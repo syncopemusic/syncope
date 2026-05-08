@@ -379,8 +379,8 @@ class AttendanceDeleteView(DeleteView):
         })
 
 
-
-@method_decorator(login_required, name="dispatch")
+@require_POST
+@login_required
 def quick_add_rehearsal(request, username):
     """Quickly create a rehearsal event with all members marked as absent."""
     org_user = get_object_or_404(CustomUser, username=username)
