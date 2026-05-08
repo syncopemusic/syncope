@@ -1,66 +1,64 @@
-# Songs and singers participation tracker
+# Syncope
+Songs and singers participation tracker
 
 ## Requirements
 
-- uv 0.9+
+- uv 0.11+
 
 ## Installation
 
 Minimal settings to run the app locally:
 
-1. Copy .env.example to .env
-2. Edit .env file, generate a new 32-character secret key and put it in the
+1. Create your own `.env` file; there is `.env.example` for trying out
+2. Edit `.env` file, generate a new 32-character secret key and put it in the
    "your-secret-key-here-generate-new-one"
 3. `uv sync`
 4. `uv run manage.py migrate`
-5. `uv run manage.py createsuperuser`
-   - follow cli instructions; email can be blank
-
+5. `uv run manage.py loaddata syncope/fixtures/syncope/*.json`
 6. `uv run manage.py runserver`
 
 Congratulations, this is now running!
 
 ### Docker
 
-Docker image also exists:
-
-`docker run -p 8000:8000 ghcr.io/lukaklanjsek/myfirstapp:latest`
+Coming soon.
 
 ## Usage
 
+Firstly register yourself and create your own organization. Organization is the center of the app.
+
+### Managing persons
+
+Your persons are destined to four roles:
+
+- admins for overviewing the application
+- members that actively participate in your activities
+- supporters that do not actively participate but contribute in other ways
+- external - every person that is not active within your organization
+
+Every change of the role has its own period of activity. 
+One can have more than one role at the same time, but only once per organization.
+
+
+
 ### Managing songs
 
-Add a composer and a poet for your new song. You can also add them alter, but
-adding them first makes managing songs cleaner.
+Step one is make your composer and poet persons into your organization.
+Next you add a song and you have to assign it to the composer and poet persons.
 
-- Sections with asterisk are mandatory.
+- Lyrics are optional, translations as well, each text can be assigned own language code.
 - ID of the song is inputted manually, for when your archive is non-sequential.
-- There is an alphabetical non-searchable drop-down menu for previously created
-  composers and poets.
+- There is an alphabetical searchable drop-down menu for previously created
+  composers and poets; these are limited to within organization.
 
-There is a connection between each song to its composer, poet and dates of
-rehearsals.
 
-### Managing members
+### Managing events and projects
 
-You can add members that participate on your rehearsals.
+Events combine songs with attendance and calendar, with projects wrapping the events together in a package.
 
-Ticker "is active" is important for listing the member:
-
-- at the top of members page;
-- at creation of a new rehearsal;
-
-### Managing rehearsals
-
-Rehearsals connect songs, active members and a calendar.
-
-In the list of rehearsals there is a preview of songs related to it and names of
-active members that are not present.
-
-- Members with "active" status appear with a checkbox for their rehearsal
+- In Attendance overview, members with active membership status appear with a checkbox for their rehearsal
   participation.
-- Songs have a search-drop-down menu; you can search among song titles or
-  composer names.
+- Events can be rehearsals, performances, concerts or recording sessions.
 
 ## Support
 

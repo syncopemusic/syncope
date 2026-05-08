@@ -1,9 +1,5 @@
 # permissions.py
 
-from django.core.exceptions import PermissionDenied
-from django.db.models import Q
-from django.template.context_processors import request
-
 from .models import Organization, Role, Person, CustomUser, Membership, Song, PersonRole
 
 
@@ -142,7 +138,7 @@ class AccessControl:
                 Boolean indicating whether user has the specified permission
             """
         try:
-            auth_user = CustomUser.objects.get(username=url_username)
+            CustomUser.objects.get(username=url_username)
         except CustomUser.DoesNotExist:
             return False
 
