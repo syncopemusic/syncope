@@ -1,5 +1,3 @@
-# views/project.py
-
 from django.http import HttpResponseForbidden
 from django.shortcuts import  get_object_or_404
 from django.urls import reverse

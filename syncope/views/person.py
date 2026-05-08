@@ -1,5 +1,3 @@
-# views/person.py
-
 from django.http import Http404, HttpResponseForbidden
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme

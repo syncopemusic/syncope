@@ -1,5 +1,3 @@
-# views/home.py
-
 from django.views import generic
 from django.views.generic import  View
 from django.contrib.auth.mixins import LoginRequiredMixin

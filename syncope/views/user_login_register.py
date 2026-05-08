@@ -1,5 +1,3 @@
-# views/user_login_register.py
-
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView, LogoutView
 from django.views.generic import CreateView
@@ -30,5 +28,3 @@ class UserLogoutView(LogoutView):
 
 class UserLoginView(LoginView):
     template_name = "registration/login.html"
-
-
