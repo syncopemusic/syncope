@@ -17,6 +17,15 @@
   {% endif %}
 {% endif %}
 
+{% if person_resources %}
+<h3>Resources</h3>
+<ul>
+  {% for r in person_resources %}
+    <li><a href="{{ r.resource.uri }}">{{ r.resource.description|default:r.resource.uri }}</a></li>
+  {% endfor %}
+</ul>
+{% endif %}
+
 <!-- Composers -->
 {% if composed_songs %}
 <h3>Composed Songs</h3>

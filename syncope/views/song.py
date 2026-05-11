@@ -9,9 +9,9 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from syncope.models import Song
-from syncope.models import Event
+from syncope.models import Event, SongResource, Resource
 from syncope.forms import  SongForm
-from syncope.forms import  QuoteFormSet, LyricsTranslationFormSet
+from syncope.forms import  QuoteFormSet, LyricsTranslationFormSet, SongResourceFormSet
 from syncope.mixins import  SongOwnerMixin
 from syncope.permissions import AccessControl
 
@@ -78,6 +78,7 @@ class SongDetailView(SongOwnerMixin, DetailView):
             eventsong__song=song
         ).order_by('-started_at').distinct()
         context['events'] = events
+        context['song_resources'] = song.song_resource.select_related('resource').order_by('order')
 
         return context
 
@@ -93,7 +94,7 @@ class SongCreateView(SongOwnerMixin, CreateView):
         kwargs["user"] = self.owner_user
         return kwargs
 
-    def get_context_data(self, quote_formset=None, translation_formset=None, **kwargs):
+    def get_context_data(self, quote_formset=None, translation_formset=None, songresource_formset=None, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
         if quote_formset is not None:
@@ -111,6 +112,16 @@ class SongCreateView(SongOwnerMixin, CreateView):
         else:
             context['translation_formset'] = LyricsTranslationFormSet(
                 prefix='translations', user=self.owner_user
+            )
+        if songresource_formset is not None:
+            context['songresource_formset'] = songresource_formset
+        elif self.request.POST:
+            context['songresource_formset'] = SongResourceFormSet(
+                self.request.POST, prefix='resources', user=self.owner_user
+            )
+        else:
+            context['songresource_formset'] = SongResourceFormSet(
+                prefix='resources', user=self.owner_user
             )
         return context
 
@@ -170,7 +181,7 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
         kwargs["user"] = self.owner_user
         return kwargs
 
-    def get_context_data(self, quote_formset=None, translation_formset=None, **kwargs):
+    def get_context_data(self, quote_formset=None, translation_formset=None, resource_formset=None, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
         if quote_formset is not None:
@@ -188,6 +199,16 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
         else:
             context['translation_formset'] = LyricsTranslationFormSet(
                 instance=self.object, prefix='translations', user=self.owner_user
+            )
+        if resource_formset is not None:
+            context['resource_formset'] = resource_formset
+        elif self.request.POST:
+            context['resource_formset'] = SongResourceFormSet(
+                self.request.POST, instance=self.object, prefix='resources', user=self.owner_user
+            )
+        else:
+            context['resource_formset'] = SongResourceFormSet(
+                instance=self.object, prefix='resources', user=self.owner_user
             )
         return context
 
@@ -210,6 +231,24 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
             return self.render_to_response(self.get_context_data(form=form, translation_formset=tf))
         return super().post(request, *args, **kwargs)
 
+    def _save_resources(self, song, resource_formset):
+        song.song_resource.all().delete()
+        valid_forms = [
+            f for f in resource_formset.forms
+            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('uri')
+        ]
+        for idx, f in enumerate(valid_forms):
+            uri = f.cleaned_data['uri']
+            description = f.cleaned_data.get('description', '')
+            resource, created = Resource.objects.get_or_create(
+                uri=uri,
+                defaults={'owner': self.owner_user, 'description': description}
+            )
+            if not created:
+                resource.description = description
+                resource.save(update_fields=['description'])
+            SongResource.objects.create(song=song, resource=resource, order=idx + 1)
+
     def form_valid(self, form):
         form.instance.user = self.owner_user
         self.object = form.save()
@@ -221,6 +260,11 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
         )
         if tf.is_valid():
             tf.save()
+        rf = SongResourceFormSet(
+            self.request.POST, instance=self.object, prefix='resources', user=self.owner_user
+        )
+        if rf.is_valid():
+            self._save_resources(self.object, rf)
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):

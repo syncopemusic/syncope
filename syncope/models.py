@@ -1,4 +1,3 @@
-# models.py
 from django.db import models
 from django.db.models import PROTECT, Q
 from django.utils import timezone
@@ -107,6 +106,22 @@ class LanguageCode(models.Model):
 
     def __str__(self):
         return self.language_code
+
+
+class Resource(models.Model):
+    """
+    URI for external places.
+    """
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="resources"
+    )
+    uri = models.URLField("url", unique=True)
+    description = models.TextField("description", blank=True, null=True)
+
+    def __str__(self):
+        return self.description
 
 
 class UserManager(BaseUserManager):
@@ -366,6 +381,10 @@ class PersonRole(models.Model):
         ]
 
 
+class PersonResource(models.Model):
+    person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="person_resource")
+    resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="person_resource")
+    order = models.PositiveIntegerField()
 
 
 
@@ -439,6 +458,12 @@ class Quote(models.Model):
         if self.bar_number:
             return f"{self.word} ({self.bar_number})"
         return self.word
+
+
+class SongResource(models.Model):
+    song = models.ForeignKey(Song, on_delete=models.PROTECT, related_name="song_resource")
+    resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="song_resource")
+    order = models.PositiveIntegerField()
 
 
 class Project(models.Model):
@@ -519,6 +544,12 @@ class EventSong(models.Model):
         ]
 
 
+class EventResource(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="event_resource")
+    resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="event_resource")
+    order = models.PositiveIntegerField()
+
+
 class AttendanceQuerySet(models.QuerySet):
     def counted(self):
         """Exclude TBD (placeholder) attendance from counts"""
@@ -577,5 +608,3 @@ class LyricsTranslation(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-

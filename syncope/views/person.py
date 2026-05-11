@@ -3,7 +3,7 @@ from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
-from syncope.forms import PersonForm
+from syncope.forms import PersonForm, PersonResourceFormSet
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy
 from datetime import datetime
@@ -11,10 +11,11 @@ from django.views.generic import ListView,  UpdateView,  DetailView, FormView
 from django.db.models import Q, Max
 import datetime
 from django.db import transaction
+from django.http import HttpResponseRedirect
 from syncope.forms import OrgMemberForm
 from syncope.models import MembershipPeriod,  PersonSkill,  PersonRole
 from syncope.models import CustomUser, Organization, Person, Membership, Role, Skill, Singer, Instrumentalist
-from syncope.models import Attendance, AttendanceType, EventType, Voice, Instrument,  Project, LyricsTranslation
+from syncope.models import Attendance, AttendanceType, EventType, Voice, Instrument,  Project, LyricsTranslation, PersonResource, Resource
 from syncope.permissions import AccessControl
 
 
@@ -73,15 +74,42 @@ class PersonUpdateView(UpdateView):
                 owner__isnull=True
             )
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, resource_formset=None, **kwargs):
         context = super().get_context_data(**kwargs)
-
+        if resource_formset is not None:
+            context['resource_formset'] = resource_formset
+        elif self.request.POST:
+            context['resource_formset'] = PersonResourceFormSet(
+                self.request.POST, instance=self.object, prefix='resources', user=self.request.user
+            )
+        else:
+            context['resource_formset'] = PersonResourceFormSet(
+                instance=self.object, prefix='resources', user=self.request.user
+            )
         return context
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
         return kwargs
+
+    def _save_resources(self, person, resource_formset):
+        person.person_resource.all().delete()
+        valid_forms = [
+            f for f in resource_formset.forms
+            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('uri')
+        ]
+        for idx, f in enumerate(valid_forms):
+            uri = f.cleaned_data['uri']
+            description = f.cleaned_data.get('description', '')
+            resource, created = Resource.objects.get_or_create(
+                uri=uri,
+                defaults={'owner': self.request.user, 'description': description}
+            )
+            if not created:
+                resource.description = description
+                resource.save(update_fields=['description'])
+            PersonResource.objects.create(person=person, resource=resource, order=idx + 1)
 
     def form_valid(self, form):
         self.object = form.save(commit=False)
@@ -92,6 +120,12 @@ class PersonUpdateView(UpdateView):
             self.object.user.save()
 
         self.object.save()
+
+        rf = PersonResourceFormSet(
+            self.request.POST, instance=self.object, prefix='resources', user=self.request.user
+        )
+        if rf.is_valid():
+            self._save_resources(self.object, rf)
 
         return redirect(self.get_success_url())
 
@@ -218,6 +252,8 @@ class OrgMemberDetailView(DetailView):
         )
 
         person = self.object
+
+        context['person_resources'] = person.person_resource.select_related('resource').order_by('order')
 
         # Composed songs
         composed_songs = person.composed_songs.all()
@@ -611,6 +647,14 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["organization"] = self.customuser
+        if self.request.POST:
+            context['resource_formset'] = PersonResourceFormSet(
+                self.request.POST, instance=self.person, prefix='resources', user=self.request.user
+            )
+        else:
+            context['resource_formset'] = PersonResourceFormSet(
+                instance=self.person, prefix='resources', user=self.request.user
+            )
         return context
 
     def form_valid(self, form):
@@ -633,7 +677,32 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
             # 6. update date fields
             self._update_dates(form)
 
+            # 7. save resources
+            rf = PersonResourceFormSet(
+                self.request.POST, instance=self.person, prefix='resources', user=self.request.user
+            )
+            if rf.is_valid():
+                self._save_resources(rf)
+
         return redirect("syncope:org_member_list",username=self.kwargs["username"])
+
+    def _save_resources(self, resource_formset):
+        self.person.person_resource.all().delete()
+        valid_forms = [
+            f for f in resource_formset.forms
+            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('uri')
+        ]
+        for idx, f in enumerate(valid_forms):
+            uri = f.cleaned_data['uri']
+            description = f.cleaned_data.get('description', '')
+            resource, created = Resource.objects.get_or_create(
+                uri=uri,
+                defaults={'owner': self.request.user, 'description': description}
+            )
+            if not created:
+                resource.description = description
+                resource.save(update_fields=['description'])
+            PersonResource.objects.create(person=self.person, resource=resource, order=idx + 1)
 
     def _update_person_info(self, form):
         """update personal info"""

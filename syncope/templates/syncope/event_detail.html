@@ -14,6 +14,14 @@
     <p>{{ event.project.description }}</p>
 {% endif %}
 {% endif %}
+{% if event_resources %}
+<h3>Resources</h3>
+<ul>
+  {% for r in event_resources %}
+    <li><a href="{{ r.resource.uri }}">{{ r.resource.description|default:r.resource.uri }}</a></li>
+  {% endfor %}
+</ul>
+{% endif %}
 
 {% if is_admin %}
     <p><a href="{%  url 'syncope:event_update' url_username event.pk %}">Edit event</a></p>
