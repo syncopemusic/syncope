@@ -14,6 +14,7 @@ from syncope.forms import  SongForm
 from syncope.forms import  QuoteFormSet, LyricsTranslationFormSet, SongResourceFormSet
 from syncope.mixins import  SongOwnerMixin
 from syncope.permissions import AccessControl
+from syncope.utils import resource_icon_list
 
 
 
@@ -51,7 +52,7 @@ class SongListView(SongOwnerMixin, ListView):
         if reverse:
             sort_field = f'-{sort_field}'
 
-        return qs.order_by(sort_field)
+        return qs.order_by(sort_field).prefetch_related('song_resource__resource')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -59,6 +60,8 @@ class SongListView(SongOwnerMixin, ListView):
         context["q"] = self.request.GET.get('q', '')
         context["current_sort"] = self.request.GET.get('sort', 'id')
         context["reverse"] = self.request.GET.get('reverse', 'false') == 'true'
+        for song in context['songs']:
+            song.resource_icons = resource_icon_list(song.song_resource.all())
         return context
 
 
@@ -78,7 +81,9 @@ class SongDetailView(SongOwnerMixin, DetailView):
             eventsong__song=song
         ).order_by('-started_at').distinct()
         context['events'] = events
-        context['song_resources'] = song.song_resource.select_related('resource').order_by('order')
+        context['song_resources'] = resource_icon_list(
+            song.song_resource.select_related('resource').order_by('order')
+        )
 
         return context
 
@@ -235,13 +240,13 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
         song.song_resource.all().delete()
         valid_forms = [
             f for f in resource_formset.forms
-            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('uri')
+            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('url')
         ]
         for idx, f in enumerate(valid_forms):
-            uri = f.cleaned_data['uri']
+            url = f.cleaned_data['url']
             description = f.cleaned_data.get('description', '')
             resource, created = Resource.objects.get_or_create(
-                uri=uri,
+                url=url,
                 defaults={'owner': self.owner_user, 'description': description}
             )
             if not created:

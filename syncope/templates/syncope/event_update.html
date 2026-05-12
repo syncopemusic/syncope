@@ -152,7 +152,7 @@
     {{ resource_formset.management_form }}
     {% for form in resource_formset %}
         <div>
-            {{ form.uri }}
+            {{ form.url }}
             {{ form.description }}
             {% if form.instance.pk %}{{ form.DELETE }}{% endif %}
             {{ form.id }}

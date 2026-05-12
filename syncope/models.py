@@ -110,14 +110,14 @@ class LanguageCode(models.Model):
 
 class Resource(models.Model):
     """
-    URI for external places.
+    URL for external places.
     """
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="resources"
     )
-    uri = models.URLField("url", unique=True)
+    url = models.URLField("url", unique=True)
     description = models.TextField("description", blank=True, null=True)
 
     def __str__(self):

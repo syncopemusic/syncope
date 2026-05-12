@@ -550,10 +550,10 @@ class BaseResourceFormSet(BaseInlineFormSet):
 
 def make_resource_form(resource_model):
     class ResourceForm(forms.ModelForm):
-        uri = forms.URLField(
+        url = forms.URLField(
             label="Resource URL",
             required=False,
-            widget=forms.URLInput(attrs={'placeholder': Resource._meta.get_field('uri').verbose_name}),
+            widget=forms.URLInput(attrs={'placeholder': Resource._meta.get_field('url').verbose_name}),
         )
         description = forms.CharField(
             label="Description",
@@ -569,15 +569,15 @@ def make_resource_form(resource_model):
             self.user = user
             super().__init__(*args, **kwargs)
             if self.instance.pk and self.instance.resource_id:
-                self.fields['uri'].initial = self.instance.resource.uri
+                self.fields['url'].initial = self.instance.resource.url
                 self.fields['description'].initial = self.instance.resource.description
 
         def save(self, commit=True):
-            uri = self.cleaned_data.get('uri')
+            url = self.cleaned_data.get('url')
             description = self.cleaned_data.get('description')
-            if uri:
+            if url:
                 resource, created = Resource.objects.get_or_create(
-                    uri=uri,
+                    url=url,
                     defaults={'owner': self.user, 'description': description}
                 )
                 if not created:

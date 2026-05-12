@@ -17,6 +17,7 @@ from syncope.models import MembershipPeriod,  PersonSkill,  PersonRole
 from syncope.models import CustomUser, Organization, Person, Membership, Role, Skill, Singer, Instrumentalist
 from syncope.models import Attendance, AttendanceType, EventType, Voice, Instrument,  Project, LyricsTranslation, PersonResource, Resource
 from syncope.permissions import AccessControl
+from syncope.utils import resource_icon_list
 
 
 @method_decorator(login_required, name='dispatch')
@@ -97,13 +98,13 @@ class PersonUpdateView(UpdateView):
         person.person_resource.all().delete()
         valid_forms = [
             f for f in resource_formset.forms
-            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('uri')
+            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('url')
         ]
         for idx, f in enumerate(valid_forms):
-            uri = f.cleaned_data['uri']
+            url = f.cleaned_data['url']
             description = f.cleaned_data.get('description', '')
             resource, created = Resource.objects.get_or_create(
-                uri=uri,
+                url=url,
                 defaults={'owner': self.request.user, 'description': description}
             )
             if not created:
@@ -158,6 +159,7 @@ class OrgMemberListView(ListView):
         queryset = visible_memberships.select_related('person').prefetch_related(
             'person__skills', 'person__roles',
             'person__singer_set__voice', 'person__instrumentalist_set__instrument',
+            'person__person_resource__resource',
         )
 
         q = self.request.GET.get('q', '').strip()
@@ -209,6 +211,10 @@ class OrgMemberListView(ListView):
             persons__in=visible_members.values_list('person', flat=True)
         ).distinct().order_by('title')
         context["available_roles"] = available_roles
+
+        for member in context['members']:
+            member.resource_icons = resource_icon_list(member.person.person_resource.all())
+
         return context
 
 @method_decorator(login_required, name="dispatch")
@@ -253,7 +259,9 @@ class OrgMemberDetailView(DetailView):
 
         person = self.object
 
-        context['person_resources'] = person.person_resource.select_related('resource').order_by('order')
+        context['person_resources'] = resource_icon_list(
+            person.person_resource.select_related('resource').order_by('order')
+        )
 
         # Composed songs
         composed_songs = person.composed_songs.all()
@@ -690,13 +698,13 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
         self.person.person_resource.all().delete()
         valid_forms = [
             f for f in resource_formset.forms
-            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('uri')
+            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('url')
         ]
         for idx, f in enumerate(valid_forms):
-            uri = f.cleaned_data['uri']
+            url = f.cleaned_data['url']
             description = f.cleaned_data.get('description', '')
             resource, created = Resource.objects.get_or_create(
-                uri=uri,
+                url=url,
                 defaults={'owner': self.request.user, 'description': description}
             )
             if not created:

@@ -16,6 +16,7 @@ from syncope.models import Event, EventSong, Attendance, AttendanceType, EventRe
 from syncope.forms import EventForm, EventSongFormSet, AttendanceFormSet, AddAttendanceForm
 from syncope.forms import AddSongToEventForm, EventResourceFormSet
 from syncope.permissions import AccessControl
+from syncope.utils import resource_icon_list
 
 
 @method_decorator(login_required, name='dispatch')
@@ -244,13 +245,13 @@ class EventUpdateView(UpdateView):
         event.event_resource.all().delete()
         valid_forms = [
             f for f in resource_formset.forms
-            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('uri')
+            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('url')
         ]
         for idx, f in enumerate(valid_forms):
-            uri = f.cleaned_data['uri']
+            url = f.cleaned_data['url']
             description = f.cleaned_data.get('description', '')
             resource, created = Resource.objects.get_or_create(
-                uri=uri,
+                url=url,
                 defaults={'owner': self.customuser, 'description': description}
             )
             if not created:
@@ -379,13 +380,18 @@ class EventListView(ListView):
     template_name = "syncope/event_list.html"
     context_object_name = "events"
     model = Event
-    # ordering = ['-started_at']
 
 
     def get_queryset(self):
         url_username = self.kwargs.get("username")
         customuser = get_object_or_404(CustomUser, username=url_username)
-        return Event.objects.filter(user=customuser).order_by('-started_at')
+        return Event.objects.filter(user=customuser).order_by('-started_at').prefetch_related('event_resource__resource')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        for event in context['events']:
+            event.resource_icons = resource_icon_list(event.event_resource.all())
+        return context
 
 
 @method_decorator(login_required, name='dispatch')
@@ -400,6 +406,7 @@ class EventDetailView(DetailView):
             'attendance_set__person',
             'attendance_set__attendance_type',
             'eventsong_set__song__composer',
+            'event_resource__resource',
         )
 
     def get_context_data(self, **kwargs):
@@ -427,7 +434,9 @@ class EventDetailView(DetailView):
         context['is_admin'] = AccessControl.can_add_event(
             self.request.user, self.object.user
         ).filter(person__roles__id=Role.ADMIN).exists()
-        context['event_resources'] = self.object.event_resource.select_related('resource').order_by('order')
+        context['event_resources'] = resource_icon_list(
+            self.object.event_resource.select_related('resource').order_by('order')
+        )
         return context
 
 

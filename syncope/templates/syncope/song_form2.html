@@ -75,7 +75,7 @@
     {{ resource_formset.management_form }}
     {% for r_form in resource_formset %}
         <div>
-            {{ r_form.uri }} {{ r_form.description }}
+            {{ r_form.url }} {{ r_form.description }}
             {% if r_form.instance.pk %}{{ r_form.DELETE }}{% endif %}
             {{ r_form.id }}
         </div>

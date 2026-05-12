@@ -48,6 +48,7 @@
         <th>Skill</th>
         <th>Voice/Instrument</th>
         <th>Roles</th>
+        <th>Resources</th>
         <th>Actions</th>
     </tr>
     </thead>
@@ -84,6 +85,11 @@
                 {% empty %}
                     No roles
                 {% endfor %}</td>
+            <td>
+              {% for link in membership.resource_icons %}
+                <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }}</a>
+              {% endfor %}
+            </td>
             <td>
                 <a href="{%  url 'syncope:org_member_edit' url_username membership.person.id %}">
                     Edit

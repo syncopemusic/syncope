@@ -47,6 +47,9 @@
                 {% if song.keywords %}
                     <small>{{ song.keywords|default:"|" }}</small>
                 {% endif %}
+                {% for link in song.resource_icons %}
+                    <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }}</a>
+                {% endfor %}
             </td>
             <td>
                 <a href="{%  url 'syncope:org_member_detail' url_username song.composer.pk %}"

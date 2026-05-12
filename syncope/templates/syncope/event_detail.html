@@ -16,11 +16,11 @@
 {% endif %}
 {% if event_resources %}
 <h3>Resources</h3>
-<ul>
-  {% for r in event_resources %}
-    <li><a href="{{ r.resource.uri }}">{{ r.resource.description|default:r.resource.uri }}</a></li>
+<p>
+  {% for link in event_resources %}
+    <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }}</a>
   {% endfor %}
-</ul>
+</p>
 {% endif %}
 
 {% if is_admin %}

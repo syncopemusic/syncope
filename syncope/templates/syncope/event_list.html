@@ -10,6 +10,7 @@
         <th>Date</th>
         <th>Type</th>
         <th>Project</th>
+        <th>Resources</th>
     </tr>
     {% for event in events %}
         <tr>
@@ -19,6 +20,11 @@
             </td>
             <td>{{ event.event_type }}</td>
             <td>{% if event.project %}<a href="{%  url 'syncope:project_detail' url_username event.project.id %}">{{ event.project }}</a>{% else %}—{% endif %}</td>
+            <td>
+              {% for link in event.resource_icons %}
+                <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }}</a>
+              {% endfor %}
+            </td>
         </tr>
     {% endfor %}
 </table>
