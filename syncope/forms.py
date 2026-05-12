@@ -1,7 +1,7 @@
 from django import forms
 import datetime
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project
+from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll
 from .models import Event, EventSong, Attendance, AttendanceType,  Voice, Instrument, EventType, EventResource
 from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource
 from django.forms import inlineformset_factory, BaseInlineFormSet
@@ -605,3 +605,14 @@ EventResourceFormSet = inlineformset_factory(
     Event, EventResource, form=EventResourceForm,
     formset=BaseResourceFormSet, extra=1, can_delete=True,
 )
+
+
+class PollCreateForm(forms.ModelForm):
+    class Meta:
+        model = Poll
+        fields = ['title', 'description', "time_length", "datetime_block",]
+        widgets = {
+            "description": forms.Textarea(attrs={'rows': 3}),
+            "datetime_block": forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+            "time_length": forms.TextInput(attrs={'placeholder': '180 minutes'}),
+        }

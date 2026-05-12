@@ -608,3 +608,26 @@ class LyricsTranslation(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class Poll(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="polls"
+    )
+    title = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class PollEvent(models.Model):
+    poll = models.ForeignKey(Poll, on_delete=models.PROTECT)
+    location = models.TextField(blank=True, null=True)
+    started_at = models.DateTimeField("start date hour")
+    ended_at = models.DateTimeField("end date hour")
+    event_type = models.ForeignKey(EventType, on_delete=models.PROTECT)
+    details = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
