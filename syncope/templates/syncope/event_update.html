@@ -148,6 +148,17 @@
         </tbody>
     </table>
 
+    <h3>Resources</h3>
+    {{ resource_formset.management_form }}
+    {% for form in resource_formset %}
+        <div>
+            {{ form.url }}
+            {{ form.description }}
+            {% if form.instance.pk %}{{ form.DELETE }}{% endif %}
+            {{ form.id }}
+        </div>
+    {% endfor %}
+
     <button type="submit" name="action" value="save">Update Event</button>
     {% if is_admin %}
         <button type="submit" name="action" value="show_add_form">Add Participant</button>

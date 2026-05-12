@@ -10,6 +10,8 @@ from .permissions import AccessControl
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q, Min, Max
+from urllib.parse import urlparse
+
 
 
 INTERNAL_ID_KEY = "internal_id"
@@ -1033,3 +1035,53 @@ def combine_event_projects(org_user, request):
             'errors': len(error_details),
             'error_details': error_details
         }
+
+
+RESOURCE_ICONS = {
+    'video':      '▶',
+    'audio':      '🎧',
+    'sheet':      '𝄞',
+    'wikipedia':  'Ⓦ',
+    'doc':        '📄',
+    'photo':      '📷',
+    'other':      '🔗',
+}
+
+
+def get_url_info(url):
+    url = url.lower()
+    path = urlparse(url).path
+    video_domains = ('youtube.com', 'youtu.be', 'vimeo.com', 'tiktok.com',)
+    audio_domains = ('spotify.com', 'soundcloud.com', 'bandcamp.com', 'deezer.com', 'tidal.com', 'mixcloud.com',)
+    sheet_music_domains = ('musescore.com', 'songsterr.com', 'flat.io', 'noteflight.com', 'imslp.org',)
+
+    if any(domain in url for domain in video_domains):
+        return 'video'
+    if any(domain in url for domain in audio_domains):
+        return 'audio'
+    if any(domain in url for domain in sheet_music_domains):
+        return 'sheet'
+
+    if 'wikipedia.org' in url:
+        return 'wikipedia'
+    if path.endswith(('.pdf', '.doc', '.docx',)):
+        return 'doc'
+    if path.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg')):
+        return 'photo'
+    if path.endswith(('.mp3', '.m4a', '.flac', '.wav', '.aac', '.ogg', '.opus', '.wma', '.aiff', '.alac')):
+        return 'audio'
+    if path.endswith(('.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v', '.wmv')):
+        return 'video'
+    if path.endswith(('.mid', '.midi', '.mscz', '.mscx', '.musicxml', '.mxl',)):
+        return 'sheet'
+
+    return 'other'
+
+
+def resource_icon_list(resource_qs):
+    return [
+        {'url': r.resource.url,
+         'icon': RESOURCE_ICONS[get_url_info(r.resource.url)],
+         'desc': r.resource.description or r.resource.url}
+        for r in resource_qs
+    ]

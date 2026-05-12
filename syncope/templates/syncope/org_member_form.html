@@ -19,6 +19,15 @@
     <p>{{ form.email.label_tag }} {{ form.email }}</p>
     <p>{{ form.phone.label_tag }} {{ form.phone }}</p>
     <p>{{ form.address.label_tag }} {{ form.address }}</p>
+    {{ resource_formset.management_form }}
+    {% for r_form in resource_formset %}
+        <div>URL:
+            {{ r_form.url }}
+            {{ r_form.description }}
+            {% if r_form.instance.pk %}{{ r_form.DELETE }}{% endif %}
+            {{ r_form.id }}
+        </div>
+    {% endfor %}
 
     <!-- Date fields -->
 {#    <fieldset>#}

@@ -71,6 +71,16 @@
     </table>
     <button type="submit" name="action" value="add_translation_row">+ Add Translation</button>
 
+    <h3>Resources</h3>
+    {{ resource_formset.management_form }}
+    {% for r_form in resource_formset %}
+        <div>
+            {{ r_form.url }} {{ r_form.description }}
+            {% if r_form.instance.pk %}{{ r_form.DELETE }}{% endif %}
+            {{ r_form.id }}
+        </div>
+    {% endfor %}
+
     <br><br>
     <button type="submit" name="action" value="">Save</button>
 </form>

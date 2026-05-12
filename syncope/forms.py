@@ -1,10 +1,9 @@
-# forms.py
 from django import forms
 import datetime
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project
-from .models import Event, EventSong, Attendance, AttendanceType, Singer, Voice, Instrument, EventType
-from .models import LyricsTranslation, LanguageCode, ApproximateDate
+from .models import Event, EventSong, Attendance, AttendanceType,  Voice, Instrument, EventType, EventResource
+from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q
 
@@ -530,4 +529,79 @@ LyricsTranslationFormSet = inlineformset_factory(
     formset=BaseLyricsTranslationFormSet,
     extra=1,
     can_delete=True,
+)
+
+
+class BaseResourceFormSet(BaseInlineFormSet):
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs['user'] = self.user
+        return kwargs
+
+    def clean(self):
+        if any(self.errors):
+            for form in self.forms:
+                form.errors.pop('__all__', None)
+
+
+def make_resource_form(resource_model):
+    class ResourceForm(forms.ModelForm):
+        url = forms.URLField(
+            label="Resource URL",
+            required=False,
+            widget=forms.URLInput(attrs={'placeholder': Resource._meta.get_field('url').verbose_name}),
+        )
+        description = forms.CharField(
+            label="Description",
+            required=False,
+            widget=forms.Textarea(attrs={'placeholder': Resource._meta.get_field('description').verbose_name, "rows":1}),
+        )
+
+        class Meta:
+            model = resource_model
+            fields = []
+
+        def __init__(self, *args, user=None, **kwargs):
+            self.user = user
+            super().__init__(*args, **kwargs)
+            if self.instance.pk and self.instance.resource_id:
+                self.fields['url'].initial = self.instance.resource.url
+                self.fields['description'].initial = self.instance.resource.description
+
+        def save(self, commit=True):
+            url = self.cleaned_data.get('url')
+            description = self.cleaned_data.get('description')
+            if url:
+                resource, created = Resource.objects.get_or_create(
+                    url=url,
+                    defaults={'owner': self.user, 'description': description}
+                )
+                if not created:
+                    resource.description = description
+                    resource.save(update_fields=['description'])
+                self.instance.resource = resource
+            return super().save(commit=commit)
+
+    return ResourceForm
+
+
+SongResourceForm = make_resource_form(SongResource)
+PersonResourceForm = make_resource_form(PersonResource)
+EventResourceForm = make_resource_form(EventResource)
+
+SongResourceFormSet = inlineformset_factory(
+    Song, SongResource, form=SongResourceForm,
+    formset=BaseResourceFormSet, extra=1, can_delete=True,
+)
+PersonResourceFormSet = inlineformset_factory(
+    Person, PersonResource, form=PersonResourceForm,
+    formset=BaseResourceFormSet, extra=1, can_delete=True,
+)
+EventResourceFormSet = inlineformset_factory(
+    Event, EventResource, form=EventResourceForm,
+    formset=BaseResourceFormSet, extra=1, can_delete=True,
 )

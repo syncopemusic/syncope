@@ -12,10 +12,11 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from syncope.models import CustomUser, Person, Role
-from syncope.models import Event, EventSong, Attendance, AttendanceType
+from syncope.models import Event, EventSong, Attendance, AttendanceType, EventResource, Resource
 from syncope.forms import EventForm, EventSongFormSet, AttendanceFormSet, AddAttendanceForm
-from syncope.forms import AddSongToEventForm
+from syncope.forms import AddSongToEventForm, EventResourceFormSet
 from syncope.permissions import AccessControl
+from syncope.utils import resource_icon_list
 
 
 @method_decorator(login_required, name='dispatch')
@@ -171,6 +172,11 @@ class EventUpdateView(UpdateView):
                     queryset=attendance_qs,
                     form_kwargs={'person_queryset': members},
                 )
+                self._resource_formset = EventResourceFormSet(
+                    self.request.POST,
+                    instance=event,
+                    user=self.customuser,
+                )
             else:
                 self._song_formset = EventSongFormSet(
                     instance=event,
@@ -181,6 +187,10 @@ class EventUpdateView(UpdateView):
                     queryset=attendance_qs,
                     form_kwargs={'person_queryset': members},
                 )
+                self._resource_formset = EventResourceFormSet(
+                    instance=event,
+                    user=self.customuser,
+                )
 
         search_q = self.request.GET.get('q', '')
         show_add_form = self.request.GET.get('add_participant') == '1' and self.is_admin
@@ -189,6 +199,7 @@ class EventUpdateView(UpdateView):
 
         context['song_formset'] = self._song_formset
         context['attendance_formset'] = self._attendance_formset
+        context['resource_formset'] = self._resource_formset
         context['attendance_types'] = AttendanceType.objects.all()
         context['url_username'] = self.kwargs.get('username')
         context['is_admin'] = self.is_admin
@@ -229,6 +240,24 @@ class EventUpdateView(UpdateView):
                 order=idx + 1,
                 encore=song_data['encore'],
             )
+
+    def _save_resources(self, event, resource_formset):
+        event.event_resource.all().delete()
+        valid_forms = [
+            f for f in resource_formset.forms
+            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('url')
+        ]
+        for idx, f in enumerate(valid_forms):
+            url = f.cleaned_data['url']
+            description = f.cleaned_data.get('description', '')
+            resource, created = Resource.objects.get_or_create(
+                url=url,
+                defaults={'owner': self.customuser, 'description': description}
+            )
+            if not created:
+                resource.description = description
+                resource.save(update_fields=['description'])
+            EventResource.objects.create(event=event, resource=resource, order=idx + 1)
 
     def _reorder_songs_db(self, event):
         """Reorder songs in the database based on reorder button click."""
@@ -297,11 +326,16 @@ class EventUpdateView(UpdateView):
             messages.error(self.request, "Please fix errors in the attendance section.")
             return self.form_invalid(form)
 
+        if not self._resource_formset.is_valid():
+            messages.error(self.request, "Please fix errors in the resources section.")
+            return self.form_invalid(form)
+
         with transaction.atomic():
             self.object = form.save()
             self._save_songs(self.object, self._song_formset)
             self._attendance_formset.instance = self.object
             self._attendance_formset.save()
+            self._save_resources(self.object, self._resource_formset)
 
         action = self.request.POST.get('action', 'save')
         event_update_url = reverse('syncope:event_update', kwargs={
@@ -346,13 +380,18 @@ class EventListView(ListView):
     template_name = "syncope/event_list.html"
     context_object_name = "events"
     model = Event
-    # ordering = ['-started_at']
 
 
     def get_queryset(self):
         url_username = self.kwargs.get("username")
         customuser = get_object_or_404(CustomUser, username=url_username)
-        return Event.objects.filter(user=customuser).order_by('-started_at')
+        return Event.objects.filter(user=customuser).order_by('-started_at').prefetch_related('event_resource__resource')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        for event in context['events']:
+            event.resource_icons = resource_icon_list(event.event_resource.all())
+        return context
 
 
 @method_decorator(login_required, name='dispatch')
@@ -367,6 +406,7 @@ class EventDetailView(DetailView):
             'attendance_set__person',
             'attendance_set__attendance_type',
             'eventsong_set__song__composer',
+            'event_resource__resource',
         )
 
     def get_context_data(self, **kwargs):
@@ -394,6 +434,9 @@ class EventDetailView(DetailView):
         context['is_admin'] = AccessControl.can_add_event(
             self.request.user, self.object.user
         ).filter(person__roles__id=Role.ADMIN).exists()
+        context['event_resources'] = resource_icon_list(
+            self.object.event_resource.select_related('resource').order_by('order')
+        )
         return context
 
 
