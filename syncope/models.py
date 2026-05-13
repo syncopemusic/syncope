@@ -69,7 +69,6 @@ class AttendanceType(models.Model):
     PRIVATE_VACATION = 4
     TBD = 5
 
-
     name = models.CharField("attendance designation", max_length=90, unique=True)
     additional_notes = models.CharField(
         "short description of presence",
@@ -79,6 +78,18 @@ class AttendanceType(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+class PollAttendanceType(models.Model):
+    TBD = 0
+    YES = 1
+    MAYBE = 2
+    NO = 3
+
+    name = models.CharField("poll type", max_length=90, unique=True)
 
     def __str__(self):
         return self.name
@@ -622,8 +633,25 @@ class Poll(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
+class PollPerson(models.Model):
+    """Persons that are invited to the poll."""
+    poll = models.ForeignKey(Poll, on_delete=models.PROTECT, related_name="poll_persons")
+    person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="poll_persons")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["poll", "person"],
+                name="unique_person_per_poll"
+            )
+        ]
+        indexes = [
+            models.Index(fields=['poll', 'person']),
+        ]
+
+
 class PollEvent(models.Model):
-    poll = models.ForeignKey(Poll, on_delete=models.PROTECT)
+    poll = models.ForeignKey(Poll, on_delete=models.PROTECT, related_name="poll_events")
     location = models.TextField(blank=True, null=True)
     started_at = models.DateTimeField("start date hour")
     ended_at = models.DateTimeField("end date hour")
@@ -631,3 +659,19 @@ class PollEvent(models.Model):
     details = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["poll", "location", "started_at", "ended_at"],
+                name="unique_poll_location_date"
+            )
+        ]
+
+
+class PollAttendance(models.Model):
+    """Combines all poll models."""
+    poll_event = models.ForeignKey(PollEvent, on_delete=models.PROTECT, related_name="poll_attendances")
+    poll_attendance_type = models.ForeignKey(PollAttendanceType, on_delete=models.PROTECT, related_name="poll_attendances")
+    poll_person = models.ForeignKey(PollPerson, on_delete=models.PROTECT, related_name="poll_attendances")
+    comment = models.TextField(blank=True, null=True)

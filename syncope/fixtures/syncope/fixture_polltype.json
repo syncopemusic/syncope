@@ -1,0 +1,30 @@
+[
+  {
+    "model": "syncope.pollattendancetype",
+    "pk": "0",
+    "fields": {
+      "name": "TBD"
+    }
+  },
+  {
+    "model": "syncope.pollattendancetype",
+    "pk": "1",
+    "fields": {
+      "name": "Yes"
+    }
+  },
+  {
+    "model": "syncope.pollattendancetype",
+    "pk": "2",
+    "fields": {
+      "name": "Maybe"
+    }
+  },
+  {
+    "model": "syncope.pollattendancetype",
+    "pk": "3",
+    "fields": {
+      "name": "No"
+    }
+  }
+]

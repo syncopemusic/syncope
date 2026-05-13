@@ -1,7 +1,8 @@
 from django import forms
 import datetime
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll
+from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
+    PollAttendance
 from .models import Event, EventSong, Attendance, AttendanceType,  Voice, Instrument, EventType, EventResource
 from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource
 from django.forms import inlineformset_factory, BaseInlineFormSet
@@ -610,9 +611,61 @@ EventResourceFormSet = inlineformset_factory(
 class PollCreateForm(forms.ModelForm):
     class Meta:
         model = Poll
-        fields = ['title', 'description', "time_length", "datetime_block",]
+        fields = ['title', 'description']
         widgets = {
             "description": forms.Textarea(attrs={'rows': 3}),
-            "datetime_block": forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
-            "time_length": forms.TextInput(attrs={'placeholder': '180 minutes'}),
+        }
+
+
+class PollPersonForm(forms.ModelForm):
+    class Meta:
+        model = PollPerson
+        fields =  [
+            'poll',
+            'person'
+        ]
+        widgets = {
+            'poll': forms.HiddenInput(),
+        }
+
+    def __init__(self, *args, org_user=None, poll=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if org_user and poll:
+            already_added = poll.poll_persons.values_list('person_id', flat=True)
+            self.fields['person'].queryset = (
+                Person.objects.in_org_user(org_user).exclude(pk__in=already_added)
+            )
+
+
+class PollEventForm(forms.ModelForm):
+    class Meta:
+        model = PollEvent
+        fields = [
+            'poll',
+            'event_type',
+            'started_at',
+            'ended_at',
+            'location',
+            'details'
+        ]
+        widgets = {
+            'poll': forms.HiddenInput(),
+            'started_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+            'ended_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+            'location': forms.Textarea(attrs={'rows': 2}),
+            'details': forms.Textarea(attrs={'rows': 2}),
+        }
+
+
+class PollAttendanceForm(forms.ModelForm):
+    class Meta:
+        model = PollAttendance
+        fields = [
+            'poll_event',
+            'poll_attendance_type',
+            'poll_person',
+            'comment'
+        ]
+        widgets = {
+            'comment': forms.Textarea(attrs={'rows': 1}),
         }
