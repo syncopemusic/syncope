@@ -1,10 +1,10 @@
-from django.views.generic import ListView, DetailView, UpdateView, View
+from django.views.generic import ListView, DetailView, UpdateView, View, DeleteView
 from django.shortcuts import get_object_or_404, render, redirect
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.http import HttpResponseForbidden
-from syncope.models import CustomUser, PollAttendance, Poll, PollPerson, PollEvent
+from syncope.models import CustomUser, PollAttendance, Poll, PollPerson, PollEvent, PollAttendanceType
 from syncope.forms import PollCreateForm, PollPersonForm, PollAttendanceForm, PollEventForm
 from syncope.permissions import AccessControl
 
@@ -29,9 +29,10 @@ class PollListView(ListView):
 
 @method_decorator(login_required, name="dispatch")
 class PollCreateUpdateView(PollAdminMixin, UpdateView):
+    """Creates or updates basic poll details. Requires title, description, user."""
     model = Poll
     form_class = PollCreateForm
-    template_name = "syncope/poll_create.html"
+    template_name = "syncope/poll_form.html"
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
@@ -48,15 +49,54 @@ class PollCreateUpdateView(PollAdminMixin, UpdateView):
         context["url_username"] = self.kwargs.get("username")
         return context
 
+    def form_valid(self, form):
+        return super().form_valid(form)
+
+
     def get_success_url(self):
-        return reverse("syncope:poll_persons", kwargs={
+        return reverse("syncope:poll_basic", kwargs={
             "username": self.kwargs.get("username"),
             "pk": self.object.pk
         })
 
 
 @method_decorator(login_required, name="dispatch")
+class PollBasicView(PollAdminMixin, DetailView):
+    """Presents basic poll details."""
+    model = Poll
+    template_name = "syncope/poll_basic.html"
+    context_object_name = "poll"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["url_username"] = self.kwargs["username"]
+        context["poll_persons"] = self.object.poll_persons.select_related('person')
+        context["poll_events"] = self.object.poll_events.select_related('event_type').order_by('started_at')
+
+        return context
+
+@method_decorator(login_required, name="dispatch")
+class PollDeleteView(PollAdminMixin, DeleteView):
+    model = Poll
+    template_name = "syncope/poll_confirm_delete.html"
+
+    def get_queryset(self):
+        org_user = get_object_or_404(CustomUser, username=self.kwargs.get("username"))
+        return Poll.objects.filter(user=org_user)
+
+    def get_success_url(self):
+        return reverse("syncope:poll_list", kwargs={
+            "username": self.kwargs.get("username")
+        })
+    
+
+
+@method_decorator(login_required, name="dispatch")
 class PollPersonView(PollAdminMixin, View):
+    """
+    Access from admin to only persons within the same customuser-organization.
+    Search menu for the persons, indexes first name, last name, role, skill, voice, instrument.
+    """
     template_name = "syncope/poll_person.html"
 
     def setup(self, request, *args, **kwargs):
@@ -65,12 +105,14 @@ class PollPersonView(PollAdminMixin, View):
         self.poll = get_object_or_404(Poll, pk=kwargs['pk'], user=self.org_user)
 
     def get(self, request, username, pk):
-        form = PollPersonForm(initial={'poll': self.poll}, org_user=self.org_user, poll=self.poll)
+        q = request.GET.get('q', '').strip()
+        form = PollPersonForm(initial={'poll': self.poll}, org_user=self.org_user, poll=self.poll, search_q=q or None)
         return render(request, self.template_name, {
             'form': form,
             'poll': self.poll,
             'poll_persons': self.poll.poll_persons.select_related('person'),
             'url_username': username,
+            'q': q,
         })
 
     def post(self, request, username, pk):
@@ -88,6 +130,9 @@ class PollPersonView(PollAdminMixin, View):
 
 @method_decorator(login_required, name="dispatch")
 class PollEventView(PollAdminMixin, View):
+    """
+    Adds date and location possibilities to the poll.
+    """
     template_name = "syncope/poll_event.html"
 
     def setup(self, request, *args, **kwargs):
@@ -118,21 +163,97 @@ class PollEventView(PollAdminMixin, View):
 
 
 class PollEventAttendanceView(View):
-    model = PollAttendance
-    form_class = PollAttendanceForm
+    """Public view — all poll persons list attendance per event slot."""
     template_name = "syncope/poll_attendance.html"
 
-    # lists persons, dates and times, and a radio button for poll_type
-    # extra comment optional per person per poll_event
-    # accessible to the public using external link
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        self.poll = get_object_or_404(Poll, pk=kwargs['pk'])
+
+    def get(self, request, username, pk):
+        poll_events = list(self.poll.poll_events.select_related('event_type').order_by('started_at'))
+        poll_persons = list(self.poll.poll_persons.select_related('person'))
+
+        # Build person_attendance dict: person_id -> {event_id -> PollAttendance object}
+        person_attendance = {}
+        for pa in PollAttendance.objects.filter(poll_person__poll=self.poll).select_related('poll_attendance_type'):
+            person_attendance.setdefault(pa.poll_person_id, {})[pa.poll_event_id] = pa
+
+        # Create table_rows with event_cells
+        table_rows = []
+        for pp in poll_persons:
+            event_cells = []
+            for event in poll_events:
+                pa = person_attendance.get(pp.id, {}).get(event.id)
+                event_cells.append({
+                    'event': event,
+                    'person': pp,
+                    'attendance_type_id': pa.poll_attendance_type_id if pa else 0,
+                    'comment': pa.comment if pa else ''
+                })
+            row = {
+                'person': pp,
+                'event_cells': event_cells
+            }
+            table_rows.append(row)
+
+        return render(request, self.template_name, {
+            'poll': self.poll,
+            'poll_events': poll_events,
+            'table_rows': table_rows,
+        })
+
+    def post(self, request, username, pk):
+        person_pk = request.POST.get('save_participant')
+        poll_person = get_object_or_404(PollPerson, pk=person_pk, poll=self.poll)
+        for event in self.poll.poll_events.all():
+            type_id_str = request.POST.get(f'attendance_{event.id}_{poll_person.id}')
+            comment = request.POST.get(f'comment_{event.id}_{poll_person.id}', '').strip()
+            if type_id_str is not None:
+                PollAttendance.objects.update_or_create(
+                    poll_person=poll_person,
+                    poll_event=event,
+                    defaults={
+                        'poll_attendance_type_id': int(type_id_str),
+                        'comment': comment or None,
+                    }
+                )
+        return redirect('syncope:poll_attendance', username=username, pk=pk)
 
 
 class PollDetailView(DetailView):
+    model = Poll
     template_name = "syncope/poll_detail.html"
+    context_object_name = "poll"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.kwargs.get('username')
+
+        poll = self.object
+        poll_events = list(poll.poll_events.select_related('event_type').order_by('started_at'))
+        poll_persons = list(poll.poll_persons.select_related('person'))
+
+        person_attendance = {}
+        for pa in PollAttendance.objects.filter(poll_person__poll=poll).select_related('poll_attendance_type'):
+            person_attendance.setdefault(pa.poll_person_id, {})[pa.poll_event_id] = pa
+
+        table_rows = []
+        for pp in poll_persons:
+            event_cells = []
+            for event in poll_events:
+                pa = person_attendance.get(pp.id, {}).get(event.id)
+                event_cells.append({
+                    'event': event,
+                    'attendance_type_id': pa.poll_attendance_type_id if pa else 0,
+                    'attendance_label': pa.poll_attendance_type.name if pa else 'TBD',
+                    'comment': pa.comment if pa else '',
+                })
+            table_rows.append({'person': pp, 'event_cells': event_cells})
+
+        context['poll_events'] = poll_events
+        context['poll_persons'] = poll_persons
+        context['table_rows'] = table_rows
         return context
 
-    # accessible using special link to public, named "poll share"
+    # accessible using special link to public

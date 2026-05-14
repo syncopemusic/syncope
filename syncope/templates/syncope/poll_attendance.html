@@ -1,0 +1,151 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}{{ poll.title }} — Attendance{% endblock %}
+
+{% block content %}
+<style>
+.attendance-cell {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 3px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    transition: background-color 0.15s ease;
+}
+
+.attendance-cell:hover {
+    opacity: 0.8;
+}
+
+.att-type-0 { background-color: #dfe6e9; } /* TBD */
+.att-type-1 { background-color: #c8f7c5; } /* YES */
+.att-type-2 { background-color: #ffeaa7; } /* MAYBE */
+.att-type-3 { background-color: #fab1a0; } /* NO */
+
+.comment-input {
+    font-size: 0.8rem;
+    padding: 4px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    box-sizing: border-box;
+    width: 150px;
+}
+
+@media (max-width: 768px) {
+    .attendance-cell {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+    .comment-input {
+        width: 100px;
+    }
+    .participant-row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .save-button {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+}
+</style>
+
+<h2>{{ poll.title }} — Attendance</h2>
+
+{% if poll.description %}
+<p>{{ poll.description }}</p>
+{% endif %}
+
+<div style="margin-bottom: 1rem; font-size: 0.85rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+    <strong>Legend:</strong>
+    <span class="attendance-cell att-type-0" style="width: auto; height: auto; padding: 2px 6px;">TBD</span>
+    <span class="attendance-cell att-type-1" style="width: auto; height: auto; padding: 2px 6px;">✓</span>
+    <span class="attendance-cell att-type-2" style="width: auto; height: auto; padding: 2px 6px;">?</span>
+    <span class="attendance-cell att-type-3" style="width: auto; height: auto; padding: 2px 6px;">✗</span>
+    <em>(Click to cycle)</em>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+
+    {% for row in table_rows %}
+    <div style="margin-bottom: 1.5rem; border-top: 2px solid #ddd; padding-top: 1rem;">
+        <div class="participant-row" style="display: flex; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
+            <div style="min-width: 120px;">
+                <strong>{{ row.person.person.first_name }} {{ row.person.person.last_name }}</strong>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; align-items: flex-start; flex-wrap: wrap;">
+                {% for cell in row.event_cells %}
+                <div style="display: flex; flex-direction: column; gap: 0.25rem; align-items: center;">
+                    <div style="font-size: 0.7rem; text-align: center; width: 40px;">
+                        <span style="display: block; font-weight: bold;">{{ cell.event.event_type.name|truncatewords:"1" }}</span>
+                        <span style="display: block;">{{ cell.event.started_at|date:"m/d" }}</span>
+                    </div>
+                    <div class="attendance-cell att-type-{{ cell.attendance_type_id }}"
+                         data-type-id="{{ cell.attendance_type_id }}"
+                         data-event-id="{{ cell.event.id }}"
+                         data-person-id="{{ cell.person.id }}"
+                         onclick="cycleAttendance(this)"
+                         title="">
+                        <input type="hidden"
+                               name="attendance_{{ cell.event.id }}_{{ cell.person.id }}"
+                               value="{{ cell.attendance_type_id }}">
+                        <span class="att-icon"></span>
+                    </div>
+                    <input type="text"
+                           name="comment_{{ cell.event.id }}_{{ cell.person.id }}"
+                           class="comment-input"
+                           placeholder="note"
+                           value="{{ cell.comment }}"
+                           style="width: 40px; font-size: 0.7rem; padding: 2px;">
+                </div>
+                {% endfor %}
+            </div>
+
+            <button type="submit" name="save_participant" value="{{ row.person.id }}" class="save-button" style="padding: 0.5rem 1rem; white-space: nowrap;">Save</button>
+        </div>
+    </div>
+    {% endfor %}
+</form>
+
+<div style="margin-top: 2rem; padding-top: 1rem; border-top: 2px solid #ddd;">
+    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">View overview</a>
+</div>
+
+<script>
+const CYCLE_ORDER = [0, 1, 2, 3];  // TBD, YES, MAYBE, NO
+const TYPE_META = {
+    0: { label: 'TBD',    icon: '',   cls: 'att-type-0' },
+    1: { label: 'YES',    icon: '✓',  cls: 'att-type-1' },
+    2: { label: 'MAYBE',  icon: '?',  cls: 'att-type-2' },
+    3: { label: 'NO',     icon: '✗',  cls: 'att-type-3' },
+};
+
+function cycleAttendance(cell) {
+    const cur = parseInt(cell.dataset.typeId, 10);
+    const next = CYCLE_ORDER[(CYCLE_ORDER.indexOf(cur) + 1) % CYCLE_ORDER.length];
+    cell.dataset.typeId = next;
+    cell.querySelector('input[type="hidden"]').value = next;
+    Object.values(TYPE_META).forEach(m => cell.classList.remove(m.cls));
+    cell.classList.add(TYPE_META[next].cls);
+    cell.querySelector('.att-icon').textContent = TYPE_META[next].icon;
+    cell.title = TYPE_META[next].label;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.attendance-cell[data-type-id]').forEach(cell => {
+        const meta = TYPE_META[parseInt(cell.dataset.typeId, 10)] || TYPE_META[0];
+        cell.querySelector('.att-icon').textContent = meta.icon;
+        cell.title = meta.label;
+    });
+});
+</script>
+
+{% endblock %}

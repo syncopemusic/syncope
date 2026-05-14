@@ -1,0 +1,26 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Poll{% endblock %}
+
+{% block content %}
+<h2>{% if form.instance.pk %}Edit{% else %}Create{% endif %} Poll</h2>
+
+<form method="post">
+    {% csrf_token %}
+
+    <div class="form-group">
+        <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
+        {{ form.title }}
+        {% if form.title.errors %}<span class="error">{{ form.title.errors }}</span>{% endif %}
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+        {{ form.description }}
+        {% if form.description.errors %}<span class="error">{{ form.description.errors }}</span>{% endif %}
+    </div>
+
+    <button type="submit">Save</button>
+    <a href="{% url 'syncope:poll_list' url_username %}">Cancel</a>
+</form>
+{% endblock %}

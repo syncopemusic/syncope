@@ -1,0 +1,45 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}{{ poll.title }}{% endblock %}
+
+{% block content %}
+<h2>{{ poll.title }}</h2>
+
+{% if poll.description %}
+<p>{{ poll.description }}</p>
+{% endif %}
+
+<h3>Persons</h3>
+{% if poll_persons %}
+<ul>
+    {% for pp in poll_persons %}
+    <li>{{ pp.person.first_name }} {{ pp.person.last_name }}</li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No persons added yet.</p>
+{% endif %}
+
+<h3>Event Slots</h3>
+{% if poll_events %}
+<ul>
+    {% for pe in poll_events %}
+    <li>
+        {{ pe.event_type.name }}:
+        {{ pe.started_at|date:"Y-m-d H:i" }} – {{ pe.ended_at|date:"H:i" }}
+        {% if pe.location %}({{ pe.location }}){% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No event slots added yet.</p>
+{% endif %}
+
+<div class="poll-actions">
+    <a href="{% url 'syncope:poll_update' url_username poll.pk %}">Edit</a>
+    <a href="{% url 'syncope:poll_list' url_username %}">Back to Polls</a>
+    <a href="{% url 'syncope:poll_persons' url_username poll.pk %}">Add people</a>
+    <a href="{% url 'syncope:poll_events' url_username poll.pk %}">Add event slots</a>
+    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">View overview</a>
+</div>
+{% endblock %}

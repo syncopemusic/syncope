@@ -51,6 +51,7 @@
 
                                                 {% if ADMIN_ROLE in membership.person.roles.all %}
                                                     <li><a href="{%  url 'syncope:attendance' org.user.username %}">ATTENDANCE</a></li>
+                                                    <li><a href="{%  url 'syncope:poll_list' org.user.username %}">Polls</a></li>
                                                     <li><a href="{%  url 'syncope:song_form2' org.user.username %}">Add song</a></li>
                                                     <li><a href="{%  url 'syncope:org_member_add' org.user.username %}">Add member</a></li>
                                                     <li><a href="{%  url 'syncope:import_hub' username=org.user.username %}">Import Data</a></li>

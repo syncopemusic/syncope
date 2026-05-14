@@ -1,0 +1,22 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}Polls{% endblock %}
+
+{% block content %}
+<h2>Polls</h2>
+
+<a href="{% url 'syncope:poll_create' url_username %}">Create New Poll</a>
+
+{% if polls %}
+<ul>
+    {% for poll in polls %}
+    <li>
+        <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">{{ poll.title }}</a>
+        <small>Updated: {{ poll.updated_at|date:"Y-m-d H:i" }}</small>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No polls yet.</p>
+{% endif %}
+{% endblock %}

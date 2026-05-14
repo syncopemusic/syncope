@@ -1,0 +1,124 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}{{ poll.title }} — Overview{% endblock %}
+
+{% block content %}
+<style>
+.attendance-cell {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    border-radius: 3px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.att-type-0 { background-color: #dfe6e9; } /* TBD */
+.att-type-1 { background-color: #c8f7c5; } /* YES */
+.att-type-2 { background-color: #ffeaa7; } /* MAYBE */
+.att-type-3 { background-color: #fab1a0; } /* NO */
+
+.comment-display {
+    font-size: 0.7rem;
+    color: #666;
+    white-space: normal;
+    word-wrap: break-word;
+    width: 40px;
+    margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+    .attendance-cell {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+    .participant-row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+</style>
+
+<h2>{{ poll.title }} — Overview</h2>
+
+{% if poll.description %}
+<p>{{ poll.description }}</p>
+{% endif %}
+
+<h3>Persons <a href="{% url 'syncope:poll_persons' url_username poll.pk %}">[Edit]</a></h3>
+{% if poll_persons %}
+<ul>
+    {% for pp in poll_persons %}
+    <li>{{ pp.person.first_name }} {{ pp.person.last_name }}</li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No persons added yet.</p>
+{% endif %}
+
+<h3>Event Slots <a href="{% url 'syncope:poll_events' url_username poll.pk %}">[Edit]</a></h3>
+{% if poll_events %}
+<ul>
+    {% for pe in poll_events %}
+    <li>
+        {{ pe.event_type.name }}:
+        {{ pe.started_at|date:"Y-m-d H:i" }} – {{ pe.ended_at|date:"H:i" }}
+        {% if pe.location %}({{ pe.location }}){% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No event slots added yet.</p>
+{% endif %}
+
+<h3>Attendance <a href="{% url 'syncope:poll_attendance' url_username poll.pk %}">[Edit]</a></h3>
+
+<div style="margin-bottom: 1rem; font-size: 0.85rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+    <strong>Legend:</strong>
+    <span class="attendance-cell att-type-0" style="width: auto; height: auto; padding: 2px 6px;">TBD</span>
+    <span class="attendance-cell att-type-1" style="width: auto; height: auto; padding: 2px 6px;">✓</span>
+    <span class="attendance-cell att-type-2" style="width: auto; height: auto; padding: 2px 6px;">?</span>
+    <span class="attendance-cell att-type-3" style="width: auto; height: auto; padding: 2px 6px;">✗</span>
+</div>
+
+{% if table_rows %}
+<div>
+    {% for row in table_rows %}
+    <div style="margin-bottom: 1.5rem; border-top: 2px solid #ddd; padding-top: 1rem;">
+        <div class="participant-row" style="display: flex; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
+            <div style="min-width: 120px;">
+                <strong>{{ row.person.person.first_name }} {{ row.person.person.last_name }}</strong>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; align-items: flex-start; flex-wrap: wrap;">
+                {% for cell in row.event_cells %}
+                <div style="display: flex; flex-direction: column; gap: 0.25rem; align-items: center;">
+                    <div style="font-size: 0.7rem; text-align: center; width: 40px;">
+                        <span style="display: block; font-weight: bold;">{{ cell.event.event_type.name|truncatewords:"1" }}</span>
+                        <span style="display: block;">{{ cell.event.started_at|date:"m/d" }}</span>
+                    </div>
+                    <span class="attendance-cell att-type-{{ cell.attendance_type_id }}" title="{{ cell.attendance_label }}">
+                        {% if cell.attendance_type_id == 1 %}✓{% elif cell.attendance_type_id == 2 %}?{% elif cell.attendance_type_id == 3 %}✗{% endif %}
+                    </span>
+                    {% if cell.comment %}
+                    <div class="comment-display">{{ cell.comment }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p>No attendance data yet.</p>
+{% endif %}
+
+<div style="margin-top: 2rem; padding-top: 1rem; border-top: 2px solid #ddd;">
+    <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">Back to Poll</a>
+</div>
+{% endblock %}

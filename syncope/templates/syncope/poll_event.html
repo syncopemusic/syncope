@@ -1,0 +1,62 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}Poll Events — {{ poll.title }}{% endblock %}
+
+{% block content %}
+<h2>{{ poll.title }} — Event Slots</h2>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.poll }}
+
+    <div class="form-group">
+        <label for="{{ form.event_type.id_for_label }}">{{ form.event_type.label }}</label>
+        {{ form.event_type }}
+        {% if form.event_type.errors %}<span class="error">{{ form.event_type.errors }}</span>{% endif %}
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.started_at.id_for_label }}">{{ form.started_at.label }}</label>
+        {{ form.started_at }}
+        {% if form.started_at.errors %}<span class="error">{{ form.started_at.errors }}</span>{% endif %}
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.ended_at.id_for_label }}">{{ form.ended_at.label }}</label>
+        {{ form.ended_at }}
+        {% if form.ended_at.errors %}<span class="error">{{ form.ended_at.errors }}</span>{% endif %}
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.location.id_for_label }}">{{ form.location.label }}</label>
+        {{ form.location }}
+        {% if form.location.errors %}<span class="error">{{ form.location.errors }}</span>{% endif %}
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.details.id_for_label }}">{{ form.details.label }}</label>
+        {{ form.details }}
+        {% if form.details.errors %}<span class="error">{{ form.details.errors }}</span>{% endif %}
+    </div>
+
+    <button type="submit">Add Event Slot</button>
+</form>
+
+<h3>Added Event Slots</h3>
+{% if poll_events %}
+<ul>
+    {% for pe in poll_events %}
+    <li>
+        {{ pe.event_type.name }}:
+        {{ pe.started_at|date:"Y-m-d H:i" }} - {{ pe.ended_at|date:"H:i" }}
+        {% if pe.location %}({{ pe.location }}){% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No event slots added yet.</p>
+{% endif %}
+
+<a href="{% url 'syncope:poll_basic' url_username poll.pk %}">Back to Poll</a>
+    <a href="{% url 'syncope:poll_attendance' url_username poll.pk %}">Continue to attendance</a>
+{% endblock %}

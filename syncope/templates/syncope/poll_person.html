@@ -1,0 +1,37 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}Poll Persons — {{ poll.title }}{% endblock %}
+
+{% block content %}
+<h2>{{ poll.title }} — Persons</h2>
+
+<form method="get">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by name, role, skill, voice, instrument">
+    <button type="submit">Search</button>
+    {% if q %}<a href="?">Clear</a>{% endif %}
+</form>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.poll }}
+    <div class="form-group">
+        {{ form.person }}
+        {% if form.person.errors %}<span class="error">{{ form.person.errors }}</span>{% endif %}
+    </div>
+    <button type="submit">Add</button>
+</form>
+
+<h3>Added Persons</h3>
+{% if poll_persons %}
+<ul>
+    {% for pp in poll_persons %}
+    <li>{{ pp.person.first_name }} {{ pp.person.last_name }}</li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No persons added yet.</p>
+{% endif %}
+
+<a href="{% url 'syncope:poll_basic' url_username poll.pk %}">Back to Poll</a>
+    <a href="{% url 'syncope:poll_events' url_username  poll.pk %}">Continue to events</a>
+{% endblock %}

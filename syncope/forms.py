@@ -628,13 +628,21 @@ class PollPersonForm(forms.ModelForm):
             'poll': forms.HiddenInput(),
         }
 
-    def __init__(self, *args, org_user=None, poll=None, **kwargs):
+    def __init__(self, *args, org_user=None, poll=None, search_q=None, **kwargs):
         super().__init__(*args, **kwargs)
         if org_user and poll:
             already_added = poll.poll_persons.values_list('person_id', flat=True)
-            self.fields['person'].queryset = (
-                Person.objects.in_org_user(org_user).exclude(pk__in=already_added)
-            )
+            qs = Person.objects.in_org_user(org_user).exclude(pk__in=already_added)
+            if search_q:
+                qs = qs.filter(
+                    Q(first_name__icontains=search_q) |
+                    Q(last_name__icontains=search_q) |
+                    Q(roles__title__icontains=search_q) |
+                    Q(skills__title__icontains=search_q) |
+                    Q(singer__voice__name__icontains=search_q) |
+                    Q(instrumentalist__instrument__name__icontains=search_q)
+                ).distinct()
+            self.fields['person'].queryset = qs
 
 
 class PollEventForm(forms.ModelForm):
