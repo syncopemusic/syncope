@@ -21,11 +21,25 @@
     <button type="submit">Add</button>
 </form>
 
+<form method="post" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="bulk_import">
+    {{ bulk_import_form.role_criteria }}
+    {{ bulk_import_form.skill_criteria }}
+    <button type="submit">Auto Import</button>
+</form>
+
 <h3>Added Persons</h3>
 {% if poll_persons %}
 <ul>
     {% for pp in poll_persons %}
-    <li>{{ pp.person.first_name }} {{ pp.person.last_name }}</li>
+    <li>
+        {{ pp.person.first_name }} {{ pp.person.last_name }}
+        <form method="post" action="{% url 'syncope:poll_person_remove' url_username poll.pk pp.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit">Remove</button>
+        </form>
+    </li>
     {% endfor %}
 </ul>
 {% else %}

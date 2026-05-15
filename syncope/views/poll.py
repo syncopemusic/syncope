@@ -2,10 +2,12 @@ from django.views.generic import ListView, DetailView, UpdateView, View, DeleteV
 from django.shortcuts import get_object_or_404, render, redirect
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+from django.contrib import messages
 from django.urls import reverse
 from django.http import HttpResponseForbidden
-from syncope.models import CustomUser, PollAttendance, Poll, PollPerson, PollEvent, PollAttendanceType
-from syncope.forms import PollCreateForm, PollPersonForm, PollAttendanceForm, PollEventForm
+from syncope.models import CustomUser, PollAttendance, Poll, PollPerson, PollEvent, PollAttendanceType, Person
+from syncope.forms import PollCreateForm, PollPersonForm, PollAttendanceForm, PollEventForm, PollBulkImportForm
 from syncope.permissions import AccessControl
 
 
@@ -25,6 +27,11 @@ class PollListView(ListView):
     def get_queryset(self):
         org_user = get_object_or_404(CustomUser, username=self.kwargs.get("username"))
         return Poll.objects.filter(user=org_user).select_related('user').order_by('-updated_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.kwargs.get('username')
+        return context
 
 
 @method_decorator(login_required, name="dispatch")
@@ -48,10 +55,6 @@ class PollCreateUpdateView(PollAdminMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context["url_username"] = self.kwargs.get("username")
         return context
-
-    def form_valid(self, form):
-        return super().form_valid(form)
-
 
     def get_success_url(self):
         return reverse("syncope:poll_basic", kwargs={
@@ -79,10 +82,16 @@ class PollBasicView(PollAdminMixin, DetailView):
 class PollDeleteView(PollAdminMixin, DeleteView):
     model = Poll
     template_name = "syncope/poll_confirm_delete.html"
+    context_object_name = "poll"
 
     def get_queryset(self):
         org_user = get_object_or_404(CustomUser, username=self.kwargs.get("username"))
         return Poll.objects.filter(user=org_user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.kwargs.get('username')
+        return context
 
     def get_success_url(self):
         return reverse("syncope:poll_list", kwargs={
@@ -109,6 +118,7 @@ class PollPersonView(PollAdminMixin, View):
         form = PollPersonForm(initial={'poll': self.poll}, org_user=self.org_user, poll=self.poll, search_q=q or None)
         return render(request, self.template_name, {
             'form': form,
+            'bulk_import_form': PollBulkImportForm(),
             'poll': self.poll,
             'poll_persons': self.poll.poll_persons.select_related('person'),
             'url_username': username,
@@ -116,16 +126,46 @@ class PollPersonView(PollAdminMixin, View):
         })
 
     def post(self, request, username, pk):
+        if request.POST.get('action') == 'bulk_import':
+            return self.bulk_import_persons(request, username, pk)
         form = PollPersonForm(request.POST, org_user=self.org_user, poll=self.poll)
         if form.is_valid():
             form.save()
             return redirect('syncope:poll_persons', username=username, pk=pk)
         return render(request, self.template_name, {
             'form': form,
+            'bulk_import_form': PollBulkImportForm(),
             'poll': self.poll,
             'poll_persons': self.poll.poll_persons.select_related('person'),
             'url_username': username,
         })
+
+    def bulk_import_persons(self, request, username, pk):
+        """Auto-import members filtered by role and/or skill."""
+        role_criteria = request.POST.get('role_criteria')
+        skill_criteria = request.POST.get('skill_criteria')
+
+        persons = Person.objects.in_org_user(self.org_user)
+
+        if role_criteria and role_criteria != 'all':
+            persons = persons.filter(roles__title=role_criteria)
+
+        if skill_criteria and skill_criteria != 'all':
+            persons = persons.filter(skills__title=skill_criteria)
+
+        existing_person_ids = self.poll.poll_persons.values_list('person_id', flat=True)
+        persons = persons.exclude(id__in=existing_person_ids).distinct()
+
+        poll_persons = [PollPerson(poll=self.poll, person=person) for person in persons]
+
+        created_count = len(poll_persons)
+        if created_count > 0:
+            PollPerson.objects.bulk_create(poll_persons, ignore_conflicts=True)
+            messages.success(request, f'Successfully imported {created_count} persons.')
+        else:
+            messages.info(request, 'No new persons to import.')
+
+        return redirect('syncope:poll_persons', username=username, pk=pk)
 
 
 @method_decorator(login_required, name="dispatch")
@@ -159,6 +199,37 @@ class PollEventView(PollAdminMixin, View):
             'poll': self.poll,
             'poll_events': self.poll.poll_events.select_related('event_type'),
             'url_username': username,
+        })
+
+
+@method_decorator(login_required, name="dispatch")
+class PollEventUpdateView(PollAdminMixin, UpdateView):
+    """Edit an existing poll event slot."""
+    model = PollEvent
+    form_class = PollEventForm
+    template_name = "syncope/poll_event.html"
+    pk_url_kwarg = "event_pk"
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        self.org_user = get_object_or_404(CustomUser, username=kwargs['username'])
+        self.poll = get_object_or_404(Poll, pk=kwargs['pk'], user=self.org_user)
+
+    def get_object(self, queryset=None):
+        return get_object_or_404(PollEvent, pk=self.kwargs['event_pk'], poll=self.poll)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['poll'] = self.poll
+        context['poll_events'] = self.poll.poll_events.select_related('event_type')
+        context['url_username'] = self.kwargs['username']
+        context['editing'] = True
+        return context
+
+    def get_success_url(self):
+        return reverse("syncope:poll_events", kwargs={
+            "username": self.kwargs["username"],
+            "pk": self.kwargs["pk"]
         })
 
 
@@ -201,6 +272,7 @@ class PollEventAttendanceView(View):
             'poll': self.poll,
             'poll_events': poll_events,
             'table_rows': table_rows,
+            'url_username': username,
         })
 
     def post(self, request, username, pk):
@@ -257,3 +329,25 @@ class PollDetailView(DetailView):
         return context
 
     # accessible using special link to public
+
+
+@require_POST
+@login_required
+def poll_person_remove(request, username, pk, person_pk):
+    org_user = get_object_or_404(CustomUser, username=username)
+    if not AccessControl.has_permission(request.user, "create", username):
+        return HttpResponseForbidden("Only admins can manage polls.")
+    poll_person = get_object_or_404(PollPerson, pk=person_pk, poll__pk=pk, poll__user=org_user)
+    poll_person.delete()
+    return redirect('syncope:poll_persons', username=username, pk=pk)
+
+
+@require_POST
+@login_required
+def poll_event_remove(request, username, pk, event_pk):
+    org_user = get_object_or_404(CustomUser, username=username)
+    if not AccessControl.has_permission(request.user, "create", username):
+        return HttpResponseForbidden("Only admins can manage polls.")
+    poll_event = get_object_or_404(PollEvent, pk=event_pk, poll__pk=pk, poll__user=org_user)
+    poll_event.delete()
+    return redirect('syncope:poll_events', username=username, pk=pk)

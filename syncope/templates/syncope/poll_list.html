@@ -13,6 +13,8 @@
     <li>
         <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">{{ poll.title }}</a>
         <small>Updated: {{ poll.updated_at|date:"Y-m-d H:i" }}</small>
+        <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Results</a> |
+        <a href="{% url 'syncope:poll_attendance' url_username poll.pk %}">External attendance link</a>
     </li>
     {% endfor %}
 </ul>

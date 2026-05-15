@@ -63,11 +63,11 @@ class Instrument(models.Model):
 
 
 class AttendanceType(models.Model):
+    TBD = 0
     PRESENT = 1
     WORK_SCHOOL = 2
     ILLNESS = 3
     PRIVATE_VACATION = 4
-    TBD = 5
 
     name = models.CharField("attendance designation", max_length=90, unique=True)
     additional_notes = models.CharField(
@@ -632,10 +632,13 @@ class Poll(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return self.title
+
 
 class PollPerson(models.Model):
     """Persons that are invited to the poll."""
-    poll = models.ForeignKey(Poll, on_delete=models.PROTECT, related_name="poll_persons")
+    poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name="poll_persons")
     person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="poll_persons")
 
     class Meta:
@@ -645,13 +648,10 @@ class PollPerson(models.Model):
                 name="unique_person_per_poll"
             )
         ]
-        indexes = [
-            models.Index(fields=['poll', 'person']),
-        ]
 
 
 class PollEvent(models.Model):
-    poll = models.ForeignKey(Poll, on_delete=models.PROTECT, related_name="poll_events")
+    poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name="poll_events")
     location = models.TextField(blank=True, null=True)
     started_at = models.DateTimeField("start date hour")
     ended_at = models.DateTimeField("end date hour")

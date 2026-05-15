@@ -3,7 +3,7 @@
 {% block title %}Poll Events — {{ poll.title }}{% endblock %}
 
 {% block content %}
-<h2>{{ poll.title }} — Event Slots</h2>
+<h2>{{ poll.title }} — {% if editing %}Edit Event Slot{% else %}Event Slots{% endif %}</h2>
 
 <form method="post">
     {% csrf_token %}
@@ -19,12 +19,13 @@
         <label for="{{ form.started_at.id_for_label }}">{{ form.started_at.label }}</label>
         {{ form.started_at }}
         {% if form.started_at.errors %}<span class="error">{{ form.started_at.errors }}</span>{% endif %}
+            <small>Autofill +3h</small>
     </div>
-
-    <div class="form-group">
+<div class="form-group"></div>
         <label for="{{ form.ended_at.id_for_label }}">{{ form.ended_at.label }}</label>
         {{ form.ended_at }}
         {% if form.ended_at.errors %}<span class="error">{{ form.ended_at.errors }}</span>{% endif %}
+
     </div>
 
     <div class="form-group">
@@ -39,7 +40,7 @@
         {% if form.details.errors %}<span class="error">{{ form.details.errors }}</span>{% endif %}
     </div>
 
-    <button type="submit">Add Event Slot</button>
+    <button type="submit">{% if editing %}Update{% else %}Add Event Slot{% endif %}</button>
 </form>
 
 <h3>Added Event Slots</h3>
@@ -48,15 +49,42 @@
     {% for pe in poll_events %}
     <li>
         {{ pe.event_type.name }}:
-        {{ pe.started_at|date:"Y-m-d H:i" }} - {{ pe.ended_at|date:"H:i" }}
+        {{ pe.started_at|date:"d M - H:i" }} - {{ pe.ended_at|date:"H:i" }}
         {% if pe.location %}({{ pe.location }}){% endif %}
+        {% if pe.details %}<small>{{ pe.details }}</small>{% endif %}
+        <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}">Edit</a>
+        <form method="post" action="{% url 'syncope:poll_event_remove' url_username poll.pk pe.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit">Remove</button>
+        </form>
     </li>
     {% endfor %}
 </ul>
 {% else %}
 <p>No event slots added yet.</p>
 {% endif %}
+        <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">Basics</a> |
+        <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Results</a> |
+        <a href="{% url 'syncope:poll_attendance' url_username poll.pk %}">External attendance link</a>
+{% endblock %}
 
-<a href="{% url 'syncope:poll_basic' url_username poll.pk %}">Back to Poll</a>
-    <a href="{% url 'syncope:poll_attendance' url_username poll.pk %}">Continue to attendance</a>
+{% block extra_js %}
+<script>
+$(function () {
+    $('#id_started_at').on('change', function () {
+        if ($('#id_ended_at').val()) return;
+        var val = $(this).val();
+        if (!val) return;
+        var d = new Date(val);
+        d.setHours(d.getHours() + 3);
+        var pad = function (n) { return String(n).padStart(2, '0'); };
+        var formatted = d.getFullYear() + '-' +
+                        pad(d.getMonth() + 1) + '-' +
+                        pad(d.getDate()) + 'T' +
+                        pad(d.getHours()) + ':' +
+                        pad(d.getMinutes());
+        $('#id_ended_at').val(formatted);
+    });
+});
+</script>
 {% endblock %}

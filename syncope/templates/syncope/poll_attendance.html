@@ -85,8 +85,14 @@
                 {% for cell in row.event_cells %}
                 <div style="display: flex; flex-direction: column; gap: 0.25rem; align-items: center;">
                     <div style="font-size: 0.7rem; text-align: center; width: 40px;">
-                        <span style="display: block; font-weight: bold;">{{ cell.event.event_type.name|truncatewords:"1" }}</span>
-                        <span style="display: block;">{{ cell.event.started_at|date:"m/d" }}</span>
+                        <span style="display: block; font-weight: bold;">{{ cell.event.event_type.name|truncatechars:10 }}</span>
+                        <span style="display: block;">{{ cell.event.started_at|date:"m/d H:i" }}</span>
+                        {% if cell.event.location %}
+                        <span style="display: block; color: #636e72;">{{ cell.event.location|truncatechars:20 }}</span>
+                        {% endif %}
+                        {% if cell.event.details %}
+                        <span style="display: block; color: #636e72; font-style: italic;">{{ cell.event.details|truncatechars:30 }}</span>
+                        {% endif %}
                     </div>
                     <div class="attendance-cell att-type-{{ cell.attendance_type_id }}"
                          data-type-id="{{ cell.attendance_type_id }}"

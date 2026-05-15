@@ -646,6 +646,12 @@ class PollPersonForm(forms.ModelForm):
 
 
 class PollEventForm(forms.ModelForm):
+    event_type = forms.ModelChoiceField(
+        queryset=EventType.objects.all(),
+        empty_label=None,
+        initial=EventType.REHEARSAL,
+    )
+
     class Meta:
         model = PollEvent
         fields = [
@@ -677,3 +683,17 @@ class PollAttendanceForm(forms.ModelForm):
         widgets = {
             'comment': forms.Textarea(attrs={'rows': 1}),
         }
+
+
+class PollBulkImportForm(forms.Form):
+    role_criteria = forms.ChoiceField(required=False, label='Role')
+    skill_criteria = forms.ChoiceField(required=False, label='Skill')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['role_criteria'].choices = [('all', 'All roles')] + list(
+            Role.objects.values_list('title', 'title')
+        )
+        self.fields['skill_criteria'].choices = [('all', 'All skills')] + list(
+            Skill.objects.values_list('title', 'title')
+        )
