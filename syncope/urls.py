@@ -11,7 +11,7 @@ from .views.project import ProjectDeleteView, ProjectCreateView, ProjectDetailVi
 from .views.project import project_add_guest, project_add_event, project_remove_event, project_remove_song, project_add_song, project_remove_guest
 from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongUpdateView, SongQuoteView
 from .views.user_login_register import SignUp, UserLoginView, UserLogoutView
-from .views.poll import PollListView, PollCreateUpdateView, PollDetailView, PollDeleteView, PollBasicView, PollPersonView, PollEventView, PollEventUpdateView, PollEventAttendanceView, poll_person_remove, poll_event_remove
+from .views.poll import PollListView, PollCreateUpdateView, PollDetailView, PollDeleteView, PollBasicView, PollPersonView, PollEventView, PollEventUpdateView, PollEventAttendanceView, PollPersonAttendanceView, poll_person_remove, poll_event_remove
 
 
 app_name = 'syncope'
@@ -75,9 +75,12 @@ urlpatterns = [
     path('<str:username>/projects/<int:pk>/guests/add/', project_add_guest, name='project_add_guest'),
     path('<str:username>/projects/<int:pk>/guests/<int:guest_pk>/remove/', project_remove_guest, name='project_remove_guest'),
 
+    path("polls/attendance/<uuid:token>/", PollPersonAttendanceView.as_view(), name="poll_person_attendance"),
+
     path("<str:username>/polls/", PollListView.as_view(), name="poll_list"),
     path("<str:username>/polls/create/", PollCreateUpdateView.as_view(), name="poll_create"),
-    path("<str:username>/polls/<int:pk>/", PollBasicView.as_view(), name="poll_basic"),
+    path("<str:username>/polls/<int:pk>/", PollDetailView.as_view(), name="poll_detail"),
+    path("<str:username>/polls/<int:pk>/overview/", PollBasicView.as_view(), name="poll_basic"),
     path("<str:username>/polls/<int:pk>/update/", PollCreateUpdateView.as_view(), name="poll_update"),
     path("<str:username>/polls/<int:pk>/delete/", PollDeleteView.as_view(), name="poll_delete"),
     path("<str:username>/polls/<int:pk>/persons/", PollPersonView.as_view(), name="poll_persons"),
@@ -86,6 +89,5 @@ urlpatterns = [
     path("<str:username>/polls/<int:pk>/events/<int:event_pk>/edit/", PollEventUpdateView.as_view(), name="poll_event_update"),
     path("<str:username>/polls/<int:pk>/events/<int:event_pk>/remove/", poll_event_remove, name="poll_event_remove"),
     path("<str:username>/polls/<int:pk>/attendance/", PollEventAttendanceView.as_view(), name="poll_attendance"),
-    path("<str:username>/polls/<int:pk>/overview/", PollDetailView.as_view(), name="poll_detail"),
 
 ]

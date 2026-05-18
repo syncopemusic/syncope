@@ -43,29 +43,48 @@
     <button type="submit">{% if editing %}Update{% else %}Add Event Slot{% endif %}</button>
 </form>
 
-<h3>Added Event Slots</h3>
+<h3>Added Event Slots ({{ poll_events|length }})</h3>
 {% if poll_events %}
-<ul>
-    {% for pe in poll_events %}
-    <li>
-        {{ pe.event_type.name }}:
-        {{ pe.started_at|date:"d M - H:i" }} - {{ pe.ended_at|date:"H:i" }}
-        {% if pe.location %}({{ pe.location }}){% endif %}
-        {% if pe.details %}<small>{{ pe.details }}</small>{% endif %}
-        <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}">Edit</a>
-        <form method="post" action="{% url 'syncope:poll_event_remove' url_username poll.pk pe.pk %}" style="display:inline;">
-            {% csrf_token %}
-            <button type="submit">Remove</button>
-        </form>
-    </li>
-    {% endfor %}
-</ul>
+<div style="max-width: 1000px; overflow-x: auto;">
+    <table style="border-collapse: collapse; width: 100%;">
+        <thead>
+            <tr style="background-color: #f8f9fa;">
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; width: 50px;">#</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Event Type</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Date</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Start - End</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Location</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Details</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 140px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pe in poll_events %}
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{{ forloop.counter }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ pe.event_type.name }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ pe.started_at|date:"d M" }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ pe.started_at|date:"H:i" }} - {{ pe.ended_at|date:"H:i" }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{% if pe.location %}{{ pe.location }}{% else %}<em>—</em>{% endif %}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{% if pe.details %}{{ pe.details }}{% else %}<em>—</em>{% endif %}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                    <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}" style="margin-right: 0.5rem;">Edit</a>
+                    <form method="post" action="{% url 'syncope:poll_event_remove' url_username poll.pk pe.pk %}" style="display:inline;" onclick="return confirm('Do you want to remove {{ pe.event_type.name }} on {{ pe.started_at|date:'d M' }}?')">
+                        {% csrf_token %}
+                        <button type="submit" style="padding: 4px 8px; font-size: 0.9rem;">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% else %}
 <p>No event slots added yet.</p>
 {% endif %}
-        <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">Basics</a> |
-        <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Results</a> |
-        <a href="{% url 'syncope:poll_attendance' url_username poll.pk %}">External attendance link</a>
+        <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">Overview</a> |
+        <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Results</a>
+
 {% endblock %}
 
 {% block extra_js %}

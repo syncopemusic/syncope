@@ -4,6 +4,11 @@
 
 {% block content %}
 <style>
+.event-col {
+    width: 60px;
+    text-align: center;
+}
+
 .attendance-cell {
     width: 40px;
     height: 40px;
@@ -16,6 +21,7 @@
     font-size: 0.9rem;
     font-weight: bold;
     transition: background-color 0.15s ease;
+    margin: 0 auto;
 }
 
 .attendance-cell:hover {
@@ -33,7 +39,42 @@
     border: 1px solid #ddd;
     border-radius: 3px;
     box-sizing: border-box;
-    width: 150px;
+    width: 55px;
+}
+
+.event-header-cell {
+    padding: 8px 4px;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    vertical-align: middle;
+}
+
+.sticky-col {
+    position: sticky;
+    left: 0;
+    background-color: #f8f9fa;
+    z-index: 1;
+    width: 100px;
+    white-space: nowrap;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+tbody td {
+    text-align: center;
 }
 
 @media (max-width: 768px) {
@@ -43,20 +84,29 @@
         font-size: 0.8rem;
     }
     .comment-input {
-        width: 100px;
-    }
-    .participant-row {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    .save-button {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.8rem;
+        width: 40px;
+        font-size: 0.7rem;
     }
 }
 </style>
 
 <h2>{{ poll.title }} — Attendance</h2>
+
+{#{% if messages %}#}
+{#<div style="margin-bottom: 1rem;">#}
+{#    {% for message in messages %}#}
+{#    <div style="padding: 12px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">#}
+{#        {{ message }}#}
+{#    </div>#}
+{#    {% endfor %}#}
+{#</div>#}
+{#{% endif %}#}
+
+{% if viewing_as %}
+<p style="font-size: 0.9rem; color: #636e72; margin-bottom: 1rem;">
+    Filling in for: <strong>{{ viewing_as.person.first_name }} {{ viewing_as.person.last_name }}</strong>
+</p>
+{% endif %}
 
 {% if poll.description %}
 <p>{{ poll.description }}</p>
@@ -66,7 +116,7 @@
     <strong>Legend:</strong>
     <span class="attendance-cell att-type-0" style="width: auto; height: auto; padding: 2px 6px;">TBD</span>
     <span class="attendance-cell att-type-1" style="width: auto; height: auto; padding: 2px 6px;">✓</span>
-    <span class="attendance-cell att-type-2" style="width: auto; height: auto; padding: 2px 6px;">?</span>
+    <span class="attendance-cell att-type-2" style="width: auto; height: auto; padding: 2px 6px;">(✓)</span>
     <span class="attendance-cell att-type-3" style="width: auto; height: auto; padding: 2px 6px;">✗</span>
     <em>(Click to cycle)</em>
 </div>
@@ -74,55 +124,99 @@
 <form method="post">
     {% csrf_token %}
 
-    {% for row in table_rows %}
-    <div style="margin-bottom: 1.5rem; border-top: 2px solid #ddd; padding-top: 1rem;">
-        <div class="participant-row" style="display: flex; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
-            <div style="min-width: 120px;">
-                <strong>{{ row.person.person.first_name }} {{ row.person.person.last_name }}</strong>
-            </div>
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                {# Event Type Row #}
+                <tr>
+                    <th class="sticky-col">Event</th>
+                    {% for event in poll_events %}
+                    <th class="event-col event-header-cell">{{ event.event_type.name|truncatechars:15 }}</th>
+                    {% endfor %}
+                </tr>
 
-            <div style="display: flex; gap: 0.5rem; align-items: flex-start; flex-wrap: wrap;">
-                {% for cell in row.event_cells %}
-                <div style="display: flex; flex-direction: column; gap: 0.25rem; align-items: center;">
-                    <div style="font-size: 0.7rem; text-align: center; width: 40px;">
-                        <span style="display: block; font-weight: bold;">{{ cell.event.event_type.name|truncatechars:10 }}</span>
-                        <span style="display: block;">{{ cell.event.started_at|date:"m/d H:i" }}</span>
-                        {% if cell.event.location %}
-                        <span style="display: block; color: #636e72;">{{ cell.event.location|truncatechars:20 }}</span>
-                        {% endif %}
-                        {% if cell.event.details %}
-                        <span style="display: block; color: #636e72; font-style: italic;">{{ cell.event.details|truncatechars:30 }}</span>
-                        {% endif %}
-                    </div>
-                    <div class="attendance-cell att-type-{{ cell.attendance_type_id }}"
-                         data-type-id="{{ cell.attendance_type_id }}"
-                         data-event-id="{{ cell.event.id }}"
-                         data-person-id="{{ cell.person.id }}"
-                         onclick="cycleAttendance(this)"
-                         title="">
-                        <input type="hidden"
-                               name="attendance_{{ cell.event.id }}_{{ cell.person.id }}"
-                               value="{{ cell.attendance_type_id }}">
-                        <span class="att-icon"></span>
-                    </div>
-                    <input type="text"
-                           name="comment_{{ cell.event.id }}_{{ cell.person.id }}"
-                           class="comment-input"
-                           placeholder="note"
-                           value="{{ cell.comment }}"
-                           style="width: 40px; font-size: 0.7rem; padding: 2px;">
-                </div>
-                {% endfor %}
-            </div>
+                {# Date Row #}
+                <tr>
+                    <th class="sticky-col">Date</th>
+                    {% for event in poll_events %}
+                    <th class="event-col event-header-cell">{{ event.started_at|date:"d M" }}</th>
+                    {% endfor %}
+                </tr>
 
-            <button type="submit" name="save_participant" value="{{ row.person.id }}" class="save-button" style="padding: 0.5rem 1rem; white-space: nowrap;">Save</button>
-        </div>
+                {# Time Row #}
+                <tr>
+                    <th class="sticky-col">Starts - ends</th>
+                    {% for event in poll_events %}
+                    <th class="event-col event-header-cell">{{ event.started_at|date:"H:i" }} - {{ event.ended_at|date:"H:i" }}</th>
+                    {% endfor %}
+                </tr>
+
+                {# Location Row #}
+                <tr>
+                    <th class="sticky-col">Location</th>
+                    {% for event in poll_events %}
+                    <th class="event-col event-header-cell">
+                        {% if event.location %}{{ event.location|truncatechars:20 }}{% else %}<em>—</em>{% endif %}
+                    </th>
+                    {% endfor %}
+                </tr>
+
+                {# Details Row #}
+                {% if poll_events|length > 0 %}
+                <tr>
+                    <th class="sticky-col">Details</th>
+                    {% for event in poll_events %}
+                    <th class="event-col event-header-cell">
+                        {% if event.details %}{{ event.details|truncatechars:20 }}{% else %}<em>—</em>{% endif %}
+                    </th>
+                    {% endfor %}
+                </tr>
+                {% endif %}
+            </thead>
+
+            <tbody>
+                {# Attendance Row #}
+                <tr>
+                    <td class="sticky-col"><strong>Attendance</strong></td>
+                    {% for cell in table_rows.0.event_cells %}
+                    <td class="event-col">
+                        <div class="attendance-cell att-type-{{ cell.attendance_type_id }}"
+                             data-type-id="{{ cell.attendance_type_id }}"
+                             data-event-id="{{ cell.event.id }}"
+                             data-person-id="{{ cell.person.id }}"
+                             onclick="cycleAttendance(this)"
+                             title="">
+                            <input type="hidden"
+                                   name="attendance_{{ cell.event.id }}_{{ cell.person.id }}"
+                                   value="{{ cell.attendance_type_id }}">
+                            <span class="att-icon"></span>
+                        </div>
+                    </td>
+                    {% endfor %}
+                </tr>
+
+                {# Comment Row #}
+                <tr>
+                    <td class="sticky-col"><strong>Note</strong></td>
+                    {% for cell in table_rows.0.event_cells %}
+                    <td class="event-col">
+                        <input type="text"
+                               name="comment_{{ cell.event.id }}_{{ cell.person.id }}"
+                               class="comment-input"
+                               placeholder="note"
+                               value="{{ cell.comment }}">
+                    </td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
     </div>
-    {% endfor %}
+
+    <button type="submit" name="save_participant" value="{{ table_rows.0.person.id }}" style="margin-top: 1rem; padding: 0.5rem 1rem;">Save</button>
 </form>
 
 <div style="margin-top: 2rem; padding-top: 1rem; border-top: 2px solid #ddd;">
-    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">View overview</a>
+    <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">View overview</a>
 </div>
 
 <script>
@@ -130,7 +224,7 @@ const CYCLE_ORDER = [0, 1, 2, 3];  // TBD, YES, MAYBE, NO
 const TYPE_META = {
     0: { label: 'TBD',    icon: '',   cls: 'att-type-0' },
     1: { label: 'YES',    icon: '✓',  cls: 'att-type-1' },
-    2: { label: 'MAYBE',  icon: '?',  cls: 'att-type-2' },
+    2: { label: 'MAYBE',  icon: '(✓)',  cls: 'att-type-2' },
     3: { label: 'NO',     icon: '✗',  cls: 'att-type-3' },
 };
 

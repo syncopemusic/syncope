@@ -20,6 +20,13 @@
         {% if form.description.errors %}<span class="error">{{ form.description.errors }}</span>{% endif %}
     </div>
 
+    {% if not form.instance.pk %}
+    <div class="form-group">
+        {{ form.import_active_members }}
+        <label for="{{ form.import_active_members.id_for_label }}">{{ form.import_active_members.label }}</label>
+    </div>
+    {% endif %}
+
     <button type="submit">Save</button>
     <a href="{% url 'syncope:poll_list' url_username %}">Cancel</a>
 </form>

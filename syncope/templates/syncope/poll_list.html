@@ -11,10 +11,13 @@
 <ul>
     {% for poll in polls %}
     <li>
-        <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">{{ poll.title }}</a>
+        <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">{{ poll.title }}</a>
         <small>Updated: {{ poll.updated_at|date:"Y-m-d H:i" }}</small>
-        <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Results</a> |
-        <a href="{% url 'syncope:poll_attendance' url_username poll.pk %}">External attendance link</a>
+        <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">Overview</a>
+        <form method="post" action="{% url 'syncope:poll_delete' url_username poll.pk %}" style="display:inline;" onclick="return confirm('Remove poll &quot;{{ poll.title }}&quot;?')">
+            {% csrf_token %}
+            <button type="submit" style="padding: 4px 8px; font-size: 0.9rem;">Delete</button>
+        </form>
     </li>
     {% endfor %}
 </ul>

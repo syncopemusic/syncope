@@ -6,7 +6,11 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.urls import reverse
 from django.http import HttpResponseForbidden
-from syncope.models import CustomUser, PollAttendance, Poll, PollPerson, PollEvent, PollAttendanceType, Person
+from django.db.models import Q
+from django.utils import timezone
+from django.utils.safestring import mark_safe
+from datetime import timedelta
+from syncope.models import CustomUser, PollAttendance, Poll, PollPerson, PollEvent, PollAttendanceType, Person, Role
 from syncope.forms import PollCreateForm, PollPersonForm, PollAttendanceForm, PollEventForm, PollBulkImportForm
 from syncope.permissions import AccessControl
 
@@ -55,6 +59,21 @@ class PollCreateUpdateView(PollAdminMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context["url_username"] = self.kwargs.get("username")
         return context
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if 'pk' not in self.kwargs and form.cleaned_data.get('import_active_members'):
+            today = timezone.now().date()
+            persons = Person.objects.in_org_user(self.org_user).filter(
+                membership_period__role_id=Role.MEMBER,
+                membership_period__started_at__lte=today
+            ).filter(
+                Q(membership_period__ended_at__isnull=True) | Q(membership_period__ended_at__gte=today)
+            ).distinct()
+            poll_persons = [PollPerson(poll=self.object, person=person) for person in persons]
+            if poll_persons:
+                PollPerson.objects.bulk_create(poll_persons, ignore_conflicts=True)
+        return response
 
     def get_success_url(self):
         return reverse("syncope:poll_basic", kwargs={
@@ -181,23 +200,44 @@ class PollEventView(PollAdminMixin, View):
         self.poll = get_object_or_404(Poll, pk=kwargs['pk'], user=self.org_user)
 
     def get(self, request, username, pk):
-        form = PollEventForm(initial={'poll': self.poll})
+        last_event = self.poll.poll_events.order_by('-created_at').first()
+        initial = {'poll': self.poll}
+        if last_event:
+            initial.update({
+                'event_type': last_event.event_type,
+                'started_at': last_event.started_at + timedelta(days=1),
+                'ended_at': last_event.ended_at + timedelta(days=1) if last_event.ended_at else None,
+                'location': last_event.location,
+                'details': last_event.details,
+            })
+        form = PollEventForm(initial=initial)
         return render(request, self.template_name, {
             'form': form,
             'poll': self.poll,
-            'poll_events': self.poll.poll_events.select_related('event_type'),
+            'poll_events': self.poll.poll_events.select_related('event_type').order_by('started_at'),
             'url_username': username,
         })
 
     def post(self, request, username, pk):
         form = PollEventForm(request.POST)
         if form.is_valid():
-            form.save()
+            event = form.save()
+            date_str = event.started_at.strftime('%d %b')
+            time_str = event.started_at.strftime('%H:%M')
+            end_time_str = event.ended_at.strftime('%H:%M') if event.ended_at else ''
+            msg = f"Event slot added: {event.event_type.name} on {date_str} at {time_str}"
+            if end_time_str:
+                msg += f" - {end_time_str}"
+            if event.location:
+                msg += f" (Location: {event.location})"
+            if event.details:
+                msg += f" - {event.details}"
+            messages.success(request, msg)
             return redirect('syncope:poll_events', username=username, pk=pk)
         return render(request, self.template_name, {
             'form': form,
             'poll': self.poll,
-            'poll_events': self.poll.poll_events.select_related('event_type'),
+            'poll_events': self.poll.poll_events.select_related('event_type').order_by('started_at'),
             'url_username': username,
         })
 
@@ -221,16 +261,97 @@ class PollEventUpdateView(PollAdminMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['poll'] = self.poll
-        context['poll_events'] = self.poll.poll_events.select_related('event_type')
+        context['poll_events'] = self.poll.poll_events.select_related('event_type').order_by('started_at')
         context['url_username'] = self.kwargs['username']
         context['editing'] = True
         return context
+
+    def form_valid(self, form):
+        event = form.save()
+        date_str = event.started_at.strftime('%d %b')
+        time_str = event.started_at.strftime('%H:%M')
+        end_time_str = event.ended_at.strftime('%H:%M') if event.ended_at else ''
+        msg = f"Event slot updated: {event.event_type.name} on {date_str} at {time_str}"
+        if end_time_str:
+            msg += f" - {end_time_str}"
+        if event.location:
+            msg += f" (Location: {event.location})"
+        if event.details:
+            msg += f" - {event.details}"
+        messages.warning(self.request, msg)
+        return super().form_valid(form)
 
     def get_success_url(self):
         return reverse("syncope:poll_events", kwargs={
             "username": self.kwargs["username"],
             "pk": self.kwargs["pk"]
         })
+
+
+class PollPersonAttendanceView(View):
+    """Public view — individual person fills in attendance via UUID token."""
+    template_name = "syncope/poll_attendance.html"
+
+    def _get_context(self, poll_person):
+        poll = poll_person.poll
+        poll_events = list(poll.poll_events.select_related('event_type').order_by('started_at'))
+        attendances = {
+            pa.poll_event_id: pa
+            for pa in PollAttendance.objects.filter(poll_person=poll_person).select_related('poll_attendance_type')
+        }
+        event_cells = [
+            {
+                'event': event,
+                'person': poll_person,
+                'attendance_type_id': attendances[event.id].poll_attendance_type_id if event.id in attendances else 0,
+                'comment': attendances[event.id].comment if event.id in attendances else '',
+            }
+            for event in poll_events
+        ]
+        return {
+            'poll': poll,
+            'poll_events': poll_events,
+            'table_rows': [{'person': poll_person, 'event_cells': event_cells}],
+            'url_username': poll.user.username,
+            'viewing_as': poll_person,
+        }
+
+    def get(self, request, token):
+        poll_person = get_object_or_404(PollPerson, token=token)
+        return render(request, self.template_name, self._get_context(poll_person))
+
+    def post(self, request, token):
+        poll_person = get_object_or_404(PollPerson, token=token)
+        saved_count = 0
+        updated_count = 0
+        tbd_count = 0
+        for event in poll_person.poll.poll_events.all():
+            type_id_str = request.POST.get(f'attendance_{event.id}_{poll_person.id}')
+            comment = request.POST.get(f'comment_{event.id}_{poll_person.id}', '').strip()
+            if type_id_str is not None:
+                type_id = int(type_id_str)
+                attendance, created = PollAttendance.objects.update_or_create(
+                    poll_person=poll_person,
+                    poll_event=event,
+                    defaults={
+                        'poll_attendance_type_id': type_id,
+                        'comment': comment or None,
+                    }
+                )
+                if type_id == 0:
+                    tbd_count += 1
+                elif created:
+                    saved_count += 1
+                else:
+                    updated_count += 1
+
+        if updated_count > 0 and saved_count == 0:
+            messages.success(request, f'Updated {updated_count} of events')
+        elif updated_count == 0 and saved_count > 0:
+            messages.success(request, f'Saved {saved_count} of events, {tbd_count} still waiting to be filled')
+        else:
+            messages.success(request, f'Saved {saved_count} of events, updated {updated_count} of events, {tbd_count} still waiting to be filled')
+        return redirect('syncope:poll_person_attendance', token=token)
 
 
 class PollEventAttendanceView(View):
@@ -278,6 +399,7 @@ class PollEventAttendanceView(View):
     def post(self, request, username, pk):
         person_pk = request.POST.get('save_participant')
         poll_person = get_object_or_404(PollPerson, pk=person_pk, poll=self.poll)
+        edited_dates = []
         for event in self.poll.poll_events.all():
             type_id_str = request.POST.get(f'attendance_{event.id}_{poll_person.id}')
             comment = request.POST.get(f'comment_{event.id}_{poll_person.id}', '').strip()
@@ -290,6 +412,11 @@ class PollEventAttendanceView(View):
                         'comment': comment or None,
                     }
                 )
+                edited_dates.append(event.started_at.strftime('%d %b'))
+        if edited_dates:
+            dates_str = ', '.join(edited_dates)
+            msg = mark_safe(f'Edited attendance for {poll_person.person.first_name} {poll_person.person.last_name} for dates <strong>{dates_str}</strong> successfully')
+            messages.success(request, msg)
         return redirect('syncope:poll_attendance', username=username, pk=pk)
 
 

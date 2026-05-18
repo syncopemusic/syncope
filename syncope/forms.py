@@ -609,6 +609,12 @@ EventResourceFormSet = inlineformset_factory(
 
 
 class PollCreateForm(forms.ModelForm):
+    import_active_members = forms.BooleanField(
+        required=False,
+        initial=True,
+        label='Import active members'
+    )
+
     class Meta:
         model = Poll
         fields = ['title', 'description']

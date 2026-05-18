@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.db.models import PROTECT, Q
 from django.utils import timezone
@@ -639,7 +640,8 @@ class Poll(models.Model):
 class PollPerson(models.Model):
     """Persons that are invited to the poll."""
     poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name="poll_persons")
-    person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="poll_persons")
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="poll_persons")
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
     class Meta:
         constraints = [
@@ -655,7 +657,7 @@ class PollEvent(models.Model):
     location = models.TextField(blank=True, null=True)
     started_at = models.DateTimeField("start date hour")
     ended_at = models.DateTimeField("end date hour")
-    event_type = models.ForeignKey(EventType, on_delete=models.PROTECT)
+    event_type = models.ForeignKey(EventType, on_delete=models.CASCADE)
     details = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -671,7 +673,7 @@ class PollEvent(models.Model):
 
 class PollAttendance(models.Model):
     """Combines all poll models."""
-    poll_event = models.ForeignKey(PollEvent, on_delete=models.PROTECT, related_name="poll_attendances")
-    poll_attendance_type = models.ForeignKey(PollAttendanceType, on_delete=models.PROTECT, related_name="poll_attendances")
-    poll_person = models.ForeignKey(PollPerson, on_delete=models.PROTECT, related_name="poll_attendances")
+    poll_event = models.ForeignKey(PollEvent, on_delete=models.CASCADE, related_name="poll_attendances")
+    poll_attendance_type = models.ForeignKey(PollAttendanceType, on_delete=models.CASCADE, related_name="poll_attendances")
+    poll_person = models.ForeignKey(PollPerson, on_delete=models.CASCADE, related_name="poll_attendances")
     comment = models.TextField(blank=True, null=True)
