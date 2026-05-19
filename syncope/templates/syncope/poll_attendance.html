@@ -17,15 +17,24 @@
     justify-content: center;
     cursor: pointer;
     user-select: none;
-    border-radius: 3px;
+    border-radius: 5px;
     font-size: 0.9rem;
     font-weight: bold;
-    transition: background-color 0.15s ease;
+    transition: all 0.15s ease;
     margin: 0 auto;
+    border: 2px solid rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .attendance-cell:hover {
-    opacity: 0.8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    border-color: rgba(0, 0, 0, 0.25);
+}
+
+.attendance-cell:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .att-type-0 { background-color: #dfe6e9; } /* TBD */
@@ -39,7 +48,7 @@
     border: 1px solid #ddd;
     border-radius: 3px;
     box-sizing: border-box;
-    width: 55px;
+    width: 100%;
 }
 
 .event-header-cell {
@@ -60,7 +69,6 @@
 
 table {
     border-collapse: collapse;
-    width: 100%;
 }
 
 th, td {
@@ -70,7 +78,11 @@ th, td {
 
 th {
     background-color: #f8f9fa;
-    font-weight: 600;
+    font-weight: 400;
+}
+
+th.bold-event-header {
+    font-weight: 700 !important;
 }
 
 tbody td {
@@ -82,25 +94,19 @@ tbody td {
         width: 32px;
         height: 32px;
         font-size: 0.8rem;
+        border: 1.5px solid rgba(0, 0, 0, 0.15);
+    }
+    .attendance-cell:hover {
+        transform: translateY(-1px);
     }
     .comment-input {
-        width: 40px;
+        width: 100%;
         font-size: 0.7rem;
     }
 }
 </style>
 
 <h2>{{ poll.title }} — Attendance</h2>
-
-{#{% if messages %}#}
-{#<div style="margin-bottom: 1rem;">#}
-{#    {% for message in messages %}#}
-{#    <div style="padding: 12px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">#}
-{#        {{ message }}#}
-{#    </div>#}
-{#    {% endfor %}#}
-{#</div>#}
-{#{% endif %}#}
 
 {% if viewing_as %}
 <p style="font-size: 0.9rem; color: #636e72; margin-bottom: 1rem;">
@@ -112,16 +118,16 @@ tbody td {
 <p>{{ poll.description }}</p>
 {% endif %}
 
-<div style="margin-bottom: 1rem; font-size: 0.85rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+<div style="margin-bottom: 1rem; font-size: 0.85rem; display: flex; gap: 0.75rem; flex-wrap: wrap; width: fit-content;">
     <strong>Legend:</strong>
-    <span class="attendance-cell att-type-0" style="width: auto; height: auto; padding: 2px 6px;">TBD</span>
+    <span class="attendance-cell att-type-0" style="width: auto; height: auto; padding: 2px 6px;">⚑</span>
     <span class="attendance-cell att-type-1" style="width: auto; height: auto; padding: 2px 6px;">✓</span>
     <span class="attendance-cell att-type-2" style="width: auto; height: auto; padding: 2px 6px;">(✓)</span>
     <span class="attendance-cell att-type-3" style="width: auto; height: auto; padding: 2px 6px;">✗</span>
     <em>(Click to cycle)</em>
 </div>
 
-<form method="post">
+<form method="post" style="min-width: 0;">
     {% csrf_token %}
 
     <div style="overflow-x: auto;">
@@ -131,7 +137,10 @@ tbody td {
                 <tr>
                     <th class="sticky-col">Event</th>
                     {% for event in poll_events %}
-                    <th class="event-col event-header-cell">{{ event.event_type.name|truncatechars:15 }}</th>
+                    <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %} [{{ event.event_type.id }}]"
+                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                        {{ event.event_type.name|truncatechars:7 }}
+                    </th>
                     {% endfor %}
                 </tr>
 
@@ -139,15 +148,21 @@ tbody td {
                 <tr>
                     <th class="sticky-col">Date</th>
                     {% for event in poll_events %}
-                    <th class="event-col event-header-cell">{{ event.started_at|date:"d M" }}</th>
+                    <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
+                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                        {% if event.same_date %}{{ event.started_at|date:"d M" }}{% else %}{{ event.started_at|date:"d M" }} <br> {{ event.ended_at|date:"d M" }}{% endif %}
+                    </th>
                     {% endfor %}
                 </tr>
 
                 {# Time Row #}
                 <tr>
-                    <th class="sticky-col">Starts - ends</th>
+                    <th class="sticky-col">Time</th>
                     {% for event in poll_events %}
-                    <th class="event-col event-header-cell">{{ event.started_at|date:"H:i" }} - {{ event.ended_at|date:"H:i" }}</th>
+                    <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
+                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                        {{ event.started_at|date:"H:i" }} <br> {{ event.ended_at|date:"H:i" }}
+                    </th>
                     {% endfor %}
                 </tr>
 
@@ -155,8 +170,9 @@ tbody td {
                 <tr>
                     <th class="sticky-col">Location</th>
                     {% for event in poll_events %}
-                    <th class="event-col event-header-cell">
-                        {% if event.location %}{{ event.location|truncatechars:20 }}{% else %}<em>—</em>{% endif %}
+                    <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
+                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                        {% if event.location %}{{ event.location|truncatechars:8 }}{% else %}<em>—</em>{% endif %}
                     </th>
                     {% endfor %}
                 </tr>
@@ -166,8 +182,9 @@ tbody td {
                 <tr>
                     <th class="sticky-col">Details</th>
                     {% for event in poll_events %}
-                    <th class="event-col event-header-cell">
-                        {% if event.details %}{{ event.details|truncatechars:20 }}{% else %}<em>—</em>{% endif %}
+                    <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
+                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                        {% if event.details %}{{ event.details|truncatechars:8 }}{% else %}<em>—</em>{% endif %}
                     </th>
                     {% endfor %}
                 </tr>
@@ -216,7 +233,7 @@ tbody td {
 </form>
 
 <div style="margin-top: 2rem; padding-top: 1rem; border-top: 2px solid #ddd;">
-    <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">View overview</a>
+    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">View votes total</a>
 </div>
 
 <script>

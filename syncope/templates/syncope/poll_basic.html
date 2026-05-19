@@ -1,6 +1,6 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}{{ poll.title }}{% endblock %}
+{% block title %}{{ poll.title }} edit poll{% endblock %}
 
 {% block content %}
 <h2>{{ poll.title }}</h2>
@@ -47,18 +47,20 @@
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: left; width: 50px;">#</th>
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Event Type</th>
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Date</th>
-                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Start - End</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Time</th>
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Location</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Details</th>
             </tr>
         </thead>
         <tbody>
             {% for pe in poll_events %}
             <tr>
                 <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{{ forloop.counter }}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">{{ pe.event_type.name }}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">{{ pe.started_at|date:"d M" }}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">{{ pe.started_at|date:"H:i" }} – {{ pe.ended_at|date:"H:i" }}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">{% if pe.location %}{{ pe.location }}{% else %}<em>—</em>{% endif %}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ pe.event_type.name|truncatechars:7 }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{% if pe.same_date %}{{ pe.started_at|date:"d M" }}{% else %}{{ pe.started_at|date:"d M" }} - {{ pe.ended_at|date:"d M" }}{% endif %}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ pe.started_at|date:"H:i" }} <br> {{ pe.ended_at|date:"H:i" }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{% if pe.location %}{{ pe.location|truncatechars:7 }}{% else %}<em>—</em>{% endif %}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{% if pe.details %}{{ pe.details|truncatechars:7 }}{% else %}<em>—</em>{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -70,9 +72,10 @@
 
 <div class="poll-actions">
     <a href="{% url 'syncope:poll_list' url_username %}">Back to list</a> |
+    <b>Edit poll page - now you are here </b>➜
     <a href="{% url 'syncope:poll_update' url_username poll.pk %}">Edit title</a> ➜
     <a href="{% url 'syncope:poll_persons' url_username poll.pk %}">Add people</a> ➜
     <a href="{% url 'syncope:poll_events' url_username poll.pk %}">Add event slots</a> ➜
-    <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">View overview</a>
+    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">View votes - overview</a>
 </div>
 {% endblock %}

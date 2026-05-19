@@ -399,24 +399,34 @@ class PollEventAttendanceView(View):
     def post(self, request, username, pk):
         person_pk = request.POST.get('save_participant')
         poll_person = get_object_or_404(PollPerson, pk=person_pk, poll=self.poll)
-        edited_dates = []
+        changed_count = 0
         for event in self.poll.poll_events.all():
             type_id_str = request.POST.get(f'attendance_{event.id}_{poll_person.id}')
             comment = request.POST.get(f'comment_{event.id}_{poll_person.id}', '').strip()
             if type_id_str is not None:
+                type_id = int(type_id_str)
+                new_comment = comment or None
+                existing = PollAttendance.objects.filter(
+                    poll_person=poll_person, poll_event=event
+                ).first()
+                if existing is None:
+                    if type_id != 0 or new_comment:
+                        changed_count += 1
+                elif existing.poll_attendance_type_id != type_id or existing.comment != new_comment:
+                    changed_count += 1
                 PollAttendance.objects.update_or_create(
                     poll_person=poll_person,
                     poll_event=event,
                     defaults={
-                        'poll_attendance_type_id': int(type_id_str),
-                        'comment': comment or None,
+                        'poll_attendance_type_id': type_id,
+                        'comment': new_comment,
                     }
                 )
-                edited_dates.append(event.started_at.strftime('%d %b'))
-        if edited_dates:
-            dates_str = ', '.join(edited_dates)
-            msg = mark_safe(f'Edited attendance for {poll_person.person.first_name} {poll_person.person.last_name} for dates <strong>{dates_str}</strong> successfully')
-            messages.success(request, msg)
+        if changed_count:
+            label = 'field' if changed_count == 1 else 'fields'
+            messages.success(request, f'Updated {changed_count} {label} for {poll_person.person.first_name} {poll_person.person.last_name}')
+        else:
+            messages.success(request, f'Saved successfully (no changes) for {poll_person.person.first_name} {poll_person.person.last_name}')
         return redirect('syncope:poll_attendance', username=username, pk=pk)
 
 

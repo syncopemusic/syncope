@@ -63,7 +63,13 @@
 {% else %}
 <p>No persons added yet.</p>
 {% endif %}
+<p>
+    <a href="{% url 'syncope:poll_list' url_username %}">Back to list</a> |
+    <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">Edit poll page</a> ➜
+    <a href="{% url 'syncope:poll_update' url_username poll.pk %}">Edit title</a> ➜
+    <b>Add people - now you are here </b>➜
+    <a href="{% url 'syncope:poll_events' url_username poll.pk %}">Add event slots</a> ➜
+    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">View votes - overview</a>
 
-<a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Back to Poll</a>
-    <a href="{% url 'syncope:poll_events' url_username  poll.pk %}">Continue to events</a>
+</p>
 {% endblock %}

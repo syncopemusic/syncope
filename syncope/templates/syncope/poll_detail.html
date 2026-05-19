@@ -1,6 +1,6 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}{{ poll.title }} — Overview{% endblock %}
+{% block title %}{{ poll.title }} votes{% endblock %}
 
 {% block content %}
 <style>
@@ -41,45 +41,21 @@
     color: #555;
     word-wrap: break-word;
 }
+
+.table-container {
+    margin-top: 8rem;
+}
 </style>
 
-<h2>{{ poll.title }} — Overview</h2>
+<h2>{{ poll.title }} votes details</h2>
 
 {% if poll.description %}
 <p>{{ poll.description }}</p>
 {% endif %}
 
-{#<h3>Persons <a href="{% url 'syncope:poll_persons' url_username poll.pk %}">[Edit]</a></h3>#}
-{#{% if poll_persons %}#}
-{#<ul>#}
-{#    {% for pp in poll_persons %}#}
-{#    <li>{{ pp.person.first_name }} {{ pp.person.last_name }}</li>#}
-{#    {% endfor %}#}
-{#</ul>#}
-{#{% else %}#}
-{#<p>No persons added yet.</p>#}
-{#{% endif %}#}
-{##}
-{#<h3>Event Slots <a href="{% url 'syncope:poll_events' url_username poll.pk %}">[Edit]</a></h3>#}
-{#{% if poll_events %}#}
-{#<ul>#}
-{#    {% for pe in poll_events %}#}
-{#    <li>#}
-{#        {{ pe.event_type.name }}:#}
-{#        {{ pe.started_at|date:"d M - H:i" }} – {{ pe.ended_at|date:"H:i" }}#}
-{#        {% if pe.location %}({{ pe.location }}){% endif %}#}
-{#    </li>#}
-{#    {% endfor %}#}
-{#</ul>#}
-{#{% else %}#}
-{#<p>No event slots added yet.</p>#}
-{#{% endif %}#}
-{##}
-{#<h3>Attendance <a href="{% url 'syncope:poll_attendance' url_username poll.pk %}">[Edit]</a></h3>#}
-
 <div style="margin-bottom: 1rem; font-size: 0.85rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
     <strong>Legend:</strong>
-    <span class="attendance-cell att-type-0" style="width: auto; height: auto; padding: 2px 6px;">TBD</span>
+    <span class="attendance-cell att-type-0" style="width: auto; height: auto; padding: 2px 6px;">⚑</span>
     <span class="attendance-cell att-type-1" style="width: auto; height: auto; padding: 2px 6px;">✓</span>
     <span class="attendance-cell att-type-2" style="width: auto; height: auto; padding: 2px 6px;">(✓)</span>
     <span class="attendance-cell att-type-3" style="width: auto; height: auto; padding: 2px 6px;">✗</span>
@@ -92,11 +68,12 @@
             <tr>
                 <th class="sticky-col">Person</th>
                 {% for pe in poll_events %}
-                <th class="event-col" style="height: 50px; padding: 5px; font-weight: normal;">
+                <th class="event-col" style="height: 50px; padding: 5px; font-weight: normal; {% if pe.event_type.id != 1 %}font-weight: bold; {% endif %}"
+                    title="{% if pe.event_type.id == 1 %}{{ pe.name }}{% else %}{{ pe.event_type }}&#10;{{ pe.name }}{% endif %}">
                     <div style="transform: rotate(-90deg); width: 10px; white-space: nowrap; font-size: 0.8rem;">
-                        {{ pe.started_at|date:"d M H:i" }} {{ pe.event_type.name|truncatechars:10 }}
-                        {% if pe.location %}<br>{{ pe.location }}{% endif %}
-                        {% if pe.details %}<br><em>{{ pe.details|truncatechars:40 }}</em>{% endif %}
+                        {% if pe.same_date %}{{ pe.started_at|date:"d M" }}{% else %}{{ pe.started_at|date:"d M" }} – {{ pe.ended_at|date:"d M" }}{% endif %} {{ pe.started_at|date:"H:i" }} {{ pe.event_type.name|truncatechars:8 }}<br>
+                        {% if pe.location %}{{ pe.location|truncatechars:10 }}{% endif %}
+                        {% if pe.details %}<em>{{ pe.details|truncatechars:10 }}</em>{% endif %}
                     </div>
                 </th>
                 {% endfor %}
@@ -125,8 +102,6 @@
 {% endif %}
 
 <div style="margin-top: 2rem; padding-top: 1rem; border-top: 2px solid #ddd;">
-    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Basics</a> |
-    <a href="{% url 'syncope:poll_persons' url_username poll.pk %}">Edit persons</a> |
-    <a href="{% url 'syncope:poll_events' url_username poll.pk %}">Edit date slots</a>
+    <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">Edit poll page</a>
 </div>
 {% endblock %}

@@ -662,6 +662,12 @@ class PollEvent(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def same_date(self):
+        if not self.ended_at:
+            return True
+        return self.started_at.date() == self.ended_at.date()
+
     class Meta:
         constraints = [
             models.UniqueConstraint(

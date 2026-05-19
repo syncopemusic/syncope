@@ -1,9 +1,9 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Poll{% endblock %}
+{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} title{% endblock %}
 
 {% block content %}
-<h2>{% if form.instance.pk %}Edit{% else %}Create{% endif %} Poll</h2>
+<h2>{% if form.instance.pk %}Edit{% else %}Create{% endif %} Poll title</h2>
 
 <form method="post">
     {% csrf_token %}
@@ -28,6 +28,15 @@
     {% endif %}
 
     <button type="submit">Save</button>
-    <a href="{% url 'syncope:poll_list' url_username %}">Cancel</a>
+    {% if form.instance.pk %}
+    <a href="{% url 'syncope:poll_list' url_username %}">Back to poll list</a> |
+    <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">Edit poll page</a> ➜
+    <b>Edit title - now you are here </b>➜
+    <a href="{% url 'syncope:poll_persons' url_username poll.pk %}">Add people</a> ➜
+    <a href="{% url 'syncope:poll_events' url_username poll.pk %}">Add event slots</a> ➜
+    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">View votes - overview</a>
+    {% else %}
+    <a href="{% url 'syncope:poll_list' url_username %}">Back to poll list</a>
+    {% endif %}
 </form>
 {% endblock %}
