@@ -27,16 +27,12 @@
     </div>
     {% endif %}
 
-    <button type="submit">Save</button>
+    <button type="submit" style="margin-top: 1rem; padding: 0.5rem 1rem;">Save</button>
     {% if form.instance.pk %}
-    <a href="{% url 'syncope:poll_list' url_username %}">Back to poll list</a> |
-    <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">Edit poll page</a> ➜
-    <b>Edit title - now you are here </b>➜
-    <a href="{% url 'syncope:poll_persons' url_username poll.pk %}">Add people</a> ➜
-    <a href="{% url 'syncope:poll_events' url_username poll.pk %}">Add event slots</a> ➜
-    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">View votes - overview</a>
+
+    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a>
     {% else %}
-    <a href="{% url 'syncope:poll_list' url_username %}">Back to poll list</a>
+    <a href="{% url 'syncope:poll_list' url_username %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a>
     {% endif %}
 </form>
 {% endblock %}

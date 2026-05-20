@@ -76,26 +76,11 @@ class PollCreateUpdateView(PollAdminMixin, UpdateView):
         return response
 
     def get_success_url(self):
-        return reverse("syncope:poll_basic", kwargs={
+        return reverse("syncope:poll_detail", kwargs={
             "username": self.kwargs.get("username"),
             "pk": self.object.pk
         })
 
-
-@method_decorator(login_required, name="dispatch")
-class PollBasicView(PollAdminMixin, DetailView):
-    """Presents basic poll details."""
-    model = Poll
-    template_name = "syncope/poll_basic.html"
-    context_object_name = "poll"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["url_username"] = self.kwargs["username"]
-        context["poll_persons"] = self.object.poll_persons.select_related('person')
-        context["poll_events"] = self.object.poll_events.select_related('event_type').order_by('started_at')
-
-        return context
 
 @method_decorator(login_required, name="dispatch")
 class PollDeleteView(PollAdminMixin, DeleteView):
@@ -289,7 +274,7 @@ class PollEventUpdateView(PollAdminMixin, UpdateView):
 
 
 class PollPersonAttendanceView(View):
-    """Public view — individual person fills in attendance via UUID token."""
+    """Public view — individual person fills in attendance via organization/poll/person pks."""
     template_name = "syncope/poll_attendance.html"
 
     def _get_context(self, poll_person):
@@ -316,12 +301,12 @@ class PollPersonAttendanceView(View):
             'viewing_as': poll_person,
         }
 
-    def get(self, request, token):
-        poll_person = get_object_or_404(PollPerson, token=token)
+    def get(self, request, username, pk, person_pk):
+        poll_person = get_object_or_404(PollPerson.objects.select_related('poll__user'), pk=person_pk, poll__pk=pk)
         return render(request, self.template_name, self._get_context(poll_person))
 
-    def post(self, request, token):
-        poll_person = get_object_or_404(PollPerson, token=token)
+    def post(self, request, username, pk, person_pk):
+        poll_person = get_object_or_404(PollPerson.objects.select_related('poll__user'), pk=person_pk, poll__pk=pk)
         saved_count = 0
         updated_count = 0
         tbd_count = 0
@@ -351,7 +336,7 @@ class PollPersonAttendanceView(View):
             messages.success(request, f'Saved {saved_count} of events, {tbd_count} still waiting to be filled')
         else:
             messages.success(request, f'Saved {saved_count} of events, updated {updated_count} of events, {tbd_count} still waiting to be filled')
-        return redirect('syncope:poll_person_attendance', token=token)
+        return redirect('syncope:poll_person_attendance', username=username, pk=pk, person_pk=person_pk)
 
 
 class PollEventAttendanceView(View):

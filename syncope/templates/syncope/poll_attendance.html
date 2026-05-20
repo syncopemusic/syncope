@@ -139,7 +139,7 @@ tbody td {
                     {% for event in poll_events %}
                     <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %} [{{ event.event_type.id }}]"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
-                        {{ event.event_type.name|truncatechars:7 }}
+                        {{ event.event_type.name }}
                     </th>
                     {% endfor %}
                 </tr>
@@ -150,7 +150,7 @@ tbody td {
                     {% for event in poll_events %}
                     <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
-                        {% if event.same_date %}{{ event.started_at|date:"d M" }}{% else %}{{ event.started_at|date:"d M" }} <br> {{ event.ended_at|date:"d M" }}{% endif %}
+                        {% if event.same_date %}{{ event.started_at|date:"D d M" }}{% else %}{{ event.started_at|date:"D d M" }} <br> {{ event.ended_at|date:"D d M" }}{% endif %}
                     </th>
                     {% endfor %}
                 </tr>
@@ -172,7 +172,7 @@ tbody td {
                     {% for event in poll_events %}
                     <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
-                        {% if event.location %}{{ event.location|truncatechars:8 }}{% else %}<em>—</em>{% endif %}
+                        {% if event.location %}{{ event.location }}{% else %}<em>—</em>{% endif %}
                     </th>
                     {% endfor %}
                 </tr>
@@ -184,7 +184,7 @@ tbody td {
                     {% for event in poll_events %}
                     <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
-                        {% if event.details %}{{ event.details|truncatechars:8 }}{% else %}<em>—</em>{% endif %}
+                        {% if event.details %}{{ event.details }}{% else %}<em>—</em>{% endif %}
                     </th>
                     {% endfor %}
                 </tr>
@@ -221,7 +221,7 @@ tbody td {
                                name="comment_{{ cell.event.id }}_{{ cell.person.id }}"
                                class="comment-input"
                                placeholder="note"
-                               value="{{ cell.comment }}">
+                               value="{{ cell.comment|default:'' }}">
                     </td>
                     {% endfor %}
                 </tr>
@@ -231,11 +231,7 @@ tbody td {
 
     <button type="submit" name="save_participant" value="{{ table_rows.0.person.id }}" style="margin-top: 1rem; padding: 0.5rem 1rem;">Save</button>
 </form>
-
-<div style="margin-top: 2rem; padding-top: 1rem; border-top: 2px solid #ddd;">
-    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">View votes total</a>
-</div>
-
+<a href="{% url 'syncope:poll_detail' url_username poll.pk %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a>
 <script>
 const CYCLE_ORDER = [0, 1, 2, 3];  // TBD, YES, MAYBE, NO
 const TYPE_META = {

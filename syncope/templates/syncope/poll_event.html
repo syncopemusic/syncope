@@ -41,8 +41,12 @@
         {% if form.details.errors %}<span class="error">{{ form.details.errors }}</span>{% endif %}
     </div>
 
-    <button type="submit">{% if editing %}Update{% else %}Add Event Slot{% endif %}</button>
+    <button type="submit" style="margin-top: 1rem; padding: 0.5rem 1rem;">{% if editing %}Update{% else %}Add Event Slot{% endif %}</button>
 </form>
+
+<p>
+    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a>
+</p>
 
 <h3>Added Event Slots ({{ poll_events|length }})</h3>
 {% if poll_events %}
@@ -63,11 +67,11 @@
             {% for pe in poll_events %}
             <tr>
                 <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{{ forloop.counter }}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">{{ pe.event_type.name|truncatechars:6 }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ pe.event_type.name }}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">{% if pe.same_date %}{{ pe.started_at|date:"d M" }}{% else %}{{ pe.started_at|date:"d M" }} – {{ pe.ended_at|date:"d M" }}{% endif %}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">{{ pe.started_at|date:"H:i" }} <br> {{ pe.ended_at|date:"H:i" }}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">{% if pe.location %}{{ pe.location|truncatechars:7 }}{% else %}<em>—</em>{% endif %}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">{% if pe.details %}{{ pe.details|truncatechars:7 }}{% else %}<em>—</em>{% endif %}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{% if pe.location %}{{ pe.location }}{% else %}<em>—</em>{% endif %}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{% if pe.details %}{{ pe.details }}{% else %}<em>—</em>{% endif %}</td>
                 <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
                     <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}" style="margin-right: 0.5rem;">Edit</a>
                     <form method="post" action="{% url 'syncope:poll_event_remove' url_username poll.pk pe.pk %}" style="display:inline;" onclick="return confirm('Do you want to remove {{ pe.event_type.name }} on {{ pe.started_at|date:'d M' }}?')">
@@ -84,12 +88,11 @@
 <p>No event slots added yet.</p>
 {% endif %}
 <p>
-    <a href="{% url 'syncope:poll_list' url_username %}">Back to list</a> |
-    <a href="{% url 'syncope:poll_basic' url_username poll.pk %}">Edit poll page</a> ➜
-    <a href="{% url 'syncope:poll_update' url_username poll.pk %}">Edit title</a> ➜
-    <a href="{% url 'syncope:poll_persons' url_username poll.pk %}">Add people</a> ➜
-    <b>Add event slots -  now you are here </b>➜
-    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">View votes - overview</a>
+
+    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Back to poll - votes</a> |
+    <a href="{% url 'syncope:poll_update' url_username poll.pk %}">Edit title</a> |
+    <a href="{% url 'syncope:poll_persons' url_username poll.pk %}">Add people</a>
+
 </p>
 {% endblock %}
 
