@@ -1,0 +1,264 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}{{ poll.title }} — Attendance{% endblock %}
+
+{% block content %}
+<style>
+.event-col {
+    width: 60px;
+    text-align: center;
+}
+
+.attendance-cell {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    transition: all 0.15s ease;
+    margin: 0 auto;
+    border: 2px solid rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.attendance-cell:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    border-color: rgba(0, 0, 0, 0.25);
+}
+
+.attendance-cell:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.att-type-0 { background-color: #dfe6e9; } /* TBD */
+.att-type-1 { background-color: #c8f7c5; } /* YES */
+.att-type-2 { background-color: #ffeaa7; } /* MAYBE */
+.att-type-3 { background-color: #fab1a0; } /* NO */
+
+.comment-input {
+    font-size: 0.8rem;
+    padding: 4px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.event-header-cell {
+    padding: 8px 4px;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    vertical-align: middle;
+}
+
+.sticky-col {
+    position: sticky;
+    left: 0;
+    background-color: #f8f9fa;
+    z-index: 1;
+    width: 100px;
+    white-space: nowrap;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+th {
+    background-color: #f8f9fa;
+    font-weight: 400;
+}
+
+th.bold-event-header {
+    font-weight: 700 !important;
+}
+
+tbody td {
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .attendance-cell {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+        border: 1.5px solid rgba(0, 0, 0, 0.15);
+    }
+    .attendance-cell:hover {
+        transform: translateY(-1px);
+    }
+    .comment-input {
+        width: 100%;
+        font-size: 0.7rem;
+    }
+}
+</style>
+
+<h2>{{ poll.title }} — Attendance</h2>
+
+{% if viewing_as %}
+<p style="font-size: 0.9rem; color: #636e72; margin-bottom: 1rem;">
+    Filling in for: <strong>{{ viewing_as.person.first_name }} {{ viewing_as.person.last_name }}</strong>
+</p>
+{% endif %}
+
+{% if poll.description %}
+<p>{{ poll.description }}</p>
+{% endif %}
+
+<div style="margin-bottom: 1rem; font-size: 0.85rem; display: flex; gap: 0.75rem; flex-wrap: wrap; width: fit-content;">
+    <strong>Legend:</strong>
+    <span class="attendance-cell att-type-0" style="width: auto; height: auto; padding: 2px 6px;">⚑</span>
+    <span class="attendance-cell att-type-1" style="width: auto; height: auto; padding: 2px 6px;">✓</span>
+    <span class="attendance-cell att-type-2" style="width: auto; height: auto; padding: 2px 6px;">(✓)</span>
+    <span class="attendance-cell att-type-3" style="width: auto; height: auto; padding: 2px 6px;">✗</span>
+    <em>(Click to cycle)</em>
+</div>
+
+<form method="post" style="min-width: 0;">
+    {% csrf_token %}
+
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                {# Event Type Row #}
+                <tr>
+                    <th class="sticky-col">Event</th>
+                    {% for event in poll_events %}
+                    <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %} [{{ event.event_type.id }}]"
+                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                        {{ event.event_type.name }}
+                    </th>
+                    {% endfor %}
+                </tr>
+
+                {# Date Row #}
+                <tr>
+                    <th class="sticky-col">Date</th>
+                    {% for event in poll_events %}
+                    <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
+                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                        {% if event.same_date %}{{ event.started_at|date:"D d M" }}{% else %}{{ event.started_at|date:"D d M" }} <br> {{ event.ended_at|date:"D d M" }}{% endif %}
+                    </th>
+                    {% endfor %}
+                </tr>
+
+                {# Time Row #}
+                <tr>
+                    <th class="sticky-col">Time</th>
+                    {% for event in poll_events %}
+                    <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
+                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                        {{ event.started_at|date:"H:i" }} <br> {{ event.ended_at|date:"H:i" }}
+                    </th>
+                    {% endfor %}
+                </tr>
+
+                {# Location Row #}
+                <tr>
+                    <th class="sticky-col">Location</th>
+                    {% for event in poll_events %}
+                    <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
+                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                        {% if event.location %}{{ event.location }}{% else %}<em>—</em>{% endif %}
+                    </th>
+                    {% endfor %}
+                </tr>
+
+                {# Details Row #}
+                {% if poll_events|length > 0 %}
+                <tr>
+                    <th class="sticky-col">Details</th>
+                    {% for event in poll_events %}
+                    <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
+                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                        {% if event.details %}{{ event.details }}{% else %}<em>—</em>{% endif %}
+                    </th>
+                    {% endfor %}
+                </tr>
+                {% endif %}
+            </thead>
+
+            <tbody>
+                {# Attendance Row #}
+                <tr>
+                    <td class="sticky-col"><strong>Attendance</strong></td>
+                    {% for cell in table_rows.0.event_cells %}
+                    <td class="event-col">
+                        <div class="attendance-cell att-type-{{ cell.attendance_type_id }}"
+                             data-type-id="{{ cell.attendance_type_id }}"
+                             data-event-id="{{ cell.event.id }}"
+                             data-person-id="{{ cell.person.id }}"
+                             onclick="cycleAttendance(this)"
+                             title="">
+                            <input type="hidden"
+                                   name="attendance_{{ cell.event.id }}_{{ cell.person.id }}"
+                                   value="{{ cell.attendance_type_id }}">
+                            <span class="att-icon"></span>
+                        </div>
+                    </td>
+                    {% endfor %}
+                </tr>
+
+                {# Comment Row #}
+                <tr>
+                    <td class="sticky-col"><strong>Note</strong></td>
+                    {% for cell in table_rows.0.event_cells %}
+                    <td class="event-col">
+                        <input type="text"
+                               name="comment_{{ cell.event.id }}_{{ cell.person.id }}"
+                               class="comment-input"
+                               placeholder="note"
+                               value="{{ cell.comment|default:'' }}">
+                    </td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <button type="submit" name="save_participant" value="{{ table_rows.0.person.id }}" style="margin-top: 1rem; padding: 0.5rem 1rem;">Save</button>
+</form>
+<a href="{% url 'syncope:poll_detail' url_username poll.pk %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a>
+<script>
+const CYCLE_ORDER = [0, 1, 2, 3];  // TBD, YES, MAYBE, NO
+const TYPE_META = {
+    0: { label: 'TBD',    icon: '',   cls: 'att-type-0' },
+    1: { label: 'YES',    icon: '✓',  cls: 'att-type-1' },
+    2: { label: 'MAYBE',  icon: '(✓)',  cls: 'att-type-2' },
+    3: { label: 'NO',     icon: '✗',  cls: 'att-type-3' },
+};
+
+function cycleAttendance(cell) {
+    const cur = parseInt(cell.dataset.typeId, 10);
+    const next = CYCLE_ORDER[(CYCLE_ORDER.indexOf(cur) + 1) % CYCLE_ORDER.length];
+    cell.dataset.typeId = next;
+    cell.querySelector('input[type="hidden"]').value = next;
+    Object.values(TYPE_META).forEach(m => cell.classList.remove(m.cls));
+    cell.classList.add(TYPE_META[next].cls);
+    cell.querySelector('.att-icon').textContent = TYPE_META[next].icon;
+    cell.title = TYPE_META[next].label;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.attendance-cell[data-type-id]').forEach(cell => {
+        const meta = TYPE_META[parseInt(cell.dataset.typeId, 10)] || TYPE_META[0];
+        cell.querySelector('.att-icon').textContent = meta.icon;
+        cell.title = meta.label;
+    });
+});
+</script>
+
+{% endblock %}

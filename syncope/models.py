@@ -63,12 +63,11 @@ class Instrument(models.Model):
 
 
 class AttendanceType(models.Model):
+    TBD = 0
     PRESENT = 1
     WORK_SCHOOL = 2
     ILLNESS = 3
     PRIVATE_VACATION = 4
-    TBD = 5
-
 
     name = models.CharField("attendance designation", max_length=90, unique=True)
     additional_notes = models.CharField(
@@ -79,6 +78,18 @@ class AttendanceType(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+class PollAttendanceType(models.Model):
+    TBD = 0
+    YES = 1
+    MAYBE = 2
+    NO = 3
+
+    name = models.CharField("poll type", max_length=90, unique=True)
 
     def __str__(self):
         return self.name
@@ -608,3 +619,65 @@ class LyricsTranslation(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class Poll(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="polls"
+    )
+    title = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+
+
+class PollPerson(models.Model):
+    """Persons that are invited to the poll."""
+    poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name="poll_persons")
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="poll_persons")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["poll", "person"],
+                name="unique_person_per_poll"
+            )
+        ]
+
+
+class PollEvent(models.Model):
+    poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name="poll_events")
+    location = models.TextField(blank=True, null=True)
+    started_at = models.DateTimeField("start date hour")
+    ended_at = models.DateTimeField("end date hour")
+    event_type = models.ForeignKey(EventType, on_delete=models.CASCADE)
+    details = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def same_date(self):
+        if not self.ended_at:
+            return True
+        return self.started_at.date() == self.ended_at.date()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["poll", "location", "started_at", "ended_at"],
+                name="unique_poll_location_date"
+            )
+        ]
+
+
+class PollAttendance(models.Model):
+    """Combines all poll models."""
+    poll_event = models.ForeignKey(PollEvent, on_delete=models.CASCADE, related_name="poll_attendances")
+    poll_attendance_type = models.ForeignKey(PollAttendanceType, on_delete=models.CASCADE, related_name="poll_attendances")
+    poll_person = models.ForeignKey(PollPerson, on_delete=models.CASCADE, related_name="poll_attendances")
+    comment = models.CharField(max_length=50, blank=True, null=True)

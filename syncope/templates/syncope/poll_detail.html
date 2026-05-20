@@ -1,0 +1,120 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}{{ poll.title }} votes{% endblock %}
+
+{% block content %}
+<style>
+.attendance-table {
+    border-collapse: collapse;
+}
+
+.sticky-col {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 1;
+    min-width: 100px;
+    max-width: 130px;
+    padding: 4px 8px;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.event-col {
+    width: 20px;
+}
+
+.attendance-cell {
+    width: 40px;
+    text-align: center;
+    border-radius: 4px;
+    font-size: 1.1rem;
+    padding: 2px;
+    user-select: none;
+}
+
+.att-type-0 { background-color: #dfe6e9; } /* TBD */
+.att-type-1 { background-color: #c8f7c5; } /* YES */
+.att-type-2 { background-color: #ffeaa7; } /* MAYBE */
+.att-type-3 { background-color: #fab1a0; } /* NO */
+
+.comment-display {
+    font-size: 0.65rem;
+    color: #555;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+}
+
+.table-container {
+    margin-top: 5rem;
+}
+</style>
+
+<h2>{{ poll.title }} votes</h2>
+
+{% if poll.description %}
+<p>{{ poll.description }}</p>
+{% endif %}
+{% if user.is_authenticated %}
+<div>
+    <p>Admin links:
+        <a href="{% url 'syncope:poll_update' url_username poll.pk %}">Edit title</a> |
+        <a href="{% url 'syncope:poll_persons' url_username poll.pk %}">Edit people</a> |
+        <a href="{% url 'syncope:poll_events' url_username poll.pk %}">Edit event slots</a> |
+
+    </p>
+</div>
+{% endif %}
+<div style="margin-bottom: 1rem; font-size: 0.85rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+    <strong>Legend:</strong>
+    <span class="attendance-cell att-type-0" style="width: auto; height: auto; padding: 2px 6px;">⚑</span>
+    <span class="attendance-cell att-type-1" style="width: auto; height: auto; padding: 2px 6px;">✓</span>
+    <span class="attendance-cell att-type-2" style="width: auto; height: auto; padding: 2px 6px;">(✓)</span>
+    <span class="attendance-cell att-type-3" style="width: auto; height: auto; padding: 2px 6px;">✗</span>
+</div>
+
+{% if table_rows %}
+<div class="table-container">
+    <table class="attendance-table">
+        <thead>
+            <tr>
+                <th class="sticky-col">Person</th>
+                {% for pe in poll_events %}
+                <th class="event-col" style="height: 50px; padding: 5px; font-weight: normal; {% if pe.event_type.id != 1 %}font-weight: bold; {% endif %}"
+                    title="{% if pe.event_type.id == 1 %}{{ pe.name }}{% else %}{{ pe.event_type }}&#10;{{ pe.name }}{% endif %}">
+                    <div style="transform: rotate(-90deg); width: 10px; white-space: nowrap; font-size: 0.8rem;line-height: 0.7rem;">
+                        {% if pe.same_date %}{{ pe.started_at|date:"d M" }}{% else %}{{ pe.started_at|date:"d M" }} – {{ pe.ended_at|date:"d M" }}{% endif %} {{ pe.started_at|date:"H:i" }}<br>
+                        {% if pe.location %}{{ pe.location|truncatechars:10 }}{% endif %}
+                    </div>
+                </th>
+                {% endfor %}
+
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in table_rows %}
+            <tr>
+                <td class="sticky-col"> <a href="{% url 'syncope:poll_person_attendance' url_username poll.pk row.person.pk %}" target="_blank" style="font-size: 0.9rem;"><strong>{{ row.person.person.first_name }} {{ row.person.person.last_name }}</strong></a></td>
+                {% for cell in row.event_cells %}
+                <td class="attendance-cell att-type-{{ cell.attendance_type_id }}"
+                    title="{{ cell.attendance_label }}">
+                    {% if cell.attendance_type_id == 1 %}✓{% elif cell.attendance_type_id == 2 %}(✓){% elif cell.attendance_type_id == 3 %}✗{% endif %}
+                    {% if cell.comment %}<div class="comment-display">{{ cell.comment }}</div>{% endif %}
+                </td>
+                {% endfor %}
+
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p>No attendance data yet.</p>
+{% endif %}
+{% if user.is_authenticated %}
+<div>
+    <p>Admin link:  <a href="{% url 'syncope:poll_list' url_username %}">Back to list of polls</a></p>
+</div>
+{% endif %}
+
+{% endblock %}

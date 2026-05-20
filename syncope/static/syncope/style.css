@@ -23,6 +23,9 @@
     transition: transform 0.2s ease;
 }
 
+.main {
+    min-width: 0;
+}
 
 .menu-links {
     list-style: none;
@@ -46,6 +49,7 @@
     display: flex;
     flex-direction: column;
     position: relative;
+    min-width: 0;
 }
 
 
@@ -113,8 +117,44 @@
         font-size: 12px;
         padding: 10px;
     }
-    
+
     td {
         font-size: 14px;
     }
+}
+
+.messages {
+    margin-bottom: 1rem;
+}
+
+.alert {
+    padding: 12px;
+    margin-bottom: 0.5rem;
+    border: 1px solid;
+    border-radius: 4px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.alert-error,
+.alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.alert-warning {
+    background-color: #ffeaa7;
+    border-color: #ffd36f;
+    color: #5f4c0b;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+    color: #0c5460;
 }

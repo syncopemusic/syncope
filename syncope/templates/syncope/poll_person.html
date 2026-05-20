@@ -1,0 +1,74 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}Poll Persons — {{ poll.title }}{% endblock %}
+
+{% block content %}
+<h2>{{ poll.title }} — Persons</h2>
+
+<form method="get">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by name, role, skill, voice, instrument">
+    <button type="submit">Search</button>
+    {% if q %}<a href="?">Clear</a>{% endif %}
+</form>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.poll }}
+    <div class="form-group">
+        {{ form.person }}
+        {% if form.person.errors %}<span class="error">{{ form.person.errors }}</span>{% endif %}
+    </div>
+    <button type="submit" style="margin-top: 1rem; padding: 0.5rem 1rem;">Add</button>
+</form>
+
+<form method="post" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="bulk_import">
+    {{ bulk_import_form.role_criteria }}
+    {{ bulk_import_form.skill_criteria }}
+    <button type="submit" style="margin-top: 1rem; padding: 0.5rem 1rem;">Auto Import</button>
+</form>
+<a href="{% url 'syncope:poll_detail' url_username poll.pk %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a>
+
+<h3>Added Persons ({{ poll_persons|length }})</h3>
+{% if poll_persons %}
+<div style="max-width: 750px; overflow-x: auto;">
+    <table style="border-collapse: collapse; width: 100%;">
+        <thead>
+            <tr style="background-color: #f8f9fa;">
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; width: 50px;">#</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Name</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Attendance Link</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 100px;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pp in poll_persons %}
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{{ forloop.counter }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ pp.person.first_name }} {{ pp.person.last_name }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">
+                    <a href="{% url 'syncope:poll_person_attendance' url_username poll.pk pp.pk %}" target="_blank">→ Link</a>
+                </td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                    <form method="post" action="{% url 'syncope:poll_person_remove' url_username poll.pk pp.pk %}" style="display:inline;" onclick="return confirm('Remove {{ pp.person.first_name }} {{ pp.person.last_name }}?')">
+                        {% csrf_token %}
+                        <button type="submit" style="padding: 4px 8px; font-size: 0.9rem;">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p>No persons added yet.</p>
+{% endif %}
+<div>
+    <p>Admin links:
+        <a href="{% url 'syncope:poll_update' url_username poll.pk %}">Edit title</a> |
+        <a href="{% url 'syncope:poll_events' url_username poll.pk %}">Add event slots</a> |
+        <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Back to poll - votes</a>
+    </p>
+</div>
+{% endblock %}

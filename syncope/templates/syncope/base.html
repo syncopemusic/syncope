@@ -51,6 +51,7 @@
 
                                                 {% if ADMIN_ROLE in membership.person.roles.all %}
                                                     <li><a href="{%  url 'syncope:attendance' org.user.username %}">ATTENDANCE</a></li>
+                                                    <li><a href="{%  url 'syncope:poll_list' org.user.username %}">Polls</a></li>
                                                     <li><a href="{%  url 'syncope:song_form2' org.user.username %}">Add song</a></li>
                                                     <li><a href="{%  url 'syncope:org_member_add' org.user.username %}">Add member</a></li>
                                                     <li><a href="{%  url 'syncope:import_hub' username=org.user.username %}">Import Data</a></li>
@@ -83,6 +84,15 @@
 
             <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
             <div class="main-content">
+                {% if messages %}
+                <div style="margin-bottom: 1rem;">
+                    {% for message in messages %}
+                    <div style="padding: 12px; background-color: {% if message.tags == 'success' %}#d4edda{% elif message.tags == 'warning' %}#ffeaa7{% elif message.tags == 'error' or message.tags == 'danger' %}#f8d7da{% else %}#d1ecf1{% endif %}; border: 1px solid {% if message.tags == 'success' %}#c3e6cb{% elif message.tags == 'warning' %}#ffd36f{% elif message.tags == 'error' or message.tags == 'danger' %}#f5c6cb{% else %}#bee5eb{% endif %}; border-radius: 4px; color: {% if message.tags == 'success' %}#155724{% elif message.tags == 'warning' %}#5f4c0b{% elif message.tags == 'error' or message.tags == 'danger' %}#721c24{% else %}#0c5460{% endif %};">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
                 {% block content %}
                 <!-- content goes here -->
                 {% endblock %}
@@ -96,7 +106,7 @@
                     {% if object.created_at %}
                         | Created: {{ object.created_at|date:"d M, Y" }}
                     {% endif %}
-                    <p>© 2025-2026 My Django App</p>
+                    <p>© 2025-2026 Syncope Music</p>
                 </div>
             </footer>
          </main>

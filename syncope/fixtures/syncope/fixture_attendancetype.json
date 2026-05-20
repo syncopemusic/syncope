@@ -1,4 +1,6 @@
 [
+  {"model": "syncope.attendancetype", "pk": 0, "fields":
+  {"name": "TBD", "additional_notes": "to be determined", "created_at": "2026-02-16T11:40:19.865Z"}},
   {"model": "syncope.attendancetype", "pk": 1, "fields":
   {"name": "Present", "additional_notes": "present at the event", "created_at": "2026-02-16T11:39:31.869Z"}},
   {"model": "syncope.attendancetype", "pk": 2, "fields":
@@ -6,7 +8,5 @@
   {"model": "syncope.attendancetype", "pk": 3, "fields":
   {"name": "Illness", "additional_notes": "unplanned medical issues", "created_at": "2026-02-16T11:39:58.706Z"}},
   {"model": "syncope.attendancetype", "pk": 4, "fields":
-  {"name": "Private/Vacation", "additional_notes": "planned absence", "created_at": "2026-02-16T11:40:19.865Z"}},
-  {"model": "syncope.attendancetype", "pk": 5, "fields":
-  {"name": "TBD", "additional_notes": "to be determined", "created_at": "2026-02-16T11:40:19.865Z"}}
+  {"name": "Private/Vacation", "additional_notes": "planned absence", "created_at": "2026-02-16T11:40:19.865Z"}}
 ]

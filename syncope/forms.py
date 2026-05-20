@@ -1,7 +1,8 @@
 from django import forms
 import datetime
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project
+from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
+    PollAttendance
 from .models import Event, EventSong, Attendance, AttendanceType,  Voice, Instrument, EventType, EventResource
 from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource
 from django.forms import inlineformset_factory, BaseInlineFormSet
@@ -605,3 +606,100 @@ EventResourceFormSet = inlineformset_factory(
     Event, EventResource, form=EventResourceForm,
     formset=BaseResourceFormSet, extra=1, can_delete=True,
 )
+
+
+class PollCreateForm(forms.ModelForm):
+    import_active_members = forms.BooleanField(
+        required=False,
+        initial=True,
+        label='Import active members'
+    )
+
+    class Meta:
+        model = Poll
+        fields = ['title', 'description']
+        widgets = {
+            "description": forms.Textarea(attrs={'rows': 3}),
+        }
+
+
+class PollPersonForm(forms.ModelForm):
+    class Meta:
+        model = PollPerson
+        fields =  [
+            'poll',
+            'person'
+        ]
+        widgets = {
+            'poll': forms.HiddenInput(),
+        }
+
+    def __init__(self, *args, org_user=None, poll=None, search_q=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if org_user and poll:
+            already_added = poll.poll_persons.values_list('person_id', flat=True)
+            qs = Person.objects.in_org_user(org_user).exclude(pk__in=already_added)
+            if search_q:
+                qs = qs.filter(
+                    Q(first_name__icontains=search_q) |
+                    Q(last_name__icontains=search_q) |
+                    Q(roles__title__icontains=search_q) |
+                    Q(skills__title__icontains=search_q) |
+                    Q(singer__voice__name__icontains=search_q) |
+                    Q(instrumentalist__instrument__name__icontains=search_q)
+                ).distinct()
+            self.fields['person'].queryset = qs
+
+
+class PollEventForm(forms.ModelForm):
+    event_type = forms.ModelChoiceField(
+        queryset=EventType.objects.all(),
+        empty_label=None,
+        initial=EventType.REHEARSAL,
+    )
+
+    class Meta:
+        model = PollEvent
+        fields = [
+            'poll',
+            'event_type',
+            'started_at',
+            'ended_at',
+            'location',
+            'details'
+        ]
+        widgets = {
+            'poll': forms.HiddenInput(),
+            'started_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+            'ended_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+            'location': forms.Textarea(attrs={'rows': 2}),
+            'details': forms.Textarea(attrs={'rows': 2}),
+        }
+
+
+class PollAttendanceForm(forms.ModelForm):
+    class Meta:
+        model = PollAttendance
+        fields = [
+            'poll_event',
+            'poll_attendance_type',
+            'poll_person',
+            'comment'
+        ]
+        widgets = {
+            'comment': forms.Textarea(attrs={'rows': 1}),
+        }
+
+
+class PollBulkImportForm(forms.Form):
+    role_criteria = forms.ChoiceField(required=False, label='Role')
+    skill_criteria = forms.ChoiceField(required=False, label='Skill')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['role_criteria'].choices = [('all', 'All roles')] + list(
+            Role.objects.values_list('title', 'title')
+        )
+        self.fields['skill_criteria'].choices = [('all', 'All skills')] + list(
+            Skill.objects.values_list('title', 'title')
+        )
