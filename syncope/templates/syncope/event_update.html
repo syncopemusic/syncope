@@ -63,7 +63,7 @@
 
     <h3 id="songs">Songs</h3>
     {{ song_formset.management_form }}
-    {% if song_formset.forms %}
+    {% if song_formset_with_resources %}
     <table>
         <thead>
             <tr>
@@ -76,7 +76,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for form in song_formset %}
+            {% for form, rs_formset in song_formset_with_resources %}
                 <tr>
                     <td style="white-space: nowrap;">
                         <div class="reorder-buttons">
@@ -85,7 +85,7 @@
                             {% else %}
                                 <span></span>
                             {% endif %}
-                            {% if forloop.counter < song_formset.forms|length %}
+                            {% if forloop.counter < song_formset_with_resources|length %}
                                 <button type="submit" name="reorder" value="song_{{ form.instance.pk }}_down_one" title="Move down">↓</button>
                             {% else %}
                                 <span></span>
@@ -110,6 +110,22 @@
                     </td>
                     {% endif %}
                 </tr>
+                {% if rs_formset %}
+                <tr>
+                    <td colspan="{% if is_admin %}6{% else %}5{% endif %}" style="padding-left:2rem; background:#fafafa;">
+                        {{ rs_formset.management_form }}
+                        <small><strong>Song Resources:</strong></small>
+                        {% for rs_form in rs_formset %}
+                            <div>
+                                {{ rs_form.url }}
+                                {{ rs_form.description }}
+                                {% if rs_form.instance.pk %}{{ rs_form.DELETE }}{% endif %}
+                                {{ rs_form.id }}
+                            </div>
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endif %}
             {% endfor %}
         </tbody>
     </table>

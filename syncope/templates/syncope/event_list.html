@@ -7,6 +7,7 @@
     +</a>
 <table>
     <tr>
+        <th>#</th>
         <th>Date</th>
         <th>Type</th>
         <th>Project</th>
@@ -14,6 +15,7 @@
     </tr>
     {% for event in events %}
         <tr>
+            <td>{{ forloop.counter }}</td>
             <td> <a href="{%  url 'syncope:event_detail' url_username event.id %}">
                 {{ event.started_at }}
                 </a>
@@ -21,9 +23,22 @@
             <td>{{ event.event_type }}</td>
             <td>{% if event.project %}<a href="{%  url 'syncope:project_detail' url_username event.project.id %}">{{ event.project }}</a>{% else %}—{% endif %}</td>
             <td>
-              {% for link in event.resource_icons %}
-                <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }}</a>
-              {% endfor %}
+              {% if event.resource_count > 0 %}
+                <span title="Event resources">
+                  {% for link in event.resource_icons %}
+                    {{ link.icon }}
+                  {% endfor %}
+                  ({{ event.resource_count }})
+                </span>
+              {% endif %}
+              {% if event.event_song_resource_count > 0 %}
+                <span title="Song resources">
+                  {% for link in event.event_song_resource_icons %}
+                    {{ link.icon }}
+                  {% endfor %}
+                  ({{ event.event_song_resource_count }})
+                </span>
+              {% endif %}
             </td>
         </tr>
     {% endfor %}

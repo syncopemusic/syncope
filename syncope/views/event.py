@@ -5,16 +5,16 @@ from django.contrib import messages
 from django.utils import timezone
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, UpdateView,  DetailView
-from django.db.models import Max, Min, Case, When, Value, IntegerField
+from django.db.models import Max, Min, Case, When, Value, IntegerField, Prefetch
 from django.shortcuts import redirect
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from syncope.models import CustomUser, Person, Role
-from syncope.models import Event, EventSong, Attendance, AttendanceType, EventResource, Resource
+from syncope.models import Event, EventSong, Attendance, AttendanceType, EventResource, EventSongResource, Resource
 from syncope.forms import EventForm, EventSongFormSet, AttendanceFormSet, AddAttendanceForm
-from syncope.forms import AddSongToEventForm, EventResourceFormSet
+from syncope.forms import AddSongToEventForm, EventResourceFormSet, EventSongResourceFormSet
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list
 
@@ -192,12 +192,31 @@ class EventUpdateView(UpdateView):
                     user=self.customuser,
                 )
 
+            # Build per-song resource formsets keyed by EventSong PK
+            self._song_resource_formsets_map = {}
+            for eventsong in song_qs:
+                if self.request.POST:
+                    formset = EventSongResourceFormSet(
+                        self.request.POST, instance=eventsong,
+                        user=self.customuser, prefix=f"esresource_{eventsong.pk}",
+                    )
+                else:
+                    formset = EventSongResourceFormSet(
+                        instance=eventsong,
+                        user=self.customuser, prefix=f"esresource_{eventsong.pk}",
+                    )
+                self._song_resource_formsets_map[eventsong.pk] = formset
+
         search_q = self.request.GET.get('q', '')
         show_add_form = self.request.GET.get('add_participant') == '1' and self.is_admin
         show_add_song = self.is_admin
         song_search_q = self.request.GET.get('song_q', '')
 
         context['song_formset'] = self._song_formset
+        context['song_formset_with_resources'] = [
+            (form, self._song_resource_formsets_map.get(form.instance.pk))
+            for form in self._song_formset.forms
+        ]
         context['attendance_formset'] = self._attendance_formset
         context['resource_formset'] = self._resource_formset
         context['attendance_types'] = AttendanceType.objects.all()
@@ -223,23 +242,32 @@ class EventUpdateView(UpdateView):
 
 
     def _save_songs(self, event, song_formset):
-        EventSong.objects.filter(event=event).delete()
-        valid_songs = [
-            {
-                'song': f.cleaned_data['song'],
-                'encore': f.cleaned_data.get('encore', False),
-                'instance': f.instance,
-            }
-            for f in song_formset.forms
+        valid_forms = [
+            f for f in song_formset.forms
             if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('song')
         ]
-        for idx, song_data in enumerate(valid_songs):
-            EventSong.objects.create(
-                event=event,
-                song=song_data['song'],
-                order=idx + 1,
-                encore=song_data['encore'],
-            )
+        valid_pks = {f.instance.pk for f in valid_forms if f.instance.pk}
+        existing_pks = set(event.eventsong_set.values_list('pk', flat=True))
+        pks_to_delete = existing_pks - valid_pks
+
+        # Clean up children before deleting EventSong rows (PROTECT constraint)
+        if pks_to_delete:
+            EventSongResource.objects.filter(event_song_id__in=pks_to_delete).delete()
+            EventSong.objects.filter(pk__in=pks_to_delete).delete()
+
+        # Two-pass order update (avoids unique_order_per_event constraint violations)
+        # Pass 1: temp negative orders
+        for idx, f in enumerate(valid_forms):
+            if f.instance.pk:
+                EventSong.objects.filter(pk=f.instance.pk).update(order=-(idx + 1))
+        # Pass 2: final positive orders + update fields
+        for idx, f in enumerate(valid_forms):
+            if f.instance.pk:
+                EventSong.objects.filter(pk=f.instance.pk).update(
+                    song=f.cleaned_data['song'],
+                    encore=f.cleaned_data.get('encore') or False,
+                    order=idx + 1,
+                )
 
     def _save_resources(self, event, resource_formset):
         event.event_resource.all().delete()
@@ -258,6 +286,24 @@ class EventUpdateView(UpdateView):
                 resource.description = description
                 resource.save(update_fields=['description'])
             EventResource.objects.create(event=event, resource=resource, order=idx + 1)
+
+    def _save_song_resources(self, event_song, resource_formset):
+        event_song.event_song_resource.all().delete()
+        valid_forms = [
+            f for f in resource_formset.forms
+            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('url')
+        ]
+        for idx, f in enumerate(valid_forms):
+            url = f.cleaned_data['url']
+            description = f.cleaned_data.get('description', '')
+            resource, created = Resource.objects.get_or_create(
+                url=url,
+                defaults={'owner': self.customuser, 'description': description}
+            )
+            if not created:
+                resource.description = description
+                resource.save(update_fields=['description'])
+            EventSongResource.objects.create(event_song=event_song, resource=resource, order=idx + 1)
 
     def _reorder_songs_db(self, event):
         """Reorder songs in the database based on reorder button click."""
@@ -330,12 +376,23 @@ class EventUpdateView(UpdateView):
             messages.error(self.request, "Please fix errors in the resources section.")
             return self.form_invalid(form)
 
+        for rs_formset in self._song_resource_formsets_map.values():
+            if not rs_formset.is_valid():
+                messages.error(self.request, "Please fix errors in song resources.")
+                return self.form_invalid(form)
+
         with transaction.atomic():
             self.object = form.save()
             self._save_songs(self.object, self._song_formset)
             self._attendance_formset.instance = self.object
             self._attendance_formset.save()
             self._save_resources(self.object, self._resource_formset)
+            for eventsong_pk, rs_formset in self._song_resource_formsets_map.items():
+                try:
+                    eventsong = EventSong.objects.get(pk=eventsong_pk)
+                    self._save_song_resources(eventsong, rs_formset)
+                except EventSong.DoesNotExist:
+                    pass  # Song was deleted; its resources already cleaned up in _save_songs
 
         action = self.request.POST.get('action', 'save')
         event_update_url = reverse('syncope:event_update', kwargs={
@@ -391,6 +448,12 @@ class EventListView(ListView):
         context = super().get_context_data(**kwargs)
         for event in context['events']:
             event.resource_icons = resource_icon_list(event.event_resource.all())
+            event.resource_count = event.event_resource.count()
+            event_song_resources = EventSongResource.objects.filter(
+                event_song__event=event
+            ).select_related('resource').order_by('order')
+            event.event_song_resource_icons = resource_icon_list(event_song_resources)
+            event.event_song_resource_count = event_song_resources.count()
         return context
 
 
@@ -407,6 +470,10 @@ class EventDetailView(DetailView):
             'attendance_set__attendance_type',
             'eventsong_set__song__composer',
             'event_resource__resource',
+            Prefetch(
+                'eventsong_set__event_song_resource',
+                queryset=EventSongResource.objects.select_related('resource').order_by('order')
+            ),
         )
 
     def get_context_data(self, **kwargs):
@@ -437,6 +504,20 @@ class EventDetailView(DetailView):
         context['event_resources'] = resource_icon_list(
             self.object.event_resource.select_related('resource').order_by('order')
         )
+
+        # Build eventsongs with resource icons
+        eventsongs = list(
+            self.object.eventsong_set.order_by('order')
+            .select_related('song', 'song__composer')
+            .prefetch_related(
+                Prefetch('event_song_resource',
+                         queryset=EventSongResource.objects.select_related('resource').order_by('order'))
+            )
+        )
+        for eventsong in eventsongs:
+            eventsong.resource_icons = resource_icon_list(eventsong.event_song_resource.all())
+        context['eventsongs'] = eventsongs
+
         return context
 
 

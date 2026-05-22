@@ -12,6 +12,7 @@
 {% if projects %}
 <table>
     <tr>
+        <th>#</th>
         <th>Title</th>
         <th>Start Date</th>
         <th>End Date</th>
@@ -19,6 +20,7 @@
     </tr>
     {% for project in projects %}
         <tr>
+            <td>{{ forloop.counter }}</td>
             <td>
                 <a href="{%  url 'syncope:project_detail' url_username project.id %}">
                     {{ project.title }}

@@ -3,7 +3,7 @@ import datetime
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
     PollAttendance
-from .models import Event, EventSong, Attendance, AttendanceType,  Voice, Instrument, EventType, EventResource
+from .models import Event, EventSong, Attendance, AttendanceType,  Voice, Instrument, EventType, EventResource, EventSongResource
 from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q
@@ -593,6 +593,7 @@ def make_resource_form(resource_model):
 SongResourceForm = make_resource_form(SongResource)
 PersonResourceForm = make_resource_form(PersonResource)
 EventResourceForm = make_resource_form(EventResource)
+EventSongResourceForm = make_resource_form(EventSongResource)
 
 SongResourceFormSet = inlineformset_factory(
     Song, SongResource, form=SongResourceForm,
@@ -604,6 +605,10 @@ PersonResourceFormSet = inlineformset_factory(
 )
 EventResourceFormSet = inlineformset_factory(
     Event, EventResource, form=EventResourceForm,
+    formset=BaseResourceFormSet, extra=1, can_delete=True,
+)
+EventSongResourceFormSet = inlineformset_factory(
+    EventSong, EventSongResource, form=EventSongResourceForm,
     formset=BaseResourceFormSet, extra=1, can_delete=True,
 )
 

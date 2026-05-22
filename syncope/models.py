@@ -236,6 +236,7 @@ class Skill(models.Model):
     INSTRUMENTALIST = 5
     CONDUCTOR = 6
     TRANSLATOR = 7
+    TECHNICIAN = 8
 
     title = models.CharField("name of skill",max_length=50, unique=True)
     additional_notes = models.CharField("short explanation of skill",max_length=255, blank=True, null=True)
@@ -442,6 +443,8 @@ class Song(models.Model):
 
     internal_id = models.PositiveIntegerField("ID", blank=True, null=True)
 
+    duration = models.CharField(max_length=50, blank=True, null=True)
+
     lyrics = models.TextField("lyrics", blank=True, null=True)
     languagecode = models.ForeignKey(LanguageCode, on_delete=models.PROTECT, blank=True, null=True)
 
@@ -558,6 +561,12 @@ class EventSong(models.Model):
 class EventResource(models.Model):
     event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="event_resource")
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="event_resource")
+    order = models.PositiveIntegerField()
+
+
+class EventSongResource(models.Model):
+    event_song = models.ForeignKey(EventSong, on_delete=models.PROTECT, related_name="event_song_resource")
+    resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="event_song_resource")
     order = models.PositiveIntegerField()
 
 
@@ -681,3 +690,31 @@ class PollAttendance(models.Model):
     poll_attendance_type = models.ForeignKey(PollAttendanceType, on_delete=models.CASCADE, related_name="poll_attendances")
     poll_person = models.ForeignKey(PollPerson, on_delete=models.CASCADE, related_name="poll_attendances")
     comment = models.CharField(max_length=50, blank=True, null=True)
+
+
+
+class Share(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    hash = models.CharField(max_length=32, unique=True)
+    resource = models.ForeignKey(Resource, on_delete=models.CASCADE, blank=True, null=True, related_name="share")
+    poll = models.ForeignKey(Poll, on_delete=models.CASCADE, blank=True, null=True,  related_name="share")
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, blank=True, null=True,  related_name="share")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, blank=True, null=True,  related_name="share")
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(resource_id__isnull=False, poll_id__isnull=True, event_id__isnull=True, project_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=False, event_id__isnull=True, project_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=True, event_id__isnull=False, project_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=True, event_id__isnull=True, project_id__isnull=False)
+                ),
+                name="share_only_one_fk"
+            )
+        ]
+
+class ShareVisit(models.Model):
+    id = models.AutoField(primary_key=True)
+    share = models.ForeignKey(Share, on_delete=models.CASCADE, related_name="share_visits")
+    time_stamp = models.DateTimeField(auto_now_add=True)

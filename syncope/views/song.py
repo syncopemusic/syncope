@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from syncope.models import Song
-from syncope.models import Event, SongResource, Resource
+from syncope.models import Event, SongResource, Resource, EventSongResource
 from syncope.forms import  SongForm
 from syncope.forms import  QuoteFormSet, LyricsTranslationFormSet, SongResourceFormSet
 from syncope.mixins import  SongOwnerMixin
@@ -80,6 +80,14 @@ class SongDetailView(SongOwnerMixin, DetailView):
         events = Event.objects.filter(
             eventsong__song=song
         ).order_by('-started_at').distinct()
+
+        for event in events:
+            event_songs = event.eventsong_set.filter(song=song)
+            event_song_resources = EventSongResource.objects.filter(
+                event_song__in=event_songs
+            ).select_related('resource').order_by('order')
+            event.song_resources_in_event = resource_icon_list(event_song_resources)
+
         context['events'] = events
         context['song_resources'] = resource_icon_list(
             song.song_resource.select_related('resource').order_by('order')

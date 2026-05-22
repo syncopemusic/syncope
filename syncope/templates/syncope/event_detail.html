@@ -15,12 +15,13 @@
 {% endif %}
 {% endif %}
 {% if event_resources %}
-<h3>Resources</h3>
-<p>
+<th></th>
+<th> Resources: </th>
+<tr>
   {% for link in event_resources %}
-    <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }}</a>
+    <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }} - {{ link.desc }}</a>
   {% endfor %}
-</p>
+</tr>
 {% endif %}
 
 {% if is_admin %}
@@ -28,19 +29,29 @@
 {% endif %}
 
 <h3>Songs</h3>
-{% if event.eventsong_set.all %}
+{% if eventsongs %}
     <table>
         <thead>
             <tr>
+                <th></th>
                 <th>Song</th>
                 <th>Encore</th>
             </tr>
         </thead>
         <tbody>
-            {% for eventsong in event.eventsong_set.all|dictsort:"order" %}
+            {% for eventsong in eventsongs %}
             <tr>
+                <td>{{ forloop.counter }}</td>
                 <td>
-                    <a href="{%  url 'syncope:song_page' url_username eventsong.song.pk %}">{{ eventsong.song.title }}</a>- {{ eventsong.song.composer.last_name }}
+                    <a href="{%  url 'syncope:song_page' url_username eventsong.song.pk %}">{{ eventsong.song.title }}</a> -
+                    <span title="{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} {{ eventsong.song.composer.birth_date|date:'Y' }}-{{ eventsong.song.composer.death_date|date:'Y' }}">
+                        {{ eventsong.song.composer.last_name }}</span>
+                    {% if eventsong.resource_icons %}
+                        &nbsp;
+                        {% for link in eventsong.resource_icons %}
+                            <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }}</a>
+                        {% endfor %}
+                    {% endif %}
                     {% if eventsong.song.keywords %}
                         <br><small>{{ eventsong.song.keywords }}</small>
                     {% endif %}
@@ -59,6 +70,7 @@
     <table>
         <thead>
             <tr>
+                <th></th>
                 <th>Person</th>
 
                 <th>Attendance</th>
@@ -67,6 +79,7 @@
         <tbody>
         {% for attendance in attendances %}
             <tr>
+                <td>{{ forloop.counter }}</td>
                 <td>{{ attendance.person.first_name }} {{ attendance.person.last_name }}</td>
                 {% comment %}
                 <td>

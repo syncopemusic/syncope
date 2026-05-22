@@ -101,6 +101,13 @@
                 </a>
             {% endif %}
             <span class="date">({{ event.started_at|date:"Y-m-d" }})</span>
+            {% if event.song_resources_in_event %}
+                <span class="resources">
+                  {% for link in event.song_resources_in_event %}
+                    <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }}</a>
+                  {% endfor %}
+                </span>
+            {% endif %}
         </li>
     {% endfor %}
 </ul>
