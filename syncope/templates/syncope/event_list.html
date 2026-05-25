@@ -3,15 +3,18 @@
 {% block title %}Events{% endblock %}
 
 {% block content %}
-<a href="{%  url 'syncope:event_create' url_username %}">
-    +</a>
+{% if ADMIN_ROLE in membership.person.roles.all %}
+<p><a href="{%  url 'syncope:event_create' url_username %}">
+    +</a></p>
+{% endif %}
+<h2>Events</h2>
 <table>
     <tr>
         <th>#</th>
         <th>Date</th>
         <th>Type</th>
         <th>Project</th>
-        <th>Resources</th>
+        <th></th>
     </tr>
     {% for event in events %}
         <tr>
@@ -25,18 +28,18 @@
             <td>
               {% if event.resource_count > 0 %}
                 <span title="Event resources">
-                  {% for link in event.resource_icons %}
-                    {{ link.icon }}
-                  {% endfor %}
-                  ({{ event.resource_count }})
+                  {% if event.resource_count > 0 %}
+                    🔗
+                  {% endif %}
+                  {{ event.resource_count }}
                 </span>
               {% endif %}
               {% if event.event_song_resource_count > 0 %}
                 <span title="Song resources">
-                  {% for link in event.event_song_resource_icons %}
-                    {{ link.icon }}
-                  {% endfor %}
-                  ({{ event.event_song_resource_count }})
+                  {% if event.event_song_resource_count > 0 %}
+                    🎵
+                  {% endif %}
+                  {{ event.event_song_resource_count }}
                 </span>
               {% endif %}
             </td>

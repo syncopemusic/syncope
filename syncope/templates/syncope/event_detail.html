@@ -14,15 +14,7 @@
     <p>{{ event.project.description }}</p>
 {% endif %}
 {% endif %}
-{% if event_resources %}
-<th></th>
-<th> Resources: </th>
-<tr>
-  {% for link in event_resources %}
-    <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }} - {{ link.desc }}</a>
-  {% endfor %}
-</tr>
-{% endif %}
+
 
 {% if is_admin %}
     <p><a href="{%  url 'syncope:event_update' url_username event.pk %}">Edit event</a></p>
@@ -43,15 +35,13 @@
             <tr>
                 <td>{{ forloop.counter }}</td>
                 <td>
+                    {% if eventsong.resource_icons %}
+                        <span title="Song has its own resources available">{{ eventsong.resource_icons.0.icon }}</span>
+                    {% endif %}
                     <a href="{%  url 'syncope:song_page' url_username eventsong.song.pk %}">{{ eventsong.song.title }}</a> -
                     <span title="{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} {{ eventsong.song.composer.birth_date|date:'Y' }}-{{ eventsong.song.composer.death_date|date:'Y' }}">
-                        {{ eventsong.song.composer.last_name }}</span>
-                    {% if eventsong.resource_icons %}
-                        &nbsp;
-                        {% for link in eventsong.resource_icons %}
-                            <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }}</a>
-                        {% endfor %}
-                    {% endif %}
+                        {{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} </span>
+
                     {% if eventsong.song.keywords %}
                         <br><small>{{ eventsong.song.keywords }}</small>
                     {% endif %}
@@ -93,23 +83,7 @@
 
                 </td>
                 {% endcomment %}
-                {% if attendance.person == my_person %}
-                    <td>
-                        <form method="post" action="{%  url 'syncope:self_attendance_update' url_username event.pk %}">
-                            {% csrf_token %}
-                            {% for at in attendance_types %}
-                                <label>
-                                    <input type="radio" name="attendance_type" value="{{ at.pk }}"
-                                        {% if attendance.attendance_type == at %}checked{% endif %}>
-                                    {{ at.name }}
-                                </label>
-                            {% endfor %}
-                            <button type="submit">Save</button>
-                        </form>
-                    </td>
-                {% else %}
-                    <td>{{ attendance.attendance_type }}</td>
-                {% endif %}
+                <td>{{ attendance.attendance_type }}</td>
             </tr>
         {% endfor %}
         </tbody>
@@ -117,5 +91,35 @@
 {% else %}
     <p>No attendance records yet.</p>
 {% endif %}
-
+{% if all_event_resources %}
+<h3>Event Resources</h3>
+<table>
+    <thead>
+        <tr>
+            <th></th>
+            <th></th>
+            <th>Resource</th>
+            <th></th>
+            <th>Song</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for res in all_event_resources %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ res.icon }}</td>
+            <td><a href="{{ res.url }}">{{ res.url }}</a></td>
+            <td>{{ res.desc }}</td>
+            <td>
+                {% if res.song %}
+                    <a href="{% url 'syncope:song_page' url_username res.song.pk %}">{{ res.song.title }} - {{ res.song.composer.first_name }} {{ res.song.composer.last_name }}</a>
+                {% else %}
+                -
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
 {% endblock %}

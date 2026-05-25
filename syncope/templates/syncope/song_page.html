@@ -48,14 +48,7 @@
     </tr>
 </table>
 
-{% if song_resources %}
-<h3>Resources</h3>
-<p>
-  {% for link in song_resources %}
-    <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }}</a>
-  {% endfor %}
-</p>
-{% endif %}
+
 
 {% if song.quotes.all %}
 <h3>Quotes</h3>
@@ -86,31 +79,56 @@
 
 {% if events %}
 <h3>Events</h3>
-<ul>
+<table>
     {% for event in events %}
-        <li>
-            {% if event.event_type.id != 1 %}
+        <tr>
+            <td>
+                {% if event.event_type.id != 1 %}
                 <strong>
                     <a href="{%  url 'syncope:event_detail' url_username event.pk %}">
                         {{ event.name }}
                     </a>
                 </strong>
-            {% else %}
-                <a href="{%  url 'syncope:event_detail' url_username event.pk %}">
-                    {{ event.name }}
-                </a>
-            {% endif %}
-            <span class="date">({{ event.started_at|date:"Y-m-d" }})</span>
-            {% if event.song_resources_in_event %}
-                <span class="resources">
-                  {% for link in event.song_resources_in_event %}
-                    <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }}</a>
-                  {% endfor %}
-                </span>
-            {% endif %}
-        </li>
+                {% else %}
+                    <a href="{%  url 'syncope:event_detail' url_username event.pk %}">
+                        {{ event.name }}
+                    </a>
+                {% endif %}
+            </td>
+            <td>({{ event.started_at|date:"d M, Y, H:i" }})</td>
+
+        </tr>
     {% endfor %}
-</ul>
+</table>
+{% endif %}
+{% if all_song_resources %}
+<h3>Resources</h3>
+<table>
+    <thead>
+        <tr>
+            <th></th>
+            <th></th>
+            <th>Resource</th>
+            <th></th>
+            <th>Event</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for res in all_song_resources %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ res.icon }}</td>
+            <td><a href="{{ res.url }}">{{ res.url }}</a></td>
+            <td>{{ res.desc }}</td>
+            <td>
+                {% if res.event %}
+                    <a href="{% url 'syncope:event_detail' url_username res.event.pk %}">{{ res.event.name }} ({{ res.event.started_at|date:"d M, Y, H:i" }})</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% endif %}
 
 {% endblock %}

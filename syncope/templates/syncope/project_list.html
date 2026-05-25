@@ -4,19 +4,20 @@
 
 {% block content %}
 <h2>Projects</h2>
-
+{% if ADMIN_ROLE in membership.person.roles.all %}
 <p>
     <a href="{%  url 'syncope:project_create' url_username %}">+ New Project</a>
 </p>
-
+{% endif %}
 {% if projects %}
 <table>
     <tr>
-        <th>#</th>
+        <th></th>
         <th>Title</th>
+        <th>Events</th>
         <th>Start Date</th>
         <th>End Date</th>
-        <th>Events</th>
+
     </tr>
     {% for project in projects %}
         <tr>
@@ -25,10 +26,12 @@
                 <a href="{%  url 'syncope:project_detail' url_username project.id %}">
                     {{ project.title }}
                 </a>
+
             </td>
+            <td><span title="Events">{{ project.num_main_events }}</span><span title="Rehearsals">({{ project.num_rehearsals }})</span></td>
             <td>{{ project.start_date|default:"-" }}</td>
             <td>{{ project.end_date|default:"-" }}</td>
-            <td>{{ project.num_main_events }} ({{ project.num_rehearsals }})</td>
+
         </tr>
     {% endfor %}
 </table>

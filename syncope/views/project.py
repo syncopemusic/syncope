@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from syncope.models import CustomUser,  Person,  Role
-from syncope.models import Event,  EventType,   Project
+from syncope.models import Event,  EventType,   Project, EventSongResource
 from syncope.forms import  ProjectForm
 from syncope.forms import  AddEventToProjectForm
 from syncope.forms import AddSongToProjectForm, AddGuestToProjectForm
@@ -209,6 +209,16 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
 
         context['url_username'] = url_username
         context['event_search_q'] = event_search_q
+
+        # Add events with resource counts to context
+        events = list(project.events.all().order_by('started_at'))
+        for event in events:
+            event.resource_count = event.event_resource.count()
+            event.event_song_resource_count = EventSongResource.objects.filter(
+                event_song__event=event
+            ).count()
+        context['events'] = events
+
         context['add_event_form'] = AddEventToProjectForm(
             org_user=org_user,
             project=project,
@@ -245,8 +255,14 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
         context['url_username'] = self.kwargs.get('username')
         project = self.object
 
-        # Get events ordered by start date
-        context['events'] = project.events.all().order_by('started_at')
+        # Get events ordered by start date and attach resource counts
+        events = list(project.events.all().order_by('started_at'))
+        for event in events:
+            event.resource_count = event.event_resource.count()
+            event.event_song_resource_count = EventSongResource.objects.filter(
+                event_song__event=event
+            ).count()
+        context['events'] = events
 
         # Get songs
         context['songs'] = project.songs.all().order_by('title')

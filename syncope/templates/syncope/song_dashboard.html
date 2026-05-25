@@ -43,9 +43,7 @@
     {% for song in songs %}
         <tr>
             <td>{{ song.internal_id|default:"-" }}</td>
-            <td>{% for link in song.resource_icons %}
-                    <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }}</a>
-                {% endfor %}</td>
+            <td>{% if song.has_direct_resources or song.has_event_resources %}🔗{% endif %}</td>
             <td>
                 <a href="{%  url 'syncope:song_page' url_username song.pk %}">{{ song.title }}</a>
                 {% if song.keywords %}

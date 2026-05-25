@@ -12,7 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from syncope.models import CustomUser, Person, Role
-from syncope.models import Event, EventSong, Attendance, AttendanceType, EventResource, EventSongResource, Resource
+from syncope.models import Event, EventSong, Attendance, AttendanceType, EventResource, EventSongResource, Resource, SongResource
 from syncope.forms import EventForm, EventSongFormSet, AttendanceFormSet, AddAttendanceForm
 from syncope.forms import AddSongToEventForm, EventResourceFormSet, EventSongResourceFormSet
 from syncope.permissions import AccessControl
@@ -469,6 +469,7 @@ class EventDetailView(DetailView):
             'attendance_set__person',
             'attendance_set__attendance_type',
             'eventsong_set__song__composer',
+            'eventsong_set__song__song_resource__resource',
             'event_resource__resource',
             Prefetch(
                 'eventsong_set__event_song_resource',
@@ -479,8 +480,6 @@ class EventDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.kwargs.get('username')
-        context['attendance_types'] = AttendanceType.objects.all()
-        context['my_person'] = AccessControl.get_member_person(self.request.user, self.object.user)
         context['attendances'] = self.object.attendance_set.select_related(
             'person', 'attendance_type'
         ).annotate(
@@ -515,8 +514,24 @@ class EventDetailView(DetailView):
             )
         )
         for eventsong in eventsongs:
-            eventsong.resource_icons = resource_icon_list(eventsong.event_song_resource.all())
+            song_has_resources = eventsong.song.song_resource.exists()
+            if song_has_resources:
+                song_icons = resource_icon_list(eventsong.song.song_resource.all())
+                eventsong.resource_icons = song_icons[:1]
+            else:
+                eventsong.resource_icons = resource_icon_list(eventsong.event_song_resource.all())
         context['eventsongs'] = eventsongs
+
+        # Build combined resource list: event resources first, then event-song resources
+        all_event_resources = [
+            {'url': r['url'], 'icon': r['icon'], 'desc': r['desc'], 'song': None}
+            for r in context['event_resources']
+        ]
+        for eventsong in eventsongs:
+            for r in resource_icon_list(eventsong.event_song_resource.all()):
+                r['song'] = eventsong.song
+                all_event_resources.append(r)
+        context['all_event_resources'] = all_event_resources
 
         return context
 
