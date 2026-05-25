@@ -443,7 +443,7 @@ class Song(models.Model):
 
     internal_id = models.PositiveIntegerField("ID", blank=True, null=True)
 
-    duration = models.CharField(max_length=50, blank=True, null=True)
+    duration = models.PositiveIntegerField("duration in seconds", blank=True, null=True)
 
     lyrics = models.TextField("lyrics", blank=True, null=True)
     languagecode = models.ForeignKey(LanguageCode, on_delete=models.PROTECT, blank=True, null=True)
@@ -717,4 +717,5 @@ class Share(models.Model):
 class ShareVisit(models.Model):
     id = models.AutoField(primary_key=True)
     share = models.ForeignKey(Share, on_delete=models.CASCADE, related_name="share_visits")
-    time_stamp = models.DateTimeField(auto_now_add=True)
+    visited_at = models.DateTimeField(auto_now_add=True)
+    counter = models.PositiveIntegerField(default=0)
