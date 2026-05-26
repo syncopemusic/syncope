@@ -130,6 +130,8 @@ class Resource(models.Model):
     )
     url = models.URLField("url", unique=True)
     description = models.TextField("description", blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.description
@@ -497,9 +499,17 @@ class Project(models.Model):
         blank=True,
         related_name="projects"
     )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.title
+
+
+class ProjectResource(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="project_resource")
+    resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="project_resource")
+    order = models.PositiveIntegerField()
 
 
 class Event(models.Model):

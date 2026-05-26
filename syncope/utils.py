@@ -378,7 +378,6 @@ def import_persons(org_user, person_mode, request, file_path, delimiter=";"):
                             started_at=period['start'],
                             ended_at=period['end']
                         )
-                        # messages.info(request, f"added membership period to {first_name} {period['start']} - {period['end']}")
                     except Exception as e:
                         messages.info(request, f"Warning: Failed to create membership period for {first_name}: {str(e)}")
                         error_details.append(

@@ -10,11 +10,13 @@ from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
+from django.db import transaction
 from syncope.models import CustomUser,  Person,  Role
-from syncope.models import Event,  EventType,   Project, EventSongResource
+from syncope.models import Event,  EventType,   Project, EventSongResource, ProjectResource, Resource
 from syncope.forms import  ProjectForm
 from syncope.forms import  AddEventToProjectForm
-from syncope.forms import AddSongToProjectForm, AddGuestToProjectForm
+from syncope.forms import AddSongToProjectForm, AddGuestToProjectForm, ProjectResourceFormSet
+from syncope.utils import resource_icon_list
 from syncope.permissions import AccessControl
 
 
@@ -197,6 +199,33 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
     def get_success_url(self):
         return reverse('syncope:project_detail', kwargs={'username': self.kwargs.get('username'), 'pk': self.object.pk})
 
+    def _save_resources(self, project, resource_formset):
+        project.project_resource.all().delete()
+        valid_forms = [
+            f for f in resource_formset.forms
+            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('url')
+        ]
+        for idx, f in enumerate(valid_forms):
+            url = f.cleaned_data['url']
+            description = f.cleaned_data.get('description', '')
+            resource, created = Resource.objects.get_or_create(
+                url=url,
+                defaults={'owner': self.request.user, 'description': description}
+            )
+            if not created:
+                resource.description = description
+                resource.save(update_fields=['description'])
+            ProjectResource.objects.create(project=project, resource=resource, order=idx + 1)
+
+    def form_valid(self, form):
+        self.object = form.save()
+        rf = ProjectResourceFormSet(
+            self.request.POST, instance=self.object, user=self.request.user
+        )
+        if rf.is_valid():
+            self._save_resources(self.object, rf)
+        return redirect(self.get_success_url())
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         url_username = self.kwargs.get('username')
@@ -236,6 +265,17 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
             project=project,
             search_q=guest_search_q,
         )
+
+        # Add resource formset
+        if self.request.POST:
+            context['resource_formset'] = ProjectResourceFormSet(
+                self.request.POST, instance=project, user=self.request.user
+            )
+        else:
+            context['resource_formset'] = ProjectResourceFormSet(
+                instance=project, user=self.request.user
+            )
+
         return context
 
 
@@ -293,6 +333,9 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
         ).distinct().order_by('last_name', 'first_name')
 
         context['members'] = members
+
+        # Add project resources
+        context['project_resources'] = resource_icon_list(project.project_resource.all().order_by('order'))
 
         return context
 

@@ -103,6 +103,23 @@
 <p>No events.</p>
 {% endif %}
 
+<h3>Resources</h3>
+{% if project_resources %}
+<table>
+    <tr><th></th><th></th><th>Description</th><th>URL</th></tr>
+    {% for link in project_resources %}
+    <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ link.icon }}</td>
+        <td>{{ link.desc }}</td>
+        <td><a href="{{ link.url }}" target="_blank">{{ link.url }}</a></td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>No resources.</p>
+{% endif %}
+
 <p>
     <a href="{%  url 'syncope:project_delete' url_username project.pk %}">Delete Project</a>
 </p>

@@ -4,7 +4,7 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
     PollAttendance
 from .models import Event, EventSong, Attendance, AttendanceType,  Voice, Instrument, EventType, EventResource, EventSongResource
-from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource
+from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource, ProjectResource
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q
 
@@ -611,6 +611,13 @@ EventResourceFormSet = inlineformset_factory(
 )
 EventSongResourceFormSet = inlineformset_factory(
     EventSong, EventSongResource, form=EventSongResourceForm,
+    formset=BaseResourceFormSet, extra=1, can_delete=True,
+)
+
+ProjectResourceForm = make_resource_form(ProjectResource)
+
+ProjectResourceFormSet = inlineformset_factory(
+    Project, ProjectResource, form=ProjectResourceForm,
     formset=BaseResourceFormSet, extra=1, can_delete=True,
 )
 
