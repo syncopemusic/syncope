@@ -4,7 +4,7 @@
 
 {% block content %}
 <h2>Projects</h2>
-{% if ADMIN_ROLE in membership.person.roles.all %}
+{% if membership and ADMIN_ROLE in membership.person.roles.all %}
 <p>
     <a href="{%  url 'syncope:project_create' url_username %}">+ New Project</a>
 </p>

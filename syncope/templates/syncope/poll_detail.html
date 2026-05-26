@@ -113,7 +113,7 @@
 {% else %}
 <p>No attendance data yet.</p>
 {% endif %}
-{% if ADMIN_ROLE in membership.person.roles.all %}
+{% if membership and ADMIN_ROLE in membership.person.roles.all %}
 <div>
     <p>Admin link:  <a href="{% url 'syncope:poll_list' url_username %}">Back to list of polls</a></p>
 </div>

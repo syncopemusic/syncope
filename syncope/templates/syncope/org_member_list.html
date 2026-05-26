@@ -2,20 +2,20 @@
 {% block title %}Members{% endblock %}
 
 {% block content %}
-{% if ADMIN_ROLE in membership.person.roles.all %}
+{% if membership and ADMIN_ROLE in membership.person.roles.all %}
 <p>
-        <a href="{%  url 'syncope:org_member_add' user.username %}">
+        <a href="{%  url 'syncope:org_member_add' url_username %}">
             + blank new form
         </a>
-        <a href="{%  url 'syncope:org_member_add_composer' user.username %}">
+        <a href="{%  url 'syncope:org_member_add_composer' url_username %}">
             + Composer
         </a>
 
-        <a href="{%  url 'syncope:org_member_add_poet' user.username %}">
+        <a href="{%  url 'syncope:org_member_add_poet' url_username %}">
             + Poet
         </a>
 
-        <a href="{%  url 'syncope:org_member_add_translator' user.username %}">
+        <a href="{%  url 'syncope:org_member_add_translator' url_username %}">
             + Translator
         </a>
 </p>

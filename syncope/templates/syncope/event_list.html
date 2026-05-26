@@ -3,7 +3,7 @@
 {% block title %}Events{% endblock %}
 
 {% block content %}
-{% if ADMIN_ROLE in membership.person.roles.all %}
+{% if membership and ADMIN_ROLE in membership.person.roles.all %}
 <p><a href="{%  url 'syncope:event_create' url_username %}">
     +</a></p>
 {% endif %}
