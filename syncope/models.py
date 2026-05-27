@@ -704,10 +704,16 @@ class PollAttendance(models.Model):
 
 
 class Share(models.Model):
+    id = models.CharField(
+        max_length=10,
+        primary_key=True,
+        editable=False,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
-    hash = models.CharField(max_length=32, unique=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="shares")
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE, blank=True, null=True, related_name="share")
     poll = models.ForeignKey(Poll, on_delete=models.CASCADE, blank=True, null=True,  related_name="share")
+    poll_person = models.ForeignKey('PollPerson', on_delete=models.CASCADE, blank=True, null=True, related_name="share")
     event = models.ForeignKey(Event, on_delete=models.CASCADE, blank=True, null=True,  related_name="share")
     project = models.ForeignKey(Project, on_delete=models.CASCADE, blank=True, null=True,  related_name="share")
 
@@ -715,10 +721,11 @@ class Share(models.Model):
         constraints = [
             models.CheckConstraint(
                 condition=(
-                    models.Q(resource_id__isnull=False, poll_id__isnull=True, event_id__isnull=True, project_id__isnull=True) |
-                    models.Q(resource_id__isnull=True, poll_id__isnull=False, event_id__isnull=True, project_id__isnull=True) |
-                    models.Q(resource_id__isnull=True, poll_id__isnull=True, event_id__isnull=False, project_id__isnull=True) |
-                    models.Q(resource_id__isnull=True, poll_id__isnull=True, event_id__isnull=True, project_id__isnull=False)
+                    models.Q(resource_id__isnull=False, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=False, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=False, event_id__isnull=True, project_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=False, project_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=False)
                 ),
                 name="share_only_one_fk"
             )
@@ -726,6 +733,5 @@ class Share(models.Model):
 
 class ShareVisit(models.Model):
     id = models.AutoField(primary_key=True)
-    share = models.ForeignKey(Share, on_delete=models.CASCADE, related_name="share_visits")
+    share = models.ForeignKey(Share, on_delete=models.PROTECT, related_name="share_visits")
     visited_at = models.DateTimeField(auto_now_add=True)
-    counter = models.PositiveIntegerField(default=0)

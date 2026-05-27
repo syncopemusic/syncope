@@ -231,7 +231,7 @@ tbody td {
 
     <button type="submit" name="save_participant" value="{{ table_rows.0.person.id }}" style="margin-top: 1rem; padding: 0.5rem 1rem;">Save</button>
 </form>
-<a href="{% url 'syncope:poll_detail' url_username poll.pk %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a>
+<p><a href="{% url 'syncope:poll_detail' url_username poll.pk %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a></p>
 <script>
 const CYCLE_ORDER = [0, 1, 2, 3];  // TBD, YES, MAYBE, NO
 const TYPE_META = {

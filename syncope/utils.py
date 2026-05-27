@@ -362,7 +362,7 @@ def import_persons(org_user, person_mode, request, file_path, delimiter=";"):
                         person=person
                     )
                     if created:
-                        messages.info(request, f"Created membership for {org_user} and {first_name}")
+                        pass
                     else:
                         messages.info(request, f"Membership already exists for {org_user} and {first_name}")
                 except Exception as e:

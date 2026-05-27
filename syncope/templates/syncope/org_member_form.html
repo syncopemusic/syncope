@@ -24,7 +24,12 @@
         <div>URL:
             {{ r_form.url }}
             {{ r_form.description }}
-            {% if r_form.instance.pk %}{{ r_form.DELETE }}{% endif %}
+            {% if r_form.instance.pk %}
+                {{ r_form.DELETE.as_hidden }}
+                <input type="checkbox" name="{{ r_form.DELETE.html_name }}" id="{{ r_form.DELETE.auto_id }}"
+                       onclick="return confirm('Do you want to delete this resource? Remember to press save.');">
+                <small class="form-text">Delete this resource</small>
+            {% endif %}
             {{ r_form.id }}
         </div>
     {% endfor %}
