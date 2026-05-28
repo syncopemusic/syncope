@@ -90,7 +90,7 @@ urlpatterns = [
     path("<str:username>/polls/<int:pk>/events/<int:event_pk>/remove/", poll_event_remove, name="poll_event_remove"),
     path("<str:username>/polls/<int:pk>/attendance/", PollEventAttendanceView.as_view(), name="poll_attendance"),
 
-    path("share/create/", create_share_link, name="share-create"),
-    path("<str:share_id>/", visit_share, name="share-visit"),
+    path("share/create/", create_share_link, name="share_create"),
+    path("<str:share_id>/", visit_share, name="share_visit"),
 
 ]

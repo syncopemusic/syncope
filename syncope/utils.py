@@ -1078,8 +1078,18 @@ def get_url_info(url):
 
 
 def resource_icon_list(resource_qs):
+    from django.urls import reverse
+    from syncope.models import Share
+
+    resource_ids = [r.resource_id for r in resource_qs]
+    share_map = {
+        s.resource_id: s.pk
+        for s in Share.objects.filter(resource_id__in=resource_ids)
+    }
+
     return [
         {'url': r.resource.url,
+         'share_url': reverse('syncope:share_visit', args=[share_map.get(r.resource_id)]) if r.resource_id in share_map else None,
          'icon': RESOURCE_ICONS[get_url_info(r.resource.url)],
          'desc': r.resource.description or r.resource.url}
         for r in resource_qs

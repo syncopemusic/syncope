@@ -118,7 +118,7 @@
         <tr>
             <td>{{ forloop.counter }}</td>
             <td>{{ res.icon }}</td>
-            <td><a href="{{ res.url }}">{{ res.url }}</a></td>
+            <td><a href="{{ res.share_url|default:res.url }}" target="_blank" rel="noopener noreferrer">{{ res.url }}</a></td>
             <td>{{ res.desc }}</td>
             <td>
                 {% if res.event %}

@@ -31,7 +31,7 @@
     <td>{{ forloop.counter }}</td>
     <td>{{ link.icon }}</td>
     <td>{{ link.desc }}</td>
-    <td><a href="{{ link.url }}" target="_blank">{{ link.url }}</a></td>
+    <td><a href="{{ link.share_url|default:link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a></td>
   </tr>
   {% endfor %}
 </table>

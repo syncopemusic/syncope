@@ -108,6 +108,16 @@ tbody td {
 
 <h2>{{ poll.title }} — Attendance</h2>
 
+<div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+    {% if viewing_as %}
+    <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy to clipboard">
+        Copy permalink
+    </button>
+    <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
+    <div style="display:none;">{% csrf_token %}</div>
+    {% endif %}
+</div>
+
 {% if viewing_as %}
 <p style="font-size: 0.9rem; color: #636e72; margin-bottom: 1rem;">
     Filling in for: <strong>{{ viewing_as.person.first_name }} {{ viewing_as.person.last_name }}</strong>
@@ -258,6 +268,63 @@ document.addEventListener('DOMContentLoaded', function () {
         cell.querySelector('.att-icon').textContent = meta.icon;
         cell.title = meta.label;
     });
+
+    // Share button handler
+    function createShareHandler(btn, resultSpan, shareData) {
+        return function () {
+            btn.disabled = true;
+            btn.textContent = 'Copying...';
+            if (resultSpan) resultSpan.textContent = '';
+
+            fetch('/share/create/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+                body: JSON.stringify(shareData),
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Request failed');
+                return response.json();
+            })
+            .then(data => {
+                const shareUrl = window.location.origin + '/' + data.share_id + '/';
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    if (resultSpan) {
+                        resultSpan.textContent = '✓ Copied: ' + shareUrl;
+                        setTimeout(() => { resultSpan.textContent = ''; }, 5000);
+                    } else {
+                        alert('Share link copied:\n' + shareUrl);
+                    }
+                }).catch(() => {
+                    if (resultSpan) resultSpan.textContent = shareUrl;
+                    else alert('Share link:\n' + shareUrl);
+                });
+            })
+            .catch(() => {
+                if (resultSpan) {
+                    resultSpan.textContent = '✗ Failed to generate link.';
+                } else {
+                    alert('Failed to generate share link');
+                }
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.textContent = btn.dataset.originalText;
+            });
+        };
+    }
+
+    const shareBtn = document.getElementById('share-btn');
+    if (shareBtn) {
+        shareBtn.dataset.originalText = 'Copy permalink';
+        shareBtn.addEventListener('click', createShareHandler(
+            shareBtn,
+            document.getElementById('share-result'),
+            { type: 'poll_person', id: {{ viewing_as.pk }} }
+        ));
+    }
 });
 </script>
 

@@ -1,5 +1,7 @@
 from django.db import models
 from django.db.models import PROTECT, Q
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 from django.contrib.auth.models import  AbstractBaseUser, BaseUserManager, PermissionsMixin #AbstractUser,
 from django.conf import settings
@@ -710,7 +712,7 @@ class Share(models.Model):
         editable=False,
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="shares")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="shares")
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE, blank=True, null=True, related_name="share")
     poll = models.ForeignKey(Poll, on_delete=models.CASCADE, blank=True, null=True,  related_name="share")
     poll_person = models.ForeignKey('PollPerson', on_delete=models.CASCADE, blank=True, null=True, related_name="share")
@@ -728,10 +730,26 @@ class Share(models.Model):
                     models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=False)
                 ),
                 name="share_only_one_fk"
-            )
+            ),
+            models.UniqueConstraint(fields=["resource"],    condition=models.Q(resource_id__isnull=False),    name="share_unique_resource"),
+            models.UniqueConstraint(fields=["poll"],        condition=models.Q(poll_id__isnull=False),        name="share_unique_poll"),
+            models.UniqueConstraint(fields=["poll_person"], condition=models.Q(poll_person_id__isnull=False), name="share_unique_poll_person"),
+            models.UniqueConstraint(fields=["event"],       condition=models.Q(event_id__isnull=False),       name="share_unique_event"),
+            models.UniqueConstraint(fields=["project"],     condition=models.Q(project_id__isnull=False),     name="share_unique_project"),
         ]
 
 class ShareVisit(models.Model):
     id = models.AutoField(primary_key=True)
-    share = models.ForeignKey(Share, on_delete=models.PROTECT, related_name="share_visits")
+    share = models.ForeignKey(Share, on_delete=models.PROTECT, related_name="share_visits", db_index=True)
     visited_at = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+
+
+@receiver(post_save, sender=Resource)
+def create_share_for_resource(sender, instance, created, **kwargs):
+    if created:
+        from syncope.views.share import generate_share_id
+        Share.objects.get_or_create(
+            resource=instance,
+            defaults={"id": generate_share_id()},
+        )

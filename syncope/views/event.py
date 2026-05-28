@@ -524,7 +524,7 @@ class EventDetailView(DetailView):
 
         # Build combined resource list: event resources first, then event-song resources
         all_event_resources = [
-            {'url': r['url'], 'icon': r['icon'], 'desc': r['desc'], 'song': None}
+            {'url': r['url'], 'icon': r['icon'], 'desc': r['desc'], 'song': None, 'share_url': r.get('share_url')}
             for r in context['event_resources']
         ]
         for eventsong in eventsongs:

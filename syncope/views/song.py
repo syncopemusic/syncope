@@ -3,7 +3,7 @@ from django.urls import reverse_lazy, reverse
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, UpdateView,  DetailView, View
 from django.views.generic.edit import DeleteView
-from django.db.models import Q, Exists, OuterRef
+from django.db.models import Q, Exists, OuterRef, Count
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -71,10 +71,10 @@ class SongListView(SongOwnerMixin, ListView):
         if reverse:
             sort_field = f'-{sort_field}'
 
-        # Annotate with flags for both direct and event-based resources
+        # Annotate with counts for both direct and event-based resources
         qs = qs.annotate(
-            has_direct_resources=Exists(SongResource.objects.filter(song=OuterRef('pk'))),
-            has_event_resources=Exists(EventSongResource.objects.filter(event_song__song=OuterRef('pk')))
+            has_direct_resources=Count('song_resource', distinct=True),
+            has_event_resources=Count('eventsong__event_song_resource', distinct=True)
         )
         return qs.order_by(sort_field).prefetch_related('song_resource__resource')
 
@@ -119,13 +119,13 @@ class SongDetailView(SongOwnerMixin, DetailView):
 
         # Build combined resource list: song resources first, then event-song resources
         all_song_resources = [
-            {'url': r['url'], 'icon': r['icon'], 'desc': r['desc'], 'event': None}
+            {'url': r['url'], 'icon': r['icon'], 'desc': r['desc'], 'event': None, 'share_url': r.get('share_url')}
             for r in context['song_resources']
         ]
         for event in events:
             for r in event.song_resources_in_event:
                 all_song_resources.append({
-                    'url': r['url'], 'icon': r['icon'], 'desc': r['desc'], 'event': event
+                    'url': r['url'], 'icon': r['icon'], 'desc': r['desc'], 'event': event, 'share_url': r.get('share_url')
                 })
         context['all_song_resources'] = all_song_resources
 

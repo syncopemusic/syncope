@@ -1,7 +1,6 @@
 import secrets
 from django.http import JsonResponse
 from django.shortcuts import redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from syncope.models import Share, ShareVisit, Resource, Poll, PollPerson, Event, Project
 
@@ -14,7 +13,6 @@ def generate_share_id(length=10):
     return ''.join(secrets.choice(BASE58_ALPHABET) for _ in range(length))
 
 
-@login_required
 @require_http_methods(["POST"])
 def create_share_link(request):
     """
@@ -61,6 +59,11 @@ def create_share_link(request):
     # Fetch the object; 404 if not found
     obj = get_object_or_404(model_class, pk=obj_id)
 
+    # Return existing share if one already exists for this object
+    existing = Share.objects.filter(**{field_name: obj}).first()
+    if existing:
+        return JsonResponse({"share_id": existing.id, "success": True})
+
     # Generate unique share_id
     while True:
         share_id = generate_share_id()
@@ -70,7 +73,7 @@ def create_share_link(request):
     # Create the share
     share = Share.objects.create(
         id=share_id,
-        created_by=request.user,
+        created_by=request.user if request.user.is_authenticated else None,
         **{field_name: obj}
     )
 
@@ -91,14 +94,17 @@ def visit_share(request, share_id):
     share = get_object_or_404(Share, pk=share_id)
 
     # Record the visit
-    ShareVisit.objects.create(share=share)
+    ip = request.META.get('HTTP_X_FORWARDED_FOR')
+    if ip:
+        ip = ip.split(',')[0].strip()
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    ShareVisit.objects.create(share=share, ip_address=ip)
 
     # Determine which object the share points to and build redirect URL
     # All models have a user field (Poll, Event, Project) or owner field (Resource)
     if share.resource_id:
-        username = share.resource.owner.username
-        # Resources don't have a detail page; redirect to owner's dashboard
-        return redirect('syncope:org_dashboard', username=username)
+        return redirect(share.resource.url)
     elif share.poll_id:
         username = share.poll.user.username
         return redirect('syncope:poll_detail', username=username, pk=share.poll_id)

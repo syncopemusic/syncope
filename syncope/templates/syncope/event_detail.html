@@ -17,8 +17,15 @@
 
 
 {% if is_admin %}
-    <p><a href="{%  url 'syncope:event_update' url_username event.pk %}">Edit event</a></p>
+<p><a href="{%  url 'syncope:event_update' url_username event.pk %}">Edit event</a> |</p>
 {% endif %}
+<p>
+
+    <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy to clipboard">Copy permalink</button>
+    <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
+</p>
+<div style="display:none;">{% csrf_token %}</div>
+
 
 <h3>Songs</h3>
 {% if eventsongs %}
@@ -108,7 +115,7 @@
         <tr>
             <td>{{ forloop.counter }}</td>
             <td>{{ res.icon }}</td>
-            <td><a href="{{ res.url }}">{{ res.url }}</a></td>
+            <td><a href="{{ res.share_url|default:res.url }}" target="_blank" rel="noopener noreferrer">{{ res.url }}</a></td>
             <td>{{ res.desc }}</td>
             <td>
                 {% if res.song %}
@@ -122,4 +129,69 @@
     </tbody>
 </table>
 {% endif %}
+
+{% block extra_js %}
+<script>
+function createShareHandler(btn, resultSpan, shareData) {
+    return function () {
+        btn.disabled = true;
+        btn.textContent = 'Copying...';
+        if (resultSpan) resultSpan.textContent = '';
+
+        fetch('/share/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify(shareData),
+        })
+        .then(function(response) {
+            if (!response.ok) throw new Error('Request failed');
+            return response.json();
+        })
+        .then(function(data) {
+            const shareUrl = window.location.origin + '/' + data.share_id + '/';
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(shareUrl).then(function() {
+                if (resultSpan) {
+                    resultSpan.textContent = '✓ Copied: ' + shareUrl;
+                } else {
+                    alert('Share link copied:\n' + shareUrl);
+                }
+            }).catch(function() {
+                if (resultSpan) {
+                    resultSpan.textContent = shareUrl;
+                } else {
+                    alert('Share link:\n' + shareUrl);
+                }
+            });
+        })
+        .catch(function() {
+            if (resultSpan) {
+                resultSpan.textContent = '✗ Failed to generate link.';
+            } else {
+                alert('Failed to generate share link');
+            }
+        })
+        .finally(function() {
+            btn.disabled = false;
+            btn.textContent = btn.dataset.originalText;
+        });
+    };
+}
+
+const shareBtn = document.getElementById('share-btn');
+if (shareBtn) {
+    shareBtn.dataset.originalText = 'Copy permalink';
+    shareBtn.addEventListener('click', createShareHandler(
+        shareBtn,
+        document.getElementById('share-result'),
+        { type: 'event', id: {{ event.pk }} }
+    ));
+}
+</script>
+{% endblock %}
+
 {% endblock %}

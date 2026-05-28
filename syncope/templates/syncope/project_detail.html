@@ -9,7 +9,11 @@
     <a href="{%  url 'syncope:project_update' url_username project.pk %}">Edit</a>
     &nbsp;|&nbsp;
     <a href="{%  url 'syncope:project_list' url_username %}">Back to Projects</a>
+    &nbsp;|&nbsp;
+    <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy to clipboard">Copy permalink</button>
+    <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
 </p>
+<div style="display:none;">{% csrf_token %}</div>
 
 <div class="project-header">
     <table>
@@ -63,6 +67,7 @@
 <table>
     <tr>
         <th>Name</th>
+        <th>🔗</th>
         <th>Date</th>
         <th>Location</th>
         <th>Type</th>
@@ -75,10 +80,12 @@
                     {{ event.name }}
                 </a>
             </td>
+            <td>{% if event.resource_count > 0 %}<span title="Event resources">🔗{{ event.resource_count }}</span>{% endif %}
+            {% if event.event_song_resource_count > 0 %}<span title="Song resources from this event">🎵{{ event.event_song_resource_count }}</span>{% endif %}
+            </td>
             <td>{{ event.started_at|date:"M d, Y" }}</td>
             <td>{{ event.location|default:"-" }}</td>
-            <td>{{ event.event_type|default:"-" }}{% if event.resource_count > 0 %}🔗{% endif %}
-            {% if event.event_song_resource_count > 0 %}🎵{% endif %}</td>
+            <td>{{ event.event_type|default:"-" }}</td>
             <td>
                 {% with songs=event.eventsong_set.all|dictsort:"order" %}
                     {% if songs %}
@@ -103,7 +110,7 @@
 <p>No events.</p>
 {% endif %}
 
-<h3>Resources</h3>
+<h3>Project Resources</h3>
 {% if project_resources %}
 <table>
     <tr><th></th><th></th><th>Description</th><th>URL</th></tr>
@@ -112,7 +119,7 @@
         <td>{{ forloop.counter }}</td>
         <td>{{ link.icon }}</td>
         <td>{{ link.desc }}</td>
-        <td><a href="{{ link.url }}" target="_blank">{{ link.url }}</a></td>
+        <td><a href="{{ link.share_url|default:link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a></td>
     </tr>
     {% endfor %}
 </table>
@@ -123,5 +130,69 @@
 <p>
     <a href="{%  url 'syncope:project_delete' url_username project.pk %}">Delete Project</a>
 </p>
+
+{% block extra_js %}
+<script>
+function createShareHandler(btn, resultSpan, shareData) {
+    return function () {
+        btn.disabled = true;
+        btn.textContent = 'Copying...';
+        if (resultSpan) resultSpan.textContent = '';
+
+        fetch('/share/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify(shareData),
+        })
+        .then(function(response) {
+            if (!response.ok) throw new Error('Request failed');
+            return response.json();
+        })
+        .then(function(data) {
+            const shareUrl = window.location.origin + '/' + data.share_id + '/';
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(shareUrl).then(function() {
+                if (resultSpan) {
+                    resultSpan.textContent = '✓ Copied: ' + shareUrl;
+                } else {
+                    alert('Share link copied:\n' + shareUrl);
+                }
+            }).catch(function() {
+                if (resultSpan) {
+                    resultSpan.textContent = shareUrl;
+                } else {
+                    alert('Share link:\n' + shareUrl);
+                }
+            });
+        })
+        .catch(function() {
+            if (resultSpan) {
+                resultSpan.textContent = '✗ Failed to generate link.';
+            } else {
+                alert('Failed to generate share link');
+            }
+        })
+        .finally(function() {
+            btn.disabled = false;
+            btn.textContent = btn.dataset.originalText;
+        });
+    };
+}
+
+const shareBtn = document.getElementById('share-btn');
+if (shareBtn) {
+    shareBtn.dataset.originalText = 'Copy permalink';
+    shareBtn.addEventListener('click', createShareHandler(
+        shareBtn,
+        document.getElementById('share-result'),
+        { type: 'project', id: {{ project.pk }} }
+    ));
+}
+</script>
+{% endblock %}
 
 {% endblock %}
