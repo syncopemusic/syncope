@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 
 {% block title %}Projects{% endblock %}
 
@@ -35,8 +36,8 @@
         <tr>
             <td>{{ forloop.counter }}</td>
             <td style="position: relative;">
-              <button class="share-project-btn" data-type="project" data-project-pk="{{ project.id }}" style="width: auto; height: auto; padding: 2px 6px;" title="Copy to clipboard"><span class="btn-full">Copy permalink</span><span class="btn-short">Copy</span></button>
-              <span class="share-project-result" style="position: absolute; left: 0; top: 100%; font-size: 0.85rem; white-space: normal; word-break: break-all; max-width: 220px; z-index: 10; background: white; padding: 2px 4px;"></span>
+              <button class="share-project-btn" data-type="project" data-project-pk="{{ project.id }}" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link"><img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy"></button>
+              <span class="share-project-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
             </td>
             <td>
                 <a href="{%  url 'syncope:project_detail' url_username project.id %}">
@@ -59,8 +60,7 @@
 function createShareHandler(btn, resultSpan, shareData) {
     return function () {
         btn.disabled = true;
-        btn.innerHTML = 'Copying...';
-        if (resultSpan) resultSpan.textContent = '';
+        if (resultSpan) resultSpan.textContent = 'Copying...';
 
         fetch('/share/create/', {
             method: 'POST',
@@ -80,15 +80,15 @@ function createShareHandler(btn, resultSpan, shareData) {
             // Copy to clipboard
             navigator.clipboard.writeText(shareUrl).then(function() {
                 if (resultSpan) {
-                    resultSpan.textContent = '✓ Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 5000);
+                    resultSpan.textContent = 'Copied';
+                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
                 } else {
                     alert('Share link copied:\n' + shareUrl);
                 }
             }).catch(function() {
                 if (resultSpan) {
-                    resultSpan.textContent = '✓ Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 5000);
+                    resultSpan.textContent = 'Copied';
+                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
                 } else {
                     alert('Share link:\n' + shareUrl);
                 }
@@ -96,20 +96,18 @@ function createShareHandler(btn, resultSpan, shareData) {
         })
         .catch(function() {
             if (resultSpan) {
-                resultSpan.textContent = '✗ Failed to generate link.';
+                resultSpan.textContent = 'Failed';
             } else {
                 alert('Failed to generate share link');
             }
         })
         .finally(function() {
             btn.disabled = false;
-            btn.innerHTML = btn.dataset.originalText;
         });
     };
 }
 
 document.querySelectorAll('.share-project-btn').forEach(function(btn) {
-    btn.dataset.originalText = btn.innerHTML;
     btn.addEventListener('click', function() {
         const projectPk = this.dataset.projectPk;
         const resultSpan = this.nextElementSibling;

@@ -23,7 +23,7 @@
                     ID {% if current_sort == 'id' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
-            <th></th>
+            <th>🔗</th>
             <th>
                 <a href="?q={{ q }}&sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                     Title {% if current_sort == 'title' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
@@ -43,7 +43,7 @@
     {% for song in songs %}
         <tr>
             <td>{{ song.internal_id|default:"-" }}</td>
-            <td>{% if song.has_direct_resources or song.has_event_resources %}<span title="Song/Event Resources">🔗{{ song.has_direct_resources }}/{{ song.has_event_resources }}</span>{% endif %}</td>
+            <td>{% if song.has_direct_resources or song.has_event_resources %}<span title="Song/Event Resources">{{ song.has_direct_resources }}/{{ song.has_event_resources }}</span>{% endif %}</td>
             <td>
                 <a href="{%  url 'syncope:song_page' url_username song.pk %}">{{ song.title }}</a>
                 {% if song.keywords %}

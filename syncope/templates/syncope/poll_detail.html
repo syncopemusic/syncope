@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 
 {% block title %}{{ poll.title }} votes{% endblock %}
 
@@ -68,8 +69,8 @@
         <a href="{% url 'syncope:poll_update' url_username poll.pk %}">Edit title</a> |
         <a href="{% url 'syncope:poll_persons' url_username poll.pk %}">Edit people</a> |
         <a href="{% url 'syncope:poll_events' url_username poll.pk %}">Edit event slots</a> |
-        <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy to clipboard">
-            Copy permalink
+        <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
+            <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
         </button>
         <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
     </p>
@@ -111,8 +112,8 @@
                 <td>{{ forloop.counter }}</td>
                 <td style="position: relative;">
 
-                    <button class="share-person-btn" data-type="poll_person" data-person-pk="{{ row.person.pk }}" style="width: auto; height: auto; padding: 2px 6px;" title="Copy to clipboard"><span class="btn-full">Copy permalink</span><span class="btn-short">Copy</span></button>
-                    <span class="share-person-result" style="position: absolute; left: 0; top: 100%; font-size: 0.85rem; white-space: normal; word-break: break-all; max-width: 220px; z-index: 10; background: white; padding: 2px 4px;"></span>
+                    <button class="share-person-btn" data-type="poll_person" data-person-pk="{{ row.person.pk }}" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link"><img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy"></button>
+                    <span class="share-person-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
 
                 </td>
                 <td class="sticky-col">
@@ -146,8 +147,7 @@
 function createShareHandler(btn, resultSpan, shareData) {
     return function () {
         btn.disabled = true;
-        btn.innerHTML = 'Copying...';
-        if (resultSpan) resultSpan.textContent = '';
+        if (resultSpan) resultSpan.textContent = 'Copying...';
 
         fetch('/share/create/', {
             method: 'POST',
@@ -167,15 +167,15 @@ function createShareHandler(btn, resultSpan, shareData) {
             // Copy to clipboard
             navigator.clipboard.writeText(shareUrl).then(function() {
                 if (resultSpan) {
-                    resultSpan.textContent = '✓ Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 5000);
+                    resultSpan.textContent = 'Copied';
+                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
                 } else {
                     alert('Share link copied:\n' + shareUrl);
                 }
             }).catch(function() {
                 if (resultSpan) {
-                    resultSpan.textContent = '✓ Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 5000);
+                    resultSpan.textContent = 'Copied';
+                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
                 } else {
                     alert('Share link:\n' + shareUrl);
                 }
@@ -183,14 +183,13 @@ function createShareHandler(btn, resultSpan, shareData) {
         })
         .catch(function() {
             if (resultSpan) {
-                resultSpan.textContent = '✗ Failed to generate link.';
+                resultSpan.textContent = 'Failed';
             } else {
                 alert('Failed to generate share link');
             }
         })
         .finally(function() {
             btn.disabled = false;
-            btn.innerHTML = btn.dataset.originalText;
         });
     };
 }
@@ -198,7 +197,6 @@ function createShareHandler(btn, resultSpan, shareData) {
 // Handle main poll share button
 const shareBtn = document.getElementById('share-btn');
 if (shareBtn) {
-    shareBtn.dataset.originalText = 'Copy permalink';
     shareBtn.addEventListener('click', createShareHandler(
         shareBtn,
         document.getElementById('share-result'),
@@ -208,7 +206,7 @@ if (shareBtn) {
 
 // Handle individual person share buttons
 document.querySelectorAll('.share-person-btn').forEach(function(btn) {
-    btn.dataset.originalText = btn.innerHTML;
+    btn.dataset.originalValue = btn.innerHTML;
     btn.addEventListener('click', function() {
         const personPk = this.dataset.personPk;
         const resultSpan = this.nextElementSibling;
