@@ -718,16 +718,20 @@ class Share(models.Model):
     poll_person = models.ForeignKey('PollPerson', on_delete=models.CASCADE, blank=True, null=True, related_name="share")
     event = models.ForeignKey(Event, on_delete=models.CASCADE, blank=True, null=True,  related_name="share")
     project = models.ForeignKey(Project, on_delete=models.CASCADE, blank=True, null=True,  related_name="share")
+    person = models.ForeignKey('Person', on_delete=models.CASCADE, blank=True, null=True, related_name="share")
+    song = models.ForeignKey('Song', on_delete=models.CASCADE, blank=True, null=True, related_name="share")
 
     class Meta:
         constraints = [
             models.CheckConstraint(
                 condition=(
-                    models.Q(resource_id__isnull=False, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=True) |
-                    models.Q(resource_id__isnull=True, poll_id__isnull=False, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=True) |
-                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=False, event_id__isnull=True, project_id__isnull=True) |
-                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=False, project_id__isnull=True) |
-                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=False)
+                    models.Q(resource_id__isnull=False, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=True, person_id__isnull=True, song_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=False, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=True, person_id__isnull=True, song_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=False, event_id__isnull=True, project_id__isnull=True, person_id__isnull=True, song_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=False, project_id__isnull=True, person_id__isnull=True, song_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=False, person_id__isnull=True, song_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=True, person_id__isnull=False, song_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=True, person_id__isnull=True, song_id__isnull=False)
                 ),
                 name="share_only_one_fk"
             ),
@@ -736,6 +740,8 @@ class Share(models.Model):
             models.UniqueConstraint(fields=["poll_person"], condition=models.Q(poll_person_id__isnull=False), name="share_unique_poll_person"),
             models.UniqueConstraint(fields=["event"],       condition=models.Q(event_id__isnull=False),       name="share_unique_event"),
             models.UniqueConstraint(fields=["project"],     condition=models.Q(project_id__isnull=False),     name="share_unique_project"),
+            models.UniqueConstraint(fields=["person"],      condition=models.Q(person_id__isnull=False),      name="share_unique_person"),
+            models.UniqueConstraint(fields=["song"],        condition=models.Q(song_id__isnull=False),        name="share_unique_song"),
         ]
 
 class ShareVisit(models.Model):

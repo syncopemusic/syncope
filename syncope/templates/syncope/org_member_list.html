@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 {% block title %}Members{% endblock %}
 
 {% block content %}
@@ -42,9 +43,12 @@
     {% if q or selected_role %}<a href="?{% if current_sort != 'name' %}sort={{ current_sort }}{% endif %}{% if reverse %}&reverse=true{% endif %}">Clear</a>{% endif %}
 </form>
 
+<div style="display:none;">{% csrf_token %}</div>
+
 <table>
     <thead>
     <tr>
+        <th></th>
         <th>
             <a href="?q={{ q }}&sort=name{% if current_sort == 'name' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                 Name {% if current_sort == 'name' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
@@ -61,7 +65,13 @@
     <tbody>
         {% for member in members %}
         <tr>
-
+            <td style="position: relative;">
+                <button class="share-member-btn" data-member-pk="{{ member.person.id }}"
+                        style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
+                    <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
+                </button>
+                <span class="share-member-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
+            </td>
             <td>
                 <a href="{%  url 'syncope:org_member_detail' url_username member.person.id %}">
                 {{ member.person.first_name }} {{ member.person.last_name }}
@@ -101,6 +111,7 @@
                     Edit
                 </a>
             </td>
+
         </tr>
         {% empty %}
         <tr>
@@ -109,4 +120,67 @@
         {% endfor %}
     </tbody>
 </table>
+
+{% block extra_js %}
+<script>
+function createShareHandler(btn, resultSpan, shareData) {
+    return function () {
+        btn.disabled = true;
+        if (resultSpan) resultSpan.textContent = 'Copying...';
+
+        fetch('/share/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify(shareData),
+        })
+        .then(function(response) {
+            if (!response.ok) throw new Error('Request failed');
+            return response.json();
+        })
+        .then(function(data) {
+            const shareUrl = window.location.origin + '/' + data.share_id + '/';
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(shareUrl).then(function() {
+                if (resultSpan) {
+                    resultSpan.textContent = 'Copied';
+                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
+                } else {
+                    alert('Share link copied:\n' + shareUrl);
+                }
+            }).catch(function() {
+                if (resultSpan) {
+                    resultSpan.textContent = 'Copied';
+                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
+                } else {
+                    alert('Share link:\n' + shareUrl);
+                }
+            });
+        })
+        .catch(function() {
+            if (resultSpan) {
+                resultSpan.textContent = 'Failed';
+            } else {
+                alert('Failed to generate share link');
+            }
+        })
+        .finally(function() {
+            btn.disabled = false;
+        });
+    };
+}
+
+document.querySelectorAll('.share-member-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        const memberPk = this.dataset.memberPk;
+        const resultSpan = this.nextElementSibling;
+        createShareHandler(this, resultSpan, { type: 'person', id: memberPk })();
+    });
+});
+</script>
+{% endblock %}
+
 {% endblock %}

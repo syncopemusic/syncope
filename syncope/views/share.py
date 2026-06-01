@@ -2,7 +2,7 @@ import secrets
 from django.http import JsonResponse
 from django.shortcuts import redirect, get_object_or_404
 from django.views.decorators.http import require_http_methods
-from syncope.models import Share, ShareVisit, Resource, Poll, PollPerson, Event, Project
+from syncope.models import Share, ShareVisit, Resource, Poll, PollPerson, Event, Project, Person, Song
 
 
 BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
@@ -49,6 +49,8 @@ def create_share_link(request):
         "poll_person": (PollPerson, "poll_person"),
         "event": (Event, "event"),
         "project": (Project, "project"),
+        "person": (Person, "person"),
+        "song": (Song, "song"),
     }
 
     if obj_type not in type_map:
@@ -117,6 +119,14 @@ def visit_share(request, share_id):
     elif share.project_id:
         username = share.project.user.username
         return redirect('syncope:project_detail', username=username, pk=share.project_id)
+    elif share.person_id:
+        p = share.person
+        membership = p.memberships.first()
+        username = membership.user.username
+        return redirect('syncope:org_member_detail', username=username, pk=share.person_id)
+    elif share.song_id:
+        username = share.song.user.username
+        return redirect('syncope:song_page', username=username, pk=share.song_id)
 
     # This shouldn't happen due to the CheckConstraint, but fallback anyway
     return JsonResponse({"error": "Share has no associated object"}, status=500)
