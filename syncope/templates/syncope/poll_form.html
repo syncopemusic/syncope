@@ -1,9 +1,9 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} title{% endblock %}
+{% block title %}{% if form.instance.pk %}Edit{% else %}New{% endif %} title{% endblock %}
 
 {% block content %}
-<h2>{% if form.instance.pk %}Edit{% else %}Create{% endif %} Poll title</h2>
+<h2>{% if form.instance.pk %}Edit{% else %}New{% endif %} Poll title</h2>
 
 <form method="post">
     {% csrf_token %}
@@ -28,11 +28,12 @@
     {% endif %}
 
     <button type="submit" style="margin-top: 1rem; padding: 0.5rem 1rem;">Save</button>
+
+</form>
     {% if form.instance.pk %}
 
     <a href="{% url 'syncope:poll_detail' url_username poll.pk %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a>
     {% else %}
     <a href="{% url 'syncope:poll_list' url_username %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a>
     {% endif %}
-</form>
 {% endblock %}

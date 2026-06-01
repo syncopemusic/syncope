@@ -17,6 +17,7 @@
         </div>
     </div>
     <div class="confirmation-form">
+        {% if is_admin %}
         <form method="POST">
             {% csrf_token %}
             <div class="form-actions">
@@ -30,6 +31,9 @@
                 </div>
             </div>
         </form>
+        {% else %}
+        <p><a href="{%  url 'syncope:event_update' url_username event.pk %}">Back to Event</a></p>
+        {% endif %}
     </div>
 </div>
 

@@ -19,7 +19,7 @@ from syncope.permissions import AccessControl
 
 @method_decorator(login_required, name="dispatch")
 class AttendanceDashboardView(View):
-    template_name = 'syncope/attendance.html'
+    template_name = 'syncope/attendance_dashboard.html'
 
     def dispatch(self, request, *args, **kwargs):
         """Handle permission checking before processing the request."""
@@ -225,7 +225,7 @@ class AttendanceDashboardView(View):
             if skipped_count > 0:
                 messages.warning(
                     request,
-                    f"Attendance updated! ({skipped_count} locked records were skipped)"
+                    f"Attendance updated!"
                 )
             else:
                 messages.success(request, "Attendance updated successfully!")
@@ -370,6 +370,7 @@ class AttendanceDeleteView(DeleteView):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.kwargs['username']
         context['event'] = self.object.event
+        context['is_admin'] = True
         return context
 
     def get_success_url(self):

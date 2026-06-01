@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% block title %}{{song.pk}}confirm{% endblock %}
+{% block title %}{{song.pk}} confirm delete{% endblock %}
 {% block content %}
 
 <div class="delete-confirmation-container">
@@ -12,7 +12,7 @@
         <div class="item-details">
             <p>Title: {{ song.title }}</p>
             <p>Song ID: {{song.pk}}</p>
-            <p>Composer: {{song.composer}}</p>
+            <p>Composer: {{ song.composer|default:"-" }}</p>
         </div>
         <div class="warning-note">
             <p>️ This action cannot be undone.</p>
@@ -20,6 +20,7 @@
     </div>
 
     <div class="confirmation-form">
+        {% if can_manage %}
         <form method="POST">
             {% csrf_token %}
             <div class="form-actions">
@@ -27,12 +28,15 @@
                     <button type="submit" class="delete-btn">Yes, delete</button>
                 </div>
                 <div class="safe-action">
-                    <a href="{%  url 'syncope:song_page' url_username song.pk %}">
+                    <a href="{%  url 'syncope:song_detail' url_username song.pk %}">
                         <button type="button" class="cancel-btn">Cancel</button>
                     </a>
                 </div>
             </div>
         </form>
+        {% else %}
+        <p><a href="{%  url 'syncope:song_detail' url_username song.pk %}">Back to Song</a></p>
+        {% endif %}
     </div>
     <div class="additional-info">
         <p>This will remove the song from all rehearsals where it was scheduled.</p>

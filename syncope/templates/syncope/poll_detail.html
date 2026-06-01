@@ -47,7 +47,7 @@
 }
 
 .table-container {
-    margin-top: 5rem;
+    margin-top: 0.5rem;
 }
 
 .btn-full { display: inline; }
@@ -95,11 +95,11 @@
                 <th>🔗</th>
                 <th class="sticky-col">Person</th>
                 {% for pe in poll_events %}
-                <th class="event-col" style="height: 50px; padding: 5px; font-weight: normal; {% if pe.event_type.id != 1 %}font-weight: bold; {% endif %}"
+                <th class="event-col" style="vertical-align: bottom; padding: 5px; font-weight: normal; {% if pe.event_type.id != 1 %}font-weight: bold; {% endif %}"
                     title="{% if pe.event_type.id == 1 %}{{ pe.name }}{% else %}{{ pe.event_type }}&#10;{{ pe.name }}{% endif %}">
-                    <div style="transform: rotate(-90deg); width: 10px; white-space: nowrap; font-size: 0.8rem;line-height: 0.7rem;">
-                        {% if pe.same_date %}{{ pe.started_at|date:"d M" }}{% else %}{{ pe.started_at|date:"d M" }} – {{ pe.ended_at|date:"d M" }}{% endif %} {{ pe.started_at|date:"H:i" }}<br>
-                        {% if pe.location %}{{ pe.location|truncatechars:10 }}{% endif %}
+                    <div style="writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-size: 0.8rem; line-height: 0.7rem;">
+                        {% if pe.same_date %}<span data-dt="{{ pe.started_at|date:'c' }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span>{% else %}<span data-dt="{{ pe.started_at|date:'c' }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span> – <span data-dt="{{ pe.ended_at|date:'c' }}" data-dt-fmt="date">{{ pe.ended_at|date:"d M" }}</span>{% endif %} <span data-dt="{{ pe.started_at|date:'c' }}" data-dt-fmt="time">{{ pe.started_at|date:"H:i" }}</span>{% if pe.location %} {{ pe.location|truncatechars:10 }}{% endif %}
+
                     </div>
                 </th>
                 {% endfor %}
@@ -134,9 +134,17 @@
 {% else %}
 <p>No attendance data yet.</p>
 {% endif %}
+
 {% if membership and ADMIN_ROLE in membership.person.roles.all %}
+
 <div>
-    <p>Admin link:  <a href="{% url 'syncope:poll_list' url_username %}">Back to list of polls</a></p>
+    <p>Admin links:
+        <br>
+        <form method="post" action="{% url 'syncope:poll_delete' url_username poll.pk %}" style="display:inline;" onsubmit="return confirm('Delete poll &quot;{{ poll.title }}&quot;? This cannot be undone.')">
+            {% csrf_token %}
+            <button type="submit" class="btn-danger">Delete the entire poll</button>
+        </form>
+        <br><button><a href="{% url 'syncope:poll_list' url_username %}">Back to list of polls</a></button></p>
 </div>
 {% endif %}
 

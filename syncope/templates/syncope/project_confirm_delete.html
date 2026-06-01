@@ -7,10 +7,14 @@
 
 <p>Are you sure you want to delete <strong>{{ project.title }}</strong>?</p>
 
+{% if can_delete %}
 <form method="post">
     {% csrf_token %}
     <button type="submit" class="danger">Delete</button>
     <a href="{%  url 'syncope:project_detail' url_username project.pk %}">Cancel</a>
 </form>
+{% else %}
+<p><a href="{%  url 'syncope:project_detail' url_username project.pk %}">Back to Project</a></p>
+{% endif %}
 
 {% endblock %}

@@ -95,7 +95,7 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
     # Role checkboxes
     roles = forms.ModelMultipleChoiceField(
         queryset=Role.objects.all(),
-        required=True,
+        required=False,
         widget=forms.CheckboxSelectMultiple
     )
     # Skill checkbox
@@ -180,7 +180,7 @@ class SongForm(forms.ModelForm):
             "number_of_pages",
             "number_of_copies",
             "year",
-            "group",
+            "ensemble",
             "number_of_voices",
             "additional_notes",
             "lyrics",
@@ -325,7 +325,13 @@ class EventChoiceField(forms.ModelChoiceField):
 
     def label_from_instance(self, obj):
         # Format: "Event Name (2024-12-25 19:00 - 21:00)"
-        label = f"{obj.name} ({obj.started_at.strftime('%Y-%m-%d %H:%M')} - {obj.ended_at.strftime('%H:%M')})"
+        if obj.started_at:
+            time_str = obj.started_at.strftime('%Y-%m-%d %H:%M')
+            if obj.ended_at:
+                time_str += f" - {obj.ended_at.strftime('%H:%M')}"
+        else:
+            time_str = "No date"
+        label = f"{obj.name} ({time_str})"
         if obj.pk in self.already_added_ids:
             return f"* {label}"
         if obj.pk in self.other_project_ids:

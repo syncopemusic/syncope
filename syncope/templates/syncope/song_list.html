@@ -6,13 +6,13 @@
 <h2>Song Archive</h2>
 
 <form method="get" style="display:flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
-    <input type="text" name="q" value="{{ q }}" placeholder="Search by ID, title, composer, keywords" style="flex: 1;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by ID, title, composer, poet, keywords" style="flex: 1;">
     <button type="submit">Search</button>
     {% if q %}<a href="?">Clear</a>{% endif %}
 </form>
 
 <div style="margin-bottom: 1em;">
-    <a href="{%  url 'syncope:song_form2' url_username %}">+ Add New Song</a>
+    <a href="{%  url 'syncope:song_new' url_username %}">+ Add New Song</a>
 </div>
 
 <div style="display:none;">{% csrf_token %}</div>
@@ -26,7 +26,7 @@
                     ID {% if current_sort == 'id' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
-            <th>🔗</th>
+            <th title="Concerts / Performances">Con/Per</th>
             <th></th>
             <th>
                 <a href="?q={{ q }}&sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
@@ -38,9 +38,13 @@
                     Composer {% if current_sort == 'composer' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
+            <th>
+                <a href="?q={{ q }}&sort=poet{% if current_sort == 'poet' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+                    Poet {% if current_sort == 'poet' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+                </a>
+            </th>
 <!--            <th>Keywords</th>-->
             <th>Copies</th>
-
             <th></th>
         </tr>
     </thead>
@@ -48,7 +52,8 @@
     {% for song in songs %}
         <tr>
             <td>{{ song.internal_id|default:"-" }}</td>
-            <td>{% if song.has_direct_resources or song.has_event_resources %}<span title="Song/Event Resources">{{ song.has_direct_resources }}/{{ song.has_event_resources }}</span>{% endif %}</td>
+            <td><span title="Number of concerts / number of performances">{% if song.concert_count or song.performance_count %}{{ song.concert_count }}/{{ song.performance_count }}{% else %}-{% endif %}</span></td>
+
             <td style="position: relative;">
                 <button class="share-song-btn" data-song-pk="{{ song.pk }}"
                         style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
@@ -57,16 +62,16 @@
                 <span class="share-song-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
             </td>
             <td>
-                <a href="{%  url 'syncope:song_page' url_username song.pk %}">{{ song.title }}</a>
+                <a href="{%  url 'syncope:song_detail' url_username song.pk %}">{{ song.title }}</a> {% if song.has_direct_resources or song.has_event_resources %}<span title="Song/Event Resources">{{ song.has_direct_resources }}/{{ song.has_event_resources }}</span>{% endif %}
                 {% if song.keywords %}
                     <small>{{ song.keywords|default:"|" }}</small>
                 {% endif %}
             </td>
             <td>
-                <a href="{%  url 'syncope:org_member_detail' url_username song.composer.pk %}"
-                title="{{ song.composer.first_name }} {{ song.composer.last_name }} {{ song.composer.birth_date|date:'Y' }}-{{ song.composer.death_date|date:'Y' }}">
-                    {{ song.composer.last_name }}
-                </a>
+                {% include "syncope/person_link.html" with person=song.composer %}
+            </td>
+            <td>
+                {% include "syncope/person_link.html" with person=song.poet %}
             </td>
 <!--            <td>{{ song.keywords|default:"-" }}</td>-->
             <td>{{ song.number_of_copies|default:"-" }}</td>
@@ -78,66 +83,43 @@
 {% elif q %}
     <p>No songs found matching "{{ q }}".</p>
 {% else %}
-    <p>No songs in the archive yet. <a href="{%  url 'syncope:song_form2' url_username %}">Add the first one.</a></p>
+    <p>No songs in the archive yet. <a href="{%  url 'syncope:song_new' url_username %}">Add the first one.</a></p>
 {% endif %}
 
 {% block extra_js %}
 <script>
-function createShareHandler(btn, resultSpan, shareData) {
-    return function () {
+document.querySelectorAll('.share-song-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        var songPk = this.dataset.songPk;
+        var resultSpan = this.nextElementSibling;
         btn.disabled = true;
-        if (resultSpan) resultSpan.textContent = 'Copying...';
-
+        resultSpan.textContent = 'Copying...';
         fetch('/share/create/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
             },
-            body: JSON.stringify(shareData),
+            body: JSON.stringify({ type: 'song', id: songPk }),
         })
-        .then(function(response) {
+        .then(function (response) {
             if (!response.ok) throw new Error('Request failed');
             return response.json();
         })
-        .then(function(data) {
-            const shareUrl = window.location.origin + '/' + data.share_id + '/';
-
-            // Copy to clipboard
-            navigator.clipboard.writeText(shareUrl).then(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link copied:\n' + shareUrl);
-                }
-            }).catch(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link:\n' + shareUrl);
-                }
+        .then(function (data) {
+            var shareUrl = window.location.origin + '/' + data.share_id + '/';
+            navigator.clipboard.writeText(shareUrl).then(function () {
+                resultSpan.textContent = 'Copied';
+                setTimeout(function () { resultSpan.textContent = ''; }, 3000);
+            }).catch(function () {
+                resultSpan.textContent = 'Copied';
+                setTimeout(function () { resultSpan.textContent = ''; }, 3000);
             });
         })
-        .catch(function() {
-            if (resultSpan) {
-                resultSpan.textContent = 'Failed';
-            } else {
-                alert('Failed to generate share link');
-            }
+        .catch(function () {
+            resultSpan.textContent = 'Failed';
         })
-        .finally(function() {
-            btn.disabled = false;
-        });
-    };
-}
-
-document.querySelectorAll('.share-song-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        const songPk = this.dataset.songPk;
-        const resultSpan = this.nextElementSibling;
-        createShareHandler(this, resultSpan, { type: 'song', id: songPk })();
+        .finally(function () { btn.disabled = false; });
     });
 });
 </script>

@@ -126,7 +126,7 @@ def visit_share(request, share_id):
         return redirect('syncope:org_member_detail', username=username, pk=share.person_id)
     elif share.song_id:
         username = share.song.user.username
-        return redirect('syncope:song_page', username=username, pk=share.song_id)
+        return redirect('syncope:song_detail', username=username, pk=share.song_id)
 
     # This shouldn't happen due to the CheckConstraint, but fallback anyway
     return JsonResponse({"error": "Share has no associated object"}, status=500)

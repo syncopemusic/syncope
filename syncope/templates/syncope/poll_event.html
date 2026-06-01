@@ -58,7 +58,7 @@
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Event Type</th>
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Date</th>
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Start <br> End</th>
-                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Locat...</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Location</th>
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Detail</th>
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 140px;">Actions</th>
             </tr>
@@ -68,16 +68,18 @@
             <tr>
                 <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{{ forloop.counter }}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">{{ pe.event_type.name }}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">{% if pe.same_date %}{{ pe.started_at|date:"d M" }}{% else %}{{ pe.started_at|date:"d M" }} – {{ pe.ended_at|date:"d M" }}{% endif %}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">{{ pe.started_at|date:"H:i" }} <br> {{ pe.ended_at|date:"H:i" }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{% if pe.same_date %}<span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span>{% else %}<span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span> – <span data-dt="{{ pe.ended_at|date:"c" }}" data-dt-fmt="date">{{ pe.ended_at|date:"d M" }}</span>{% endif %}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;"><span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="time">{{ pe.started_at|date:"H:i" }}</span> <br> <span data-dt="{{ pe.ended_at|date:"c" }}" data-dt-fmt="time">{{ pe.ended_at|date:"H:i" }}</span></td>
                 <td style="border: 1px solid #ddd; padding: 8px;">{% if pe.location %}{{ pe.location }}{% else %}<em>—</em>{% endif %}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">{% if pe.details %}{{ pe.details }}{% else %}<em>—</em>{% endif %}</td>
                 <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
                     <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}" style="margin-right: 0.5rem;">Edit</a>
-                    <form method="post" action="{% url 'syncope:poll_event_remove' url_username poll.pk pe.pk %}" style="display:inline;" onclick="return confirm('Do you want to remove {{ pe.event_type.name }} on {{ pe.started_at|date:'d M' }}?')">
+                    {% if is_admin %}
+                    <form method="post" action="{% url 'syncope:poll_event_remove' url_username poll.pk pe.pk %}" class="remove-event-form" data-event-type="{{ pe.event_type.name }}" style="display:inline;">
                         {% csrf_token %}
-                        <button type="submit" style="padding: 4px 8px; font-size: 0.9rem;">Remove</button>
+                        <button type="submit" class="btn-danger" style="padding: 4px 8px; font-size: 0.9rem;" title="Remove this event slot">Remove</button>
                     </form>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

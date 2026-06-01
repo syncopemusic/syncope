@@ -1,9 +1,9 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}Create{% endblock %}
+{% block title %}{% if form.instance.pk %}Edit{% else %}New{% endif %} Event{% endblock %}
 
 {% block content %}
-<h2>Create new event</h2>
+<h2>New event</h2>
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}

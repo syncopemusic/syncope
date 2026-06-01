@@ -9,7 +9,11 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from syncope.models import CustomUser, Skill
 from syncope.permissions import AccessControl
-from syncope.utils import import_songs, import_persons, import_events, import_attendance, import_event_songs, combine_event_projects
+from syncope.utils import (
+    import_songs, import_persons, import_events, import_attendance,
+    import_event_songs, combine_event_projects,
+    ALLOWED_SONG_KEYS, ALLOWED_PERSON_KEYS, REQUIRED_PERSON_KEYS, ALLOWED_EVENT_KEYS
+)
 
 
 @method_decorator(login_required, name="dispatch")
@@ -75,6 +79,26 @@ class ImportDashboardView(View):
         }
         if self.import_method == 'members':
             context['skills'] = Skill.objects.all()
+            context['importable_fields'] = ALLOWED_PERSON_KEYS
+            context['required_fields'] = REQUIRED_PERSON_KEYS
+            context['csv_header'] = ';'.join(ALLOWED_PERSON_KEYS)
+        elif self.import_method == 'songs':
+            context['importable_fields'] = ALLOWED_SONG_KEYS
+            context['csv_header'] = ';'.join(ALLOWED_SONG_KEYS)
+        elif self.import_method == 'events':
+            context['importable_fields'] = ALLOWED_EVENT_KEYS
+            context['csv_header'] = ';'.join(ALLOWED_EVENT_KEYS)
+        elif self.import_method == 'attendance':
+            context['format_note'] = (
+                'First column: member full names (<code>first_name last_name</code>). '
+                'Remaining columns: dates (<code>YYYY-MM-DD</code>). '
+                'Cell values: <code>+</code> present, <code>-</code> work/school, <code>o</code> vacation, <code>!</code> illness, or empty.'
+            )
+        elif self.import_method == 'event_songs':
+            context['format_note'] = (
+                'All columns are dates (<code>YYYY-MM-DD</code>). '
+                'Cell values: song <code>internal_id</code> (number) or <code>title</code> (text).'
+            )
         return render(request, self.template_name, context)
 
     def post(self, request, username, method):

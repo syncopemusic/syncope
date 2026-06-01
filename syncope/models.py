@@ -1,9 +1,9 @@
 from django.db import models
-from django.db.models import PROTECT, Q
+from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
-from django.contrib.auth.models import  AbstractBaseUser, BaseUserManager, PermissionsMixin #AbstractUser,
+from django.contrib.auth.models import  AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.conf import settings
 
 
@@ -32,6 +32,10 @@ class EventType(models.Model):
     additional_notes = models.CharField("short description of type", max_length=250, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @classmethod
+    def get_performance_types(cls):
+        return [cls.PERFORMANCE, cls.CONCERT, cls.RECORDING]
 
     def __str__(self):
         return self.name
@@ -263,10 +267,10 @@ class Person(models.Model):
     address = models.TextField(blank=True, null=True)
     phone =  models.CharField(max_length=23, blank=True, null=True)
     birth_date = models.DateField("birthday", blank=True, null=True)
-    birth_approximate = models.ForeignKey(ApproximateDate, on_delete=models.PROTECT, blank=True, null=True,
+    birth_approximate = models.ForeignKey(ApproximateDate, on_delete=models.CASCADE, blank=True, null=True,
                                           related_name="birth_approximate")
     death_date = models.DateField("deathday", blank=True, null=True)
-    death_approximate = models.ForeignKey(ApproximateDate, on_delete=models.PROTECT, blank=True, null=True,
+    death_approximate = models.ForeignKey(ApproximateDate, on_delete=models.CASCADE, blank=True, null=True,
                                           related_name="death_approximate")
 
     user = models.ForeignKey(
@@ -279,7 +283,7 @@ class Person(models.Model):
 
     owner = models.ForeignKey(
         "self",
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         blank=True,
         null=True,
         related_name="owned_persons"
@@ -325,7 +329,7 @@ class Membership(models.Model):
         blank=True,
         related_name="memberships"
     )
-    person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="memberships")
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="memberships")
 
     class Meta:
         constraints = [
@@ -352,8 +356,8 @@ class MembershipPeriod(models.Model):
         blank=True,
         related_name="membership_period"
     )
-    person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="membership_period")
-    role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name="membership_period")
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="membership_period")
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name="membership_period")
     started_at = models.DateField()
     ended_at = models.DateField(null=True, blank=True)
 
@@ -370,8 +374,8 @@ class PersonSkill(models.Model):
     Relationship between Person(member) and Skill.
     Each Person(member) can have multiple skill entries.
     """
-    person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="person_skill")
-    skill = models.ForeignKey(Skill, on_delete=models.PROTECT, related_name="person_skill")
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="person_skill")
+    skill = models.ForeignKey(Skill, on_delete=models.CASCADE, related_name="person_skill")
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -385,8 +389,8 @@ class PersonSkill(models.Model):
 
 
 class PersonRole(models.Model):
-    person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="person_role")
-    role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name="person_role")
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="person_role")
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name="person_role")
 
     class Meta:
         constraints = [
@@ -398,8 +402,8 @@ class PersonRole(models.Model):
 
 
 class PersonResource(models.Model):
-    person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="person_resource")
-    resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="person_resource")
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="person_resource")
+    resource = models.ForeignKey(Resource, on_delete=models.CASCADE, related_name="person_resource")
     order = models.PositiveIntegerField()
 
 
@@ -411,19 +415,23 @@ class Song(models.Model):
 
     composer = models.ForeignKey(
         Person,
-        on_delete=PROTECT,
+        on_delete=models.SET_NULL,
         related_name="composed_songs",
-        limit_choices_to={'person_skill__skill_id': Skill.COMPOSER}
+        limit_choices_to={'person_skill__skill_id': Skill.COMPOSER},
+        null=True,
+        blank=True
     )
     poet = models.ForeignKey(
         Person,
-        on_delete=PROTECT,
+        on_delete=models.SET_NULL,
         related_name="written_songs",
-        limit_choices_to={'person_skill__skill_id': Skill.POET}
+        limit_choices_to={'person_skill__skill_id': Skill.POET},
+        null=True,
+        blank=True
     )
     translator = models.ForeignKey(
         Person,
-        on_delete=PROTECT,
+        on_delete=models.SET_NULL,
         related_name="translated_songs",
         limit_choices_to={'person_skill__skill_id': Skill.TRANSLATOR},
         null=True,
@@ -431,7 +439,7 @@ class Song(models.Model):
     )
 
     year = models.IntegerField("year of creation", blank=True, null=True)
-    group = models.CharField("type of song", max_length=250)
+    ensemble = models.CharField("ensemble", max_length=250, blank=True, null=True)
     number_of_voices = models.PositiveIntegerField(blank=True, null=True)
     keywords = models.CharField(max_length=255, blank=True, null=True)
 
@@ -450,7 +458,7 @@ class Song(models.Model):
     duration = models.PositiveIntegerField("duration in seconds", blank=True, null=True)
 
     lyrics = models.TextField("lyrics", blank=True, null=True)
-    languagecode = models.ForeignKey(LanguageCode, on_delete=models.PROTECT, blank=True, null=True)
+    languagecode = models.ForeignKey(LanguageCode, on_delete=models.CASCADE, blank=True, null=True)
 
     class Meta:
         constraints = [
@@ -461,7 +469,8 @@ class Song(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.title} - {self.composer.last_name}"
+        composer_name = self.composer.last_name if self.composer else '-'
+        return f"{self.title} - {composer_name}"
 
 
 class Quote(models.Model):
@@ -479,8 +488,8 @@ class Quote(models.Model):
 
 
 class SongResource(models.Model):
-    song = models.ForeignKey(Song, on_delete=models.PROTECT, related_name="song_resource")
-    resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="song_resource")
+    song = models.ForeignKey(Song, on_delete=models.CASCADE, related_name="song_resource")
+    resource = models.ForeignKey(Resource, on_delete=models.CASCADE, related_name="song_resource")
     order = models.PositiveIntegerField()
 
 
@@ -523,9 +532,9 @@ class Event(models.Model):
     internal_id = models.PositiveIntegerField("ID", blank=True, null=True)
     name = models.CharField("name of the event", max_length=250)
     location = models.TextField(blank=True, null=True)
-    started_at = models.DateTimeField("start date hour")
-    ended_at = models.DateTimeField("end date hour")
-    event_type = models.ForeignKey(EventType, on_delete=models.PROTECT)
+    started_at = models.DateTimeField("start date hour", blank=True, null=True)
+    ended_at = models.DateTimeField("end date hour", blank=True, null=True)
+    event_type = models.ForeignKey(EventType, on_delete=models.CASCADE)
     details = models.TextField(blank=True, null=True)
     num_visitors = models.PositiveIntegerField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
@@ -535,10 +544,10 @@ class Event(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    attendance_locked = models.BooleanField(default=False)
-    locked_by = models.ForeignKey(CustomUser, null=True, blank=True,
-                                  on_delete=models.SET_NULL, related_name='locked_events')
-    locked_at = models.DateTimeField(null=True, blank=True)
+    # attendance_locked = models.BooleanField(default=False)
+    # locked_by = models.ForeignKey(CustomUser, null=True, blank=True,
+    #                               on_delete=models.SET_NULL, related_name='locked_events')
+    # locked_at = models.DateTimeField(null=True, blank=True)
 
     project = models.ForeignKey(
         Project,
@@ -553,8 +562,8 @@ class EventSong(models.Model):
     """
     Through table for song objects that are in each event. Order matters.
     """
-    event = models.ForeignKey(Event, on_delete=models.PROTECT)
-    song = models.ForeignKey(Song, on_delete=models.PROTECT)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE)
+    song = models.ForeignKey(Song, on_delete=models.CASCADE)
     order = models.IntegerField(null=True, blank=True)
     encore = models.BooleanField("additional songs after the end (encore)",blank=True, null=True)
 
@@ -571,8 +580,8 @@ class EventSong(models.Model):
 
 
 class EventResource(models.Model):
-    event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="event_resource")
-    resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="event_resource")
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="event_resource")
+    resource = models.ForeignKey(Resource, on_delete=models.CASCADE, related_name="event_resource")
     order = models.PositiveIntegerField()
 
 
@@ -593,9 +602,9 @@ class Attendance(models.Model):
     Designation of participation between event and person.
     Outputs: present, missing, absent, late, early departure.
     """
-    event = models.ForeignKey(Event, on_delete=models.PROTECT)
-    person = models.ForeignKey(Person, on_delete=models.PROTECT)
-    attendance_type = models.ForeignKey(AttendanceType, on_delete=models.PROTECT)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE)
+    person = models.ForeignKey(Person, on_delete=models.CASCADE)
+    attendance_type = models.ForeignKey(AttendanceType, on_delete=models.CASCADE)
 
     objects = models.Manager.from_queryset(AttendanceQuerySet)()
 
@@ -616,15 +625,15 @@ class Attendance(models.Model):
 
 class Singer(models.Model):
     """Through table for person and voice."""
-    person = models.ForeignKey(Person, on_delete=models.PROTECT)
-    voice = models.ForeignKey(Voice, on_delete=models.PROTECT)
+    person = models.ForeignKey(Person, on_delete=models.CASCADE)
+    voice = models.ForeignKey(Voice, on_delete=models.CASCADE)
 
 
 
 class Instrumentalist(models.Model):
     """Through table for person and instrument."""
-    person = models.ForeignKey(Person, on_delete=models.PROTECT)
-    instrument = models.ForeignKey(Instrument, on_delete=models.PROTECT)
+    person = models.ForeignKey(Person, on_delete=models.CASCADE)
+    instrument = models.ForeignKey(Instrument, on_delete=models.CASCADE)
 
 
 class LyricsTranslation(models.Model):
@@ -634,9 +643,9 @@ class LyricsTranslation(models.Model):
     Each language has its own input.
     """
     translation = models.TextField()
-    song = models.ForeignKey(Song, on_delete=models.PROTECT)
-    languagecode = models.ForeignKey(LanguageCode, on_delete=models.PROTECT)
-    translator = models.ForeignKey(Person, on_delete=models.PROTECT, blank=True, null=True)
+    song = models.ForeignKey(Song, on_delete=models.CASCADE)
+    languagecode = models.ForeignKey(LanguageCode, on_delete=models.CASCADE)
+    translator = models.ForeignKey(Person, on_delete=models.CASCADE, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -1,6 +1,6 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}Poll Persons — {{ poll.title }}{% endblock %}
+{% block title %}{{ poll.title }} - Persons{% endblock %}
 
 {% block content %}
 <h2>{{ poll.title }} — Persons</h2>
@@ -8,7 +8,7 @@
 <form method="get">
     <input type="text" name="q" value="{{ q }}" placeholder="Search by name, role, skill, voice, instrument">
     <button type="submit">Search</button>
-    {% if q %}<a href="?">Clear</a>{% endif %}
+    {% if q %}<a href="?" class="btn-primary" style="text-decoration: none; color: inherit;">Clear</a>{% endif %}
 </form>
 
 <form method="post">
@@ -51,10 +51,12 @@
                     <a href="{% url 'syncope:poll_person_attendance' url_username poll.pk pp.pk %}" target="_blank">→ Link</a>
                 </td>
                 <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                    {% if is_admin %}
                     <form method="post" action="{% url 'syncope:poll_person_remove' url_username poll.pk pp.pk %}" style="display:inline;" onclick="return confirm('Remove {{ pp.person.first_name }} {{ pp.person.last_name }}?')">
                         {% csrf_token %}
-                        <button type="submit" style="padding: 4px 8px; font-size: 0.9rem;">Remove</button>
+                        <button type="submit" class="btn-danger" style="padding: 4px 8px; font-size: 0.9rem;">Remove</button>
                     </form>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

@@ -4,6 +4,7 @@
 {% block title %}Events{% endblock %}
 
 {% block content %}
+
 <style>
 .btn-full { display: inline; }
 .btn-short { display: none; }
@@ -13,30 +14,34 @@
 }
 </style>
 {% if membership and ADMIN_ROLE in membership.person.roles.all %}
-<p><a href="{%  url 'syncope:event_create' url_username %}">
-    +</a></p>
+<p><a href="{%  url 'syncope:event_new' url_username %}">
+    + New Event</a></p>
 {% endif %}
 <h2>Events</h2>
 
 <div style="display:none;">{% csrf_token %}</div>
 
+
 <table>
     <tr>
-        <th>#</th>
+        <th><a href="?sort=id{% if current_sort == 'id' and not reverse %}&reverse=true{% endif %}">#{% if current_sort == 'id' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th>🔗</th>
-        <th>Date</th>
-        <th>Type</th>
-        <th>Project</th>
+        <th><a href="?sort=date{% if current_sort == 'date' and not reverse %}&reverse=true{% endif %}">Date{% if current_sort == 'date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?sort=type{% if current_sort == 'type' and not reverse %}&reverse=true{% endif %}">Type{% if current_sort == 'type' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?sort=project{% if current_sort == 'project' and not reverse %}&reverse=true{% endif %}">Project{% if current_sort == 'project' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+
         <th>Resources</th>
     </tr>
     {% for event in events %}
         <tr>
             <td>{{ forloop.counter }}</td>
+
             <td style="position: relative;"><button class="share-event-btn" data-type="event" data-event-pk="{{ event.id }}" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link"><img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy"></button>
               <span class="share-event-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
             </td>
+
             <td> <a href="{%  url 'syncope:event_detail' url_username event.id %}">
-                {{ event.started_at }}
+                <span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime">{{ event.started_at|date:"d M, Y, H:i" }}</span>
                 </a>
             </td>
             <td>{{ event.event_type }}</td>

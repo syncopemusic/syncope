@@ -1,8 +1,8 @@
 {% extends "syncope/base.html" %}
-{% block title %}{{ page_title }}{% endblock %}
+{% block title %}{% if form.instance.pk %}Update{% else %}New Person{% endif %} {{ form.instance.first_name }} {{ form.instance.last_name }} {% endblock %}
 
 {% block content %}
-<h1>{{ page_title }}</h1>
+<h1>{% if form.instance.pk %}Update{% else %}New Person{% endif %} {{ form.instance.first_name }} {{ form.instance.last_name }} </h1>
 {% if url_username == user.username %}
     <p>
         This is your personal page.

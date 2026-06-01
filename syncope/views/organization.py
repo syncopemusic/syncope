@@ -52,7 +52,7 @@ class OrganizationDashboard(TemplateView):
 
 @method_decorator(login_required, name='dispatch')
 class OrganizationCreateView(CreateView):
-    template_name = "syncope/organization_form.html"
+    template_name = "syncope/org_form.html"
     form_class = OrganizationForm
     context_object_name = "org_create"
     success_url = reverse_lazy("syncope:home")

@@ -5,12 +5,14 @@ from django.contrib import messages
 from django.utils import timezone
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, UpdateView,  DetailView
+from django.views.generic.edit import DeleteView
 from django.db.models import Max, Min, Case, When, Value, IntegerField, Prefetch
 from django.shortcuts import redirect
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
+from django.contrib.auth.mixins import LoginRequiredMixin
 from syncope.models import CustomUser, Person, Role
 from syncope.models import Event, EventSong, Attendance, AttendanceType, EventResource, EventSongResource, Resource, SongResource
 from syncope.forms import EventForm, EventSongFormSet, AttendanceFormSet, AddAttendanceForm
@@ -24,7 +26,7 @@ class EventCreateView(CreateView):
     """Step 1: Create event with basic info only"""
     model = Event
     form_class = EventForm
-    template_name = 'syncope/event_create.html'
+    template_name = 'syncope/event_form.html'
 
     def dispatch(self, request, *args, **kwargs):
         url_username = self.kwargs.get("username")
@@ -208,8 +210,6 @@ class EventUpdateView(UpdateView):
                 self._song_resource_formsets_map[eventsong.pk] = formset
 
         search_q = self.request.GET.get('q', '')
-        show_add_form = self.request.GET.get('add_participant') == '1' and self.is_admin
-        show_add_song = self.is_admin
         song_search_q = self.request.GET.get('song_q', '')
 
         context['song_formset'] = self._song_formset
@@ -223,20 +223,18 @@ class EventUpdateView(UpdateView):
         context['url_username'] = self.kwargs.get('username')
         context['is_admin'] = self.is_admin
         context['admin_override'] = self.request.GET.get('admin_override') == 'true' and self.is_admin
-        context['show_add_form'] = show_add_form
         context['search_q'] = search_q
-        context['show_add_song'] = show_add_song
         context['song_search_q'] = song_search_q
         context['add_form'] = AddAttendanceForm(
             org_user=self.customuser,
             event=event,
             search_q=search_q,
-        ) if show_add_form else None
+        ) if self.is_admin else None
         context['add_song_form'] = AddSongToEventForm(
             org_user=self.customuser,
             event=event,
             search_q=song_search_q,
-        ) if show_add_song else None
+        ) if self.is_admin else None
         return context
 
 
@@ -400,14 +398,8 @@ class EventUpdateView(UpdateView):
             'pk': self.object.pk,
         })
 
-        if action == 'show_add_form':
-            return redirect(event_update_url + '?add_participant=1')
-
-        if action == 'save_and_add_song':
-            return redirect(event_update_url + '?add_song=1')
-
         if action == 'add_member':
-            add_url = reverse('syncope:org_member_add', kwargs={
+            add_url = reverse('syncope:org_member_new', kwargs={
                 'username': self.kwargs['username'],
             })
             return redirect(f'{add_url}?next={event_update_url}')
@@ -438,11 +430,32 @@ class EventListView(ListView):
     context_object_name = "events"
     model = Event
 
+    def _get_sort_field(self, default_sort='date'):
+        """Extract and validate sort parameters from request."""
+        sort = self.request.GET.get('sort', default_sort)
+        reverse = self.request.GET.get('reverse', 'false') == 'true'
+
+        # If no sort parameter provided, default to descending for backward compatibility
+        if 'sort' not in self.request.GET:
+            reverse = True
+
+        sort_field_map = {
+            'id': 'pk',
+            'date': 'started_at',
+            'type': 'event_type__name',
+            'project': 'project__title',
+        }
+        sort_field = sort_field_map.get(sort, 'started_at')
+        if reverse:
+            sort_field = '-' + sort_field
+
+        return sort_field, sort, reverse
 
     def get_queryset(self):
         url_username = self.kwargs.get("username")
         customuser = get_object_or_404(CustomUser, username=url_username)
-        return Event.objects.filter(user=customuser).order_by('-started_at').prefetch_related('event_resource__resource')
+        sort_field, _, _ = self._get_sort_field()
+        return Event.objects.filter(user=customuser).order_by(sort_field).prefetch_related('event_resource__resource')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -454,6 +467,9 @@ class EventListView(ListView):
             ).select_related('resource').order_by('order')
             event.event_song_resource_icons = resource_icon_list(event_song_resources)
             event.event_song_resource_count = event_song_resources.count()
+        _, sort, reverse = self._get_sort_field()
+        context['current_sort'] = sort
+        context['reverse'] = reverse
         return context
 
 
@@ -585,3 +601,41 @@ def event_add_song(request, username, pk):
         )
 
     return redirect('syncope:event_update', username=username, pk=pk)
+
+
+@method_decorator(login_required, name="dispatch")
+class EventDeleteView(LoginRequiredMixin, DeleteView):
+    model = Event
+    template_name = 'syncope/event_confirm_delete.html'
+    success_url = None
+
+    def get_queryset(self):
+        url_username = self.kwargs.get('username')
+        org_user = get_object_or_404(CustomUser, username=url_username)
+        return Event.objects.filter(user=org_user)
+
+    def dispatch(self, request, *args, **kwargs):
+        url_username = self.kwargs.get('username')
+        org_user = get_object_or_404(CustomUser, username=url_username)
+        is_admin = AccessControl.can_add_event(
+            request.user, org_user
+        ).filter(person__roles__id=Role.ADMIN).exists()
+        if not is_admin:
+            return HttpResponseForbidden("Only admins can delete events.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        event = self.get_object()
+        event_name = event.name
+        response = super().delete(request, *args, **kwargs)
+        messages.success(request, f"Successfully deleted event '{event_name}'.")
+        return response
+
+    def get_success_url(self):
+        return reverse('syncope:event_list', kwargs={'username': self.kwargs.get('username')})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.kwargs.get('username')
+        context['is_admin'] = True
+        return context

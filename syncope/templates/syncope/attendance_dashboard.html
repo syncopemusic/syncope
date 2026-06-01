@@ -41,10 +41,16 @@
 <div class="attendance-dashboard">
     <h2>Attendance Dashboard - {{ org_user.username }}</h2>
 
+
+        <form method="post" action="{%  url 'syncope:quick_new_rehearsal' username=url_username %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-primary">+ Add Rehearsal Now</button>
+        </form>
+
     {# Filters and Quick Add in same row #}
     <div class="dashboard-controls" style="display: flex; gap: 2rem; margin-bottom: 1rem; align-items: end;">
         <form method="get" class="filters" style="display: flex; gap: 1rem; align-items: end;">
-            <div>
+            <div><p>Filter:</p>
                 <label>Date Range:</label>
                 <input type="date" name="start_date" value="{{ request.GET.start_date }}"
                        onchange="document.getElementById('event_limit_input').value='';">
@@ -58,13 +64,9 @@
                        onchange="this.form.start_date.value=''; this.form.end_date.value='';">
             </div>
             <button type="submit">Filter</button>
-            <a href="?">Reset</a>
+            <a href="?" class="btn-primary" style="text-decoration: none; color: inherit;">Reset filter</a>
         </form>
 
-        <form method="post" action="{%  url 'syncope:quick_add_rehearsal' username=url_username %}">
-            {% csrf_token %}
-            <button type="submit" class="btn-primary">+ Add Rehearsal Now</button>
-        </form>
     </div>
 
     <div style="margin-bottom: 0.5rem; font-size: 0.85rem; display: flex; gap: 1rem; flex-wrap: wrap;">
@@ -85,6 +87,7 @@
             <table class="attendance-table">
                 <thead>
                     <tr>
+                        <th>#</th>
                         <th class="sticky-col">Member</th>
                         {% for event in events %}
                             <th class="event-col "
@@ -95,7 +98,7 @@
                                         {% if event.event_type.id != 1 %}font-weight: bold; {% endif %}
                                         color: inherit; text-decoration: underline; font-size: inherit;"
                                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
-                                        {{ event.started_at|date:"d M" }}
+                                        <span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="date">{{ event.started_at|date:"d M" }}</span>
                                     </a>
                                 </div>
                             </th>
@@ -107,6 +110,7 @@
                 <tbody>
                     {% for row in dashboard_data %}
                         <tr>
+                            <td>{{ forloop.counter }}</td>
                             <td class="sticky-col member-name">{{ row.member }}</td>
                             {% for cell in row.attendance_cells %}
                                 <td class="attendance-cell att-type-{{ cell.attendance_type_id|default:5 }} {% if cell.is_grayed_out %}grayed-out{% endif %}"
@@ -134,7 +138,7 @@
         </div>
 
         <div >
-            <button type="submit" class="btn-primary">Save All Changes</button>
+            <button type="submit" class="btn-primary">Save</button>
         </div>
     </form>
 </div>

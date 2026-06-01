@@ -1,8 +1,8 @@
 {% extends "syncope/base.html" %}
-{% block title %}{% if object %}Edit Song{% else %}Add Song{% endif %}{% endblock %}
+{% block title %}{% if object %}Edit{% else %}New{% endif %} Song{% endblock %}
 {% block content %}
 
-<h1>{% if object %}Edit{% else %}Add{% endif %} Song</h1>
+<h1>{% if object %}Edit{% else %}New{% endif %} Song</h1>
 
 <form method="post">
     {% csrf_token %}
@@ -36,7 +36,7 @@
                 {% for hidden in kw_form.hidden_fields %}{{ hidden }}{% endfor %}
                 <td>{{ kw_form.word }}</td>
                 <td>{{ kw_form.bar_number }}</td>
-                <td>{{ kw_form.DELETE }}</td>
+                <td>{% if can_manage %}{{ kw_form.DELETE }}{% endif %}</td>
             </tr>
         {% endfor %}
         </tbody>
@@ -61,7 +61,7 @@
                 <td>{{ t_form.languagecode }}</td>
                 <td>{{ t_form.translation }}</td>
                 <td>{{ t_form.translator }}</td>
-                <td>{{ t_form.DELETE }}</td>
+                <td>{% if can_manage %}{{ t_form.DELETE }}{% endif %}</td>
             </tr>
             {% if t_form.errors %}
             <tr><td colspan="4">{{ t_form.errors }}</td></tr>
@@ -71,9 +71,10 @@
     </table>
     <button type="submit" name="action" value="add_translation_row">+ Add Translation</button>
 
-    <h3>Resources</h3>
+
     {{ resource_formset.management_form }}
     {% for r_form in resource_formset %}
+    <h3>Resources</h3>
         <div>
             {{ r_form.url }} {{ r_form.description }}
             {% if r_form.instance.pk %}{{ r_form.DELETE }}{% endif %}
@@ -86,9 +87,9 @@
 </form>
 <p>
 {% if object %}
-    <a href="{%  url 'syncope:song_page' url_username object.pk %}">Cancel Edit</a>
+    <a href="{%  url 'syncope:song_detail' url_username object.pk %}">Cancel Edit</a>
 {% else %}
-    <a href="{%  url 'syncope:song_dashboard' url_username %}">Cancel &amp; Return to List</a>
+    <a href="{%  url 'syncope:song_list' url_username %}">Cancel &amp; Return to List</a>
 {% endif %}
 </p>
 {% endblock %}

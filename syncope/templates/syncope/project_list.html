@@ -15,7 +15,7 @@
 <h2>Projects</h2>
 {% if membership and ADMIN_ROLE in membership.person.roles.all %}
 <p>
-    <a href="{%  url 'syncope:project_create' url_username %}">+ New Project</a>
+    <a href="{%  url 'syncope:project_new' url_username %}">+ New Project</a>
 </p>
 {% endif %}
 {% if projects %}
@@ -24,32 +24,34 @@
 
 <table>
     <tr>
-        <th></th>
+
+        <th><a href="?sort=id{% if current_sort == 'id' and not reverse %}&reverse=true{% endif %}">#{% if current_sort == 'id' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th>🔗</th>
-        <th>Title</th>
-        <th>Events</th>
-        <th>Start Date</th>
-        <th>End Date</th>
+        <th><a href="?sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}">Title{% if current_sort == 'title' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?sort=start_date{% if current_sort == 'start_date' and not reverse %}&reverse=true{% endif %}">Start Date{% if current_sort == 'start_date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?sort=end_date{% if current_sort == 'end_date' and not reverse %}&reverse=true{% endif %}">End Date{% if current_sort == 'end_date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?sort=events{% if current_sort == 'events' and not reverse %}&reverse=true{% endif %}">Events{% if current_sort == 'events' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
 
     </tr>
     {% for project in projects %}
         <tr>
             <td>{{ forloop.counter }}</td>
+
             <td style="position: relative;">
               <button class="share-project-btn" data-type="project" data-project-pk="{{ project.id }}" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link"><img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy"></button>
               <span class="share-project-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
             </td>
+
             <td>
                 <a href="{%  url 'syncope:project_detail' url_username project.id %}">
                     {{ project.title }}
                 </a>
 
             </td>
-            <td><span title="Events">{{ project.num_main_events }}</span><span title="Rehearsals">({{ project.num_rehearsals }})</span></td>
+
             <td>{{ project.start_date|default:"-" }}</td>
             <td>{{ project.end_date|default:"-" }}</td>
-
-
+            <td><span title="Events">{{ project.num_main_events }}</span><span title="Rehearsals">({{ project.num_rehearsals }})</span></td>
         </tr>
     {% endfor %}
 </table>

@@ -1,0 +1,8 @@
+{% if person %}
+    <a href="{%  url 'syncope:org_member_detail' url_username person.pk %}"
+    title="{{ person.first_name }} {{ person.last_name }} {{ person.birth_date|date:'Y' }}-{{ person.death_date|date:'Y' }}">
+        {{ person.first_name }} {{ person.last_name }}
+    </a>
+{% else %}
+    -
+{% endif %}

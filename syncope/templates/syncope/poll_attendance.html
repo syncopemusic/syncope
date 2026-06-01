@@ -1,7 +1,7 @@
 {% extends "syncope/base.html" %}
 {% load static %}
 
-{% block title %}{{ poll.title }} — Attendance{% endblock %}
+{% block title %}{{ poll.title }} - Attendance{% endblock %}
 
 {% block content %}
 <style>
@@ -107,7 +107,7 @@ tbody td {
 }
 </style>
 
-<h2>{{ poll.title }} — Attendance</h2>
+<h2>{{ poll.title }} - Attendance</h2>
 
 <div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
     {% if viewing_as %}
@@ -161,7 +161,7 @@ tbody td {
                     {% for event in poll_events %}
                     <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
-                        {% if event.same_date %}{{ event.started_at|date:"D d M" }}{% else %}{{ event.started_at|date:"D d M" }} <br> {{ event.ended_at|date:"D d M" }}{% endif %}
+                        {% if event.same_date %}<span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="date-dow">{{ event.started_at|date:"D d M" }}</span>{% else %}<span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="date-dow">{{ event.started_at|date:"D d M" }}</span> <br> <span data-dt="{{ event.ended_at|date:"c" }}" data-dt-fmt="date-dow">{{ event.ended_at|date:"D d M" }}</span>{% endif %}
                     </th>
                     {% endfor %}
                 </tr>
@@ -172,7 +172,7 @@ tbody td {
                     {% for event in poll_events %}
                     <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
-                        {{ event.started_at|date:"H:i" }} <br> {{ event.ended_at|date:"H:i" }}
+                        <span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="time">{{ event.started_at|date:"H:i" }}</span> <br> <span data-dt="{{ event.ended_at|date:"c" }}" data-dt-fmt="time">{{ event.ended_at|date:"H:i" }}</span>
                     </th>
                     {% endfor %}
                 </tr>

@@ -7,7 +7,7 @@
 <p><small>Quotes are specific phrases or sections from the song with their bar numbers for reference.</small></p>
 
 <p>
-    <a href="{%  url 'syncope:song_page' url_username song.pk %}">Back to Song</a>
+    <a href="{%  url 'syncope:song_detail' url_username song.pk %}">Back to Song</a>
     &nbsp;|&nbsp;
     <a href="{%  url 'syncope:song_update' url_username song.pk %}">Edit Song</a>
 </p>
@@ -36,7 +36,7 @@
                     {% endif %}
                 </td>
                 <td>{{ form.bar_number }}</td>
-                <td>{{ form.DELETE }}</td>
+                <td>{% if can_manage %}{{ form.DELETE }}{% endif %}</td>
             </tr>
         {% endfor %}
         </tbody>
