@@ -19,5 +19,8 @@
   },
   {"model": "syncope.skill", "pk": 7, "fields":
   {"title": "Translator", "additional_notes": "translates lyrics", "created_at": "2026-02-16T11:41:20.537Z"}
+  },
+  {"model": "syncope.skill", "pk": 8, "fields":
+  {"title": "Technician", "additional_notes": "support", "created_at": "2026-02-16T11:41:20.537Z"}
   }
 ]

@@ -3,19 +3,38 @@ from django.urls import reverse_lazy, reverse
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, UpdateView,  DetailView, View
 from django.views.generic.edit import DeleteView
-from django.db.models import  Q
+from django.db.models import Q, Exists, OuterRef, Count
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from syncope.models import Song
-from syncope.models import Event, SongResource, Resource
+from syncope.models import Event, SongResource, Resource, EventSongResource
 from syncope.forms import  SongForm
 from syncope.forms import  QuoteFormSet, LyricsTranslationFormSet, SongResourceFormSet
 from syncope.mixins import  SongOwnerMixin
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list
 
+
+def save_song_resources(song, resource_formset, owner_user):
+    """Save resources from a formset to a song."""
+    song.song_resource.all().delete()
+    valid_forms = [
+        f for f in resource_formset.forms
+        if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('url')
+    ]
+    for idx, f in enumerate(valid_forms):
+        url = f.cleaned_data['url']
+        description = f.cleaned_data.get('description', '')
+        resource, created = Resource.objects.get_or_create(
+            url=url,
+            defaults={'owner': owner_user, 'description': description}
+        )
+        if not created:
+            resource.description = description
+            resource.save(update_fields=['description'])
+        SongResource.objects.create(song=song, resource=resource, order=idx + 1)
 
 
 @method_decorator(login_required, name='dispatch')
@@ -52,6 +71,11 @@ class SongListView(SongOwnerMixin, ListView):
         if reverse:
             sort_field = f'-{sort_field}'
 
+        # Annotate with counts for both direct and event-based resources
+        qs = qs.annotate(
+            has_direct_resources=Count('song_resource', distinct=True),
+            has_event_resources=Count('eventsong__event_song_resource', distinct=True)
+        )
         return qs.order_by(sort_field).prefetch_related('song_resource__resource')
 
     def get_context_data(self, **kwargs):
@@ -80,10 +104,30 @@ class SongDetailView(SongOwnerMixin, DetailView):
         events = Event.objects.filter(
             eventsong__song=song
         ).order_by('-started_at').distinct()
+
+        for event in events:
+            event_songs = event.eventsong_set.filter(song=song)
+            event_song_resources = EventSongResource.objects.filter(
+                event_song__in=event_songs
+            ).select_related('resource').order_by('order')
+            event.song_resources_in_event = resource_icon_list(event_song_resources)
+
         context['events'] = events
         context['song_resources'] = resource_icon_list(
             song.song_resource.select_related('resource').order_by('order')
         )
+
+        # Build combined resource list: song resources first, then event-song resources
+        all_song_resources = [
+            {'url': r['url'], 'icon': r['icon'], 'desc': r['desc'], 'event': None, 'share_url': r.get('share_url')}
+            for r in context['song_resources']
+        ]
+        for event in events:
+            for r in event.song_resources_in_event:
+                all_song_resources.append({
+                    'url': r['url'], 'icon': r['icon'], 'desc': r['desc'], 'event': event, 'share_url': r.get('share_url')
+                })
+        context['all_song_resources'] = all_song_resources
 
         return context
 
@@ -160,6 +204,11 @@ class SongCreateView(SongOwnerMixin, CreateView):
         )
         if tf.is_valid():
             tf.save()
+        rf = SongResourceFormSet(
+            self.request.POST, instance=self.object, prefix='resources', user=self.owner_user
+        )
+        if rf.is_valid():
+            save_song_resources(self.object, rf, self.owner_user)
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
@@ -237,22 +286,7 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
         return super().post(request, *args, **kwargs)
 
     def _save_resources(self, song, resource_formset):
-        song.song_resource.all().delete()
-        valid_forms = [
-            f for f in resource_formset.forms
-            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('url')
-        ]
-        for idx, f in enumerate(valid_forms):
-            url = f.cleaned_data['url']
-            description = f.cleaned_data.get('description', '')
-            resource, created = Resource.objects.get_or_create(
-                url=url,
-                defaults={'owner': self.owner_user, 'description': description}
-            )
-            if not created:
-                resource.description = description
-                resource.save(update_fields=['description'])
-            SongResource.objects.create(song=song, resource=resource, order=idx + 1)
+        save_song_resources(song, resource_formset, self.owner_user)
 
     def form_valid(self, form):
         form.instance.user = self.owner_user

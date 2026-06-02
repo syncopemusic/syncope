@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 
 {% block title %}{{ project.title }}{% endblock %}
 
@@ -9,11 +10,18 @@
     <a href="{%  url 'syncope:project_update' url_username project.pk %}">Edit</a>
     &nbsp;|&nbsp;
     <a href="{%  url 'syncope:project_list' url_username %}">Back to Projects</a>
+    &nbsp;|&nbsp;
+    <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
+        <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
+    </button>
+    <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
 </p>
+<div style="display:none;">{% csrf_token %}</div>
 
 <div class="project-header">
     <table>
-        <tr><th>Description</th><td>{{ project.description|default:"-" }}</td></tr>
+        <tr><th>Description</th><td>{{ project.description|default:"-"|linebreaksbr }}</td></tr>
+        <tr><th>Details</th><td>{{ project.details|default:"-"|linebreaksbr }}</td></tr>
         <tr><th>Start Date</th><td>{{ project.start_date|default:"-" }}</td></tr>
         <tr><th>End Date</th><td>{{ project.end_date|default:"-" }}</td></tr>
     </table>
@@ -62,6 +70,7 @@
 <table>
     <tr>
         <th>Name</th>
+        <th>🔗</th>
         <th>Date</th>
         <th>Location</th>
         <th>Type</th>
@@ -73,6 +82,9 @@
                 <a href="{%  url 'syncope:event_detail' url_username event.pk %}">
                     {{ event.name }}
                 </a>
+            </td>
+            <td>{% if event.resource_count > 0 %}<span title="Event resources">🔗{{ event.resource_count }}</span>{% endif %}
+            {% if event.event_song_resource_count > 0 %}<span title="Song resources from this event">🎵{{ event.event_song_resource_count }}</span>{% endif %}
             </td>
             <td>{{ event.started_at|date:"M d, Y" }}</td>
             <td>{{ event.location|default:"-" }}</td>
@@ -101,8 +113,88 @@
 <p>No events.</p>
 {% endif %}
 
+<h3>Project Resources</h3>
+{% if project_resources %}
+<table>
+    <tr><th></th><th></th><th>Description</th><th>URL</th></tr>
+    {% for link in project_resources %}
+    <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ link.icon }}</td>
+        <td>{{ link.desc }}</td>
+        <td><a href="{{ link.share_url|default:link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a></td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>No resources.</p>
+{% endif %}
+
 <p>
     <a href="{%  url 'syncope:project_delete' url_username project.pk %}">Delete Project</a>
 </p>
+
+{% block extra_js %}
+<script>
+function createShareHandler(btn, resultSpan, shareData) {
+    return function () {
+        btn.disabled = true;
+        if (resultSpan) resultSpan.textContent = 'Copying...';
+
+        fetch('/share/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify(shareData),
+        })
+        .then(function(response) {
+            if (!response.ok) throw new Error('Request failed');
+            return response.json();
+        })
+        .then(function(data) {
+            const shareUrl = window.location.origin + '/' + data.share_id + '/';
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(shareUrl).then(function() {
+                if (resultSpan) {
+                    resultSpan.textContent = 'Copied';
+                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
+                } else {
+                    alert('Share link copied:\n' + shareUrl);
+                }
+            }).catch(function() {
+                if (resultSpan) {
+                    resultSpan.textContent = 'Copied';
+                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
+                } else {
+                    alert('Share link:\n' + shareUrl);
+                }
+            });
+        })
+        .catch(function() {
+            if (resultSpan) {
+                resultSpan.textContent = 'Failed';
+            } else {
+                alert('Failed to generate share link');
+            }
+        })
+        .finally(function() {
+            btn.disabled = false;
+        });
+    };
+}
+
+const shareBtn = document.getElementById('share-btn');
+if (shareBtn) {
+    shareBtn.addEventListener('click', createShareHandler(
+        shareBtn,
+        document.getElementById('share-result'),
+        { type: 'project', id: {{ project.pk }} }
+    ));
+}
+</script>
+{% endblock %}
 
 {% endblock %}

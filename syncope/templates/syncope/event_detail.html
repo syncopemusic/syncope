@@ -1,4 +1,6 @@
 {% extends "syncope/base.html" %}
+{% load static %}
+
 {% block title %}{{ event.name }}{% endblock %}
 
 {% block content %}
@@ -14,33 +16,43 @@
     <p>{{ event.project.description }}</p>
 {% endif %}
 {% endif %}
-{% if event_resources %}
-<h3>Resources</h3>
-<p>
-  {% for link in event_resources %}
-    <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }}</a>
-  {% endfor %}
-</p>
-{% endif %}
+
 
 {% if is_admin %}
-    <p><a href="{%  url 'syncope:event_update' url_username event.pk %}">Edit event</a></p>
+<p><a href="{%  url 'syncope:event_update' url_username event.pk %}">Edit event</a> |</p>
 {% endif %}
+<p>
+
+    <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
+        <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
+    </button>
+    <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
+</p>
+<div style="display:none;">{% csrf_token %}</div>
+
 
 <h3>Songs</h3>
-{% if event.eventsong_set.all %}
+{% if eventsongs %}
     <table>
         <thead>
             <tr>
+                <th></th>
                 <th>Song</th>
                 <th>Encore</th>
             </tr>
         </thead>
         <tbody>
-            {% for eventsong in event.eventsong_set.all|dictsort:"order" %}
+            {% for eventsong in eventsongs %}
             <tr>
+                <td>{{ forloop.counter }}</td>
                 <td>
-                    <a href="{%  url 'syncope:song_page' url_username eventsong.song.pk %}">{{ eventsong.song.title }}</a>- {{ eventsong.song.composer.last_name }}
+                    {% if eventsong.resource_icons %}
+                        <span title="Song has its own resources available">{{ eventsong.resource_icons.0.icon }}</span>
+                    {% endif %}
+                    <a href="{%  url 'syncope:song_page' url_username eventsong.song.pk %}">{{ eventsong.song.title }}</a> -
+                    <span title="{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} {{ eventsong.song.composer.birth_date|date:'Y' }}-{{ eventsong.song.composer.death_date|date:'Y' }}">
+                        {{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} </span>
+
                     {% if eventsong.song.keywords %}
                         <br><small>{{ eventsong.song.keywords }}</small>
                     {% endif %}
@@ -59,6 +71,7 @@
     <table>
         <thead>
             <tr>
+                <th></th>
                 <th>Person</th>
 
                 <th>Attendance</th>
@@ -67,6 +80,7 @@
         <tbody>
         {% for attendance in attendances %}
             <tr>
+                <td>{{ forloop.counter }}</td>
                 <td>{{ attendance.person.first_name }} {{ attendance.person.last_name }}</td>
                 {% comment %}
                 <td>
@@ -80,23 +94,7 @@
 
                 </td>
                 {% endcomment %}
-                {% if attendance.person == my_person %}
-                    <td>
-                        <form method="post" action="{%  url 'syncope:self_attendance_update' url_username event.pk %}">
-                            {% csrf_token %}
-                            {% for at in attendance_types %}
-                                <label>
-                                    <input type="radio" name="attendance_type" value="{{ at.pk }}"
-                                        {% if attendance.attendance_type == at %}checked{% endif %}>
-                                    {{ at.name }}
-                                </label>
-                            {% endfor %}
-                            <button type="submit">Save</button>
-                        </form>
-                    </td>
-                {% else %}
-                    <td>{{ attendance.attendance_type }}</td>
-                {% endif %}
+                <td>{{ attendance.attendance_type }}</td>
             </tr>
         {% endfor %}
         </tbody>
@@ -104,5 +102,99 @@
 {% else %}
     <p>No attendance records yet.</p>
 {% endif %}
+{% if all_event_resources %}
+<h3>Event Resources</h3>
+<table>
+    <thead>
+        <tr>
+            <th></th>
+            <th></th>
+            <th>Resource</th>
+            <th></th>
+            <th>Song</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for res in all_event_resources %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ res.icon }}</td>
+            <td><a href="{{ res.share_url|default:res.url }}" target="_blank" rel="noopener noreferrer">{{ res.url }}</a></td>
+            <td>{{ res.desc }}</td>
+            <td>
+                {% if res.song %}
+                    <a href="{% url 'syncope:song_page' url_username res.song.pk %}">{{ res.song.title }} - {{ res.song.composer.first_name }} {{ res.song.composer.last_name }}</a>
+                {% else %}
+                -
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+{% block extra_js %}
+<script>
+function createShareHandler(btn, resultSpan, shareData) {
+    return function () {
+        btn.disabled = true;
+        if (resultSpan) resultSpan.textContent = 'Copying...';
+
+        fetch('/share/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify(shareData),
+        })
+        .then(function(response) {
+            if (!response.ok) throw new Error('Request failed');
+            return response.json();
+        })
+        .then(function(data) {
+            const shareUrl = window.location.origin + '/' + data.share_id + '/';
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(shareUrl).then(function() {
+                if (resultSpan) {
+                    resultSpan.textContent = 'Copied';
+                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
+                } else {
+                    alert('Share link copied:\n' + shareUrl);
+                }
+            }).catch(function() {
+                if (resultSpan) {
+                    resultSpan.textContent = 'Copied';
+                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
+                } else {
+                    alert('Share link:\n' + shareUrl);
+                }
+            });
+        })
+        .catch(function() {
+            if (resultSpan) {
+                resultSpan.textContent = 'Failed';
+            } else {
+                alert('Failed to generate share link');
+            }
+        })
+        .finally(function() {
+            btn.disabled = false;
+        });
+    };
+}
+
+const shareBtn = document.getElementById('share-btn');
+if (shareBtn) {
+    shareBtn.addEventListener('click', createShareHandler(
+        shareBtn,
+        document.getElementById('share-result'),
+        { type: 'event', id: {{ event.pk }} }
+    ));
+}
+</script>
+{% endblock %}
 
 {% endblock %}

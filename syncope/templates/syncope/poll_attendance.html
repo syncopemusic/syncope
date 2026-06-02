@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 
 {% block title %}{{ poll.title }} — Attendance{% endblock %}
 
@@ -107,6 +108,16 @@ tbody td {
 </style>
 
 <h2>{{ poll.title }} — Attendance</h2>
+
+<div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+    {% if viewing_as %}
+    <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
+        <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
+    </button>
+    <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
+    <div style="display:none;">{% csrf_token %}</div>
+    {% endif %}
+</div>
 
 {% if viewing_as %}
 <p style="font-size: 0.9rem; color: #636e72; margin-bottom: 1rem;">
@@ -231,7 +242,7 @@ tbody td {
 
     <button type="submit" name="save_participant" value="{{ table_rows.0.person.id }}" style="margin-top: 1rem; padding: 0.5rem 1rem;">Save</button>
 </form>
-<a href="{% url 'syncope:poll_detail' url_username poll.pk %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a>
+<p><a href="{% url 'syncope:poll_detail' url_username poll.pk %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a></p>
 <script>
 const CYCLE_ORDER = [0, 1, 2, 3];  // TBD, YES, MAYBE, NO
 const TYPE_META = {
@@ -258,6 +269,64 @@ document.addEventListener('DOMContentLoaded', function () {
         cell.querySelector('.att-icon').textContent = meta.icon;
         cell.title = meta.label;
     });
+
+    // Share button handler
+    function createShareHandler(btn, resultSpan, shareData) {
+        return function () {
+            btn.disabled = true;
+            if (resultSpan) resultSpan.textContent = 'Copying...';
+
+            fetch('/share/create/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+                body: JSON.stringify(shareData),
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Request failed');
+                return response.json();
+            })
+            .then(data => {
+                const shareUrl = window.location.origin + '/' + data.share_id + '/';
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    if (resultSpan) {
+                        resultSpan.textContent = 'Copied';
+                        setTimeout(() => { resultSpan.textContent = ''; }, 3000);
+                    } else {
+                        alert('Share link copied:\n' + shareUrl);
+                    }
+                }).catch(() => {
+                    if (resultSpan) {
+                        resultSpan.textContent = 'Copied';
+                        setTimeout(() => { resultSpan.textContent = ''; }, 3000);
+                    } else {
+                        alert('Share link:\n' + shareUrl);
+                    }
+                });
+            })
+            .catch(() => {
+                if (resultSpan) {
+                    resultSpan.textContent = 'Failed';
+                } else {
+                    alert('Failed to generate share link');
+                }
+            })
+            .finally(() => {
+                btn.disabled = false;
+            });
+        };
+    }
+
+    const shareBtn = document.getElementById('share-btn');
+    if (shareBtn) {
+        shareBtn.addEventListener('click', createShareHandler(
+            shareBtn,
+            document.getElementById('share-result'),
+            { type: 'poll_person', id: {{ viewing_as.pk }} }
+        ));
+    }
 });
 </script>
 

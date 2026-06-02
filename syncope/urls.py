@@ -12,6 +12,7 @@ from .views.project import project_add_guest, project_add_event, project_remove_
 from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongUpdateView, SongQuoteView
 from .views.user_login_register import SignUp, UserLoginView, UserLogoutView
 from .views.poll import PollListView, PollCreateUpdateView, PollDetailView, PollDeleteView, PollPersonView, PollEventView, PollEventUpdateView, PollEventAttendanceView, PollPersonAttendanceView, poll_person_remove, poll_event_remove
+from .views.share import create_share_link, visit_share
 
 
 app_name = 'syncope'
@@ -88,5 +89,8 @@ urlpatterns = [
     path("<str:username>/polls/<int:pk>/events/<int:event_pk>/edit/", PollEventUpdateView.as_view(), name="poll_event_update"),
     path("<str:username>/polls/<int:pk>/events/<int:event_pk>/remove/", poll_event_remove, name="poll_event_remove"),
     path("<str:username>/polls/<int:pk>/attendance/", PollEventAttendanceView.as_view(), name="poll_attendance"),
+
+    path("share/create/", create_share_link, name="share_create"),
+    path("<str:share_id>/", visit_share, name="share_visit"),
 
 ]

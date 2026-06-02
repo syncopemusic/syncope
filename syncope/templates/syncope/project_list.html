@@ -1,35 +1,127 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 
 {% block title %}Projects{% endblock %}
 
 {% block content %}
+<style>
+.btn-full { display: inline; }
+.btn-short { display: none; }
+@media (max-width: 768px) {
+    .btn-full { display: none; }
+    .btn-short { display: inline; }
+}
+</style>
 <h2>Projects</h2>
-
+{% if membership and ADMIN_ROLE in membership.person.roles.all %}
 <p>
     <a href="{%  url 'syncope:project_create' url_username %}">+ New Project</a>
 </p>
-
+{% endif %}
 {% if projects %}
+
+<div style="display:none;">{% csrf_token %}</div>
+
 <table>
     <tr>
+        <th></th>
+        <th>🔗</th>
         <th>Title</th>
+        <th>Events</th>
         <th>Start Date</th>
         <th>End Date</th>
-        <th>Events</th>
+
     </tr>
     {% for project in projects %}
         <tr>
+            <td>{{ forloop.counter }}</td>
+            <td style="position: relative;">
+              <button class="share-project-btn" data-type="project" data-project-pk="{{ project.id }}" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link"><img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy"></button>
+              <span class="share-project-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
+            </td>
             <td>
                 <a href="{%  url 'syncope:project_detail' url_username project.id %}">
                     {{ project.title }}
                 </a>
+
             </td>
+            <td><span title="Events">{{ project.num_main_events }}</span><span title="Rehearsals">({{ project.num_rehearsals }})</span></td>
             <td>{{ project.start_date|default:"-" }}</td>
             <td>{{ project.end_date|default:"-" }}</td>
-            <td>{{ project.num_main_events }} ({{ project.num_rehearsals }})</td>
+
+
         </tr>
     {% endfor %}
 </table>
+
+{% if user.is_authenticated %}
+{% block extra_js %}
+<script>
+function createShareHandler(btn, resultSpan, shareData) {
+    return function () {
+        btn.disabled = true;
+        if (resultSpan) resultSpan.textContent = 'Copying...';
+
+        fetch('/share/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify(shareData),
+        })
+        .then(function(response) {
+            if (!response.ok) throw new Error('Request failed');
+            return response.json();
+        })
+        .then(function(data) {
+            const shareUrl = window.location.origin + '/' + data.share_id + '/';
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(shareUrl).then(function() {
+                if (resultSpan) {
+                    resultSpan.textContent = 'Copied';
+                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
+                } else {
+                    alert('Share link copied:\n' + shareUrl);
+                }
+            }).catch(function() {
+                if (resultSpan) {
+                    resultSpan.textContent = 'Copied';
+                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
+                } else {
+                    alert('Share link:\n' + shareUrl);
+                }
+            });
+        })
+        .catch(function() {
+            if (resultSpan) {
+                resultSpan.textContent = 'Failed';
+            } else {
+                alert('Failed to generate share link');
+            }
+        })
+        .finally(function() {
+            btn.disabled = false;
+        });
+    };
+}
+
+document.querySelectorAll('.share-project-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        const projectPk = this.dataset.projectPk;
+        const resultSpan = this.nextElementSibling;
+        createShareHandler(
+            this,
+            resultSpan,
+            { type: 'project', id: projectPk }
+        )();
+    });
+});
+</script>
+{% endblock %}
+{% endif %}
+
 {% else %}
 <p>No projects yet.</p>
 {% endif %}

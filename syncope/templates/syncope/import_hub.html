@@ -8,17 +8,6 @@
     <h1>Import Data Hub</h1>
     <p class="text-muted">Upload and manage your data in multiple steps. Steps can be repeated as needed.</p>
 
-    {% if messages %}
-        <div class="mt-3 mb-3">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-
     <div class="row g-4 mt-2">
         <!-- Step 1: Import Members -->
         <div class="col-md-6 col-lg-4">

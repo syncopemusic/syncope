@@ -1,5 +1,7 @@
 from django.db import models
 from django.db.models import PROTECT, Q
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 from django.contrib.auth.models import  AbstractBaseUser, BaseUserManager, PermissionsMixin #AbstractUser,
 from django.conf import settings
@@ -130,6 +132,8 @@ class Resource(models.Model):
     )
     url = models.URLField("url", unique=True)
     description = models.TextField("description", blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.description
@@ -236,6 +240,7 @@ class Skill(models.Model):
     INSTRUMENTALIST = 5
     CONDUCTOR = 6
     TRANSLATOR = 7
+    TECHNICIAN = 8
 
     title = models.CharField("name of skill",max_length=50, unique=True)
     additional_notes = models.CharField("short explanation of skill",max_length=255, blank=True, null=True)
@@ -442,6 +447,8 @@ class Song(models.Model):
 
     internal_id = models.PositiveIntegerField("ID", blank=True, null=True)
 
+    duration = models.PositiveIntegerField("duration in seconds", blank=True, null=True)
+
     lyrics = models.TextField("lyrics", blank=True, null=True)
     languagecode = models.ForeignKey(LanguageCode, on_delete=models.PROTECT, blank=True, null=True)
 
@@ -494,9 +501,17 @@ class Project(models.Model):
         blank=True,
         related_name="projects"
     )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.title
+
+
+class ProjectResource(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="project_resource")
+    resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="project_resource")
+    order = models.PositiveIntegerField()
 
 
 class Event(models.Model):
@@ -558,6 +573,12 @@ class EventSong(models.Model):
 class EventResource(models.Model):
     event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="event_resource")
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="event_resource")
+    order = models.PositiveIntegerField()
+
+
+class EventSongResource(models.Model):
+    event_song = models.ForeignKey(EventSong, on_delete=models.PROTECT, related_name="event_song_resource")
+    resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="event_song_resource")
     order = models.PositiveIntegerField()
 
 
@@ -681,3 +702,60 @@ class PollAttendance(models.Model):
     poll_attendance_type = models.ForeignKey(PollAttendanceType, on_delete=models.CASCADE, related_name="poll_attendances")
     poll_person = models.ForeignKey(PollPerson, on_delete=models.CASCADE, related_name="poll_attendances")
     comment = models.CharField(max_length=50, blank=True, null=True)
+
+
+
+class Share(models.Model):
+    id = models.CharField(
+        max_length=10,
+        primary_key=True,
+        editable=False,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="shares")
+    resource = models.ForeignKey(Resource, on_delete=models.CASCADE, blank=True, null=True, related_name="share")
+    poll = models.ForeignKey(Poll, on_delete=models.CASCADE, blank=True, null=True,  related_name="share")
+    poll_person = models.ForeignKey('PollPerson', on_delete=models.CASCADE, blank=True, null=True, related_name="share")
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, blank=True, null=True,  related_name="share")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, blank=True, null=True,  related_name="share")
+    person = models.ForeignKey('Person', on_delete=models.CASCADE, blank=True, null=True, related_name="share")
+    song = models.ForeignKey('Song', on_delete=models.CASCADE, blank=True, null=True, related_name="share")
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(resource_id__isnull=False, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=True, person_id__isnull=True, song_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=False, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=True, person_id__isnull=True, song_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=False, event_id__isnull=True, project_id__isnull=True, person_id__isnull=True, song_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=False, project_id__isnull=True, person_id__isnull=True, song_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=False, person_id__isnull=True, song_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=True, person_id__isnull=False, song_id__isnull=True) |
+                    models.Q(resource_id__isnull=True, poll_id__isnull=True, poll_person_id__isnull=True, event_id__isnull=True, project_id__isnull=True, person_id__isnull=True, song_id__isnull=False)
+                ),
+                name="share_only_one_fk"
+            ),
+            models.UniqueConstraint(fields=["resource"],    condition=models.Q(resource_id__isnull=False),    name="share_unique_resource"),
+            models.UniqueConstraint(fields=["poll"],        condition=models.Q(poll_id__isnull=False),        name="share_unique_poll"),
+            models.UniqueConstraint(fields=["poll_person"], condition=models.Q(poll_person_id__isnull=False), name="share_unique_poll_person"),
+            models.UniqueConstraint(fields=["event"],       condition=models.Q(event_id__isnull=False),       name="share_unique_event"),
+            models.UniqueConstraint(fields=["project"],     condition=models.Q(project_id__isnull=False),     name="share_unique_project"),
+            models.UniqueConstraint(fields=["person"],      condition=models.Q(person_id__isnull=False),      name="share_unique_person"),
+            models.UniqueConstraint(fields=["song"],        condition=models.Q(song_id__isnull=False),        name="share_unique_song"),
+        ]
+
+class ShareVisit(models.Model):
+    id = models.AutoField(primary_key=True)
+    share = models.ForeignKey(Share, on_delete=models.PROTECT, related_name="share_visits", db_index=True)
+    visited_at = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+
+
+@receiver(post_save, sender=Resource)
+def create_share_for_resource(sender, instance, created, **kwargs):
+    if created:
+        from syncope.views.share import generate_share_id
+        Share.objects.get_or_create(
+            resource=instance,
+            defaults={"id": generate_share_id()},
+        )

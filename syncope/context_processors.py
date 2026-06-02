@@ -46,5 +46,17 @@ def user_person(request):
         if m.user != request.user  # Exclude your own org
     ]
 
+    # Derive the single membership relevant to the current page (for child template checks)
+    url_username = context["url_username"]
+    if url_username:
+        context["membership"] = next(
+            (m for m in context["memberships"] if m.user.username == url_username),
+            None,
+        )
+    else:
+        context["membership"] = next(
+            (m for m in context["memberships"] if m.user == request.user),
+            None,
+        )
 
     return context

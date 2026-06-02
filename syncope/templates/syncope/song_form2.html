@@ -84,11 +84,11 @@
     <br><br>
     <button type="submit" name="action" value="">Save</button>
 </form>
-
+<p>
 {% if object %}
     <a href="{%  url 'syncope:song_page' url_username object.pk %}">Cancel Edit</a>
 {% else %}
     <a href="{%  url 'syncope:song_dashboard' url_username %}">Cancel &amp; Return to List</a>
 {% endif %}
-
+</p>
 {% endblock %}

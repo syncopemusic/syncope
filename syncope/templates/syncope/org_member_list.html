@@ -1,23 +1,30 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 {% block title %}Members{% endblock %}
 
 {% block content %}
+{% if membership and ADMIN_ROLE in membership.person.roles.all %}
+<p>
+        <a href="{%  url 'syncope:org_member_add' url_username %}">
+            + blank new form
+        </a>
+        <a href="{%  url 'syncope:org_member_add_composer' url_username %}">
+            + Composer
+        </a>
 
+        <a href="{%  url 'syncope:org_member_add_poet' url_username %}">
+            + Poet
+        </a>
+
+        <a href="{%  url 'syncope:org_member_add_translator' url_username %}">
+            + Translator
+        </a>
+</p>
+{% endif %}
 {% if url_username == user.username %}
     <p>
         This is your personal page.
 
-        <a href="{%  url 'syncope:org_member_add_composer' user.username %}">
-            + Add Composer
-        </a>
-
-        <a href="{%  url 'syncope:org_member_add_poet' user.username %}">
-            + Add Poet
-        </a>
-
-        <a href="{%  url 'syncope:org_member_add_translator' user.username %}">
-            + Add Translator
-        </a>
     </p>
 {% else %}
     <p>This is organization: {{ url_username }}</p>
@@ -36,9 +43,12 @@
     {% if q or selected_role %}<a href="?{% if current_sort != 'name' %}sort={{ current_sort }}{% endif %}{% if reverse %}&reverse=true{% endif %}">Clear</a>{% endif %}
 </form>
 
+<div style="display:none;">{% csrf_token %}</div>
+
 <table>
     <thead>
     <tr>
+        <th></th>
         <th>
             <a href="?q={{ q }}&sort=name{% if current_sort == 'name' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                 Name {% if current_sort == 'name' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
@@ -53,48 +63,55 @@
     </tr>
     </thead>
     <tbody>
-        {% for membership in members %}
+        {% for member in members %}
         <tr>
-            
+            <td style="position: relative;">
+                <button class="share-member-btn" data-member-pk="{{ member.person.id }}"
+                        style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
+                    <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
+                </button>
+                <span class="share-member-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
+            </td>
             <td>
-                <a href="{%  url 'syncope:org_member_detail' url_username membership.person.id %}">
-                {{ membership.person.first_name }} {{ membership.person.last_name }}
+                <a href="{%  url 'syncope:org_member_detail' url_username member.person.id %}">
+                {{ member.person.first_name }} {{ member.person.last_name }}
                 </a>
             </td>
-            <td>{{ membership.person.email }}</td>
+            <td>{{ member.person.email }}</td>
             <td>
-                {% for skill in membership.person.skills.all %}
+                {% for skill in member.person.skills.all %}
                     {{ skill.title }}
                 {% empty %}
                     No skills
                 {% endfor %}
             </td>
             <td>
-                {% for singer in membership.person.singer_set.all %}
+                {% for singer in member.person.singer_set.all %}
                     {{ singer.voice.name }}
                 {% empty %}
 
                 {% endfor %}
-                {% for instrumentalist in membership.person.instrumentalist_set.all %}
+                {% for instrumentalist in member.person.instrumentalist_set.all %}
                     {{ instrumentalist.instrument.name }}
                 {% empty %}
                 {% endfor %}
             </td>
-            <td>{% for role in membership.person.roles.all %}
+            <td>{% for role in member.person.roles.all %}
                     {{ role.title }}
                 {% empty %}
                     No roles
                 {% endfor %}</td>
             <td>
-              {% for link in membership.resource_icons %}
-                <a href="{{ link.url }}" title="{{ link.desc }}" target="_blank">{{ link.icon }}</a>
-              {% endfor %}
+              {% for link in member.resource_icons %} {% if forloop.first %}
+                {{ link.icon }}
+                {% endif %} {% endfor %}
             </td>
             <td>
-                <a href="{%  url 'syncope:org_member_edit' url_username membership.person.id %}">
+                <a href="{%  url 'syncope:org_member_edit' url_username member.person.id %}">
                     Edit
                 </a>
             </td>
+
         </tr>
         {% empty %}
         <tr>
@@ -103,4 +120,67 @@
         {% endfor %}
     </tbody>
 </table>
+
+{% block extra_js %}
+<script>
+function createShareHandler(btn, resultSpan, shareData) {
+    return function () {
+        btn.disabled = true;
+        if (resultSpan) resultSpan.textContent = 'Copying...';
+
+        fetch('/share/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify(shareData),
+        })
+        .then(function(response) {
+            if (!response.ok) throw new Error('Request failed');
+            return response.json();
+        })
+        .then(function(data) {
+            const shareUrl = window.location.origin + '/' + data.share_id + '/';
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(shareUrl).then(function() {
+                if (resultSpan) {
+                    resultSpan.textContent = 'Copied';
+                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
+                } else {
+                    alert('Share link copied:\n' + shareUrl);
+                }
+            }).catch(function() {
+                if (resultSpan) {
+                    resultSpan.textContent = 'Copied';
+                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
+                } else {
+                    alert('Share link:\n' + shareUrl);
+                }
+            });
+        })
+        .catch(function() {
+            if (resultSpan) {
+                resultSpan.textContent = 'Failed';
+            } else {
+                alert('Failed to generate share link');
+            }
+        })
+        .finally(function() {
+            btn.disabled = false;
+        });
+    };
+}
+
+document.querySelectorAll('.share-member-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        const memberPk = this.dataset.memberPk;
+        const resultSpan = this.nextElementSibling;
+        createShareHandler(this, resultSpan, { type: 'person', id: memberPk })();
+    });
+});
+</script>
+{% endblock %}
+
 {% endblock %}

@@ -362,7 +362,7 @@ def import_persons(org_user, person_mode, request, file_path, delimiter=";"):
                         person=person
                     )
                     if created:
-                        messages.info(request, f"Created membership for {org_user} and {first_name}")
+                        pass
                     else:
                         messages.info(request, f"Membership already exists for {org_user} and {first_name}")
                 except Exception as e:
@@ -378,7 +378,6 @@ def import_persons(org_user, person_mode, request, file_path, delimiter=";"):
                             started_at=period['start'],
                             ended_at=period['end']
                         )
-                        messages.info(request, f"added membership period to {first_name} {period['start']} - {period['end']}")
                     except Exception as e:
                         messages.info(request, f"Warning: Failed to create membership period for {first_name}: {str(e)}")
                         error_details.append(
@@ -1079,8 +1078,18 @@ def get_url_info(url):
 
 
 def resource_icon_list(resource_qs):
+    from django.urls import reverse
+    from syncope.models import Share
+
+    resource_ids = [r.resource_id for r in resource_qs]
+    share_map = {
+        s.resource_id: s.pk
+        for s in Share.objects.filter(resource_id__in=resource_ids)
+    }
+
     return [
         {'url': r.resource.url,
+         'share_url': reverse('syncope:share_visit', args=[share_map.get(r.resource_id)]) if r.resource_id in share_map else None,
          'icon': RESOURCE_ICONS[get_url_info(r.resource.url)],
          'desc': r.resource.description or r.resource.url}
         for r in resource_qs

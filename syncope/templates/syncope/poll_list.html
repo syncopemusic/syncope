@@ -4,9 +4,9 @@
 
 {% block content %}
 <h2>Polls</h2>
-
-<a href="{% url 'syncope:poll_create' url_username %}">Create New Poll</a>
-
+{% if membership and ADMIN_ROLE in membership.person.roles.all %}
+<p><a href="{% url 'syncope:poll_create' url_username %}">Create New Poll</a></p>
+{% endif %}
 {% if polls %}
 <ul>
     {% for poll in polls %}
