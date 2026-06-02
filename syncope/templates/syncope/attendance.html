@@ -1,51 +1,18 @@
 {% extends "syncope/base.html" %}
+
 {% block title %}Attendance{% endblock %}
+
 {% block content %}
-<style>
-.event-col {
-    width: 20px;
-}
-
-.attendance-cell {
-    width: 40px;
-    text-align: center;
-    cursor: pointer;
-    user-select: none;
-    border-radius: 4px;
-    font-size: 1.1rem;
-    transition: background-color 0.15s ease;
-}
-
-.attendance-cell:hover {
-    opacity: 0.8;
-}
-
-.attendance-cell.grayed-out:hover {
-    opacity: 1;
-}
-
-.att-type-1 { background-color: #c8f7c5; }
-.att-type-2 { background-color: #ffeaa7; }
-.att-type-3 { background-color: #fab1a0; }
-.att-type-4 { background-color: #a29bfe; }
-.att-type-5 { background-color: #dfe6e9; }
-
-.grayed-out {
-    background-color: #ffffff !important;
-    color: #333333;
-    pointer-events: none;
-    cursor: default;
-}
-
-</style>
 <div class="attendance-dashboard">
-    <h2>Attendance Dashboard - {{ org_user.username }}</h2>
+    <div class="section-header">
+        <h2>Attendance — {{ org_user.username }}</h2>
+    </div>
 
     {# Filters and Quick Add in same row #}
-    <div class="dashboard-controls" style="display: flex; gap: 2rem; margin-bottom: 1rem; align-items: end;">
-        <form method="get" class="filters" style="display: flex; gap: 1rem; align-items: end;">
+    <div class="dashboard-controls" style="display: flex; gap: 2rem; margin-bottom: 1rem; align-items: end; flex-wrap: wrap;">
+        <form method="get" class="filters" style="display: flex; gap: 1rem; align-items: end; flex-wrap: wrap;">
             <div>
-                <label>Date Range:</label>
+                <label style="font-size: 0.82rem; font-weight: 500; color: var(--text-light);">Date Range:</label>
                 <input type="date" name="start_date" value="{{ request.GET.start_date }}"
                        onchange="document.getElementById('event_limit_input').value='';">
                 to
@@ -53,49 +20,54 @@
                        onchange="document.getElementById('event_limit_input').value='';">
             </div>
             <div>
-                <label>Event Limit:</label>
-                <input type="number" id="event_limit_input" name="event_limit" value="{{ request.GET.event_limit|default:8 }}" min="1" max="50" style="width: 60px;"
+                <label style="font-size: 0.82rem; font-weight: 500; color: var(--text-light);">Event Limit:</label>
+                <input type="number" id="event_limit_input" name="event_limit" value="{{ request.GET.event_limit|default:8 }}" min="1" max="50" style="width: 60px; padding: 0.35rem 0.5rem; border: 1.5px solid var(--border); border-radius: var(--radius); font-family: Inter, sans-serif;"
                        onchange="this.form.start_date.value=''; this.form.end_date.value='';">
             </div>
-            <button type="submit">Filter</button>
-            <a href="?">Reset</a>
+            <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+            <a href="?" class="btn btn-link btn-sm">Reset</a>
         </form>
 
-        <form method="post" action="{%  url 'syncope:quick_add_rehearsal' username=url_username %}">
+        <form method="post" action="{% url 'syncope:quick_add_rehearsal' username=url_username %}">
             {% csrf_token %}
-            <button type="submit" class="btn-primary">+ Add Rehearsal Now</button>
+            <button type="submit" class="btn btn-primary">+ Add Rehearsal</button>
         </form>
     </div>
 
-    <div style="margin-bottom: 0.5rem; font-size: 0.85rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+    <div class="legend">
         <strong>Legend:</strong>
-        <span class="att-type-1" style="padding: 2px 6px; border-radius: 3px;" title="present at the event">✓ Present</span>
-        <span class="att-type-2" style="padding: 2px 6px; border-radius: 3px;" title="missing due to professional activities">💼 Work/School</span>
-        <span class="att-type-3" style="padding: 2px 6px; border-radius: 3px;" title="unplanned medical issues">🤒 Illness</span>
-        <span class="att-type-4" style="padding: 2px 6px; border-radius: 3px;" title="planned absence">🏖 Private/Vacation</span>
-        <span class="att-type-5" style="padding: 2px 6px; border-radius: 3px;" title="to be determined">TBD</span>
-        <em>(Click a cell to cycle)</em>
+        <span class="attendance-cell att-type-1" style="width: auto; height: auto; padding: 2px 6px; cursor: default;" title="present at the event">✓</span>
+        <span>Present</span>
+        <span class="attendance-cell att-type-2" style="width: auto; height: auto; padding: 2px 6px; cursor: default;" title="missing due to professional activities">💼</span>
+        <span>Work/School</span>
+        <span class="attendance-cell att-type-3" style="width: auto; height: auto; padding: 2px 6px; cursor: default;" title="unplanned medical issues">🤒</span>
+        <span>Illness</span>
+        <span class="attendance-cell att-type-4" style="width: auto; height: auto; padding: 2px 6px; cursor: default;" title="planned absence">🏖</span>
+        <span>Private/Vacation</span>
+        <span class="attendance-cell att-type-5" style="width: auto; height: auto; padding: 2px 6px; cursor: default;" title="to be determined">—</span>
+        <span>TBD</span>
+        <em style="margin-left: 0.5rem; font-size: 0.82rem; color: var(--muted);">(Click a cell to cycle)</em>
     </div>
 
     {# Main Form with Attendance Table #}
     <form method="post">
         {% csrf_token %}
 
-        <div class="table-container" >
+        <div class="table-container">
             <table class="attendance-table">
                 <thead>
                     <tr>
                         <th class="sticky-col">Member</th>
                         {% for event in events %}
-                            <th class="event-col "
+                            <th class="event-col"
                                 style="height: 50px; padding: 5px; font-weight: normal;">
                                 <div style="transform: rotate(-90deg); width: 10px; white-space: nowrap;">
-                                    <a href="{%  url 'syncope:event_update' url_username event.id %}"
-                                        style="
-                                        {% if event.event_type.id != 1 %}font-weight: bold; {% endif %}
-                                        color: inherit; text-decoration: underline; font-size: inherit;"
-                                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
-                                        {{ event.started_at|date:"d M" }}
+                                    <a href="{% url 'syncope:event_update' url_username event.id %}"
+                                       style="
+                                       {% if event.event_type.id != 1 %}font-weight: bold; {% endif %}
+                                       color: inherit; text-decoration: underline; font-size: inherit;"
+                                       title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                                       {{ event.started_at|date:"d M" }}
                                     </a>
                                 </div>
                             </th>
@@ -133,13 +105,11 @@
             </table>
         </div>
 
-        <div >
-            <button type="submit" class="btn-primary">Save All Changes</button>
+        <div style="margin-top: 1rem;">
+            <button type="submit" class="btn btn-primary">Save All Changes</button>
         </div>
     </form>
 </div>
-
-
 
 <script>
 const CYCLE_ORDER = [5, 1, 2, 3, 4];

@@ -1,29 +1,27 @@
 {% extends "syncope/base.html" %}
+
 {% block title %}Quotes: {{ song.title }}{% endblock %}
+
 {% block content %}
+<div class="section-header">
+    <h2>Quotes for "{{ song.title }}"</h2>
+</div>
 
-<h2>Quotes for "{{ song.title }}"</h2>
+<p class="text-small text-muted">Quotes are specific phrases or sections from the song with their bar numbers for reference.</p>
 
-<p><small>Quotes are specific phrases or sections from the song with their bar numbers for reference.</small></p>
-
-<p>
-    <a href="{%  url 'syncope:song_page' url_username song.pk %}">Back to Song</a>
-    &nbsp;|&nbsp;
-    <a href="{%  url 'syncope:song_update' url_username song.pk %}">Edit Song</a>
-</p>
+<div class="action-bar">
+    <a href="{% url 'syncope:song_page' url_username song.pk %}" class="btn btn-link btn-sm">← Back to Song</a>
+    <a href="{% url 'syncope:song_update' url_username song.pk %}" class="btn btn-secondary btn-sm">Edit Song</a>
+</div>
 
 <form method="post">
     {% csrf_token %}
     {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
 
     {{ formset.management_form }}
-    <table>
+    <table class="formset-table">
         <thead>
-            <tr>
-                <th>Quote</th>
-                <th>Bar Number</th>
-                <th>Remove</th>
-            </tr>
+            <tr><th>Quote</th><th>Bar Number</th><th>Remove</th></tr>
         </thead>
         <tbody>
         {% for form in formset %}
@@ -42,9 +40,8 @@
         </tbody>
     </table>
 
-    <button type="submit" name="action" value="add_kw_row">+ Add Another Quote</button>
-    &nbsp;
-    <button type="submit" name="action" value="">Save Quotes</button>
+    <button type="submit" name="action" value="add_kw_row" class="btn btn-secondary btn-sm">+ Add Quote</button>
+    <button type="submit" name="action" value="" class="btn btn-primary" style="margin-left: 0.5rem;">Save Quotes</button>
 </form>
 
 {% endblock %}

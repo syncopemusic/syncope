@@ -3,7 +3,9 @@
 {% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} title{% endblock %}
 
 {% block content %}
-<h2>{% if form.instance.pk %}Edit{% else %}Create{% endif %} Poll title</h2>
+<div class="section-header">
+    <h2>{% if form.instance.pk %}Edit{% else %}Create{% endif %} Poll</h2>
+</div>
 
 <form method="post">
     {% csrf_token %}
@@ -27,12 +29,13 @@
     </div>
     {% endif %}
 
-    <button type="submit" style="margin-top: 1rem; padding: 0.5rem 1rem;">Save</button>
-    {% if form.instance.pk %}
-
-    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a>
-    {% else %}
-    <a href="{% url 'syncope:poll_list' url_username %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a>
-    {% endif %}
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save</button>
+        {% if form.instance.pk %}
+            <a href="{% url 'syncope:poll_detail' url_username poll.pk %}" class="btn btn-secondary">Back</a>
+        {% else %}
+            <a href="{% url 'syncope:poll_list' url_username %}" class="btn btn-secondary">Back</a>
+        {% endif %}
+    </div>
 </form>
 {% endblock %}

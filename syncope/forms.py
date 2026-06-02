@@ -1,5 +1,4 @@
 from django import forms
-import datetime
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
     PollAttendance
@@ -41,9 +40,7 @@ class PersonForm(forms.ModelForm):
             "birth_date",
         ]
         widgets = {
-            "birth_date": forms.SelectDateWidget(
-                years=range(datetime.date.today().year, 1930, -1)
-            ),
+            "birth_date": forms.DateInput(attrs={'type': 'date'}),
         }
 
     def __init__(self, *args, **kwargs):

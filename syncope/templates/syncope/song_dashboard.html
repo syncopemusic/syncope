@@ -1,21 +1,21 @@
 {% extends "syncope/base.html" %}
+
 {% block title %}Songs{% endblock %}
+
 {% block content %}
+<div class="section-header">
+    <h2>Song Archive</h2>
+    <a href="{% url 'syncope:song_form2' url_username %}" class="btn btn-secondary btn-sm">+ Add Song</a>
+</div>
 
-<h2>Song Archive</h2>
-
-<form method="get" style="display:flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
-    <input type="text" name="q" value="{{ q }}" placeholder="Search by ID, title, composer, keywords" style="flex: 1;">
+<form method="get" class="search-form">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by ID, title, composer, keywords">
     <button type="submit">Search</button>
     {% if q %}<a href="?">Clear</a>{% endif %}
 </form>
 
-<div style="margin-bottom: 1em;">
-    <a href="{%  url 'syncope:song_form2' url_username %}">+ Add New Song</a>
-</div>
-
 {% if songs %}
-<table>
+<table class="table">
     <thead>
         <tr>
             <th>
@@ -23,7 +23,7 @@
                     ID {% if current_sort == 'id' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
-            <th>🔗</th>
+            <th></th>
             <th>
                 <a href="?q={{ q }}&sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                     Title {% if current_sort == 'title' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
@@ -34,7 +34,6 @@
                     Composer {% if current_sort == 'composer' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
-<!--            <th>Keywords</th>-->
             <th>Copies</th>
             <th></th>
         </tr>
@@ -45,28 +44,26 @@
             <td>{{ song.internal_id|default:"-" }}</td>
             <td>{% if song.has_direct_resources or song.has_event_resources %}<span title="Song/Event Resources">{{ song.has_direct_resources }}/{{ song.has_event_resources }}</span>{% endif %}</td>
             <td>
-                <a href="{%  url 'syncope:song_page' url_username song.pk %}">{{ song.title }}</a>
+                <a href="{% url 'syncope:song_page' url_username song.pk %}">{{ song.title }}</a>
                 {% if song.keywords %}
                     <small>{{ song.keywords|default:"|" }}</small>
                 {% endif %}
             </td>
             <td>
-                <a href="{%  url 'syncope:org_member_detail' url_username song.composer.pk %}"
+                <a href="{% url 'syncope:org_member_detail' url_username song.composer.pk %}"
                 title="{{ song.composer.first_name }} {{ song.composer.last_name }} {{ song.composer.birth_date|date:'Y' }}-{{ song.composer.death_date|date:'Y' }}">
                     {{ song.composer.last_name }}
                 </a>
             </td>
-<!--            <td>{{ song.keywords|default:"-" }}</td>-->
             <td>{{ song.number_of_copies|default:"-" }}</td>
-            <td><a href="{%  url 'syncope:song_update' url_username song.pk %}">Edit</a></td>
+            <td><a href="{% url 'syncope:song_update' url_username song.pk %}" class="btn btn-link btn-sm">Edit</a></td>
         </tr>
     {% endfor %}
     </tbody>
 </table>
 {% elif q %}
-    <p>No songs found matching "{{ q }}".</p>
+    <p class="empty-state">No songs found matching "{{ q }}".</p>
 {% else %}
-    <p>No songs in the archive yet. <a href="{%  url 'syncope:song_form2' url_username %}">Add the first one.</a></p>
+    <p class="empty-state">No songs in the archive yet. <a href="{% url 'syncope:song_form2' url_username %}">Add the first one.</a></p>
 {% endif %}
-
 {% endblock %}

@@ -3,33 +3,28 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
-  <p>Welcome, {{ user.username }} at the email of: {{ user.email }}!</p>
+  <div class="welcome-card">
+    <h2>Welcome, {{ person.first_name|default:user.username }}!</h2>
+    <p>{{ person.first_name }} {{ person.last_name }} · {{ user.email }}</p>
+  </div>
 
-  {% with person=user.persons.first %}
-  {% if person %}
-    <p>{{ person.first_name }} {{ person.last_name }}</p>
-<p><a href="{%  url 'syncope:org_create' %}">Create organization</a></p>
-{% if memberships %}
-
-<p>Your memberships:</p>
-        <ul>
-          {% for membership in org_memberships %}
-
-            <li>
-            {{ membership.user.username }}
-            ({{ membership.person.roles.all|join:", " }})
-            </li>
-          {% endfor %}
-        </ul>
-
-{% else %}
-  <p>You are not member of any organization.</p>
-{% endif %}
-
-  {% else %}
-    <a href="{%  url 'syncope:person_update' url_username %}">
-      Please complete your profile
-    </a>
+  {% if not person %}
+    <a href="{% url 'syncope:person_update' url_username %}" class="btn btn-primary">Complete your profile</a>
   {% endif %}
-{% endwith %}
+
+  <p><a href="{% url 'syncope:org_create' %}" class="btn btn-secondary">+ Create organization</a></p>
+
+  {% if memberships %}
+    <h3>Your memberships</h3>
+    <div class="card-grid">
+      {% for membership in org_memberships %}
+        <div class="card">
+          <h3><a href="{% url 'syncope:org_dashboard' membership.user.username %}">{{ membership.user.username }}</a></h3>
+          <p>{{ membership.person.roles.all|join:", " }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  {% elif person %}
+    <p class="text-muted">You are not a member of any organization yet.</p>
+  {% endif %}
 {% endblock %}

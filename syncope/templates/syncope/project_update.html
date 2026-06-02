@@ -3,79 +3,68 @@
 {% block title %}Edit Project{% endblock %}
 
 {% block content %}
-<h2>Edit Project</h2>
+<div class="section-header">
+    <h2>Edit Project</h2>
+</div>
 
 <form method="post">
     {% csrf_token %}
 
-    <div class="form-group">
-        <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
-        {{ form.title }}
-        {% if form.title.errors %}<span class="error">{{ form.title.errors }}</span>{% endif %}
-    </div>
-
-    <div class="form-group">
-        <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
-        {{ form.description }}
-        {% if form.description.errors %}<span class="error">{{ form.description.errors }}</span>{% endif %}
-    </div>
-
-    <div class="form-group">
-        <label for="{{ form.details.id_for_label }}">{{ form.details.label }}</label>
-        {{ form.details }}
-        {% if form.details.errors %}<span class="error">{{ form.details.errors }}</span>{% endif %}
-    </div>
-
-    <div class="form-group">
-        <label for="{{ form.start_date.id_for_label }}">{{ form.start_date.label }}</label>
-        {{ form.start_date }}
-        {% if form.start_date.errors %}<span class="error">{{ form.start_date.errors }}</span>{% endif %}
-    </div>
-
-    <div class="form-group">
-        <label for="{{ form.end_date.id_for_label }}">{{ form.end_date.label }}</label>
-        {{ form.end_date }}
-        {% if form.end_date.errors %}<span class="error">{{ form.end_date.errors }}</span>{% endif %}
-    </div>
-
-    <h3>Resources</h3>
-    {{ resource_formset.management_form }}
-    {% for form in resource_formset %}
-        <div>
-            {{ form.url }}
-            {{ form.description }}
-            {% if form.instance.pk %}{{ form.DELETE }}{% endif %}
-            {{ form.id }}
+    {% for field in form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+                <ul class="errorlist">
+                    {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            {% endif %}
         </div>
     {% endfor %}
 
-    <button type="submit">Save</button>
-    <a href="{%  url 'syncope:project_detail' url_username project.id %}">Cancel</a>
+    <h3>Resources</h3>
+    {{ resource_formset.management_form }}
+    {% for rf in resource_formset %}
+        <div class="form-group">
+            {{ rf.url }}
+            {{ rf.description }}
+            {% if rf.instance.pk %}{{ rf.DELETE }}{% endif %}
+            {{ rf.id }}
+        </div>
+    {% endfor %}
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a href="{% url 'syncope:project_detail' url_username project.id %}" class="btn btn-secondary">Cancel</a>
+    </div>
 </form>
 
 <h3 id="add-event-section">Project Events</h3>
 
-{% if form.instance.events.all %}
-<div style="margin-bottom: 20px;">
+{% if events %}
+<div style="margin-bottom: 1.5rem;">
     <h4>Current Events</h4>
-    <table style="width: 100%; border-collapse: collapse;">
+    <table class="table">
         <thead>
-            <tr style="border-bottom: 1px solid #ccc;">
-                <th style="text-align: left; padding: 8px;">Event Name</th>
-                <th style="text-align: left; padding: 8px;">Date & Time</th>
-                <th style="text-align: center; padding: 8px;">Action</th>
+            <tr>
+                <th>Event Name</th>
+                <th>Date &amp; Time</th>
+                <th style="text-align: center;">Action</th>
             </tr>
         </thead>
         <tbody>
             {% for event in events %}
-            <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 8px;">{{ event.name }}{% if event.resource_count > 0 %} - 🔗{% endif %}
-            {% if event.event_song_resource_count > 0 %}🎵{% endif %}</td>
-                <td style="padding: 8px;">{{ event.started_at|date:"Y-m-d H:i" }} - {{ event.ended_at|date:"H:i" }}</td>
-                <td style="text-align: center; padding: 8px;">
-                    <form method="post" action="{%  url 'syncope:project_remove_event' url_username form.instance.pk event.pk %}" style="display: inline;">
+            <tr>
+                <td>
+                    <a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a>
+                    {% if event.resource_count > 0 %} — <span class="text-small">Resources</span>{% endif %}
+                    {% if event.event_song_resource_count > 0 %} <span class="text-small">Song resources</span>{% endif %}
+                </td>
+                <td>{{ event.started_at|date:"Y-m-d H:i" }} — {{ event.ended_at|date:"H:i" }}</td>
+                <td style="text-align: center;">
+                    <form method="post" action="{% url 'syncope:project_remove_event' url_username form.instance.pk event.pk %}">
                         {% csrf_token %}
-                        <button type="submit" onclick="return confirm('Remove this event from the project?')" style="color: #d32f2f; background: none; border: none; cursor: pointer; text-decoration: underline;">Remove</button>
+                        <button type="submit" onclick="return confirm('Remove this event from the project?')" class="btn btn-danger btn-sm">Remove</button>
                     </form>
                 </td>
             </tr>
@@ -85,53 +74,55 @@
 </div>
 {% endif %}
 
-<div>
+<div style="margin-bottom: 1.5rem;">
     <h4>Add Event to Project</h4>
-    <a href="{%  url 'syncope:event_create' url_username %}?next={%  url 'syncope:project_update' url_username form.instance.pk %}">+ Create New Event</a>
+    <p class="mb-1">
+        <a href="{% url 'syncope:event_create' url_username %}?next={% url 'syncope:project_update' url_username form.instance.pk %}" class="btn btn-secondary btn-sm">+ Create New Event</a>
+    </p>
 
-    <form method="get" style="margin: 10px 0;">
+    <form method="get" class="search-form">
         <input type="text" name="event_q" value="{{ event_search_q }}" placeholder="Search by event name">
         <button type="submit">Search</button>
-        {% if event_search_q %}<a href="{%  url 'syncope:project_update' url_username form.instance.pk %}">Clear</a>{% endif %}
+        {% if event_search_q %}<a href="{% url 'syncope:project_update' url_username form.instance.pk %}">Clear</a>{% endif %}
     </form>
 
     {% if add_event_form.fields.event.queryset.exists %}
-    <form method="post" action="{%  url 'syncope:project_add_event' url_username form.instance.pk %}">
+    <form method="post" action="{% url 'syncope:project_add_event' url_username form.instance.pk %}">
         {% csrf_token %}
-        <div>{{ add_event_form.event }}</div>
-        <button type="submit">Add Event to Project</button>
+        <div class="form-group">{{ add_event_form.event }}</div>
+        <button type="submit" class="btn btn-primary btn-sm">Add Event to Project</button>
     </form>
     {% elif event_search_q %}
-        <p>No matching events found.</p>
+        <p class="text-muted">No matching events found.</p>
     {% else %}
-        <p>No events available to add.</p>
+        <p class="text-muted">No events available to add.</p>
     {% endif %}
 </div>
 
 <h3 id="songs-section">Project Songs</h3>
 
 {% if form.instance.songs.all %}
-<div style="margin-bottom: 20px;">
+<div style="margin-bottom: 1.5rem;">
     <h4>Current Songs</h4>
-    <table style="width: 100%; border-collapse: collapse;">
+    <table class="table">
         <thead>
-            <tr style="border-bottom: 1px solid #ccc;">
-                <th style="text-align: left; padding: 8px;">Song Title</th>
-                <th style="text-align: left; padding: 8px;">Composer</th>
-                <th style="text-align: center; padding: 8px;">Action</th>
+            <tr>
+                <th>Song Title</th>
+                <th>Composer</th>
+                <th style="text-align: center;">Action</th>
             </tr>
         </thead>
         <tbody>
             {% for song in form.instance.songs.all|dictsort:"title" %}
-            <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 8px;">
-                    <a href="{%  url 'syncope:song_page' url_username song.pk %}">{{ song.title }}</a>
+            <tr>
+                <td>
+                    <a href="{% url 'syncope:song_page' url_username song.pk %}">{{ song.title }}</a>
                 </td>
-                <td style="padding: 8px;">{% if song.composer %}{{ song.composer.last_name }}{% endif %}</td>
-                <td style="text-align: center; padding: 8px;">
-                    <form method="post" action="{%  url 'syncope:project_remove_song' url_username form.instance.pk song.pk %}" style="display: inline;">
+                <td>{% if song.composer %}{{ song.composer.last_name }}{% endif %}</td>
+                <td style="text-align: center;">
+                    <form method="post" action="{% url 'syncope:project_remove_song' url_username form.instance.pk song.pk %}">
                         {% csrf_token %}
-                        <button type="submit" onclick="return confirm('Remove this song from the project?')" style="color: #d32f2f; background: none; border: none; cursor: pointer; text-decoration: underline;">Remove</button>
+                        <button type="submit" onclick="return confirm('Remove this song from the project?')" class="btn btn-danger btn-sm">Remove</button>
                     </form>
                 </td>
             </tr>
@@ -141,48 +132,48 @@
 </div>
 {% endif %}
 
-<div style="margin-bottom: 20px;">
+<div style="margin-bottom: 1.5rem;">
     <h4>Add Song to Project</h4>
 
-    <form method="get" style="margin: 10px 0;">
+    <form method="get" class="search-form">
         <input type="text" name="song_q" value="{{ song_search_q }}" placeholder="Search by title, composer, or ID">
         <button type="submit">Search</button>
-        {% if song_search_q %}<a href="{%  url 'syncope:project_update' url_username form.instance.pk %}">Clear</a>{% endif %}
+        {% if song_search_q %}<a href="{% url 'syncope:project_update' url_username form.instance.pk %}">Clear</a>{% endif %}
     </form>
 
     {% if add_song_form.fields.song.queryset.exists %}
-    <form method="post" action="{%  url 'syncope:project_add_song' url_username form.instance.pk %}">
+    <form method="post" action="{% url 'syncope:project_add_song' url_username form.instance.pk %}">
         {% csrf_token %}
-        <div>{{ add_song_form.song }}</div>
-        <button type="submit">Add Song to Project</button>
+        <div class="form-group">{{ add_song_form.song }}</div>
+        <button type="submit" class="btn btn-primary btn-sm">Add Song to Project</button>
     </form>
     {% elif song_search_q %}
-        <p>No matching songs found.</p>
+        <p class="text-muted">No matching songs found.</p>
     {% else %}
-        <p>No songs available to add.</p>
+        <p class="text-muted">No songs available to add.</p>
     {% endif %}
 </div>
 
 <h3 id="guests-section">Project Guests</h3>
 
 {% if form.instance.guests.all %}
-<div style="margin-bottom: 20px;">
+<div style="margin-bottom: 1.5rem;">
     <h4>Current Guests</h4>
-    <table style="width: 100%; border-collapse: collapse;">
+    <table class="table">
         <thead>
-            <tr style="border-bottom: 1px solid #ccc;">
-                <th style="text-align: left; padding: 8px;">Guest Name</th>
-                <th style="text-align: center; padding: 8px;">Action</th>
+            <tr>
+                <th>Guest Name</th>
+                <th style="text-align: center;">Action</th>
             </tr>
         </thead>
         <tbody>
             {% for guest in form.instance.guests.all|dictsort:"last_name" %}
-            <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 8px;">{{ guest.first_name }} {{ guest.last_name }}</td>
-                <td style="text-align: center; padding: 8px;">
-                    <form method="post" action="{%  url 'syncope:project_remove_guest' url_username form.instance.pk guest.pk %}" style="display: inline;">
+            <tr>
+                <td>{{ guest.first_name }} {{ guest.last_name }}</td>
+                <td style="text-align: center;">
+                    <form method="post" action="{% url 'syncope:project_remove_guest' url_username form.instance.pk guest.pk %}">
                         {% csrf_token %}
-                        <button type="submit" onclick="return confirm('Remove this guest from the project?')" style="color: #d32f2f; background: none; border: none; cursor: pointer; text-decoration: underline;">Remove</button>
+                        <button type="submit" onclick="return confirm('Remove this guest from the project?')" class="btn btn-danger btn-sm">Remove</button>
                     </form>
                 </td>
             </tr>
@@ -195,22 +186,22 @@
 <div>
     <h4>Add Guest to Project</h4>
 
-    <form method="get" style="margin: 10px 0;">
+    <form method="get" class="search-form">
         <input type="text" name="guest_q" value="{{ guest_search_q }}" placeholder="Search by name">
         <button type="submit">Search</button>
-        {% if guest_search_q %}<a href="{%  url 'syncope:project_update' url_username form.instance.pk %}">Clear</a>{% endif %}
+        {% if guest_search_q %}<a href="{% url 'syncope:project_update' url_username form.instance.pk %}">Clear</a>{% endif %}
     </form>
 
     {% if add_guest_form.fields.guest.queryset.exists %}
-    <form method="post" action="{%  url 'syncope:project_add_guest' url_username form.instance.pk %}">
+    <form method="post" action="{% url 'syncope:project_add_guest' url_username form.instance.pk %}">
         {% csrf_token %}
-        <div>{{ add_guest_form.guest }}</div>
-        <button type="submit">Add Guest to Project</button>
+        <div class="form-group">{{ add_guest_form.guest }}</div>
+        <button type="submit" class="btn btn-primary btn-sm">Add Guest to Project</button>
     </form>
     {% elif guest_search_q %}
-        <p>No matching guests found.</p>
+        <p class="text-muted">No matching guests found.</p>
     {% else %}
-        <p>No guests available to add.</p>
+        <p class="text-muted">No guests available to add.</p>
     {% endif %}
 </div>
 

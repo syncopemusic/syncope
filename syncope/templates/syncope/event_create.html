@@ -3,10 +3,14 @@
 {% block title %}Create{% endblock %}
 
 {% block content %}
-<h2>Create new event</h2>
+<div class="section-header">
+    <h2>Create new event</h2>
+</div>
+
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Add event</button>
+    <button type="submit" class="btn btn-primary">Add Event</button>
+    <a href="{% url 'syncope:event_list' url_username %}" class="btn btn-link" style="margin-left: 0.5rem;">Cancel</a>
 </form>
 {% endblock %}

@@ -4,22 +4,22 @@
 {% block title %}{{ project.title }}{% endblock %}
 
 {% block content %}
-<h2>{{ project.title }}</h2>
+<div class="section-header">
+    <h2>{{ project.title }}</h2>
+</div>
 
-<p>
-    <a href="{%  url 'syncope:project_update' url_username project.pk %}">Edit</a>
-    &nbsp;|&nbsp;
-    <a href="{%  url 'syncope:project_list' url_username %}">Back to Projects</a>
-    &nbsp;|&nbsp;
-    <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
+<div class="action-bar">
+    <a href="{% url 'syncope:project_update' url_username project.pk %}" class="btn btn-secondary btn-sm">Edit</a>
+    <a href="{% url 'syncope:project_list' url_username %}" class="btn btn-link btn-sm">← Back</a>
+    <button id="share-btn" class="btn btn-link btn-sm" title="Copy share link">
         <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
     </button>
-    <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
-</p>
+    <span id="share-result" class="share-result"></span>
+</div>
 <div style="display:none;">{% csrf_token %}</div>
 
 <div class="project-header">
-    <table>
+    <table class="table-detail">
         <tr><th>Description</th><td>{{ project.description|default:"-"|linebreaksbr }}</td></tr>
         <tr><th>Details</th><td>{{ project.details|default:"-"|linebreaksbr }}</td></tr>
         <tr><th>Start Date</th><td>{{ project.start_date|default:"-" }}</td></tr>
@@ -37,7 +37,7 @@
     {% endfor %}
 </ul>
 {% else %}
-<p>No members.</p>
+<p class="text-muted">No members.</p>
 {% endif %}
 
 <h3>Guests</h3>
@@ -48,7 +48,7 @@
     {% endfor %}
 </ul>
 {% else %}
-<p>No guests.</p>
+<p class="text-muted">No guests.</p>
 {% endif %}
 
 <h3>Songs</h3>
@@ -56,35 +56,28 @@
 <ul>
     {% for song in songs %}
         <li>
-            <a href="{%  url 'syncope:song_page' url_username song.pk %}">{{ song.title }}</a>
+            <a href="{% url 'syncope:song_page' url_username song.pk %}">{{ song.title }}</a>
             {% if song.composer %} — {{ song.composer }}{% endif %}
         </li>
     {% endfor %}
 </ul>
 {% else %}
-<p>No songs.</p>
+<p class="text-muted">No songs.</p>
 {% endif %}
 
 <h3>Events</h3>
 {% if events %}
-<table>
-    <tr>
-        <th>Name</th>
-        <th>🔗</th>
-        <th>Date</th>
-        <th>Location</th>
-        <th>Type</th>
-        <th>Songs</th>
-    </tr>
+<table class="table">
+    <thead>
+        <tr><th>Name</th><th>Resources</th><th>Date</th><th>Location</th><th>Type</th><th>Songs</th></tr>
+    </thead>
+    <tbody>
     {% for event in events %}
         <tr>
+            <td><a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a></td>
             <td>
-                <a href="{%  url 'syncope:event_detail' url_username event.pk %}">
-                    {{ event.name }}
-                </a>
-            </td>
-            <td>{% if event.resource_count > 0 %}<span title="Event resources">🔗{{ event.resource_count }}</span>{% endif %}
-            {% if event.event_song_resource_count > 0 %}<span title="Song resources from this event">🎵{{ event.event_song_resource_count }}</span>{% endif %}
+                {% if event.resource_count > 0 %}<span title="Event resources">🔗{{ event.resource_count }}</span>{% endif %}
+                {% if event.event_song_resource_count > 0 %}<span title="Song resources">🎵{{ event.event_song_resource_count }}</span>{% endif %}
             </td>
             <td>{{ event.started_at|date:"M d, Y" }}</td>
             <td>{{ event.location|default:"-" }}</td>
@@ -92,31 +85,29 @@
             <td>
                 {% with songs=event.eventsong_set.all|dictsort:"order" %}
                     {% if songs %}
-                        <ul style="margin: 0; padding-left: 20px;">
+                        <ul style="margin: 0; padding-left: 1.25rem;">
                             {% for event_song in songs %}
-                                <li>
-                                    <a href="{%  url 'syncope:song_page' url_username event_song.song.pk %}">
-                                        {{ event_song.song.title }}
-                                    </a>
-                                </li>
+                                <li><a href="{% url 'syncope:song_page' url_username event_song.song.pk %}">{{ event_song.song.title }}</a></li>
                             {% endfor %}
                         </ul>
-                    {% else %}
-                        -
-                    {% endif %}
+                    {% else %}—{% endif %}
                 {% endwith %}
             </td>
         </tr>
     {% endfor %}
+    </tbody>
 </table>
 {% else %}
-<p>No events.</p>
+<p class="text-muted">No events.</p>
 {% endif %}
 
 <h3>Project Resources</h3>
 {% if project_resources %}
-<table>
-    <tr><th></th><th></th><th>Description</th><th>URL</th></tr>
+<table class="table">
+    <thead>
+        <tr><th>#</th><th></th><th>Description</th><th>URL</th></tr>
+    </thead>
+    <tbody>
     {% for link in project_resources %}
     <tr>
         <td>{{ forloop.counter }}</td>
@@ -125,14 +116,13 @@
         <td><a href="{{ link.share_url|default:link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a></td>
     </tr>
     {% endfor %}
+    </tbody>
 </table>
 {% else %}
-<p>No resources.</p>
+<p class="text-muted">No resources.</p>
 {% endif %}
 
-<p>
-    <a href="{%  url 'syncope:project_delete' url_username project.pk %}">Delete Project</a>
-</p>
+<p><a href="{% url 'syncope:project_delete' url_username project.pk %}" class="btn btn-danger btn-sm">Delete Project</a></p>
 
 {% block extra_js %}
 <script>
@@ -140,61 +130,26 @@ function createShareHandler(btn, resultSpan, shareData) {
     return function () {
         btn.disabled = true;
         if (resultSpan) resultSpan.textContent = 'Copying...';
-
         fetch('/share/create/', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            },
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
             body: JSON.stringify(shareData),
         })
-        .then(function(response) {
-            if (!response.ok) throw new Error('Request failed');
-            return response.json();
-        })
+        .then(function(response) { if (!response.ok) throw new Error('Request failed'); return response.json(); })
         .then(function(data) {
             const shareUrl = window.location.origin + '/' + data.share_id + '/';
-
-            // Copy to clipboard
             navigator.clipboard.writeText(shareUrl).then(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link copied:\n' + shareUrl);
-                }
-            }).catch(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link:\n' + shareUrl);
-                }
-            });
+                if (resultSpan) { resultSpan.textContent = 'Copied'; setTimeout(function() { resultSpan.textContent = ''; }, 3000); }
+            }).catch(function() { if (resultSpan) resultSpan.textContent = 'Link copied'; });
         })
-        .catch(function() {
-            if (resultSpan) {
-                resultSpan.textContent = 'Failed';
-            } else {
-                alert('Failed to generate share link');
-            }
-        })
-        .finally(function() {
-            btn.disabled = false;
-        });
+        .catch(function() { if (resultSpan) resultSpan.textContent = 'Failed'; })
+        .finally(function() { btn.disabled = false; });
     };
 }
-
 const shareBtn = document.getElementById('share-btn');
 if (shareBtn) {
-    shareBtn.addEventListener('click', createShareHandler(
-        shareBtn,
-        document.getElementById('share-result'),
-        { type: 'project', id: {{ project.pk }} }
-    ));
+    shareBtn.addEventListener('click', createShareHandler(shareBtn, document.getElementById('share-result'), { type: 'project', id: {{ project.pk }} }));
 }
 </script>
 {% endblock %}
-
 {% endblock %}

@@ -3,20 +3,34 @@
 {% block title %}{{ organization.name }}{% endblock %}
 
 {% block content %}
-Welcome, {{ user.username }}
-
-<p>Name: {{ organization.name }}</p>
-<p>Email: {{ organization.email }}</p>
-<p>Address: {{ organization.address }}</p>
-
-<hr>
+<div class="welcome-card">
+    <h2>{{ organization.name }}</h2>
+    {% if organization.email %}<p>Email: {{ organization.email }}</p>{% endif %}
+    {% if organization.address %}<p>Address: {{ organization.address }}</p>{% endif %}
+</div>
 
 <h3>Quick Links</h3>
-<ul>
-    <li><a href="{%  url 'syncope:project_list' url_username %}">Projects</a></li>
-    <li><a href="{%  url 'syncope:event_list' url_username %}">Events</a></li>
-    <li><a href="{%  url 'syncope:song_dashboard' url_username %}">Songs</a></li>
-    <li><a href="{%  url 'syncope:org_member_list' url_username %}">Members</a></li>
-</ul>
+<div class="card-grid">
+    <div class="card">
+        <h3>Projects</h3>
+        <p>Manage concerts, seasons, and productions.</p>
+        <a href="{% url 'syncope:project_list' url_username %}" class="btn btn-secondary btn-sm mt-1">View projects</a>
+    </div>
+    <div class="card">
+        <h3>Events</h3>
+        <p>Rehearsals, performances, and readings.</p>
+        <a href="{% url 'syncope:event_list' url_username %}" class="btn btn-secondary btn-sm mt-1">View events</a>
+    </div>
+    <div class="card">
+        <h3>Songs</h3>
+        <p>Browse the song archive.</p>
+        <a href="{% url 'syncope:song_dashboard' url_username %}" class="btn btn-secondary btn-sm mt-1">Browse songs</a>
+    </div>
+    <div class="card">
+        <h3>Members</h3>
+        <p>View and manage ensemble members.</p>
+        <a href="{% url 'syncope:org_member_list' url_username %}" class="btn btn-secondary btn-sm mt-1">View members</a>
+    </div>
+</div>
 
 {% endblock %}

@@ -1,115 +1,159 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
-{% load static %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{% endblock %}</title>
+    <title>{% block title %}Syncope{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="{% static 'syncope/style.css' %}">
-
-    <link rel="icon" href="{% static 'syncope/images/favicon.ico' %}" type="image/x-icon" >
-
-
+    <link rel="icon" href="{% static 'syncope/images/favicon.ico' %}" type="image/x-icon">
 
     <script src="{% static 'syncope/jquery-3.7.1.min.js' %}"></script>
-
-
 
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     <div class="grid-container">
 
-    <!-- toggle button -->
+        <!-- Sidebar -->
         <nav class="sidebar" id="sidebar">
             {% if user.is_authenticated %}
-                <p>{{ user.username }}</p>
+                <div class="sidebar-header">
+                    <svg class="sidebar-logo" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+                        <g transform="matrix(6.0758 0 0 6.0758 58.262 2.1937)">
+                            <g transform="matrix(1.3333 0 0 1.3333 -455.01 -30.947)" fill="currentColor">
+                                <g transform="translate(341.25 40.445)">
+                                    <path d="m4.3438-2.7031c-0.8125 0-1.6094 0.25-2.3125 0.67188-0.9375 0.5625-2.0312 1.5469-2.0312 2.9688 0 1.2188 1.0625 1.7656 2.1562 1.7656 0.8125 0 1.6094-0.25 2.3125-0.67188 0.9375-0.5625 2.0312-1.5469 2.0312-2.9688 0-1.2188-1.0625-1.7656-2.1562-1.7656z"/>
+                                </g>
+                                <g transform="translate(347.75 23.21)">
+                                    <path d="m0 0h-0.3125v4.9844h0.3125c1.4219 1.4844 3.2812 3.5781 3.2812 5.6406 0 1.3125-0.3125 2.6094-0.82812 3.8125-0.0625 0.32812 0.20312 0.54688 0.45312 0.54688 0.14062 0 0.29688-0.07813 0.40625-0.25 0.51562-1.3125 0.8125-2.7031 0.8125-4.1094 0-3.9375-4.125-6.7031-4.125-10.625z"/>
+                                </g>
+                            </g>
+                            <g transform="matrix(1.3333 0 0 1.3333 -457.77 -30.947)" fill="currentColor">
+                                <g transform="translate(354.04 37.954)" fill="currentColor">
+                                    <path d="m4.3438-2.7031c-0.8125 0-1.6094 0.25-2.3125 0.67188-0.9375 0.5625-2.0312 1.5469-2.0312 2.9688 0 1.2188 1.0625 1.7656 2.1562 1.7656 0.8125 0 1.6094-0.25 2.3125-0.67188 0.9375-0.5625 2.0312-1.5469 2.0312-2.9688 0-1.2188-1.0625-1.7656-2.1562-1.7656z"/>
+                                </g>
+                            </g>
+                            <path d="m14.643 20.998v20.064" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width=".7"/>
+                            <path d="m8.2865 0.35052v20.995" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width=".7"/>
+                        </g>
+                    </svg>
+                    <div class="sidebar-brand">Syncope</div>
+                </div>
+
+                <div class="sidebar-user">{{ user.username }}</div>
+
                 <ul class="menu-links">
-                    <li><a href="{%  url 'syncope:person_update' user.username %}">Update profile</a></li>
-                    <li><a href="{%  url 'syncope:home' %}">Home</a></li>
-                    <li><a href="{%  url 'syncope:song_dashboard' user.username %}">Songs</a></li>
+                    <li><a href="{% url 'syncope:home' %}">Home</a></li>
+                    <li><a href="{% url 'syncope:person_update' user.username %}">Update profile</a></li>
+                    <li><a href="{% url 'syncope:song_dashboard' user.username %}">Songs</a></li>
 
                     <li>
-                        <p>Groups:</p>
+                        <span class="section-label">Groups</span>
                         <ul>
                             {% for membership in memberships %}
                                 {% with org=membership.user.organizations.first %}
                                     {% if org %}
                                         <li class="org-item {% if url_username == org.user.username %}active{% endif %}">
-                                            <a href="{%  url 'syncope:org_dashboard' org.user.username %}">
-                                                {{ org.name }} ({{ membership.person.first_name }} - {{ membership.person.roles.all|join:", " }})
+                                            <a href="{% url 'syncope:org_dashboard' org.user.username %}">
+                                                {{ org.name }}
                                             </a>
+                                            <small style="color: rgba(255,255,255,0.45); display: block; padding: 0 0.75rem; margin-bottom: 0.25rem;">
+                                                {{ membership.person.first_name }} · {{ membership.person.roles.all|join:", " }}
+                                            </small>
                                             <ul class="org-submenu">
-                                                <!-- Songs visible to ADMIN and MEMBER -->
                                                 {% if ADMIN_ROLE in membership.person.roles.all or MEMBER_ROLE in membership.person.roles.all %}
-                                                    <li><a href="{%  url 'syncope:song_dashboard' org.user.username %}">Songs</a></li>
-                                                    <li><a href="{%  url 'syncope:org_member_list' org.user.username %}">Members</a></li>
-                                                    <li><a href="{%  url 'syncope:event_list' org.user.username %}">Events</a></li>
-                                                    <li><a href="{%  url 'syncope:project_list' org.user.username %}">Projects</a></li>
+                                                    <li><a href="{% url 'syncope:song_dashboard' org.user.username %}">Songs</a></li>
+                                                    <li><a href="{% url 'syncope:org_member_list' org.user.username %}">Members</a></li>
+                                                    <li><a href="{% url 'syncope:event_list' org.user.username %}">Events</a></li>
+                                                    <li><a href="{% url 'syncope:project_list' org.user.username %}">Projects</a></li>
                                                 {% endif %}
 
                                                 {% if ADMIN_ROLE in membership.person.roles.all %}
-                                                    <li><a href="{%  url 'syncope:attendance' org.user.username %}">ATTENDANCE</a></li>
-                                                    <li><a href="{%  url 'syncope:poll_list' org.user.username %}">Polls</a></li>
-                                                    <li><a href="{%  url 'syncope:song_form2' org.user.username %}">Add song</a></li>
-
-                                                    <li><a href="{%  url 'syncope:import_hub' username=org.user.username %}">Import Data</a></li>
+                                                    <li><a href="{% url 'syncope:attendance' org.user.username %}">Attendance</a></li>
+                                                    <li><a href="{% url 'syncope:poll_list' org.user.username %}">Polls</a></li>
+                                                    <li><a href="{% url 'syncope:song_form2' org.user.username %}">Add song</a></li>
+                                                    <li><a href="{% url 'syncope:import_hub' username=org.user.username %}">Import Data</a></li>
                                                 {% endif %}
                                             </ul>
                                         </li>
                                     {% endif %}
                                 {% endwith %}
                             {% empty %}
-                                <li>No groups yet</li>
+                                <li style="padding: 0.5rem 0.75rem; font-size: 0.85rem; color: rgba(255,255,255,0.4);">No groups yet</li>
                             {% endfor %}
                         </ul>
                     </li>
-
-                    <li>
-                        <form method="post" action="{% url 'logout' %}" onclick="return confirm('You want to log out?')">
-                            {% csrf_token %}
-                            <button type="submit">Logout</button>
-                        </form>
-                    </li>
                 </ul>
+
+                <div class="sidebar-footer">
+                    <form method="post" action="{% url 'logout' %}" onclick="return confirm('Log out?')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center; border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.7);">Log out</button>
+                    </form>
+                </div>
             {% else %}
-                <a href="{%  url 'syncope:signup' %}">Sign Up</a>
-                <a href="{%  url 'syncope:login' %}">Login</a>
+                <div class="sidebar-header">
+                    <svg class="sidebar-logo" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+                        <g transform="matrix(6.0758 0 0 6.0758 58.262 2.1937)">
+                            <g transform="matrix(1.3333 0 0 1.3333 -455.01 -30.947)" fill="currentColor">
+                                <g transform="translate(341.25 40.445)">
+                                    <path d="m4.3438-2.7031c-0.8125 0-1.6094 0.25-2.3125 0.67188-0.9375 0.5625-2.0312 1.5469-2.0312 2.9688 0 1.2188 1.0625 1.7656 2.1562 1.7656 0.8125 0 1.6094-0.25 2.3125-0.67188 0.9375-0.5625 2.0312-1.5469 2.0312-2.9688 0-1.2188-1.0625-1.7656-2.1562-1.7656z"/>
+                                </g>
+                                <g transform="translate(347.75 23.21)">
+                                    <path d="m0 0h-0.3125v4.9844h0.3125c1.4219 1.4844 3.2812 3.5781 3.2812 5.6406 0 1.3125-0.3125 2.6094-0.82812 3.8125-0.0625 0.32812 0.20312 0.54688 0.45312 0.54688 0.14062 0 0.29688-0.07813 0.40625-0.25 0.51562-1.3125 0.8125-2.7031 0.8125-4.1094 0-3.9375-4.125-6.7031-4.125-10.625z"/>
+                                </g>
+                            </g>
+                            <g transform="matrix(1.3333 0 0 1.3333 -457.77 -30.947)" fill="currentColor">
+                                <g transform="translate(354.04 37.954)" fill="currentColor">
+                                    <path d="m4.3438-2.7031c-0.8125 0-1.6094 0.25-2.3125 0.67188-0.9375 0.5625-2.0312 1.5469-2.0312 2.9688 0 1.2188 1.0625 1.7656 2.1562 1.7656 0.8125 0 1.6094-0.25 2.3125-0.67188 0.9375-0.5625 2.0312-1.5469 2.0312-2.9688 0-1.2188-1.0625-1.7656-2.1562-1.7656z"/>
+                                </g>
+                            </g>
+                            <path d="m14.643 20.998v20.064" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width=".7"/>
+                            <path d="m8.2865 0.35052v20.995" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width=".7"/>
+                        </g>
+                    </svg>
+                    <div class="sidebar-brand">Syncope</div>
+                </div>
+                <div style="padding: 1.5rem 1.25rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <a href="{% url 'syncope:signup' %}" class="btn btn-primary" style="width: 100%; justify-content: center;">Sign Up</a>
+                    <a href="{% url 'syncope:login' %}" class="btn btn-secondary" style="width: 100%; justify-content: center; border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.8);">Log In</a>
+                </div>
             {% endif %}
         </nav>
 
-<!--    main -->
+        <!-- Main -->
         <main class="main">
-
             <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
             <div class="main-content">
                 {% if messages %}
-                <div style="margin-bottom: 1rem;">
+                <div class="messages">
                     {% for message in messages %}
-                    <div style="padding: 12px; background-color: {% if message.tags == 'success' %}#d4edda{% elif message.tags == 'warning' %}#ffeaa7{% elif message.tags == 'error' or message.tags == 'danger' %}#f8d7da{% else %}#d1ecf1{% endif %}; border: 1px solid {% if message.tags == 'success' %}#c3e6cb{% elif message.tags == 'warning' %}#ffd36f{% elif message.tags == 'error' or message.tags == 'danger' %}#f5c6cb{% else %}#bee5eb{% endif %}; border-radius: 4px; color: {% if message.tags == 'success' %}#155724{% elif message.tags == 'warning' %}#5f4c0b{% elif message.tags == 'error' or message.tags == 'danger' %}#721c24{% else %}#0c5460{% endif %};">
+                    <div class="alert alert-{{ message.tags }}">
                         {{ message }}
                     </div>
                     {% endfor %}
                 </div>
                 {% endif %}
-                {% block content %}
-                <!-- content goes here -->
-                {% endblock %}
+                {% block content %}{% endblock %}
             </div>
             <footer class="footer">
                 <div class="footer-info">
-                    <!-- timestamp  -->
-                        {% if object.updated_at %}
+                    {% if object.updated_at %}
                         Last updated: {{ object.updated_at|date:"d M, Y, H:i" }}
                     {% endif %}
                     {% if object.created_at %}
                         | Created: {{ object.created_at|date:"d M, Y" }}
                     {% endif %}
-                    <p>© 2025-2026 Syncope Music</p>
+                    <p style="margin-top: 0.5rem;">© 2025-2026 Syncope Music</p>
                 </div>
             </footer>
-         </main>
+        </main>
 
     </div>
 
@@ -118,8 +162,6 @@
     <script>
         function toggleMenu(){
             const container = document.querySelector(".grid-container");
-            {#const sidebar = document.querySelector(".sidebar");#}
-
             if (window.innerWidth < 769) {
                 container.classList.toggle("menu-visible");
             }
@@ -130,8 +172,7 @@
             if (window.innerWidth > 768) {
                 container.classList.remove("menu-visible");
             }
-        })
-        ;
+        });
     </script>
 {{ form.media }}
 </body>

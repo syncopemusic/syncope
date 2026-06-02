@@ -3,7 +3,9 @@
 {% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Project{% endblock %}
 
 {% block content %}
-<h2>{% if form.instance.pk %}Edit{% else %}Create{% endif %} Project</h2>
+<div class="section-header">
+    <h2>{% if form.instance.pk %}Edit{% else %}Create{% endif %} Project</h2>
+</div>
 
 <form method="post">
     {% csrf_token %}
@@ -38,8 +40,8 @@
         {% if form.end_date.errors %}<span class="error">{{ form.end_date.errors }}</span>{% endif %}
     </div>
 
-    <button type="submit">Save</button>
-    <a href="{%  url 'syncope:project_list' url_username %}">Cancel</a>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{% url 'syncope:project_list' url_username %}" class="btn btn-link" style="margin-left: 0.5rem;">Cancel</a>
 </form>
 
 {% endblock %}

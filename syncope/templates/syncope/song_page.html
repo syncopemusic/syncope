@@ -1,54 +1,36 @@
 {% extends "syncope/base.html" %}
+
 {% block title %}{{ song.title }}{% endblock %}
+
 {% block content %}
+<div class="section-header">
+    <h2>{{ song.title }}</h2>
+</div>
 
-<h2>{{ song.title }}</h2>
+<div class="action-bar">
+    <a href="{% url 'syncope:song_update' url_username song.pk %}" class="btn btn-secondary btn-sm">Edit Song</a>
+    <a href="{% url 'syncope:song_dashboard' url_username %}" class="btn btn-link btn-sm">← Back to List</a>
+</div>
 
-<p>
-    <a href="{%  url 'syncope:song_update' url_username song.pk %}">Edit Song</a>
-    &nbsp;|&nbsp;
-    <a href="{%  url 'syncope:song_dashboard' url_username %}">Back to List</a>
-</p>
-
-<table>
+<table class="table-detail">
     <tr><th>Song ID</th><td>{{ song.internal_id|default:"-" }}</td></tr>
     <tr><th>Composer</th><td>
-        {% if song.composer %}
-            <a href="{%  url 'syncope:org_member_detail' url_username song.composer.pk %}">{{ song.composer }}</a>
-        {% else %}
-            -
-        {% endif %}
+        {% if song.composer %}<a href="{% url 'syncope:org_member_detail' url_username song.composer.pk %}">{{ song.composer }}</a>{% else %}—{% endif %}
     </td></tr>
     <tr><th>Poet</th><td>
-        {% if song.poet %}
-            <a href="{%  url 'syncope:org_member_detail' url_username song.poet.pk %}">{{ song.poet }}</a>
-        {% else %}
-            -
-        {% endif %}
+        {% if song.poet %}<a href="{% url 'syncope:org_member_detail' url_username song.poet.pk %}">{{ song.poet }}</a>{% else %}—{% endif %}
     </td></tr>
     <tr><th>Translator</th><td>
-        {% if song.translator %}
-            <a href="{%  url 'syncope:org_member_detail' url_username song.translator.pk %}">{{ song.translator }}</a>
-        {% else %}
-            -
-        {% endif %}
+        {% if song.translator %}<a href="{% url 'syncope:org_member_detail' url_username song.translator.pk %}">{{ song.translator }}</a>{% else %}—{% endif %}
     </td></tr>
     <tr><th>Type</th><td>{{ song.group }}</td></tr>
     <tr><th>Year</th><td>{{ song.year|default:"-" }}</td></tr>
     <tr><th>Voices</th><td>{{ song.number_of_voices|default:"-" }}</td></tr>
     <tr><th>Pages</th><td>{{ song.number_of_pages|default:"-" }}</td></tr>
     <tr><th>Copies</th><td>{{ song.number_of_copies|default:"-" }}</td></tr>
-    <tr>
-        <th>Keywords</th>
-        <td>{{ song.keywords|default:"-" }}</td>
-    </tr>
-    <tr>
-        <th>Original Language</th>
-        <td>{{ song.languagecode|default:"-" }}</td>
-    </tr>
+    <tr><th>Keywords</th><td>{{ song.keywords|default:"-" }}</td></tr>
+    <tr><th>Original Language</th><td>{{ song.languagecode|default:"-" }}</td></tr>
 </table>
-
-
 
 {% if song.quotes.all %}
 <h3>Quotes</h3>
@@ -66,52 +48,41 @@
 
 {% if song.lyrics %}
 <h3>Lyrics</h3>
-<div>{{ song.lyrics|linebreaks }}</div>
+<div style="white-space: pre-wrap;">{{ song.lyrics|linebreaks }}</div>
 {% endif %}
 
 {% if song.lyricstranslation_set.all %}
 <h3>Lyrics Translations</h3>
 {% for t in song.lyricstranslation_set.all %}
     <h4>{{ t.languagecode }}{% if t.translator %} — {{ t.translator }}{% endif %}</h4>
-    <div>{{ t.translation|linebreaks }}</div>
+    <div style="white-space: pre-wrap; margin-bottom: 1rem;">{{ t.translation|linebreaks }}</div>
 {% endfor %}
 {% endif %}
 
 {% if events %}
 <h3>Events</h3>
-<table>
+<table class="table">
+    <thead><tr><th>Event</th><th>Date</th></tr></thead>
+    <tbody>
     {% for event in events %}
         <tr>
             <td>
-                {% if event.event_type.id != 1 %}
-                <strong>
-                    <a href="{%  url 'syncope:event_detail' url_username event.pk %}">
-                        {{ event.name }}
-                    </a>
-                </strong>
-                {% else %}
-                    <a href="{%  url 'syncope:event_detail' url_username event.pk %}">
-                        {{ event.name }}
-                    </a>
-                {% endif %}
+                {% if event.event_type.id != 1 %}<strong>{% endif %}
+                    <a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a>
+                {% if event.event_type.id != 1 %}</strong>{% endif %}
             </td>
-            <td>({{ event.started_at|date:"d M, Y, H:i" }})</td>
-
+            <td>{{ event.started_at|date:"d M, Y, H:i" }}</td>
         </tr>
     {% endfor %}
+    </tbody>
 </table>
 {% endif %}
+
 {% if all_song_resources %}
 <h3>Resources</h3>
-<table>
+<table class="table">
     <thead>
-        <tr>
-            <th></th>
-            <th></th>
-            <th>Resource</th>
-            <th></th>
-            <th>Event</th>
-        </tr>
+        <tr><th>#</th><th></th><th>Resource</th><th>Description</th><th>Event</th></tr>
     </thead>
     <tbody>
         {% for res in all_song_resources %}
@@ -130,5 +101,4 @@
     </tbody>
 </table>
 {% endif %}
-
 {% endblock %}

@@ -4,86 +4,37 @@
 {% block title %}{{ poll.title }} votes{% endblock %}
 
 {% block content %}
-<style>
-.attendance-table {
-    border-collapse: collapse;
-}
+<div class="section-header">
+    <h2>{{ poll.title }} votes</h2>
+</div>
 
-.sticky-col {
-    position: sticky;
-    left: 0;
-    background: white;
-    z-index: 1;
-    min-width: 100px;
-    max-width: 130px;
-    padding: 4px 8px;
-    overflow-wrap: break-word;
-    word-break: break-word;
-}
+{% if poll.description %}<p class="text-muted">{{ poll.description }}</p>{% endif %}
 
-.event-col {
-    width: 20px;
-}
-
-.attendance-cell {
-    width: 40px;
-    text-align: center;
-    border-radius: 4px;
-    font-size: 1.1rem;
-    padding: 2px;
-    user-select: none;
-}
-
-.att-type-0 { background-color: #dfe6e9; } /* NO ANSWER */
-.att-type-1 { background-color: #c8f7c5; } /* YES */
-.att-type-2 { background-color: #ffeaa7; } /* MAYBE */
-.att-type-3 { background-color: #fab1a0; } /* NO */
-
-.comment-display {
-    font-size: 0.65rem;
-    color: #555;
-    word-wrap: break-word;
-    overflow-wrap: anywhere;
-}
-
-.table-container {
-    margin-top: 5rem;
-}
-
-.btn-full { display: inline; }
-.btn-short { display: none; }
-@media (max-width: 768px) {
-    .btn-full { display: none; }
-    .btn-short { display: inline; }
-}
-</style>
-
-<h2>{{ poll.title }} votes</h2>
-
-{% if poll.description %}
-<p>{{ poll.description }}</p>
-{% endif %}
 {% if user.is_authenticated %}
-<div>
-    <p>Admin links:
-        <a href="{% url 'syncope:poll_update' url_username poll.pk %}">Edit title</a> |
-        <a href="{% url 'syncope:poll_persons' url_username poll.pk %}">Edit people</a> |
-        <a href="{% url 'syncope:poll_events' url_username poll.pk %}">Edit event slots</a> |
-        <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
-            <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-        </button>
-        <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
-    </p>
+<div class="action-bar">
+    <span class="text-small text-muted">Admin:</span>
+    <a href="{% url 'syncope:poll_update' url_username poll.pk %}" class="btn btn-link btn-sm">Edit title</a>
+    <a href="{% url 'syncope:poll_persons' url_username poll.pk %}" class="btn btn-link btn-sm">Edit people</a>
+    <a href="{% url 'syncope:poll_events' url_username poll.pk %}" class="btn btn-link btn-sm">Edit event slots</a>
+    <button id="share-btn" class="btn btn-link btn-sm" title="Copy share link">
+        <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
+    </button>
+    <span id="share-result" class="share-result"></span>
 </div>
 {# Hidden CSRF token for the JS fetch call #}
 <div style="display:none;">{% csrf_token %}</div>
 {% endif %}
-<div style="margin-bottom: 1rem; font-size: 0.85rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+
+<div class="legend">
     <strong>Legend:</strong>
-    <span class="attendance-cell att-type-0" style="width: auto; height: auto; padding: 2px 6px;">⚑</span>
-    <span class="attendance-cell att-type-1" style="width: auto; height: auto; padding: 2px 6px;">✓</span>
-    <span class="attendance-cell att-type-2" style="width: auto; height: auto; padding: 2px 6px;">(✓)</span>
-    <span class="attendance-cell att-type-3" style="width: auto; height: auto; padding: 2px 6px;">✗</span>
+    <span class="attendance-cell att-type-0">⚑</span>
+    <span>No answer</span>
+    <span class="attendance-cell att-type-1">✓</span>
+    <span>Yes</span>
+    <span class="attendance-cell att-type-2">(✓)</span>
+    <span>Maybe</span>
+    <span class="attendance-cell att-type-3">✗</span>
+    <span>No</span>
 </div>
 
 {% if table_rows %}
@@ -92,7 +43,7 @@
         <thead>
             <tr>
                 <th></th>
-                <th>🔗</th>
+                <th></th>
                 <th class="sticky-col">Person</th>
                 {% for pe in poll_events %}
                 <th class="event-col" style="height: 50px; padding: 5px; font-weight: normal; {% if pe.event_type.id != 1 %}font-weight: bold; {% endif %}"
@@ -103,7 +54,6 @@
                     </div>
                 </th>
                 {% endfor %}
-
             </tr>
         </thead>
         <tbody>
@@ -111,10 +61,10 @@
             <tr>
                 <td>{{ forloop.counter }}</td>
                 <td style="position: relative;">
-
-                    <button class="share-person-btn" data-type="poll_person" data-person-pk="{{ row.person.pk }}" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link"><img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy"></button>
-                    <span class="share-person-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
-
+                    <button class="btn btn-link share-person-btn" data-type="poll_person" data-person-pk="{{ row.person.pk }}" title="Copy share link">
+                        <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
+                    </button>
+                    <span class="share-person-result share-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
                 </td>
                 <td class="sticky-col">
                     <a href="{% url 'syncope:poll_person_attendance' url_username poll.pk row.person.pk %}" target="_blank" style="font-size: 0.9rem;"><strong>{{ row.person.person.first_name }} {{ row.person.person.last_name }}</strong></a>
@@ -132,11 +82,12 @@
     </table>
 </div>
 {% else %}
-<p>No attendance data yet.</p>
+<p class="empty-state">No attendance data yet.</p>
 {% endif %}
+
 {% if membership and ADMIN_ROLE in membership.person.roles.all %}
-<div>
-    <p>Admin link:  <a href="{% url 'syncope:poll_list' url_username %}">Back to list of polls</a></p>
+<div class="mt-2">
+    <a href="{% url 'syncope:poll_list' url_username %}" class="btn btn-link btn-sm">← Back to polls</a>
 </div>
 {% endif %}
 
@@ -148,73 +99,29 @@ function createShareHandler(btn, resultSpan, shareData) {
     return function () {
         btn.disabled = true;
         if (resultSpan) resultSpan.textContent = 'Copying...';
-
         fetch('/share/create/', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            },
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
             body: JSON.stringify(shareData),
         })
-        .then(function(response) {
-            if (!response.ok) throw new Error('Request failed');
-            return response.json();
-        })
+        .then(function(response) { if (!response.ok) throw new Error('Request failed'); return response.json(); })
         .then(function(data) {
             const shareUrl = window.location.origin + '/' + data.share_id + '/';
-
-            // Copy to clipboard
             navigator.clipboard.writeText(shareUrl).then(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link copied:\n' + shareUrl);
-                }
-            }).catch(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link:\n' + shareUrl);
-                }
-            });
+                if (resultSpan) { resultSpan.textContent = 'Copied'; setTimeout(function() { resultSpan.textContent = ''; }, 3000); }
+            }).catch(function() { if (resultSpan) resultSpan.textContent = 'Link copied'; });
         })
-        .catch(function() {
-            if (resultSpan) {
-                resultSpan.textContent = 'Failed';
-            } else {
-                alert('Failed to generate share link');
-            }
-        })
-        .finally(function() {
-            btn.disabled = false;
-        });
+        .catch(function() { if (resultSpan) resultSpan.textContent = 'Failed'; })
+        .finally(function() { btn.disabled = false; });
     };
 }
-
-// Handle main poll share button
 const shareBtn = document.getElementById('share-btn');
 if (shareBtn) {
-    shareBtn.addEventListener('click', createShareHandler(
-        shareBtn,
-        document.getElementById('share-result'),
-        { type: 'poll', id: {{ poll.pk }} }
-    ));
+    shareBtn.addEventListener('click', createShareHandler(shareBtn, document.getElementById('share-result'), { type: 'poll', id: {{ poll.pk }} }));
 }
-
-// Handle individual person share buttons
 document.querySelectorAll('.share-person-btn').forEach(function(btn) {
-    btn.dataset.originalValue = btn.innerHTML;
     btn.addEventListener('click', function() {
-        const personPk = this.dataset.personPk;
-        const resultSpan = this.nextElementSibling;
-        createShareHandler(
-            this,
-            resultSpan,
-            { type: 'poll_person', id: personPk }
-        )();
+        createShareHandler(this, this.nextElementSibling, { type: 'poll_person', id: this.dataset.personPk })();
     });
 });
 </script>

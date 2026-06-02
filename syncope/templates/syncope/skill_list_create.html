@@ -1,27 +1,45 @@
 {% extends "syncope/base.html" %}
+
 {% block title %}Skills{% endblock %}
+
 {% block content %}
-<h1>Skills</h1>
-<h2> Add new skill </h2>
+<div class="section-header">
+    <h2>Skills</h2>
+</div>
+
+<h3>Add new skill</h3>
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Add new skill</button>
+    <button type="submit" class="btn btn-primary">Add Skill</button>
 </form>
 
-<h2> Skill list </h2>
-<ul>
-{% for skill in skills %}
-    <p>{{ skill.title }}
-    - info: {{ skill.additional_notes }} - added  {{ skill.created_at }}
-    <form method="post" style="display: inline;">
-        {% csrf_token %}
-        <input type="hidden" name="skill_id" value="{{ skill.id }}">
-        <button type="submit" name="delete_skill" onclick="return confirm('Are you sure?')">Delete</button>
-      </form>
-    </p>
-{% endfor %}
-</ul>
-
+<h3>Skill list</h3>
+{% if skills %}
+<table class="table">
+    <thead>
+        <tr><th>#</th><th>Title</th><th>Info</th><th>Added</th><th></th></tr>
+    </thead>
+    <tbody>
+    {% for skill in skills %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ skill.title }}</td>
+            <td class="text-muted">{{ skill.additional_notes }}</td>
+            <td class="text-small">{{ skill.created_at }}</td>
+            <td>
+                <form method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="skill_id" value="{{ skill.id }}">
+                    <button type="submit" name="delete_skill" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?')">Delete</button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="text-muted">No skills defined yet.</p>
+{% endif %}
 
 {% endblock %}
