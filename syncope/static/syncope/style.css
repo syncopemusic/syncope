@@ -956,7 +956,8 @@ li {
 }
 
 .event-col {
-    width: 20px;
+    min-width: 70px;
+    width: 70px;
 }
 
 .comment-display {

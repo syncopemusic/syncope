@@ -13,9 +13,9 @@
 {% if user.is_authenticated %}
 <div class="action-bar">
     <span class="text-small text-muted">Admin:</span>
-    <a href="{% url 'syncope:poll_update' url_username poll.pk %}" class="btn btn-link btn-sm">Edit title</a>
-    <a href="{% url 'syncope:poll_persons' url_username poll.pk %}" class="btn btn-link btn-sm">Edit people</a>
-    <a href="{% url 'syncope:poll_events' url_username poll.pk %}" class="btn btn-link btn-sm">Edit event slots</a>
+    <a href="{% url 'syncope:poll_update' url_username poll.pk %}" class="btn btn-secondary btn-sm">Edit title</a>
+    <a href="{% url 'syncope:poll_persons' url_username poll.pk %}" class="btn btn-secondary btn-sm">Edit people</a>
+    <a href="{% url 'syncope:poll_events' url_username poll.pk %}" class="btn btn-secondary btn-sm">Edit event slots</a>
     <button id="share-btn" class="btn btn-link btn-sm" title="Copy share link">
         <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
     </button>
@@ -46,11 +46,12 @@
                 <th></th>
                 <th class="sticky-col">Person</th>
                 {% for pe in poll_events %}
-                <th class="event-col" style="height: 50px; padding: 5px; font-weight: normal; {% if pe.event_type.id != 1 %}font-weight: bold; {% endif %}"
+                <th class="event-col" style="min-height: 60px; padding: 0.5rem 0.3rem; font-weight: {% if pe.event_type.id != 1 %}bold{% else %}normal{% endif %}"
                     title="{% if pe.event_type.id == 1 %}{{ pe.name }}{% else %}{{ pe.event_type }}&#10;{{ pe.name }}{% endif %}">
-                    <div style="transform: rotate(-90deg); width: 10px; white-space: nowrap; font-size: 0.8rem;line-height: 0.7rem;">
-                        {% if pe.same_date %}{{ pe.started_at|date:"d M" }}{% else %}{{ pe.started_at|date:"d M" }} – {{ pe.ended_at|date:"d M" }}{% endif %} {{ pe.started_at|date:"H:i" }}<br>
-                        {% if pe.location %}{{ pe.location|truncatechars:10 }}{% endif %}
+                    <div style="white-space: nowrap; font-size: 0.75rem; line-height: 1.4;">
+                        {% if pe.same_date %}{{ pe.started_at|date:"d M" }}{% else %}{{ pe.started_at|date:"d M" }}<br>– {{ pe.ended_at|date:"d M" }}{% endif %}<br>
+                        {{ pe.started_at|date:"H:i" }}
+                        {% if pe.location %}<br>{{ pe.location|truncatechars:15 }}{% endif %}
                     </div>
                 </th>
                 {% endfor %}
@@ -87,7 +88,7 @@
 
 {% if membership and ADMIN_ROLE in membership.person.roles.all %}
 <div class="mt-2">
-    <a href="{% url 'syncope:poll_list' url_username %}" class="btn btn-link btn-sm">← Back to polls</a>
+    <a href="{% url 'syncope:poll_list' url_username %}" class="btn btn-secondary btn-sm">← Back to polls</a>
 </div>
 {% endif %}
 
