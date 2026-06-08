@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% block title %}Update{% endblock %}
+{% block title %}{% if form.instance.pk %}Update{% else %}New{% endif %} event{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -94,7 +94,7 @@
                     </td>
                     <td style="text-align: center; font-weight: bold;">{{ forloop.counter }}</td>
                     <td>
-                        <a href="{%  url 'syncope:song_page' url_username form.instance.song.pk %}">{{ form.instance.song.title }}</a>
+                        <a href="{%  url 'syncope:song_detail' url_username form.instance.song.pk %}">{{ form.instance.song.title }}</a>
                         {% if form.instance.song.composer %} &mdash; {{ form.instance.song.composer.last_name }}{% endif %}
                         {% if form.instance.song.keywords %}
                             <br><small>{{ form.instance.song.keywords }}</small>
@@ -103,7 +103,7 @@
                         {{ form.id }}
                     </td>
                     <td style="text-align: center;">{{ form.encore }}</td>
-                    <td style="text-align: center;">{{ form.DELETE }}</td>
+                    <td style="text-align: center;">{% if is_admin %}{{ form.DELETE }}{% endif %}</td>
                     {% if is_admin %}
                     <td>
                         <a href="{%  url 'syncope:song_update' url_username form.instance.song.pk %}?next={%  url 'syncope:event_update' url_username object.pk %}">Edit</a>
@@ -130,7 +130,7 @@
         </tbody>
     </table>
     {% else %}
-        <p>No songs added yet.{% if is_admin %} Use "Save &amp; Add Song" to add songs.{% endif %}</p>
+        <p>No songs added yet.{% if is_admin %} Use the section below to add songs.{% endif %}</p>
     {% endif %}
 
     <h3>Attendance</h3>
@@ -157,7 +157,7 @@
                     <td>{{ radio.tag }}</td>
                 {% endfor %}
                 {% if is_admin and form.instance.pk %}
-                <td style="text-align: center;">{{ form.DELETE }}</td>
+                <td style="text-align: center;" title="Remove person from this event record. Pres SAVE in the end.">{{ form.DELETE }}</td>
                 {% endif %}
             </tr>
         {% endfor %}
@@ -170,23 +170,20 @@
         <div>
             {{ form.url }}
             {{ form.description }}
-            {% if form.instance.pk %}{{ form.DELETE }}{% endif %}
+            {% if is_admin and form.instance.pk %}{{ form.DELETE }}{% endif %}
             {{ form.id }}
         </div>
     {% endfor %}
 
-    <button type="submit" name="action" value="save">Update Event</button>
+    <button type="submit" name="action" value="save">Save</button>
     {% if is_admin %}
-        <button type="submit" name="action" value="show_add_form">Add Participant</button>
-        <button type="submit" name="action" value="add_member">Add New Person to Org</button>
+        <br><button type="submit" name="action" value="add_member">Add New Person to Org</button>
     {% endif %}
 </form>
 
-{% if show_add_song and is_admin %}
+{% if is_admin %}
 <h3 id="add-song-section">Add Song to Event</h3>
-<a href="{%  url 'syncope:event_update' url_username object.pk %}">&#x2715; Cancel</a>
-&nbsp;|&nbsp;
-<a href="{%  url 'syncope:song_form2' url_username %}?next={%  url 'syncope:event_update' url_username object.pk %}">+ Add Fresh Song to Archive</a>
+<p><a href="{%  url 'syncope:song_new' url_username %}?next={%  url 'syncope:event_update' url_username object.pk %}">+ Add Fresh Song to Archive</a></p>
 
 {% if song_formset.forms %}
 <p><strong>Already in setlist:</strong>
@@ -195,14 +192,13 @@
 {% endif %}
 
 <form method="get">
-    <input type="hidden" name="add_song" value="1">
-    <input type="text" name="song_q" value="{{ song_search_q }}" placeholder="Search by ID, title, composer, or keywords" autofocus>
+    <input type="text" name="song_q" value="{{ song_search_q }}" placeholder="Search by ID, title, composer, or keywords">
     <button type="submit">Search</button>
-    {% if song_search_q %}<a href="?add_song=1">Clear</a>{% endif %}
+    {% if song_search_q %}<a href="{%  url 'syncope:event_update' url_username object.pk %}">Clear</a>{% endif %}
 </form>
 
 {% if add_song_form.fields.song.queryset.exists %}
-<form method="post" action="{%  url 'syncope:event_add_song' url_username object.pk %}">
+<form method="post" action="{%  url 'syncope:event_new_song' url_username object.pk %}">
     {% csrf_token %}
     <div>{{ add_song_form.song }}</div>
     <div><label>Encore: {{ add_song_form.encore }}</label></div>
@@ -214,26 +210,24 @@
     <p>No songs in the archive yet.</p>
 {% endif %}
 
-<p><a href="{%  url 'syncope:song_dashboard' url_username %}">Browse full song archive</a></p>
+<p><a href="{%  url 'syncope:song_list' url_username %}">Browse full song archive</a></p>
 {% endif %}
 
-{% if show_add_form and is_admin %}
+{% if is_admin %}
 <h3 id="add-participant-section">Add Participant</h3>
-<a href="{%  url 'syncope:event_update' url_username object.pk %}">&#x2715; Close</a>
 
 <form method="get">
-    <input type="hidden" name="add_participant" value="1">
-    <input type="text" name="q" value="{{ search_q }}" placeholder="Search by name, voice, or instrument" autofocus>
+    <input type="text" name="q" value="{{ search_q }}" placeholder="Search by name, voice, or instrument">
     <button type="submit">Search</button>
-    {% if search_q %}<a href="?add_participant=1">Clear</a>{% endif %}
+    {% if search_q %}<a href="{%  url 'syncope:event_update' url_username object.pk %}">Clear</a>{% endif %}
 </form>
 
 {% if add_form.fields.person.queryset.exists %}
-<form method="post" action="{%  url 'syncope:event_add_attendance' url_username object.pk %}">
+<form method="post" action="{%  url 'syncope:event_new_attendance' url_username object.pk %}">
     {% csrf_token %}
     <div>{{ add_form.person }}</div>
     <div>{{ add_form.attendance_type }}</div>
-    <button type="submit">Add to Attendance</button>
+    <button type="submit">Add Participant</button>
 </form>
 {% elif search_q %}
     <p>No matching persons found.</p>

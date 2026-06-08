@@ -443,3 +443,15 @@ class AccessControl:
             return Membership.objects.none()
 
         return Membership.objects.filter(user=url_username)
+
+    @classmethod
+    def can_delete_project(cls, auth_user, url_username):
+        """
+        Check if auth_user can delete a project in the organization.
+        Only ADMIN role can delete projects.
+        """
+        if not auth_user.is_authenticated:
+            return False
+
+        roles = cls.get_org_roles(auth_user, url_username)
+        return roles.filter(id=Role.ADMIN).exists()

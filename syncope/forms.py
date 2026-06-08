@@ -29,6 +29,23 @@ class RegisterForm(UserCreationForm):
 
 class PersonForm(forms.ModelForm):
     email = forms.EmailField(required=True)
+    skills = forms.ModelMultipleChoiceField(
+        queryset=Skill.objects.exclude(id__in=[Skill.SINGER, Skill.INSTRUMENTALIST]),
+        required=False,
+        widget=forms.CheckboxSelectMultiple
+    )
+    voices = forms.ModelMultipleChoiceField(
+        queryset=Voice.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'size': '6'}),
+        label='Voice Types'
+    )
+    instruments = forms.ModelMultipleChoiceField(
+        queryset=Instrument.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'size': '6'}),
+        label='Instrument Types'
+    )
 
     class Meta:
         model = Person
@@ -41,9 +58,7 @@ class PersonForm(forms.ModelForm):
             "birth_date",
         ]
         widgets = {
-            "birth_date": forms.SelectDateWidget(
-                years=range(datetime.date.today().year, 1930, -1)
-            ),
+            "birth_date": forms.DateInput(attrs={'type': 'date'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -95,12 +110,12 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
     # Role checkboxes
     roles = forms.ModelMultipleChoiceField(
         queryset=Role.objects.all(),
-        required=True,
+        required=False,
         widget=forms.CheckboxSelectMultiple
     )
     # Skill checkbox
     skills = forms.ModelMultipleChoiceField(
-        queryset=Skill.objects.all(),
+        queryset=Skill.objects.exclude(id__in=[Skill.SINGER, Skill.INSTRUMENTALIST]),
         required=False,
         widget=forms.CheckboxSelectMultiple
     )
@@ -180,7 +195,7 @@ class SongForm(forms.ModelForm):
             "number_of_pages",
             "number_of_copies",
             "year",
-            "group",
+            "ensemble",
             "number_of_voices",
             "additional_notes",
             "lyrics",
@@ -325,7 +340,13 @@ class EventChoiceField(forms.ModelChoiceField):
 
     def label_from_instance(self, obj):
         # Format: "Event Name (2024-12-25 19:00 - 21:00)"
-        label = f"{obj.name} ({obj.started_at.strftime('%Y-%m-%d %H:%M')} - {obj.ended_at.strftime('%H:%M')})"
+        if obj.started_at:
+            time_str = obj.started_at.strftime('%Y-%m-%d %H:%M')
+            if obj.ended_at:
+                time_str += f" - {obj.ended_at.strftime('%H:%M')}"
+        else:
+            time_str = "No date"
+        label = f"{obj.name} ({time_str})"
         if obj.pk in self.already_added_ids:
             return f"* {label}"
         if obj.pk in self.other_project_ids:

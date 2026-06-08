@@ -1,0 +1,20 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}Delete Event{% endblock %}
+
+{% block content %}
+<h2>Delete Event?</h2>
+
+<p>Are you sure you want to delete <strong>{{ event.name }}</strong>?</p>
+
+{% if is_admin %}
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="danger">Delete</button>
+    <a href="{%  url 'syncope:event_detail' url_username event.pk %}">Cancel</a>
+</form>
+{% else %}
+<p><a href="{%  url 'syncope:event_detail' url_username event.pk %}">Back to Event</a></p>
+{% endif %}
+
+{% endblock %}

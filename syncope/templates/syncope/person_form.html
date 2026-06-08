@@ -1,18 +1,12 @@
 {% extends "syncope/base.html" %}
-{% block title %}{% if form.instance.pk %}Update{% else %}New Person{% endif %} {{ form.instance.first_name }} {{ form.instance.last_name }} {% endblock %}
+
+{% block title %}Update your personal{% endblock %}
 
 {% block content %}
-<h1>{% if form.instance.pk %}Update{% else %}New Person{% endif %} {{ form.instance.first_name }} {{ form.instance.last_name }} </h1>
-{% if url_username == user.username %}
-    <p>
-        This is your personal page.
-    </p>
-{% else %}
-    <p>This is organization: {{ url_username }}</p>
-{% endif %}
-
+<h2>Update Your Profile</h2>
 <form method="post">
     {% csrf_token %}
+
     <!-- Existing fields -->
     <p>{{ form.first_name.label_tag }} {{ form.first_name }}</p>
     <p>{{ form.last_name.label_tag }} {{ form.last_name }}</p>
@@ -20,7 +14,7 @@
     <p>{{ form.phone.label_tag }} {{ form.phone }}</p>
     <p>{{ form.address.label_tag }} {{ form.address }}</p>
     {{ resource_formset.management_form }}
-       <p>Resources:</p>
+        <p>Resources:</p>
     {% for r_form in resource_formset %}
 
         <div>URL:
@@ -37,21 +31,8 @@
     {% endfor %}
 
     <!-- Date fields -->
-{#    <fieldset>#}
-{#        <legend>Birth Information</legend>#}
-        <p> * {{ form.birth_date.label_tag }} {{ form.birth_date }}</p>
-        <p>{{ form.birth_approximate.label_tag }} {{ form.birth_approximate }}</p>
-{#    </fieldset>#}
+    <p>{{ form.birth_date.label_tag }} {{ form.birth_date }}</p>
 
-{#    <fieldset>#}
-{#        <legend>Death Information</legend>#}
-        <p> + {{ form.death_date.label_tag }} {{ form.death_date }}</p>
-        <p>{{ form.death_approximate.label_tag }} {{ form.death_approximate }}</p>
-{#    </fieldset>#}
-
-    <!-- Roles -->
-    {{ form.roles.label_tag }}
-    {{ form.roles }}
     <!-- Voices (renders as native <select multiple>) -->
     <p>{{ form.voices.label_tag }}
         {{ form.voices }}</p>
@@ -60,21 +41,12 @@
     <!-- Instruments (renders as native <select multiple>) -->
     <p>{{ form.instruments.label_tag }}
     {{ form.instruments }}</p>
-    <small class="form-text">Hold Ctrl/Cmd to select multiple voices</small>
-    <p>
-        <small class="form-text">
-            small text for testing
-        </small>
-    </p>
-
+    <small class="form-text">Hold Ctrl/Cmd to select multiple instruments</small>
 
     <!-- Skills -->
     <p>{{ form.skills.label_tag }}
         {{ form.skills }}</p>
 
-
-    <button type="submit">Save</button>
+    <button type="submit">Update Profile</button>
 </form>
-
-
 {% endblock %}

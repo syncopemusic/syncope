@@ -2,10 +2,9 @@
 {% load static %}
 {% block title %}Import {{ import_method|title }}{% endblock %}
 {% block content %}
+
 <div class="container mt-4">
-    <a href="{%  url 'syncope:import_hub' username=url_username %}" class="btn btn-outline-secondary mb-3">
-        &larr; Back to Import Hub
-    </a>
+
     <h2>Import {{ import_method|title }}</h2>
 
     <form method="post" enctype="multipart/form-data">
@@ -37,5 +36,54 @@
 
         <button type="submit" class="btn btn-primary">Upload {{ import_method|title }}</button>
     </form>
+    {% if importable_fields %}
+    <div class="mt-4">
+        <h5>Available fields</h5>
+        <div class="d-flex flex-wrap gap-2">
+            {% for field in importable_fields %}
+            <span class="badge {% if field in required_fields %}bg-danger{% else %}bg-secondary{% endif %}" style="{% if field in required_fields %}font-weight: bold;{% endif %}">
+                {{ field }}
+            </span>
+            {% endfor %}
+        </div>
+        {% if required_fields %}
+        <small class="text-muted mt-1 d-block"><span class="badge bg-danger" style="font-weight: bold;">Bold</span> = required</small>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if csv_header %}
+    <div class="mt-4">
+        <h5>CSV header - copy and paste into Excel:</h5>
+        <div class="card bg-light">
+            <div class="card-body p-3">
+                <pre id="csv_header" class="mb-0" style="font-family: monospace; font-size: 0.95rem; white-space: pre-wrap; word-wrap: break-word;">{{ csv_header }}</pre>
+            </div>
+        </div>
+
+        <small class="text-muted d-block mt-2">Use <code>;</code> (semicolon) as delimiter in Excel</small>
+    </div>
+    {% endif %}
+    {% if format_note %}
+    <div class="mt-4 alert alert-info">{{ format_note|safe }}</div>
+    {% endif %}
+
+    {% if messages %}
+        <div class="mt-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+</div>
+<div>
+    <button title="Back to Import Hub">
+        <a href="{%  url 'syncope:import_hub' username=url_username %}" class="btn btn-outline-secondary mb-3">
+            Back
+        </a>
+    </button>
 </div>
 {% endblock %}

@@ -5,18 +5,18 @@
 {% block content %}
 {% if membership and ADMIN_ROLE in membership.person.roles.all %}
 <p>
-        <a href="{%  url 'syncope:org_member_add' url_username %}">
+        <a href="{%  url 'syncope:org_member_new' url_username %}">
             + blank new form
         </a>
-        <a href="{%  url 'syncope:org_member_add_composer' url_username %}">
+        <a href="{%  url 'syncope:org_member_new_composer' url_username %}">
             + Composer
         </a>
 
-        <a href="{%  url 'syncope:org_member_add_poet' url_username %}">
+        <a href="{%  url 'syncope:org_member_new_poet' url_username %}">
             + Poet
         </a>
 
-        <a href="{%  url 'syncope:org_member_add_translator' url_username %}">
+        <a href="{%  url 'syncope:org_member_new_translator' url_username %}">
             + Translator
         </a>
 </p>
@@ -25,6 +25,18 @@
     <p>
         This is your personal page.
 
+        <a href="{%  url 'syncope:org_member_new_composer' user.username %}">
+            + Add Composer
+        </a>
+
+        <a href="{%  url 'syncope:org_member_new_poet' user.username %}">
+            + Add Poet
+        </a>
+
+        <a href="{%  url 'syncope:org_member_new_translator' user.username %}">
+            + Add Translator
+        </a>
+
     </p>
 {% else %}
     <p>This is organization: {{ url_username }}</p>
@@ -32,7 +44,7 @@
 <form method="get" style="display:flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
     <input type="text" name="q" value="{{ q }}" placeholder="Filter by skill, voice or instrument" style="flex: 1;">
     <select name="role">
-        <option value="">All roles</option>
+        <option value="" {% if not selected_role %}selected{% endif %}>All roles</option>
         {% for role in available_roles %}
             <option value="{{ role.id }}" {% if selected_role|add:"" == role.id|add:"" %}selected{% endif %}>{{ role.title }}</option>
         {% endfor %}
@@ -48,15 +60,31 @@
 <table>
     <thead>
     <tr>
+
+        <th>#</th>
+
         <th></th>
+
         <th>
-            <a href="?q={{ q }}&sort=name{% if current_sort == 'name' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+            <a href="?q={{ q }}&role={{ selected_role }}&sort=name{% if current_sort == 'name' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                 Name {% if current_sort == 'name' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
-        <th>Email</th>
-        <th>Skill</th>
-        <th>Voice/Instrument</th>
+        <th>
+            <a href="?q={{ q }}&role={{ selected_role }}&sort=email{% if current_sort == 'email' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+                Email {% if current_sort == 'email' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+            </a>
+        </th>
+        <th>
+            <a href="?q={{ q }}&role={{ selected_role }}&sort=skill{% if current_sort == 'skill' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+                Skill {% if current_sort == 'skill' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+            </a>
+        </th>
+        <th>
+            <a href="?q={{ q }}&role={{ selected_role }}&sort=voice_instrument{% if current_sort == 'voice_instrument' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+                Voice/Instrument {% if current_sort == 'voice_instrument' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+            </a>
+        </th>
         <th>Roles</th>
         <th>Resources</th>
         <th>Actions</th>
@@ -65,6 +93,7 @@
     <tbody>
         {% for member in members %}
         <tr>
+            <td>{{ forloop.counter }}</td>
             <td style="position: relative;">
                 <button class="share-member-btn" data-member-pk="{{ member.person.id }}"
                         style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">

@@ -4,22 +4,37 @@
 
 {% block content %}
 <h2>Polls</h2>
+
 {% if membership and ADMIN_ROLE in membership.person.roles.all %}
-<p><a href="{% url 'syncope:poll_create' url_username %}">Create New Poll</a></p>
+<p><a href="{% url 'syncope:poll_new' url_username %}">+ New Poll</a></p>
 {% endif %}
+
+
+
 {% if polls %}
-<ul>
+<table>
+    <tr>
+        <th><a href="?sort=id{% if current_sort == 'id' and not reverse %}&reverse=true{% endif %}">#{% if current_sort == 'id' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}">Title{% if current_sort == 'title' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?sort=updated{% if current_sort == 'updated' and not reverse %}&reverse=true{% endif %}">Updated{% if current_sort == 'updated' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th></th>
+    </tr>
     {% for poll in polls %}
-    <li>
-        <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">{{ poll.title }}</a>
-        <small>Updated: {{ poll.updated_at|date:"Y-m-d H:i" }}</small>
-        <form method="post" action="{% url 'syncope:poll_delete' url_username poll.pk %}" style="display:inline;" onclick="return confirm('Remove poll &quot;{{ poll.title }}&quot;?')">
-            {% csrf_token %}
-            <button type="submit" style="padding: 4px 8px; font-size: 0.9rem;">Delete</button>
-        </form>
-    </li>
+    <tr>
+        <td>{{ forloop.counter }}</td>
+        <td><a href="{% url 'syncope:poll_detail' url_username poll.pk %}">{{ poll.title }}</a></td>
+        <td><span data-dt="{{ poll.updated_at|date:"c" }}" data-dt-fmt="datetime">{{ poll.updated_at|date:"Y-m-d H:i" }}</span></td>
+        <td>
+            {% if is_admin %}
+            <form method="post" action="{% url 'syncope:poll_delete' url_username poll.pk %}" style="display:inline;" onclick="return confirm('Remove poll &quot;{{ poll.title }}&quot;?')">
+                {% csrf_token %}
+                <button type="submit" style="padding: 4px 8px; font-size: 0.9rem;">Delete</button>
+            </form>
+            {% endif %}
+        </td>
+    </tr>
     {% endfor %}
-</ul>
+</table>
 {% else %}
 <p>No polls yet.</p>
 {% endif %}

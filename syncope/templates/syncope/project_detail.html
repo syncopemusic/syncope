@@ -31,36 +31,57 @@
 
 <h3>Members</h3>
 {% if members %}
-<ul>
+<table>
+
+    <tr>
+        <th>#</th>
+        <th>Name</th>
+    </tr>
     {% for member in members %}
-        <li>{{ member.first_name }} {{ member.last_name }}</li>
+    <tr>
+        <td>{{ forloop.counter }}</td>
+        <td><a href="{% url 'syncope:org_member_detail' url_username member.pk %}">{{ member.first_name }} {{ member.last_name }}</a></td>
+    </tr>
     {% endfor %}
-</ul>
+</table>
 {% else %}
 <p>No members.</p>
 {% endif %}
 
 <h3>Guests</h3>
 {% if guests %}
-<ul>
+<table>
+    <tr>
+        <th>#</th>
+        <th>Name</th>
+    </tr>
     {% for guest in guests %}
-        <li>{{ guest.first_name }} {{ guest.last_name }}</li>
+    <tr>
+        <td>{{ forloop.counter }}</td>
+        <td><a href="{% url 'syncope:org_member_detail' url_username guest.pk %}">{{ guest.first_name }} {{ guest.last_name }}</a></td>
+    </tr>
     {% endfor %}
-</ul>
+</table>
 {% else %}
 <p>No guests.</p>
 {% endif %}
 
 <h3>Songs</h3>
 {% if songs %}
-<ul>
+<table>
+    <tr>
+        <th>#</th>
+        <th>Title</th>
+        <th>Composer</th>
+    </tr>
     {% for song in songs %}
-        <li>
-            <a href="{%  url 'syncope:song_page' url_username song.pk %}">{{ song.title }}</a>
-            {% if song.composer %} — {{ song.composer }}{% endif %}
-        </li>
+    <tr>
+        <td>{{ forloop.counter }}</td>
+        <td><a href="{% url 'syncope:song_detail' url_username song.pk %}">{{ song.title }}</a></td>
+        <td>{{ song.composer|default:"-" }}</td>
+    </tr>
     {% endfor %}
-</ul>
+</table>
 {% else %}
 <p>No songs.</p>
 {% endif %}
@@ -69,6 +90,7 @@
 {% if events %}
 <table>
     <tr>
+        <th>#</th>
         <th>Name</th>
         <th>🔗</th>
         <th>Date</th>
@@ -78,6 +100,7 @@
     </tr>
     {% for event in events %}
         <tr>
+            <td>{{ forloop.counter }}</td>
             <td>
                 <a href="{%  url 'syncope:event_detail' url_username event.pk %}">
                     {{ event.name }}
@@ -86,7 +109,8 @@
             <td>{% if event.resource_count > 0 %}<span title="Event resources">🔗{{ event.resource_count }}</span>{% endif %}
             {% if event.event_song_resource_count > 0 %}<span title="Song resources from this event">🎵{{ event.event_song_resource_count }}</span>{% endif %}
             </td>
-            <td>{{ event.started_at|date:"M d, Y" }}</td>
+            <td><span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="date-year">{{ event.started_at|date:"M d, Y" }}</span></td>
+
             <td>{{ event.location|default:"-" }}</td>
             <td>{{ event.event_type|default:"-" }}</td>
             <td>
@@ -95,7 +119,7 @@
                         <ul style="margin: 0; padding-left: 20px;">
                             {% for event_song in songs %}
                                 <li>
-                                    <a href="{%  url 'syncope:song_page' url_username event_song.song.pk %}">
+                                    <a href="{%  url 'syncope:song_detail' url_username event_song.song.pk %}">
                                         {{ event_song.song.title }}
                                     </a>
                                 </li>
@@ -112,6 +136,7 @@
 {% else %}
 <p>No events.</p>
 {% endif %}
+
 
 <h3>Project Resources</h3>
 {% if project_resources %}
@@ -130,9 +155,11 @@
 <p>No resources.</p>
 {% endif %}
 
+{% if can_delete %}
 <p>
-    <a href="{%  url 'syncope:project_delete' url_username project.pk %}">Delete Project</a>
+    <a href="{% url 'syncope:project_delete' url_username project.pk %}" class="btn-danger" style="display: inline-block; text-decoration: none;">Delete Project</a>
 </p>
+{% endif %}
 
 {% block extra_js %}
 <script>

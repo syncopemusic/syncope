@@ -1,14 +1,15 @@
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse_lazy, reverse
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponseForbidden
 from django.views.generic import ListView, CreateView, UpdateView,  DetailView, View
 from django.views.generic.edit import DeleteView
 from django.db.models import Q, Exists, OuterRef, Count
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
-from syncope.models import Song
+from syncope.models import Song, EventType
 from syncope.models import Event, SongResource, Resource, EventSongResource
 from syncope.forms import  SongForm
 from syncope.forms import  QuoteFormSet, LyricsTranslationFormSet, SongResourceFormSet
@@ -40,7 +41,7 @@ def save_song_resources(song, resource_formset, owner_user):
 @method_decorator(login_required, name='dispatch')
 class SongListView(SongOwnerMixin, ListView):
     model = Song
-    template_name = "syncope/song_dashboard.html"
+    template_name = "syncope/song_list.html"
     context_object_name = "songs"
     permission_check_method = AccessControl.can_view_song_list
 
@@ -54,6 +55,7 @@ class SongListView(SongOwnerMixin, ListView):
                 qs = qs.filter(
                     Q(title__icontains=q) |
                     Q(composer__last_name__icontains=q) |
+                    Q(poet__last_name__icontains=q) |
                     Q(keywords__icontains=q)
                 ).distinct()
 
@@ -65,6 +67,7 @@ class SongListView(SongOwnerMixin, ListView):
             'id': 'internal_id',
             'title': 'title',
             'composer': 'composer__last_name',
+            'poet': 'poet__last_name',
         }
 
         sort_field = sort_field_map.get(sort, 'internal_id')
@@ -74,9 +77,26 @@ class SongListView(SongOwnerMixin, ListView):
         # Annotate with counts for both direct and event-based resources
         qs = qs.annotate(
             has_direct_resources=Count('song_resource', distinct=True),
-            has_event_resources=Count('eventsong__event_song_resource', distinct=True)
+            has_event_resources=Count('eventsong__event_song_resource', distinct=True),
+            concert_count=Count(
+                'eventsong__event',
+                filter=Q(
+                    eventsong__event__event_type_id=EventType.CONCERT,
+                    eventsong__event__user=self.owner_user,
+                ),
+                distinct=True,
+            ),
+            performance_count=Count(
+                'eventsong__event',
+                filter=Q(
+                    eventsong__event__event_type_id=EventType.PERFORMANCE,
+                    eventsong__event__user=self.owner_user,
+                ),
+                distinct=True,
+            ),
         )
-        return qs.order_by(sort_field).prefetch_related('song_resource__resource')
+        return qs.order_by(sort_field).select_related('composer', 'poet').prefetch_related('song_resource__resource')
+
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -92,7 +112,7 @@ class SongListView(SongOwnerMixin, ListView):
 @method_decorator(login_required, name='dispatch')
 class SongDetailView(SongOwnerMixin, DetailView):
     model = Song
-    template_name = "syncope/song_page.html"
+    template_name = "syncope/song_detail.html"
     context_object_name = "song"
     permission_check_method = AccessControl.can_view_song
 
@@ -116,6 +136,7 @@ class SongDetailView(SongOwnerMixin, DetailView):
         context['song_resources'] = resource_icon_list(
             song.song_resource.select_related('resource').order_by('order')
         )
+        context['can_manage'] = AccessControl.can_manage_song(self.request.user, song)
 
         # Build combined resource list: song resources first, then event-song resources
         all_song_resources = [
@@ -135,7 +156,7 @@ class SongDetailView(SongOwnerMixin, DetailView):
 @method_decorator(login_required, name='dispatch')
 class SongCreateView(SongOwnerMixin, CreateView):
     form_class = SongForm
-    template_name = "syncope/song_form2.html"
+    template_name = "syncope/song_form.html"
     permission_check_method = AccessControl.can_manage_song
 
     def get_form_kwargs(self):
@@ -146,6 +167,7 @@ class SongCreateView(SongOwnerMixin, CreateView):
     def get_context_data(self, quote_formset=None, translation_formset=None, songresource_formset=None, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
+        context['can_manage'] = True
         if quote_formset is not None:
             context['quote_formset'] = quote_formset
         elif self.request.POST:
@@ -215,7 +237,7 @@ class SongCreateView(SongOwnerMixin, CreateView):
         next_url = self.request.POST.get('next') or self.request.GET.get('next', '')
         if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
             return next_url
-        return reverse_lazy("syncope:song_page", kwargs={
+        return reverse_lazy("syncope:song_detail", kwargs={
             "username": self.owner_user.username,
             "pk": self.object.pk
         })
@@ -224,7 +246,7 @@ class SongCreateView(SongOwnerMixin, CreateView):
 @method_decorator(login_required, name='dispatch')
 class SongUpdateView(SongOwnerMixin, UpdateView):
     form_class = SongForm
-    template_name = "syncope/song_form2.html"
+    template_name = "syncope/song_form.html"
     permission_check_method = AccessControl.can_manage_song
 
     def get_queryset(self):
@@ -238,6 +260,7 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
     def get_context_data(self, quote_formset=None, translation_formset=None, resource_formset=None, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
+        context['can_manage'] = True
         if quote_formset is not None:
             context['quote_formset'] = quote_formset
         elif self.request.POST:
@@ -307,7 +330,7 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
-        return reverse_lazy("syncope:song_page", kwargs={
+        return reverse_lazy("syncope:song_detail", kwargs={
             "username": self.owner_user.username,
             "pk": self.object.pk
         })
@@ -319,10 +342,29 @@ class SongDeleteView(SongOwnerMixin, DeleteView):
     template_name = "syncope/song_confirm_delete.html"
     permission_check_method = AccessControl.can_manage_song
 
+    def dispatch(self, request, *args, **kwargs):
+        song = self.get_object()
+        if not AccessControl.can_manage_song(request.user, song):
+            return HttpResponseForbidden("Only admins can delete songs.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        song = self.get_object()
+        song_title = song.title
+        response = super().delete(request, *args, **kwargs)
+        messages.success(request, f"Successfully deleted song '{song_title}'.")
+        return response
+
     def get_success_url(self):
-        return reverse_lazy("syncope:song_dashboard", kwargs={
+        return reverse_lazy("syncope:song_list", kwargs={
             "username": self.owner_user.username
         })
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.owner_user.username
+        context['can_manage'] = True
+        return context
 
 
 
@@ -343,7 +385,7 @@ class SongQuoteView(SongOwnerMixin, View):
         next_url = request.GET.get('next') or request.POST.get('next', '')
         if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
             return next_url
-        return reverse('syncope:song_page', kwargs={'username': username, 'pk': pk})
+        return reverse('syncope:song_detail', kwargs={'username': username, 'pk': pk})
 
     def get(self, request, username, pk):
         song = self._get_song(pk)
@@ -353,6 +395,7 @@ class SongQuoteView(SongOwnerMixin, View):
             'formset': formset,
             'url_username': username,
             'next': request.GET.get('next', ''),
+            'can_manage': True,
         })
 
     def post(self, request, username, pk):

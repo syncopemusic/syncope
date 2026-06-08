@@ -28,13 +28,38 @@ class PollListView(ListView):
     context_object_name = "polls"
     template_name = "syncope/poll_list.html"
 
+    def _get_sort_field(self, default_sort='updated'):
+        """Extract and validate sort parameters from request."""
+        sort = self.request.GET.get('sort', default_sort)
+        reverse = self.request.GET.get('reverse', 'false') == 'true'
+
+        # If no sort parameter provided, default to descending for backward compatibility
+        if 'sort' not in self.request.GET:
+            reverse = True
+
+        sort_field_map = {
+            'id': 'pk',
+            'title': 'title',
+            'updated': 'updated_at',
+        }
+        sort_field = sort_field_map.get(sort, 'updated_at')
+        if reverse:
+            sort_field = '-' + sort_field
+
+        return sort_field, sort, reverse
+
     def get_queryset(self):
         org_user = get_object_or_404(CustomUser, username=self.kwargs.get("username"))
-        return Poll.objects.filter(user=org_user).select_related('user').order_by('-updated_at')
+        sort_field, _, _ = self._get_sort_field()
+        return Poll.objects.filter(user=org_user).select_related('user').order_by(sort_field)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.kwargs.get('username')
+        context['is_admin'] = AccessControl.has_permission(self.request.user, 'delete', self.kwargs.get('username'))
+        _, sort, reverse = self._get_sort_field()
+        context['current_sort'] = sort
+        context['reverse'] = reverse
         return context
 
 
@@ -95,6 +120,7 @@ class PollDeleteView(PollAdminMixin, DeleteView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.kwargs.get('username')
+        context['is_admin'] = AccessControl.has_permission(self.request.user, 'delete', self.kwargs.get('username'))
         return context
 
     def get_success_url(self):
@@ -127,6 +153,7 @@ class PollPersonView(PollAdminMixin, View):
             'poll_persons': self.poll.poll_persons.select_related('person'),
             'url_username': username,
             'q': q,
+            'is_admin': True,
         })
 
     def post(self, request, username, pk):
@@ -201,6 +228,7 @@ class PollEventView(PollAdminMixin, View):
             'poll': self.poll,
             'poll_events': self.poll.poll_events.select_related('event_type').order_by('started_at'),
             'url_username': username,
+            'is_admin': True,
         })
 
     def post(self, request, username, pk):
@@ -448,6 +476,10 @@ class PollDetailView(DetailView):
         context['poll_events'] = poll_events
         context['poll_persons'] = poll_persons
         context['table_rows'] = table_rows
+        context['is_admin'] = (
+            self.request.user.is_authenticated and
+            AccessControl.has_permission(self.request.user, "create", self.kwargs.get('username'))
+        )
         return context
 
     # accessible using special link to public
@@ -472,4 +504,6 @@ def poll_event_remove(request, username, pk, event_pk):
         return HttpResponseForbidden("Only admins can manage polls.")
     poll_event = get_object_or_404(PollEvent, pk=event_pk, poll__pk=pk, poll__user=org_user)
     poll_event.delete()
+    if request.GET.get('next') == 'detail':
+        return redirect('syncope:poll_detail', username=username, pk=pk)
     return redirect('syncope:poll_events', username=username, pk=pk)

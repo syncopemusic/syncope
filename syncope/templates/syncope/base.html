@@ -28,7 +28,7 @@
                 <ul class="menu-links">
                     <li><a href="{%  url 'syncope:person_update' user.username %}">Update profile</a></li>
                     <li><a href="{%  url 'syncope:home' %}">Home</a></li>
-                    <li><a href="{%  url 'syncope:song_dashboard' user.username %}">Songs</a></li>
+                    <li><a href="{%  url 'syncope:song_list' user.username %}">Songs</a></li>
 
                     <li>
                         <p>Groups:</p>
@@ -43,16 +43,15 @@
                                             <ul class="org-submenu">
                                                 <!-- Songs visible to ADMIN and MEMBER -->
                                                 {% if ADMIN_ROLE in membership.person.roles.all or MEMBER_ROLE in membership.person.roles.all %}
-                                                    <li><a href="{%  url 'syncope:song_dashboard' org.user.username %}">Songs</a></li>
+                                                    <li><a href="{%  url 'syncope:song_list' org.user.username %}">Songs</a></li>
                                                     <li><a href="{%  url 'syncope:org_member_list' org.user.username %}">Members</a></li>
                                                     <li><a href="{%  url 'syncope:event_list' org.user.username %}">Events</a></li>
                                                     <li><a href="{%  url 'syncope:project_list' org.user.username %}">Projects</a></li>
-                                                {% endif %}
-
-                                                {% if ADMIN_ROLE in membership.person.roles.all %}
-                                                    <li><a href="{%  url 'syncope:attendance' org.user.username %}">ATTENDANCE</a></li>
+                                                    <li><a href="{%  url 'syncope:attendance' org.user.username %}">Attendance</a></li>
                                                     <li><a href="{%  url 'syncope:poll_list' org.user.username %}">Polls</a></li>
-                                                    <li><a href="{%  url 'syncope:song_form2' org.user.username %}">Add song</a></li>
+
+                                                {% endif %}
+                                                {% if ADMIN_ROLE in membership.person.roles.all %}
 
                                                     <li><a href="{%  url 'syncope:import_hub' username=org.user.username %}">Import Data</a></li>
                                                 {% endif %}
@@ -101,10 +100,10 @@
                 <div class="footer-info">
                     <!-- timestamp  -->
                         {% if object.updated_at %}
-                        Last updated: {{ object.updated_at|date:"d M, Y, H:i" }}
+                        Last updated: <span data-dt="{{ object.updated_at|date:"c" }}" data-dt-fmt="datetime">{{ object.updated_at|date:"d M, Y, H:i" }}</span>
                     {% endif %}
                     {% if object.created_at %}
-                        | Created: {{ object.created_at|date:"d M, Y" }}
+                        | Created: <span data-dt="{{ object.created_at|date:"c" }}" data-dt-fmt="date-year">{{ object.created_at|date:"d M, Y" }}</span>
                     {% endif %}
                     <p>© 2025-2026 Syncope Music</p>
                 </div>
@@ -132,6 +131,32 @@
             }
         })
         ;
+    </script>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const formatters = {
+          'date':      new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }),
+          'date-year': new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
+          'time':      new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }),
+          'datetime':  new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          'date-dow':  new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
+        };
+        document.querySelectorAll('[data-dt]').forEach(function (el) {
+          const fmt = formatters[el.dataset.dtFmt];
+          if (fmt) el.textContent = fmt.format(new Date(el.dataset.dt));
+        });
+
+        document.querySelectorAll('.remove-event-form').forEach(function (form) {
+          form.addEventListener('submit', function (e) {
+            var th = form.closest('th');
+            var span = th ? th.querySelector('[data-dt-fmt="date"]') : null;
+            var dateStr = span ? ' on ' + span.textContent : '';
+            var label = form.dataset.eventType || 'event';
+            if (!confirm('Remove ' + label + dateStr + '?')) e.preventDefault();
+          });
+        });
+      });
     </script>
 {{ form.media }}
 </body>

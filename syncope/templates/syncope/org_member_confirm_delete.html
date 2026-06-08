@@ -1,0 +1,20 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}Delete Member{% endblock %}
+
+{% block content %}
+<h2>Delete Member?</h2>
+
+<p>Are you sure you want to delete <strong>{{ person.first_name }} {{ person.last_name }}</strong>?</p>
+
+{% if is_admin %}
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="danger">Delete</button>
+    <a href="{% url 'syncope:org_member_detail' url_username person.pk %}">Cancel</a>
+</form>
+{% else %}
+<p><a href="{% url 'syncope:org_member_detail' url_username person.pk %}">Back to Member</a></p>
+{% endif %}
+
+{% endblock %}

@@ -2,7 +2,8 @@
 from .models import (Song, Membership, CustomUser, Attendance, AttendanceType,
                      Person, PersonRole, PersonSkill,
                      MembershipPeriod, Role, Skill, ApproximateDate,
-                     Singer, Voice, Event, Project, EventType, EventSong)
+                     Singer, Voice, Event, Project, EventType, EventSong,
+                     LanguageCode, Instrument, Instrumentalist)
 import csv, datetime
 from datetime import datetime, date
 from django.contrib import messages
@@ -20,11 +21,15 @@ COMPOSER_LAST_NAME_KEY = "composer_last_name"
 COMPOSER_FIRST_NAME_KEY = "composer_first_name"
 POET_LAST_NAME_KEY = "poet_last_name"
 POET_FIRST_NAME_KEY = "poet_first_name"
+TRANSLATOR_LAST_NAME_KEY = "translator_last_name"
+TRANSLATOR_FIRST_NAME_KEY = "translator_first_name"
 YEAR_KEY = "year"
-GROUP_KEY = "group"
+ENSEMBLE_KEY = "ensemble"
 NUMBER_OF_PAGES_KEY = "number_of_pages"
 NUMBER_OF_COPIES_KEY = "number_of_copies"
 NUMBER_OF_VOICES_KEY = "number_of_voices"
+KEYWORDS_KEY = "keywords"
+LANGUAGE_CODE_KEY = "languagecode"
 ADDITIONAL_NOTES_KEY = "additional_notes"
 LYRICS_KEY = "lyrics"
 
@@ -35,14 +40,42 @@ ALLOWED_SONG_KEYS = [
     COMPOSER_FIRST_NAME_KEY,
     POET_LAST_NAME_KEY,
     POET_FIRST_NAME_KEY,
+    TRANSLATOR_LAST_NAME_KEY,
+    TRANSLATOR_FIRST_NAME_KEY,
     YEAR_KEY,
-    GROUP_KEY,
+    ENSEMBLE_KEY,
     NUMBER_OF_PAGES_KEY,
     NUMBER_OF_COPIES_KEY,
     NUMBER_OF_VOICES_KEY,
+    KEYWORDS_KEY,
+    LANGUAGE_CODE_KEY,
     ADDITIONAL_NOTES_KEY,
     LYRICS_KEY,
 ]
+
+def _get_or_create_person_with_skill(org_user, last_name, first_name, skill_id, today):
+    if not (last_name or first_name):
+        return None
+    existing = Person.objects.filter(
+        last_name=last_name,
+        first_name=first_name,
+        memberships__user=org_user,
+        person_skill__skill_id=skill_id
+    ).first()
+    if existing:
+        return existing
+    person = Person.objects.create(
+        last_name=last_name,
+        first_name=first_name,
+        user=None,
+        owner=None
+    )
+    Membership.objects.create(user=org_user, person=person)
+    PersonRole.objects.create(person=person, role_id=Role.EXTERNAL)
+    MembershipPeriod.objects.create(user=org_user, person=person, role_id=Role.EXTERNAL,
+                                    started_at=today)
+    PersonSkill.objects.create(person=person, skill_id=skill_id)
+    return person
 
 def import_songs(org_user, request, file_path, delimiter=";"):
     """Import songs from a CSV file into the database for a given organization user."""
@@ -76,58 +109,31 @@ def import_songs(org_user, request, file_path, delimiter=";"):
             composer_first_name = (row.get(COMPOSER_FIRST_NAME_KEY) or '').strip()
             poet_last_name = (row.get(POET_LAST_NAME_KEY) or '').strip()
             poet_first_name = (row.get(POET_FIRST_NAME_KEY) or '').strip()
+            translator_last_name = (row.get(TRANSLATOR_LAST_NAME_KEY) or '').strip()
+            translator_first_name = (row.get(TRANSLATOR_FIRST_NAME_KEY) or '').strip()
             year_value = (row.get(YEAR_KEY) or '').strip()
-            group_value = (row.get(GROUP_KEY) or '').strip()
+            ensemble_value = (row.get(ENSEMBLE_KEY) or '').strip()
             number_of_pages_value = (row.get(NUMBER_OF_PAGES_KEY) or '').strip()
             number_of_copies_value = (row.get(NUMBER_OF_COPIES_KEY) or '').strip()
             number_of_voices_value = (row.get(NUMBER_OF_VOICES_KEY) or '').strip()
+            keywords_value = (row.get(KEYWORDS_KEY) or '').strip()
+            language_code_value = (row.get(LANGUAGE_CODE_KEY) or '').strip()
             additional_notes_value = (row.get(ADDITIONAL_NOTES_KEY) or '').strip()
             lyrics_value = (row.get(LYRICS_KEY) or '').strip()
-            try:   # get organization username from url
-                # Check if person exists in the organization's membership
-                existing_composer = Person.objects.filter(   # does composer already exist in our membership?
-                    last_name=composer_last_name,
-                    first_name=composer_first_name,
-                    memberships__user=org_user,
-                    person_skill__skill_id = Skill.COMPOSER
-                ).first()
+            try:
+                composer = _get_or_create_person_with_skill(
+                    org_user, composer_last_name, composer_first_name, Skill.COMPOSER, today
+                )
+                poet = _get_or_create_person_with_skill(
+                    org_user, poet_last_name, poet_first_name, Skill.POET, today
+                )
+                translator = _get_or_create_person_with_skill(
+                    org_user, translator_last_name, translator_first_name, Skill.TRANSLATOR, today
+                )
 
-                if existing_composer:
-                    composer = existing_composer
-                else:   # Create new composer if not found in organization's membership
-                    composer = Person.objects.create(
-                        last_name=composer_last_name,
-                        first_name=composer_first_name,
-                        user=None,
-                        owner=None
-                    )
-                    Membership.objects.create(user=org_user, person=composer)
-                    PersonRole.objects.create(person=composer, role_id=Role.EXTERNAL)
-                    MembershipPeriod.objects.create(user=org_user, person=composer, role_id=Role.EXTERNAL,
-                                                    started_at=today)
-                    PersonSkill.objects.create(person=composer, skill_id=Skill.COMPOSER)
-
-                existing_poet = Person.objects.filter(
-                    last_name=poet_last_name,
-                    first_name=poet_first_name,
-                    memberships__user=org_user,
-                    person_skill__skill_id = Skill.POET
-                ).first()
-
-                if existing_poet:
-                    poet = existing_poet
-                else:    # Create new composer if not found in organization's membership
-                    poet = Person.objects.create(
-                        last_name=poet_last_name,
-                        first_name=poet_first_name,
-                        user=None,
-                        owner=None
-                    )
-                    Membership.objects.create(user=org_user, person=poet)
-                    PersonRole.objects.create(person=poet, role_id=Role.EXTERNAL)
-                    MembershipPeriod.objects.create(user=org_user, person=poet, role_id=Role.EXTERNAL,
-                                                    started_at=today)
-                    PersonSkill.objects.create(person=poet, skill_id=Skill.POET)
+                languagecode = None
+                if language_code_value:
+                    languagecode = LanguageCode.objects.filter(language_code=language_code_value).first()
 
                 Song.objects.create(   # Create new song with validated data
                     user=org_user,
@@ -135,11 +141,12 @@ def import_songs(org_user, request, file_path, delimiter=";"):
                     title=title_value,
                     composer=composer,
                     poet=poet,
+                    translator=translator,
                     number_of_pages=number_of_pages_value or None,
                     number_of_copies=number_of_copies_value or None,
                     number_of_voices=number_of_voices_value or None,
-                    year=year_value or None,
-                    group=group_value or None,
+                    keywords=keywords_value or None,
+                    languagecode=languagecode,
                     additional_notes=additional_notes_value or None,
                     lyrics=lyrics_value or None,
                     created_at=today,
@@ -168,6 +175,7 @@ DEATH_APPROX_KEY = "death_date_approximation"
 LANDLINE_PHONE_KEY = "landline_phone"
 MOBILE_PHONE_KEY = "mobile_phone"
 VOICE_KEY = "voice"
+INSTRUMENT_KEY = "instrument"
 ACTIVITY_KEY = "activity"
 
 ALLOWED_PERSON_KEYS = [
@@ -182,6 +190,7 @@ ALLOWED_PERSON_KEYS = [
     LANDLINE_PHONE_KEY,
     MOBILE_PHONE_KEY,
     VOICE_KEY,
+    INSTRUMENT_KEY,
     ACTIVITY_KEY,
 ]
 
@@ -190,7 +199,7 @@ REQUIRED_PERSON_KEYS = {FIRST_NAME_KEY, LAST_NAME_KEY}
 OPTIONAL_PERSON_KEYS = {
     EMAIL_KEY, ADDRESS_KEY, BIRTH_DATE_KEY, BIRTH_APPROX_KEY,
     DEATH_DATE_KEY, DEATH_APPROX_KEY, LANDLINE_PHONE_KEY,
-    MOBILE_PHONE_KEY, VOICE_KEY, ACTIVITY_KEY,
+    MOBILE_PHONE_KEY, VOICE_KEY, INSTRUMENT_KEY, ACTIVITY_KEY,
 }
 
 VOICE_TYPES = {
@@ -290,6 +299,7 @@ def import_persons(org_user, person_mode, request, file_path, delimiter=";"):
                 phone = (row.get(MOBILE_PHONE_KEY) or row.get(LANDLINE_PHONE_KEY) or '').strip() or None \
                         if (MOBILE_PHONE_KEY in present_optional or LANDLINE_PHONE_KEY in present_optional) else None
                 voice = (row.get(VOICE_KEY) or '').strip() if VOICE_KEY in present_optional else ''
+                instrument = (row.get(INSTRUMENT_KEY) or '').strip() if INSTRUMENT_KEY in present_optional else ''
                 activity_ranges = parse_activity(row.get(ACTIVITY_KEY) or '') if ACTIVITY_KEY in present_optional else []
                 has_active = bool(activity_ranges and any(p['end'] is None for p in activity_ranges))
 
@@ -319,6 +329,11 @@ def import_persons(org_user, person_mode, request, file_path, delimiter=";"):
                         voice_instance = Voice.objects.filter(name=voice_type).first()
                         if voice_instance:
                             Singer.objects.get_or_create(person=existing, defaults={'voice': voice_instance})
+
+                    if instrument:
+                        instrument_instance = Instrument.objects.filter(name=instrument).first()
+                        if instrument_instance:
+                            Instrumentalist.objects.get_or_create(person=existing, defaults={'instrument': instrument_instance})
 
                     for period in activity_ranges:
                         MembershipPeriod.objects.get_or_create(
@@ -355,6 +370,13 @@ def import_persons(org_user, person_mode, request, file_path, delimiter=";"):
                         Singer.objects.create(person=person, voice=voice_instance)
                 except Exception as e:
                     error_details.append(f"Row {reader.line_num} - Voice assignment failed for {first_name}: {str(e)}")
+
+                try:    # Instrument
+                    if instrument:
+                        instrument_instance = Instrument.objects.get(name=instrument)
+                        Instrumentalist.objects.create(person=person, instrument=instrument_instance)
+                except Exception as e:
+                    error_details.append(f"Row {reader.line_num} - Instrument assignment failed for {first_name}: {str(e)}")
 
                 try: # Check if membership already exists to prevent duplicates
                     membership, created = Membership.objects.get_or_create(
@@ -413,7 +435,7 @@ def import_persons(org_user, person_mode, request, file_path, delimiter=";"):
 
 
 
-# EVENT_INTERNAL_ID_KEY = "internal_id"
+EVENT_INTERNAL_ID_KEY = "internal_id"
 EVENT_NAME_KEY = "title"
 EVENT_LOCATION_CITY_KEY = "location_city"
 # EVENT_LOCATION_RID_KEY = "location_rid"
@@ -431,7 +453,7 @@ EVENT_ADDITIONAL_TEXTFIELD_KEY = "notes"
 EVENT_PRODUCERS_GROUP_KEY = "producers_group"
 
 ALLOWED_EVENT_KEYS = [
-    # EVENT_INTERNAL_ID_KEY,
+    EVENT_INTERNAL_ID_KEY,
     EVENT_NAME_KEY,
     EVENT_LOCATION_CITY_KEY,
     EVENT_LOCATION_CUSTOM_KEY,
@@ -521,7 +543,7 @@ def import_events(org_user, request, file_path, delimiter=";"):
             try:
                 with transaction.atomic():
 
-                    # internal_id = (f_row.get(EVENT_INTERNAL_ID_KEY) or '').strip() or None
+                    internal_id = (f_row.get(EVENT_INTERNAL_ID_KEY) or '').strip() or None
                     name = (f_row.get(EVENT_NAME_KEY) or '').strip() or None
                     location_city = (f_row.get(EVENT_LOCATION_CITY_KEY) or '').strip() or None
                     # location_rid = (f_row.get(EVENT_LOCATION_RID_KEY) or '').strip() or None
@@ -585,7 +607,7 @@ def import_events(org_user, request, file_path, delimiter=";"):
 
                     event = Event.objects.create(
                         user=org_user,
-                        # internal_id=internal_id,
+                        internal_id=internal_id,
                         name=name,
                         location=location,
                         started_at=started_at,
@@ -680,6 +702,7 @@ def import_attendance(org_user, request, file_path, delimiter=";"):
                 "+": AttendanceType.objects.get(id=AttendanceType.PRESENT),
                 "-": AttendanceType.objects.get(id=AttendanceType.WORK_SCHOOL),
                 "o": AttendanceType.objects.get(id=AttendanceType.PRIVATE_VACATION),
+                "!": AttendanceType.objects.get(id=AttendanceType.ILLNESS),
             }
         except AttendanceType.DoesNotExist as e:
             messages.error(request, f"Missing AttendanceType configuration: {str(e)}")

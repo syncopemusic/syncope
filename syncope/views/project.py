@@ -10,7 +10,7 @@ from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
-from django.db import transaction
+from django.contrib import messages
 from syncope.models import CustomUser,  Person,  Role
 from syncope.models import Event,  EventType,   Project, EventSongResource, ProjectResource, Resource
 from syncope.forms import  ProjectForm
@@ -114,9 +114,32 @@ class ProjectListView(LoginRequiredMixin, ListView):
     template_name = 'syncope/project_list.html'
     context_object_name = 'projects'
 
+    def _get_sort_field(self, default_sort='end_date'):
+        """Extract and validate sort parameters from request."""
+        sort = self.request.GET.get('sort', default_sort)
+        reverse = self.request.GET.get('reverse', 'false') == 'true'
+
+        # If no sort parameter provided, default to descending for backward compatibility
+        if 'sort' not in self.request.GET:
+            reverse = True
+
+        sort_field_map = {
+            'id': 'pk',
+            'title': 'title',
+            'start_date': 'start_date',
+            'end_date': 'end_date',
+            'events': 'num_main_events',
+        }
+        sort_field = sort_field_map.get(sort, default_sort)
+        if reverse:
+            sort_field = '-' + sort_field
+
+        return sort_field, sort, reverse
+
     def get_queryset(self):
         url_username = self.kwargs.get('username')
         org_user = get_object_or_404(CustomUser, username=url_username)
+        sort_field, _, _ = self._get_sort_field()
         return (
             Project.objects
             .filter(user=org_user)
@@ -134,12 +157,15 @@ class ProjectListView(LoginRequiredMixin, ListView):
                     filter=Q(events__event_type_id=EventType.REHEARSAL)
                 ),
             )
-            .order_by('-end_date')
+            .order_by(sort_field)
         )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.kwargs.get('username')
+        _, sort, reverse = self._get_sort_field()
+        context['current_sort'] = sort
+        context['reverse'] = reverse
         return context
 
 
@@ -237,6 +263,7 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
         guest_search_q = self.request.GET.get('guest_q', '')
 
         context['url_username'] = url_username
+        context['is_admin'] = AccessControl.has_permission(self.request.user, 'delete', url_username)
         context['event_search_q'] = event_search_q
 
         # Add events with resource counts to context
@@ -337,6 +364,9 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
         # Add project resources
         context['project_resources'] = resource_icon_list(project.project_resource.all().order_by('order'))
 
+        # Check if user can delete this project
+        context['can_delete'] = AccessControl.can_delete_project(self.request.user, url_username)
+
         return context
 
 @method_decorator(login_required, name="dispatch")
@@ -350,10 +380,24 @@ class ProjectDeleteView(LoginRequiredMixin, DeleteView):
         org_user = get_object_or_404(CustomUser, username=url_username)
         return Project.objects.filter(user=org_user)
 
+    def dispatch(self, request, *args, **kwargs):
+        url_username = self.kwargs.get('username')
+        if not AccessControl.can_delete_project(request.user, url_username):
+            return HttpResponseForbidden("Only admins can delete projects.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        project = self.get_object()
+        project_title = project.title
+        response = super().delete(request, *args, **kwargs)
+        messages.success(request, f"Successfully deleted project '{project_title}'.")
+        return response
+
     def get_success_url(self):
         return reverse('syncope:project_list', kwargs={'username': self.kwargs.get('username')})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.kwargs.get('username')
+        context['can_delete'] = AccessControl.can_delete_project(self.request.user, self.kwargs.get('username'))
         return context

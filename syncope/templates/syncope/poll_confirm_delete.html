@@ -7,9 +7,13 @@
 
 <p>Are you sure you want to delete "<strong>{{ poll.title }}</strong>"?</p>
 
+{% if is_admin %}
 <form method="post">
     {% csrf_token %}
     <button type="submit" class="btn btn-danger">Delete</button>
     <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Cancel</a>
 </form>
+{% else %}
+<p><a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Back to Poll</a></p>
+{% endif %}
 {% endblock %}

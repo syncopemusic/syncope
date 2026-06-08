@@ -2,13 +2,17 @@ from django.http import Http404, HttpResponseForbidden
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from syncope.forms import PersonForm, PersonResourceFormSet
 from django.core.exceptions import PermissionDenied
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from datetime import datetime
 from django.views.generic import ListView,  UpdateView,  DetailView, FormView
-from django.db.models import Q, Max
+from django.views.generic.edit import DeleteView
+from django.db.models import Q, Max, Min, Value
+from django.db.models.functions import Coalesce
 import datetime
 from django.db import transaction
 from django.http import HttpResponseRedirect
@@ -22,7 +26,7 @@ from syncope.utils import resource_icon_list
 
 @method_decorator(login_required, name='dispatch')
 class PersonUpdateView(UpdateView):
-    template_name = "syncope/person_form2.html"
+    template_name = "syncope/person_form.html"
     form_class = PersonForm
     context_object_name = "person_create"
     success_url = reverse_lazy("syncope:home")
@@ -93,6 +97,20 @@ class PersonUpdateView(UpdateView):
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
         return kwargs
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        if self.request.method == "GET":
+            form.initial["skills"] = self.object.skills.exclude(
+                id__in=[Skill.SINGER, Skill.INSTRUMENTALIST]
+            ).values_list("id", flat=True)
+            form.initial["voices"] = Voice.objects.filter(
+                singer__person=self.object
+            ).values_list("id", flat=True)
+            form.initial["instruments"] = Instrument.objects.filter(
+                instrumentalist__person=self.object
+            ).values_list("id", flat=True)
+        return form
 
     def _save_resources(self, person, resource_formset):
         person.person_resource.all().delete()
@@ -174,14 +192,32 @@ class OrgMemberListView(ListView):
                 Q(person__instrumentalist__instrument__name__icontains=q)
             ).distinct()
 
-        role_id = self.request.GET.get('role', '').strip()
+        session_key = f'member_list_role_{self.kwargs["username"]}'
+        if 'role' in self.request.GET:
+            role_id = self.request.GET.get('role', '').strip()
+            self.request.session[session_key] = role_id
+        else:
+            role_id = self.request.session.get(session_key)
+            if role_id is None:
+                role_id = str(Role.MEMBER)
+                self.request.session[session_key] = role_id
+
         if role_id:
             queryset = queryset.filter(person__roles__id=int(role_id))
-        elif 'role' not in self.request.GET:
-            queryset = queryset.filter(person__roles__id=Role.MEMBER)
+
+        queryset = queryset.annotate(
+            first_skill=Min('person__skills__title'),
+            first_voice=Min('person__singer__voice__name'),
+            first_instrument=Min('person__instrumentalist__instrument__name'),
+        ).annotate(
+            first_voice_or_instrument=Coalesce('first_voice', 'first_instrument', Value('')),
+        )
 
         sort_field_map = {
             'name': ('person__last_name', 'person__first_name'),
+            'email': ('person__email',),
+            'skill': ('first_skill',),
+            'voice_instrument': ('first_voice_or_instrument',),
         }
         sort_key = self.request.GET.get('sort', 'name')
         reverse = self.request.GET.get('reverse', 'false') == 'true'
@@ -197,10 +233,11 @@ class OrgMemberListView(ListView):
         context["q"] = self.request.GET.get('q', '')
         context["current_sort"] = self.request.GET.get('sort', 'name')
         context["reverse"] = self.request.GET.get('reverse', 'false') == 'true'
+        session_key = f'member_list_role_{self.kwargs["username"]}'
         if 'role' in self.request.GET:
             context["selected_role"] = self.request.GET.get('role', '')
         else:
-            context["selected_role"] = str(Role.MEMBER)
+            context["selected_role"] = self.request.session.get(session_key, str(Role.MEMBER))
 
         url_username = self.kwargs["username"]
         visible_members = AccessControl.get_visible_members(
@@ -251,6 +288,7 @@ class OrgMemberDetailView(DetailView):
         url_username = self.kwargs["username"]
 
         context["url_username"] = url_username
+        context["is_admin"] = AccessControl.has_permission(self.request.user, 'delete', url_username)
         context["person_data"] = AccessControl.filter_person_details(
             self.request.user,
             self.object,
@@ -414,9 +452,15 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
         kwargs['preset'] = self.kwargs.get('preset')
         return kwargs
 
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.instance = Person()
+        return form
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['preset'] = self.kwargs.get('preset')
+        context['is_admin'] = True
         return context
 
     def form_valid(self, form):
@@ -482,6 +526,9 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
 
     def _add_roles(self, person, selected_roles):
         """Create memberships for selected roles."""
+        if not selected_roles:
+            selected_roles = [Role.objects.get(id=Role.EXTERNAL)]
+
         today = datetime.date.today()
 
         # Create the base membership (only once per person-org relationship)
@@ -610,6 +657,7 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
     def get_form(self, form_class=None):
         # pre-fill form with existing data
         form = super().get_form(form_class)
+        form.instance = self.person
 
         if self.request.method == "GET":
             # current roles in THIS organization
@@ -655,6 +703,7 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["organization"] = self.customuser
+        context['is_admin'] = True
         if self.request.POST:
             context['resource_formset'] = PersonResourceFormSet(
                 self.request.POST, instance=self.person, prefix='resources', user=self.request.user
@@ -881,3 +930,36 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
         else:
             self.person.death_approximate = None
         self.person.save()
+
+
+@method_decorator(login_required, name="dispatch")
+class OrgMemberDeleteView(LoginRequiredMixin, DeleteView):
+    model = Person
+    template_name = 'syncope/org_member_confirm_delete.html'
+
+    def get_queryset(self):
+        url_username = self.kwargs.get('username')
+        org_user = get_object_or_404(CustomUser, username=url_username)
+        return Person.objects.filter(memberships__user=org_user)
+
+    def dispatch(self, request, *args, **kwargs):
+        url_username = self.kwargs.get('username')
+        if not AccessControl.has_permission(request.user, 'delete', url_username):
+            return HttpResponseForbidden("Only admins can delete members.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        person = self.get_object()
+        name = f"{person.first_name} {person.last_name}".strip()
+        response = super().delete(request, *args, **kwargs)
+        messages.success(request, f"Successfully deleted member '{name}'.")
+        return response
+
+    def get_success_url(self):
+        return reverse('syncope:org_member_list', kwargs={'username': self.kwargs.get('username')})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.kwargs.get('username')
+        context['is_admin'] = True
+        return context
