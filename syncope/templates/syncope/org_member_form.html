@@ -20,7 +20,9 @@
     <p>{{ form.phone.label_tag }} {{ form.phone }}</p>
     <p>{{ form.address.label_tag }} {{ form.address }}</p>
     {{ resource_formset.management_form }}
+       <p>Resources:</p>
     {% for r_form in resource_formset %}
+
         <div>URL:
             {{ r_form.url }}
             {{ r_form.description }}
@@ -61,7 +63,7 @@
     <small class="form-text">Hold Ctrl/Cmd to select multiple voices</small>
     <p>
         <small class="form-text">
-            If either voice or instrument get selected, options below get filled in automatically.
+            small text for testing
         </small>
     </p>
 

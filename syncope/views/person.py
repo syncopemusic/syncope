@@ -98,6 +98,20 @@ class PersonUpdateView(UpdateView):
         kwargs["user"] = self.request.user
         return kwargs
 
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        if self.request.method == "GET":
+            form.initial["skills"] = self.object.skills.exclude(
+                id__in=[Skill.SINGER, Skill.INSTRUMENTALIST]
+            ).values_list("id", flat=True)
+            form.initial["voices"] = Voice.objects.filter(
+                singer__person=self.object
+            ).values_list("id", flat=True)
+            form.initial["instruments"] = Instrument.objects.filter(
+                instrumentalist__person=self.object
+            ).values_list("id", flat=True)
+        return form
+
     def _save_resources(self, person, resource_formset):
         person.person_resource.all().delete()
         valid_forms = [

@@ -6,7 +6,46 @@
 <h2>Update Your Profile</h2>
 <form method="post">
     {% csrf_token %}
-    {{ form.as_p }}
+
+    <!-- Existing fields -->
+    <p>{{ form.first_name.label_tag }} {{ form.first_name }}</p>
+    <p>{{ form.last_name.label_tag }} {{ form.last_name }}</p>
+    <p>{{ form.email.label_tag }} {{ form.email }}</p>
+    <p>{{ form.phone.label_tag }} {{ form.phone }}</p>
+    <p>{{ form.address.label_tag }} {{ form.address }}</p>
+    {{ resource_formset.management_form }}
+        <p>Resources:</p>
+    {% for r_form in resource_formset %}
+
+        <div>URL:
+            {{ r_form.url }}
+            {{ r_form.description }}
+            {% if r_form.instance.pk %}
+                {{ r_form.DELETE.as_hidden }}
+                <input type="checkbox" name="{{ r_form.DELETE.html_name }}" id="{{ r_form.DELETE.auto_id }}"
+                       onclick="return confirm('Do you want to delete this resource? Remember to press save.');">
+                <small class="form-text">Delete this resource</small>
+            {% endif %}
+            {{ r_form.id }}
+        </div>
+    {% endfor %}
+
+    <!-- Date fields -->
+    <p>{{ form.birth_date.label_tag }} {{ form.birth_date }}</p>
+
+    <!-- Voices (renders as native <select multiple>) -->
+    <p>{{ form.voices.label_tag }}
+        {{ form.voices }}</p>
+    <small class="form-text">Hold Ctrl/Cmd to select multiple voices</small>
+
+    <!-- Instruments (renders as native <select multiple>) -->
+    <p>{{ form.instruments.label_tag }}
+    {{ form.instruments }}</p>
+    <small class="form-text">Hold Ctrl/Cmd to select multiple instruments</small>
+
+    <!-- Skills -->
+    <p>{{ form.skills.label_tag }}
+        {{ form.skills }}</p>
 
     <button type="submit">Update Profile</button>
 </form>

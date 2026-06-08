@@ -29,6 +29,23 @@ class RegisterForm(UserCreationForm):
 
 class PersonForm(forms.ModelForm):
     email = forms.EmailField(required=True)
+    skills = forms.ModelMultipleChoiceField(
+        queryset=Skill.objects.exclude(id__in=[Skill.SINGER, Skill.INSTRUMENTALIST]),
+        required=False,
+        widget=forms.CheckboxSelectMultiple
+    )
+    voices = forms.ModelMultipleChoiceField(
+        queryset=Voice.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'size': '6'}),
+        label='Voice Types'
+    )
+    instruments = forms.ModelMultipleChoiceField(
+        queryset=Instrument.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'size': '6'}),
+        label='Instrument Types'
+    )
 
     class Meta:
         model = Person
@@ -41,9 +58,7 @@ class PersonForm(forms.ModelForm):
             "birth_date",
         ]
         widgets = {
-            "birth_date": forms.SelectDateWidget(
-                years=range(datetime.date.today().year, 1930, -1)
-            ),
+            "birth_date": forms.DateInput(attrs={'type': 'date'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -100,7 +115,7 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
     )
     # Skill checkbox
     skills = forms.ModelMultipleChoiceField(
-        queryset=Skill.objects.all(),
+        queryset=Skill.objects.exclude(id__in=[Skill.SINGER, Skill.INSTRUMENTALIST]),
         required=False,
         widget=forms.CheckboxSelectMultiple
     )
