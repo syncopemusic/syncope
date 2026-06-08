@@ -21,7 +21,18 @@ Congratulations, this is now running!
 
 ### Docker
 
-Coming soon.
+This project supports running via Docker using Compose.
+1. `git clone syncopemusic/syncope`
+2. `cd syncope`
+3. `docker compose up --build`
+4. Open app:
+`http://localhost:8000`
+5. Sign up using the app mechanism.
+
+- SQLite database is stored on the host machine:
+`./db/database.sqlite3`
+- It is mounted into the container:
+`/app/db/database.sqlite3`
 
 ## Usage
 

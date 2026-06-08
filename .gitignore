@@ -10,7 +10,7 @@ ENV/
 .envrc
 
 # Database files
-db.sqlite3
+/db/
 *.db
 .sqlite3
 
