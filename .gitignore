@@ -40,7 +40,7 @@ __pycache__/
 Thumbs.db
 
 *.sh
+!docker/start.sh
 
 .continue/
 imports/
-uv.lock

@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
+    image: "ghcr.io/syncopemusic/syncope:latest"
     ports:
       - "8000:8000"
     volumes:

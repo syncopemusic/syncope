@@ -1,5 +1,5 @@
 # Dockerfile
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
@@ -11,10 +11,12 @@ ENV VIRTUAL_ENV=/app/.venv \
 WORKDIR /app
 
 COPY . /app/
+COPY .env.example /app/.env
 
 RUN uv sync --frozen
 
 COPY docker/start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
 EXPOSE 8000
 
