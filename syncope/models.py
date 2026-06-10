@@ -784,6 +784,7 @@ class InvitationStatus(models.Model):
     PENDING = 1
     APPROVED = 2
     REJECTED = 3
+    WITHDRAWN = 4
 
     name = models.CharField("invitation status", max_length=50, unique=True)
 
@@ -794,13 +795,14 @@ class InvitationStatus(models.Model):
 class Invitation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
     invitation_type = models.ForeignKey(InvitationType, on_delete=models.PROTECT, related_name="invitations")
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="sent_invitations")
-    sender_confirm = models.BooleanField(default=True)
+
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="received_invitations")
-    recipient_confirm = models.BooleanField(default=None, null=True, blank=True)
+
     status = models.ForeignKey(InvitationStatus, on_delete=models.PROTECT, related_name="invitations", default=InvitationStatus.PENDING)
-    expires_at = models.DateTimeField(null=True, blank=True)
+
     reviewed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -813,7 +815,7 @@ class Invitation(models.Model):
         ordering = ["-created_at"]
         constraints = [
             models.UniqueConstraint(
-                fields=["sender", "recipient", "invitation_type"],
+                fields=["sender", "recipient", "status"],
                 condition=models.Q(status_id=InvitationStatus.PENDING),
                 name="unique_pending_invitation_per_pair"
             )
