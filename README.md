@@ -38,7 +38,7 @@ SQLite database is stored on the host machine at `./db/database.sqlite3` and mou
 
 Optional: Override environment variables (defaults from `.env.example` are used):
 
-`docker run -p 8000:8000 -e SECRET_KEY=your-secret-key -e DEBUG=False -v ./db:/app/db ghcr.io/syncopemusic/syncope:latest`
+`docker run -p 8000:8000 -e SECRET_KEY=your-secret-key -v ./db:/app/db ghcr.io/syncopemusic/syncope:latest`
 
 ## Usage
 
