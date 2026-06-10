@@ -768,3 +768,56 @@ def create_share_for_resource(sender, instance, created, **kwargs):
             resource=instance,
             defaults={"id": generate_share_id()},
         )
+
+
+class InvitationType(models.Model):
+    INVITE = 1
+    REQUEST = 2
+
+    name = models.CharField("invitation type", max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class InvitationStatus(models.Model):
+    PENDING = 1
+    APPROVED = 2
+    REJECTED = 3
+
+    name = models.CharField("invitation status", max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Invitation(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    invitation_type = models.ForeignKey(InvitationType, on_delete=models.PROTECT, related_name="invitations")
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="sent_invitations")
+    sender_confirm = models.BooleanField(default=True)
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="received_invitations")
+    recipient_confirm = models.BooleanField(default=None, null=True, blank=True)
+    status = models.ForeignKey(InvitationStatus, on_delete=models.PROTECT, related_name="invitations", default=InvitationStatus.PENDING)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="reviewed_invitations"
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sender", "recipient", "invitation_type"],
+                condition=models.Q(status_id=InvitationStatus.PENDING),
+                name="unique_pending_invitation_per_pair"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.invitation_type}: {self.sender} → {self.recipient} ({self.status})"

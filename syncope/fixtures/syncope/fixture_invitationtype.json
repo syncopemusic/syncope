@@ -1,0 +1,4 @@
+[
+  {"model": "syncope.invitationtype", "pk": 1, "fields": {"name": "Invite"}},
+  {"model": "syncope.invitationtype", "pk": 2, "fields": {"name": "Request"}}
+]

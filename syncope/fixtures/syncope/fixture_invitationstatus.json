@@ -1,0 +1,5 @@
+[
+  {"model": "syncope.invitationstatus", "pk": 1, "fields": {"name": "Pending"}},
+  {"model": "syncope.invitationstatus", "pk": 2, "fields": {"name": "Approved"}},
+  {"model": "syncope.invitationstatus", "pk": 3, "fields": {"name": "Rejected"}}
+]
