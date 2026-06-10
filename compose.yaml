@@ -1,0 +1,14 @@
+name: syncope
+
+services:
+  syncope:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: "ghcr.io/syncopemusic/syncope:latest"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./db:/app/db
+    environment:
+      - DB_PATH=db/database.sqlite3

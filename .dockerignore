@@ -1,0 +1,8 @@
+.git
+.venv
+db/
+*.pyc
+__pycache__
+.env
+*.sh
+!docker/start.sh

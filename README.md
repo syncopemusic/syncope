@@ -21,7 +21,24 @@ Congratulations, this is now running!
 
 ### Docker
 
-Coming soon.
+#### Local development
+
+1. `docker compose up --build`
+2. Open app: `http://localhost:8000`
+3. Sign up using the app mechanism.
+
+#### Run published image
+
+1. `mkdir db`
+2. `docker run -p 8000:8000 -v ./db:/app/db ghcr.io/syncopemusic/syncope:latest`
+
+Open app: `http://localhost:8000`
+
+SQLite database is stored on the host machine at `./db/database.sqlite3` and mounted into the container at `/app/db/database.sqlite3`.
+
+Optional: Override environment variables (defaults from `.env.example` are used):
+
+`docker run -p 8000:8000 -e SECRET_KEY=your-secret-key -v ./db:/app/db ghcr.io/syncopemusic/syncope:latest`
 
 ## Usage
 

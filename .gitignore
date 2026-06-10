@@ -10,7 +10,7 @@ ENV/
 .envrc
 
 # Database files
-db.sqlite3
+/db/
 *.db
 .sqlite3
 
@@ -40,7 +40,7 @@ __pycache__/
 Thumbs.db
 
 *.sh
+!docker/start.sh
 
 .continue/
 imports/
-uv.lock

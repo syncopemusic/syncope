@@ -2,7 +2,7 @@
 
 # cleanup
 rm syncope/migrations/0*.py
-rm db.sqlite3
+rm db/database.sqlite3
 
 # setup new db
 uv run manage.py makemigrations
