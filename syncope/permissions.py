@@ -455,3 +455,15 @@ class AccessControl:
 
         roles = cls.get_org_roles(auth_user, url_username)
         return roles.filter(id=Role.ADMIN).exists()
+
+    @classmethod
+    def can_manage_invite(cls, auth_user, url_username):
+        """
+        Check if auth_user can accept or create an invitation in the organization.
+        Only ADMIN role can accept or create invitations.
+        """
+        if not auth_user.is_authenticated:
+            return False
+
+        roles = cls.get_org_roles(auth_user, url_username)
+        return roles.filter(id=Role.ADMIN).exists()

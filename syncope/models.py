@@ -798,9 +798,7 @@ class Invitation(models.Model):
     expires_at = models.DateTimeField(null=True, blank=True)
     invitation_type = models.ForeignKey(InvitationType, on_delete=models.PROTECT, related_name="invitations")
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="sent_invitations")
-
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="received_invitations")
-
     status = models.ForeignKey(InvitationStatus, on_delete=models.PROTECT, related_name="invitations", default=InvitationStatus.PENDING)
 
     reviewed_by = models.ForeignKey(
@@ -811,11 +809,13 @@ class Invitation(models.Model):
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
 
+    existing_person = models.ForeignKey(Person, on_delete=models.SET_NULL, null=True, blank=True, related_name="existing_persons")
+
     class Meta:
         ordering = ["-created_at"]
         constraints = [
             models.UniqueConstraint(
-                fields=["sender", "recipient", "status"],
+                fields=["sender", "recipient"],
                 condition=models.Q(status_id=InvitationStatus.PENDING),
                 name="unique_pending_invitation_per_pair"
             )

@@ -1,0 +1,33 @@
+{% extends "syncope/base.html" %}
+{% block title %}Invitations{% endblock %}
+
+{% block content %}
+<h2>Invitations</h2>
+
+<p><a href="{% url 'syncope:invitation_new' url_username %}">+ New Invitation</a></p>
+
+<table>
+    <tr>
+        <th><a href="?sort=date{% if current_sort == 'date' and not reverse %}&reverse=true{% endif %}">Date{% if current_sort == 'date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?sort=type{% if current_sort == 'type' and not reverse %}&reverse=true{% endif %}">Type{% if current_sort == 'type' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th>Sender</th>
+        <th>Recipient</th>
+        <th><a href="?sort=status{% if current_sort == 'status' and not reverse %}&reverse=true{% endif %}">Status{% if current_sort == 'status' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?sort=expires{% if current_sort == 'expires' and not reverse %}&reverse=true{% endif %}">Expires{% if current_sort == 'expires' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th></th>
+    </tr>
+    {% for invitation in invitations %}
+        <tr>
+            <td><span data-dt="{{ invitation.created_at|date:'c' }}" data-dt-fmt="date">{{ invitation.created_at|date:"d M, Y" }}</span></td>
+            <td>{{ invitation.invitation_type }}</td>
+            <td>{{ invitation.sender }}</td>
+            <td>{{ invitation.recipient }}</td>
+            <td>{{ invitation.status }}</td>
+            <td>{% if invitation.expires_at %}<span data-dt="{{ invitation.expires_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.expires_at|date:"d M, Y, H:i" }}</span>{% else %}—{% endif %}</td>
+            <td><a href="{% url 'syncope:invitation_detail' url_username invitation.pk %}">View</a></td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="7">No invitations yet.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

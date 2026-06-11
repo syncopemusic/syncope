@@ -29,6 +29,7 @@
                     <li><a href="{%  url 'syncope:person_update' user.username %}">Update profile</a></li>
                     <li><a href="{%  url 'syncope:home' %}">Home</a></li>
                     <li><a href="{%  url 'syncope:song_list' user.username %}">Songs</a></li>
+                    <li><a href="{%  url 'syncope:invitation_list' user.username %}">Invitations</a></li>
 
                     <li>
                         <p>Groups:</p>
@@ -54,6 +55,7 @@
                                                 {% if ADMIN_ROLE in membership.person.roles.all %}
 
                                                     <li><a href="{%  url 'syncope:import_hub' username=org.user.username %}">Import Data</a></li>
+                                                    <li><a href="{%  url 'syncope:invitation_list' org.user.username %}">Invitations</a></li>
                                                 {% endif %}
                                             </ul>
                                         </li>

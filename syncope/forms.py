@@ -2,7 +2,7 @@ from django import forms
 import datetime
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
-    PollAttendance
+    PollAttendance, Invitation
 from .models import Event, EventSong, Attendance, AttendanceType,  Voice, Instrument, EventType, EventResource, EventSongResource
 from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource, ProjectResource
 from django.forms import inlineformset_factory, BaseInlineFormSet
@@ -738,3 +738,34 @@ class PollBulkImportForm(forms.Form):
         self.fields['skill_criteria'].choices = [('all', 'All skills')] + list(
             Skill.objects.values_list('title', 'title')
         )
+
+
+class InvitationForm(forms.ModelForm):
+    class Meta:
+        model = Invitation
+        fields = ['recipient', 'existing_person', 'expires_at']
+        widgets = {
+            "expires_at": forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+        }
+
+    def __init__(self, *args, customuser, **kwargs):
+        super().__init__(*args, **kwargs)
+        is_org = Organization.objects.filter(user=customuser).exists()
+        if is_org:
+            self.fields['recipient'].queryset = CustomUser.objects.exclude(pk=customuser.pk).filter(
+                organizations__isnull=True
+            )
+            self.fields['recipient'].label = "User to invite"
+            self.fields['existing_person'].queryset = Person.objects.filter(
+                memberships__user=customuser,
+                owner__isnull=True,
+                user__isnull=True,
+            ).distinct()
+            self.fields['existing_person'].label = "Link to existing member record (optional)"
+            self.fields['existing_person'].empty_label = "-- Create new person on accept --"
+        else:
+            self.fields['recipient'].queryset = CustomUser.objects.filter(organizations__isnull=False)
+            self.fields['recipient'].label = "Organization to request to join"
+            self.fields['existing_person'].queryset = Person.objects.none()
+            self.fields['existing_person'].widget = forms.HiddenInput()
+            self.fields['existing_person'].required = False

@@ -1,0 +1,44 @@
+{% extends "syncope/base.html" %}
+{% block title %}Invitation{% endblock %}
+
+{% block content %}
+<h2>Invitation</h2>
+
+<p><strong>Type:</strong> {{ invitation.invitation_type }}</p>
+<p><strong>From:</strong> {{ invitation.sender }}</p>
+<p><strong>To:</strong> {{ invitation.recipient }}</p>
+<p><strong>Status:</strong> {{ invitation.status }}</p>
+{% if invitation.person %}
+    <p><strong>Linked member record:</strong> {{ invitation.person.first_name }} {{ invitation.person.last_name }}</p>
+{% endif %}
+{% if invitation.expires_at %}
+    <p><strong>Expires:</strong> <span data-dt="{{ invitation.expires_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.expires_at|date:"d M, Y, H:i" }}</span></p>
+{% endif %}
+{% if invitation.reviewed_by %}
+    <p><strong>Reviewed by:</strong> {{ invitation.reviewed_by }} on
+        <span data-dt="{{ invitation.reviewed_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.reviewed_at|date:"d M, Y, H:i" }}</span></p>
+{% endif %}
+
+{% if is_pending %}
+    {% if invitation.recipient.username == url_username %}
+        <form method="post">
+            {% csrf_token %}
+            <p>
+                <label>
+                    <input type="checkbox" name="copy_details" checked>
+                    Copy my profile details (name, email, address, phone, birth date) to the member record
+                </label>
+            </p>
+            <button type="submit" name="decision" value="accept">Accept</button>
+            <button type="submit" name="decision" value="reject" class="danger">Reject</button>
+        </form>
+    {% elif invitation.sender.username == url_username %}
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" name="decision" value="withdraw" class="danger">Withdraw</button>
+        </form>
+    {% endif %}
+{% endif %}
+
+<p><a href="{% url 'syncope:invitation_list' url_username %}">Back to Invitations</a></p>
+{% endblock %}

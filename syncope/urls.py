@@ -6,6 +6,7 @@ from .views.event import EventCreateView, EventDetailView, EventUpdateView, Even
 from .views.event import event_add_song, event_add_attendance
 from .views.home import HomeView, SkillListAndCreateView
 from .views.importing import ImportHubView, ImportDashboardView, CombineProjectsView
+from .views.invitation import InvitationListView, InvitationCreateView, InvitationUpdateView
 from .views.organization import OrganizationCreateView, OrganizationDashboard
 from .views.person import PersonUpdateView, OrgMemberAddView, OrgMemberEditView, OrgMemberListView, OrgMemberDetailView, OrgMemberDeleteView
 from .views.project import ProjectDeleteView, ProjectCreateView, ProjectDetailView, ProjectUpdateView, ProjectListView
@@ -23,6 +24,9 @@ urlpatterns = [
     path("signup/", SignUp.as_view(), name="signup"),
 
     path("<str:username>/person/update/", PersonUpdateView.as_view(), name="person_update"),
+    path("<str:username>/invitations/", InvitationListView.as_view(), name="invitation_list"),
+    path("<str:username>/invitations/new/", InvitationCreateView.as_view(), name="invitation_new"),
+    path("<str:username>/invitations/<int:pk>/", InvitationUpdateView.as_view(), name="invitation_detail"),
     path("logout/", UserLogoutView.as_view(), name="logout"),
     path("login/", UserLoginView.as_view(), name="login"),
 
