@@ -231,6 +231,14 @@ class PersonQuerySet(models.QuerySet):
             Q(membership_period__ended_at__isnull=True)
         ).distinct()
 
+    def unlinked_in_org(self, org_user):
+        """Filter unlinked persons in an organization (can be linked to invitations/requests)."""
+        return self.filter(
+            memberships__user=org_user,
+            owner__isnull=True,
+            user__isnull=True,
+        ).distinct().order_by('-created_at')
+
 
 class Skill(models.Model):
     """
@@ -315,6 +323,10 @@ class Person(models.Model):
                 name="unique_user_per_person"
             )
         ]
+
+    def is_unlinked(self):
+        """Check if this person record can be linked to an invitation (is not already linked)."""
+        return self.owner_id is None and self.user_id is None
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
@@ -755,7 +767,7 @@ class Share(models.Model):
 
 class ShareVisit(models.Model):
     id = models.AutoField(primary_key=True)
-    share = models.ForeignKey(Share, on_delete=models.PROTECT, related_name="share_visits", db_index=True)
+    share = models.ForeignKey(Share, on_delete=models.CASCADE, related_name="share_visits", db_index=True)
     visited_at = models.DateTimeField(auto_now_add=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
 
@@ -801,15 +813,16 @@ class Invitation(models.Model):
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="received_invitations")
     status = models.ForeignKey(InvitationStatus, on_delete=models.PROTECT, related_name="invitations", default=InvitationStatus.PENDING)
 
-    reviewed_by = models.ForeignKey(
+    admin_involved = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True, blank=True,
-        related_name="reviewed_invitations"
+        related_name="invitations_admin_involved"
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
 
     existing_person = models.ForeignKey(Person, on_delete=models.SET_NULL, null=True, blank=True, related_name="existing_persons")
+    copy_details = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["-created_at"]

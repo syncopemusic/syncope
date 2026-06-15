@@ -1,6 +1,6 @@
 # syncope/context_processors.py
-from .models import Membership, Role
-from django.db.models import Q
+from .models import Membership, Role, Invitation, InvitationStatus
+from django.db.models import Q, Count
 
 from .permissions import AccessControl
 
@@ -45,6 +45,18 @@ def user_person(request):
         m for m in context["memberships"]
         if m.user != request.user  # Exclude your own org
     ]
+
+    # Compute pending invitation counts for user and all memberships
+    recipient_ids = {request.user.id} | {m.user_id for m in context["memberships"]}
+    counts = dict(
+        Invitation.objects.filter(
+            recipient_id__in=recipient_ids,
+            status_id=InvitationStatus.PENDING,
+        ).values("recipient_id").annotate(n=Count("id")).values_list("recipient_id", "n")
+    )
+    context["pending_invitations_count"] = counts.get(request.user.id, 0)
+    for membership in context["memberships"]:
+        membership.pending_invitations_count = counts.get(membership.user_id, 0)
 
     # Derive the single membership relevant to the current page (for child template checks)
     url_username = context["url_username"]

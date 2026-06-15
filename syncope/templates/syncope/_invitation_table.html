@@ -1,0 +1,55 @@
+{% comment %}
+Reusable invitation table template.
+
+Usage:
+{% include "syncope/_invitation_table.html" with
+    title="Pending Invitations"
+    invitations=pending_invitations
+    prefix="pending"
+    sort=pending_sort
+    reverse=pending_reverse
+    other_prefix="history"
+    other_sort=history_sort
+    other_reverse=history_reverse
+%}
+
+Parameters:
+- title: Section heading
+- invitations: QuerySet of Invitation objects
+- prefix: URL parameter prefix (e.g., "pending" or "history")
+- sort: Current sort key (e.g., "date")
+- reverse: Boolean, whether sort is reversed
+- other_prefix: Other table's URL parameter prefix
+- other_sort: Other table's sort key (for preservation in URLs)
+- other_reverse: Other table's reverse state (for preservation in URLs)
+{% endcomment %}
+
+<h3>{{ title }}</h3>
+<table>
+    <tr>
+        <th>#</th>
+        <th><a href="?{{ prefix }}_sort=date{% if sort == 'date' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}">Date{% if sort == 'date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?{{ prefix }}_sort=type{% if sort == 'type' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}">Type{% if sort == 'type' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?{{ prefix }}_sort=sent_by{% if sort == 'sent_by' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}">Sender{% if sort == 'sent_by' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?{{ prefix }}_sort=admin{% if sort == 'admin' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}">Admin involved{% if sort == 'admin' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?{{ prefix }}_sort=received_by{% if sort == 'received_by' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}">Recipient{% if sort == 'received_by' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?{{ prefix }}_sort=status{% if sort == 'status' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}">Status{% if sort == 'status' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?{{ prefix }}_sort=expires{% if sort == 'expires' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}">Expires{% if sort == 'expires' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th></th>
+    </tr>
+    {% for invitation in invitations %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td><span data-dt="{{ invitation.created_at|date:'c' }}" data-dt-fmt="date">{{ invitation.created_at|date:"d M, Y" }}</span></td>
+            <td>{{ invitation.invitation_type }}</td>
+            <td>{{ invitation.sender }}</td>
+            <td>{% if invitation.admin_involved %}{{ invitation.admin_involved }}{% else %}?{% endif %}</td>
+            <td>{{ invitation.recipient }}</td>
+            <td>{{ invitation.status }}</td>
+            <td>{% if invitation.expires_at %}<span data-dt="{{ invitation.expires_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.expires_at|date:"d M, Y, H:i" }}</span>{% else %}—{% endif %}</td>
+            <td><a href="{% url 'syncope:invitation_detail' url_username invitation.pk %}">View</a></td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="9">No invitations.</td></tr>
+    {% endfor %}
+</table>
