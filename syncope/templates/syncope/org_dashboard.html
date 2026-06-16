@@ -7,16 +7,21 @@ Welcome, {{ user.username }}
 
 <p>Name: {{ organization.name }}</p>
 <p>Email: {{ organization.email }}</p>
-<p>Address: {{ organization.address }}</p>
+<p>Address: {{ organization.address|linebreaksbr }}</p>
+
+{% if is_admin %}
+<a href="{% url 'syncope:org_edit' url_username %}">Edit</a>
+<a href="{% url 'syncope:org_delete' url_username %}">Delete</a>
+{% endif %}
 
 <hr>
 
 <h3>Quick Links</h3>
 <ul>
-    <li><a href="{%  url 'syncope:project_list' url_username %}">Projects</a></li>
-    <li><a href="{%  url 'syncope:event_list' url_username %}">Events</a></li>
-    <li><a href="{%  url 'syncope:song_list' url_username %}">Songs</a></li>
-    <li><a href="{%  url 'syncope:org_member_list' url_username %}">Members</a></li>
+    <li><a href="{% url 'syncope:project_list' url_username %}">Projects</a></li>
+    <li><a href="{% url 'syncope:event_list' url_username %}">Events</a></li>
+    <li><a href="{% url 'syncope:song_list' url_username %}">Songs</a></li>
+    <li><a href="{% url 'syncope:org_member_list' url_username %}">Members</a></li>
 </ul>
 
 {% endblock %}

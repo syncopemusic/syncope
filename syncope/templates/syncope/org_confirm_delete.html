@@ -1,0 +1,20 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}Delete {{ object.name }}{% endblock %}
+
+{% block content %}
+
+<h2>Delete Organization</h2>
+<p>Are you sure you want to delete <strong>{{ object.name }}</strong>? This will permanently delete the organization and all its data.</p>
+
+{% if is_admin %}
+<form method="post">
+  {% csrf_token %}
+  <button type="submit" onclick="return confirm('This will permanently delete {{ object.name }} and all its data. Are you sure?')">Delete</button>
+  <a href="{% url 'syncope:org_dashboard' url_username %}">Cancel</a>
+</form>
+{% else %}
+<p><a href="{% url 'syncope:org_dashboard' url_username %}">Back to Dashboard</a></p>
+{% endif %}
+
+{% endblock %}

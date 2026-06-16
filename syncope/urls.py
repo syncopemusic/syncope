@@ -6,7 +6,7 @@ from .views.event import EventCreateView, EventDetailView, EventUpdateView, Even
 from .views.event import event_add_song, event_add_attendance
 from .views.home import HomeView, SkillListAndCreateView
 from .views.importing import ImportHubView, ImportDashboardView, CombineProjectsView
-from .views.organization import OrganizationCreateView, OrganizationDashboard
+from .views.organization import OrganizationCreateView, OrganizationDashboard, OrganizationUpdateView, OrganizationDeleteView
 from .views.person import PersonUpdateView, OrgMemberAddView, OrgMemberEditView, OrgMemberListView, OrgMemberDetailView, OrgMemberDeleteView
 from .views.project import ProjectDeleteView, ProjectCreateView, ProjectDetailView, ProjectUpdateView, ProjectListView
 from .views.project import project_add_guest, project_add_event, project_remove_event, project_remove_song, project_add_song, project_remove_guest
@@ -32,6 +32,8 @@ urlpatterns = [
     path("organization/new/", OrganizationCreateView.as_view(), name="org_new"),
 
     path("<str:username>/dashboard/", OrganizationDashboard.as_view(), name="org_dashboard"),
+    path("<str:username>/edit/", OrganizationUpdateView.as_view(), name="org_edit"),
+    path("<str:username>/delete/", OrganizationDeleteView.as_view(), name="org_delete"),
     path("<str:username>/import/", ImportHubView.as_view(), name="import_hub"),
     path("<str:username>/import/combine/", CombineProjectsView.as_view(), name="import_combine"),
     path("<str:username>/<str:method>/import/", ImportDashboardView.as_view(), name="import_dashboard"),
