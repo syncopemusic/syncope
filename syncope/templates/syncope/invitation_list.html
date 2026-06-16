@@ -4,7 +4,14 @@
 {% block content %}
 <h2>Invitations</h2>
 
-<p><a href="{% url 'syncope:invitation_new' url_username %}">+ New Invitation</a></p>
+{% if is_org %}
+<p>
+    <a href="{% url 'syncope:invitation_new' url_username %}">+ new invite</a>
+    <a href="{% url 'syncope:org_member_new' url_username %}">+ create a new org person</a>
+</p>
+{% else %}
+<p>    <a href="{% url 'syncope:invitation_new' url_username %}">+ new request</a></p>
+{% endif %}
 
 <h3>Pending Invitations</h3>
 <table>
@@ -19,7 +26,7 @@
         <th><a href="?pending_sort=expires{% if pending_sort == 'expires' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}">Expires{% if pending_sort == 'expires' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th></th>
     </tr>
-    {% for invitation in pending_invitations %}
+    {% for invitation in pending_list %}
         <tr>
             <td>{{ forloop.counter }}</td>
             <td><span data-dt="{{ invitation.created_at|date:'c' }}" data-dt-fmt="date">{{ invitation.created_at|date:"d M, Y" }}</span></td>

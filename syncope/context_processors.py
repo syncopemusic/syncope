@@ -1,6 +1,6 @@
 # syncope/context_processors.py
 from .models import Membership, Role, Invitation, InvitationStatus
-from django.db.models import Q, Count
+from django.db.models import Q
 
 from .permissions import AccessControl
 
@@ -46,17 +46,27 @@ def user_person(request):
         if m.user != request.user  # Exclude your own org
     ]
 
-    # Compute pending invitation counts for user and all memberships
-    recipient_ids = {request.user.id} | {m.user_id for m in context["memberships"]}
-    counts = dict(
+    # Compute total pending invitation count for user and all memberships
+    user_org_ids = {request.user.id} | {m.user_id for m in context["memberships"]}
+
+    pending_qs = (
         Invitation.objects.filter(
-            recipient_id__in=recipient_ids,
+            Q(recipient_id__in=user_org_ids) | Q(sender_id__in=user_org_ids),
             status_id=InvitationStatus.PENDING,
-        ).values("recipient_id").annotate(n=Count("id")).values_list("recipient_id", "n")
+        )
+        .values("sender_id", "recipient_id")
     )
-    context["pending_invitations_count"] = counts.get(request.user.id, 0)
+
+    counts = {}
+    for row in pending_qs:
+        for uid in (row["sender_id"], row["recipient_id"]):
+            if uid in user_org_ids:
+                counts[uid] = counts.get(uid, 0) + 1
+
+    context["pending_invitations"] = counts.get(request.user.id, 0)
+
     for membership in context["memberships"]:
-        membership.pending_invitations_count = counts.get(membership.user_id, 0)
+        membership.pending_invitations = counts.get(membership.user_id, 0)
 
     # Derive the single membership relevant to the current page (for child template checks)
     url_username = context["url_username"]

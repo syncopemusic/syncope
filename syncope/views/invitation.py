@@ -69,7 +69,7 @@ class InvitationListView(InvitationAccessMixin, ListView):
         pending_sort_field, pending_sort, pending_reverse = self._get_sort_field('pending')
         history_sort_field, history_sort, history_reverse = self._get_sort_field('history')
 
-        context['pending_invitations'] = base_qs.filter(status_id=InvitationStatus.PENDING).order_by(pending_sort_field)
+        context['pending_list'] = base_qs.filter(status_id=InvitationStatus.PENDING).order_by(pending_sort_field)
         context['history_invitations'] = base_qs.exclude(status_id=InvitationStatus.PENDING).order_by(history_sort_field)
 
         context['pending_sort'] = pending_sort
@@ -77,6 +77,7 @@ class InvitationListView(InvitationAccessMixin, ListView):
         context['history_sort'] = history_sort
         context['history_reverse'] = history_reverse
         context['url_username'] = self.customuser.username
+        context['is_org'] = Organization.objects.filter(user=self.customuser).exists()
 
         return context
 
@@ -92,6 +93,12 @@ class InvitationCreateView(InvitationAccessMixin, CreateView):
         kwargs = super().get_form_kwargs()
         kwargs["customuser"] = self.customuser
         return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.customuser.username
+        context['is_org'] = Organization.objects.filter(user=self.customuser).exists()
+        return context
 
     def form_valid(self, form):
         is_org = Organization.objects.filter(user=self.customuser).exists()
@@ -128,6 +135,13 @@ class InvitationCreateView(InvitationAccessMixin, CreateView):
                 self.request,
                 "Organization can only invite users, and users can only request to join organizations."
             )
+            return HttpResponseRedirect(self.request.path)
+
+        org_user = self.customuser if is_org else recipient
+        human_user = recipient if is_org else self.customuser
+
+        if AccessControl.get_member_person(human_user, org_user):
+            messages.error(self.request, "This user is already a member of the organization.")
             return HttpResponseRedirect(self.request.path)
 
         form.instance.sender = self.customuser
