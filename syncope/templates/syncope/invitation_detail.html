@@ -1,0 +1,54 @@
+{% extends "syncope/base.html" %}
+{% block title %}Invitation{% endblock %}
+
+{% block content %}
+<h2>Invitation</h2>
+
+<p><strong>Type:</strong> {{ invitation.invitation_type }}</p>
+<p><strong>From:</strong> {{ invitation.sender }}</p>
+<p><strong>To:</strong> {{ invitation.recipient }}</p>
+{% if invitation.admin_involved %}
+    <p><strong>Initiated by:</strong> {{ invitation.admin_involved }}</p>
+{% endif %}
+<p><strong>Status:</strong> {{ invitation.status }}</p>
+{% if invitation.existing_person %}
+    <p><strong>Linked member record:</strong> {{ invitation.existing_person.first_name }} {{ invitation.existing_person.last_name }}</p>
+{% endif %}
+{% if is_request %}
+    <p><strong>Requester opted to copy profile details:</strong> {{ invitation.copy_details|yesno:"Yes,No" }}</p>
+{% endif %}
+{% if invitation.expires_at %}
+    <p><strong>Expires:</strong> <span data-dt="{{ invitation.expires_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.expires_at|date:"d M, Y, H:i" }}</span></p>
+{% endif %}
+{% if invitation.admin_involved and invitation.reviewed_at %}
+    <p><strong>Admin involved:</strong> {{ invitation.admin_involved }} on
+        <span data-dt="{{ invitation.reviewed_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.reviewed_at|date:"d M, Y, H:i" }}</span></p>
+{% endif %}
+
+{% if is_pending %}
+    {% if invitation.recipient.username == url_username %}
+        <form method="post">
+            {% csrf_token %}
+            {% if is_request %}
+                {{ accept_form.as_p }}
+            {% else %}
+                <p>
+                    <label>
+                        <input type="checkbox" name="copy_details" checked>
+                        Copy my profile details (name, email, address, phone, birth date) to the member record
+                    </label>
+                </p>
+            {% endif %}
+            <button type="submit" name="decision" value="accept">Accept</button>
+            <button type="submit" name="decision" value="reject" class="danger">Reject</button>
+        </form>
+    {% elif invitation.sender.username == url_username %}
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" name="decision" value="withdraw" class="danger">Withdraw</button>
+        </form>
+    {% endif %}
+{% endif %}
+
+<p><a href="{% url 'syncope:invitation_list' url_username %}">Back to Invitations</a></p>
+{% endblock %}

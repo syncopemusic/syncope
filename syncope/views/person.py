@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
+from django.views.decorators.http import require_POST
 from syncope.forms import PersonForm, PersonResourceFormSet
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy, reverse
@@ -263,6 +264,9 @@ class OrgMemberDetailView(DetailView):
     customuser = None
     has_edit_permission = False
 
+    def get_queryset(self):
+        return Person.objects.select_related("owner__user")
+
     def dispatch(self, request, *args, **kwargs):
         """Handle permission checking before processing the request."""
         url_username = self.kwargs.get("username")
@@ -293,6 +297,11 @@ class OrgMemberDetailView(DetailView):
             self.request.user,
             self.object,
             url_username,
+        )
+
+        context["is_linked"] = self.object.owner_id is not None
+        context["can_unlink"] = context["is_admin"] or AccessControl.is_person_owner(
+            self.request.user, self.object
         )
 
         person = self.object
@@ -963,3 +972,33 @@ class OrgMemberDeleteView(LoginRequiredMixin, DeleteView):
         context['url_username'] = self.kwargs.get('username')
         context['is_admin'] = True
         return context
+
+
+@require_POST
+@login_required
+def org_member_unlink(request, username, pk):
+    org_user = get_object_or_404(CustomUser, username=username)
+    person = get_object_or_404(
+        Person.objects.select_related("owner"),
+        pk=pk, memberships__user=org_user,
+    )
+
+    is_admin = AccessControl.has_permission(request.user, "delete", username)
+    is_owner = AccessControl.is_person_owner(request.user, person)
+
+    if not (is_admin or is_owner):
+        return HttpResponseForbidden()
+
+    if person.owner_id is None:
+        return redirect("syncope:org_member_detail", username=username, pk=pk)
+
+    person.owner = None
+    person.save(update_fields=["owner"])
+
+    name = f"{person.first_name} {person.last_name}".strip()
+    if is_owner:
+        messages.success(request, f"Unlinked your account from '{name}'.")
+        return redirect("syncope:home")
+
+    messages.success(request, f"Unlinked '{name}' from their account.")
+    return redirect("syncope:org_member_detail", username=username, pk=pk)

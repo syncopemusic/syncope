@@ -1,0 +1,75 @@
+{% extends "syncope/base.html" %}
+{% block title %}Invitations{% endblock %}
+
+{% block content %}
+<h2>Invitations</h2>
+
+{% if is_org %}
+<p>
+    <a href="{% url 'syncope:invitation_new' url_username %}">+ new invite</a>
+    <a href="{% url 'syncope:org_member_new' url_username %}">+ create a new org person</a>
+</p>
+{% else %}
+<p>    <a href="{% url 'syncope:invitation_new' url_username %}">+ new request</a></p>
+{% endif %}
+
+<h3>Pending Invitations</h3>
+<table>
+    <tr>
+        <th>#</th>
+        <th><a href="?pending_sort=date{% if pending_sort == 'date' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}">Date{% if pending_sort == 'date' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?pending_sort=type{% if pending_sort == 'type' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}">Type{% if pending_sort == 'type' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?pending_sort=sent_by{% if pending_sort == 'sent_by' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}">Sender{% if pending_sort == 'sent_by' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?pending_sort=admin{% if pending_sort == 'admin' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}">Admin involved{% if pending_sort == 'admin' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?pending_sort=received_by{% if pending_sort == 'received_by' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}">Recipient{% if pending_sort == 'received_by' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?pending_sort=status{% if pending_sort == 'status' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}">Status{% if pending_sort == 'status' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?pending_sort=expires{% if pending_sort == 'expires' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}">Expires{% if pending_sort == 'expires' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th></th>
+    </tr>
+    {% for invitation in pending_list %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td><span data-dt="{{ invitation.created_at|date:'c' }}" data-dt-fmt="date">{{ invitation.created_at|date:"d M, Y" }}</span></td>
+            <td>{{ invitation.invitation_type }}</td>
+            <td>{{ invitation.sender }}</td>
+            <td>{% if invitation.admin_involved %}{{ invitation.admin_involved }}{% else %}?{% endif %}</td>
+            <td>{{ invitation.recipient }}</td>
+            <td>{{ invitation.status }}</td>
+            <td>{% if invitation.expires_at %}<span data-dt="{{ invitation.expires_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.expires_at|date:"d M, Y, H:i" }}</span>{% else %}—{% endif %}</td>
+            <td><a href="{% url 'syncope:invitation_detail' url_username invitation.pk %}">View</a></td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="9">No pending invitations.</td></tr>
+    {% endfor %}
+</table>
+
+<h3>History</h3>
+<table>
+    <tr>
+        <th>#</th>
+        <th><a href="?history_sort=date{% if history_sort == 'date' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}">Date{% if history_sort == 'date' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?history_sort=type{% if history_sort == 'type' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}">Type{% if history_sort == 'type' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?history_sort=sent_by{% if history_sort == 'sent_by' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}">Sender{% if history_sort == 'sent_by' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?history_sort=admin{% if history_sort == 'admin' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}">Admin involved{% if history_sort == 'admin' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?history_sort=received_by{% if history_sort == 'received_by' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}">Recipient{% if history_sort == 'received_by' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?history_sort=status{% if history_sort == 'status' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}">Status{% if history_sort == 'status' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?history_sort=expires{% if history_sort == 'expires' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}">Expires{% if history_sort == 'expires' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th></th>
+    </tr>
+    {% for invitation in history_invitations %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td><span data-dt="{{ invitation.created_at|date:'c' }}" data-dt-fmt="date">{{ invitation.created_at|date:"d M, Y" }}</span></td>
+            <td>{{ invitation.invitation_type }}</td>
+            <td>{{ invitation.sender }}</td>
+            <td>{% if invitation.admin_involved %}{{ invitation.admin_involved }}{% else %}?{% endif %}</td>
+            <td>{{ invitation.recipient }}</td>
+            <td>{{ invitation.status }}</td>
+            <td>{% if invitation.expires_at %}<span data-dt="{{ invitation.expires_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.expires_at|date:"d M, Y, H:i" }}</span>{% else %}—{% endif %}</td>
+            <td><a href="{% url 'syncope:invitation_detail' url_username invitation.pk %}">View</a></td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="9">No resolved invitations.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}
