@@ -114,7 +114,7 @@
                 <tr>
                     <td colspan="{% if is_admin %}6{% else %}5{% endif %}" style="padding-left:2rem; background:#fafafa;">
                         {{ rs_formset.management_form }}
-                        <small><strong>Song Resources:</strong></small>
+                        <small><strong>Song resources for this event:</strong></small>
                         {% for rs_form in rs_formset %}
                             <div>
                                 {{ rs_form.url }}
@@ -165,6 +165,7 @@
     </table>
 
     <h3>Resources</h3>
+    <p><small>This event's specific resources.</small></p>
     {{ resource_formset.management_form }}
     {% for form in resource_formset %}
         <div>
@@ -176,14 +177,14 @@
     {% endfor %}
 
     <button type="submit" name="action" value="save">Save</button>
-    {% if is_admin %}
-        <br><button type="submit" name="action" value="add_member">Add New Person to Org</button>
-    {% endif %}
+
 </form>
 
 {% if is_admin %}
 <h3 id="add-song-section">Add Song to Event</h3>
-<p><a href="{%  url 'syncope:song_new' url_username %}?next={%  url 'syncope:event_update' url_username object.pk %}">+ Add Fresh Song to Archive</a></p>
+<p><a href="{%  url 'syncope:song_new' url_username %}?next={%  url 'syncope:event_update' url_username object.pk %}">
+    <button type="button">+ Add Fresh Song to Archive</button></a>
+</p>
 
 {% if song_formset.forms %}
 <p><strong>Already in setlist:</strong>
@@ -215,6 +216,11 @@
 
 {% if is_admin %}
 <h3 id="add-participant-section">Add Participant</h3>
+<p>
+<a href="{% url 'syncope:org_member_new' url_username %}?next={{ request.get_full_path|urlencode }}">
+    <button type="button">Create new participant</button>
+</a>
+</p>
 
 <form method="get">
     <input type="text" name="q" value="{{ search_q }}" placeholder="Search by name, voice, or instrument">

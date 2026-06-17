@@ -22,7 +22,7 @@ from syncope.models import MembershipPeriod,  PersonSkill,  PersonRole
 from syncope.models import CustomUser, Organization, Person, Membership, Role, Skill, Singer, Instrumentalist
 from syncope.models import Attendance, AttendanceType, EventType, Voice, Instrument,  Project, LyricsTranslation, PersonResource, Resource
 from syncope.permissions import AccessControl
-from syncope.utils import resource_icon_list
+from syncope.utils import resource_icon_list, add_query_param
 
 
 @method_decorator(login_required, name='dispatch')
@@ -499,6 +499,8 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
 
         next_url = self.request.GET.get('next', '')
         if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
+            preset = self.kwargs.get('preset', '')
+            next_url = add_query_param(next_url, {f'select_{preset or "person"}': person.pk})
             return redirect(next_url)
         return redirect("syncope:org_member_list", username=self.kwargs["username"])
 

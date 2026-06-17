@@ -4,8 +4,10 @@
 
 {% block content %}
 <h2>New event</h2>
+<p><small>You can edit participation, add guests and manage songs at a later page.</small></p>
 <form method="post">
     {% csrf_token %}
+    {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
     {{ form.as_p }}
     <button type="submit">Add event</button>
 </form>

@@ -20,6 +20,25 @@ from syncope.utils import resource_icon_list
 from syncope.permissions import AccessControl
 
 
+class SelectPersonInitialMixin:
+    person_preset_fields = []
+    person_preset_map = {}
+
+    def _get_initial_with_presets(self):
+        initial = {}
+        if self.person_preset_map:
+            for query_key, form_key in self.person_preset_map.items():
+                pk = self.request.GET.get(query_key)
+                if pk:
+                    initial[form_key] = pk
+        else:
+            for field in self.person_preset_fields:
+                pk = self.request.GET.get(f'select_{field}')
+                if pk:
+                    initial[field] = pk
+        return initial
+
+
 @require_POST
 @login_required
 def project_add_event(request, username, pk):
@@ -203,11 +222,16 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
 
 
 @method_decorator(login_required, name="dispatch")
-class ProjectUpdateView(LoginRequiredMixin, UpdateView):
+class ProjectUpdateView(LoginRequiredMixin, SelectPersonInitialMixin, UpdateView):
     model = Project
     form_class = ProjectForm
     template_name = 'syncope/project_update.html'
     success_url = None
+    person_preset_map = {
+        'select_person': 'guest',
+        'select_song': 'song',
+        'select_event': 'event',
+    }
 
     def get_queryset(self):
         url_username = self.kwargs.get('username')
@@ -274,10 +298,12 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
             ).count()
         context['events'] = events
 
+        presets = self._get_initial_with_presets()
         context['add_event_form'] = AddEventToProjectForm(
             org_user=org_user,
             project=project,
             search_q=event_search_q,
+            initial={'event': presets['event']} if 'event' in presets else {},
         )
         context['song_search_q'] = song_search_q
         context['guest_search_q'] = guest_search_q
@@ -285,11 +311,13 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
             org_user=org_user,
             project=project,
             search_q=song_search_q,
+            initial={'song': presets['song']} if 'song' in presets else {},
         )
         context['add_guest_form'] = AddGuestToProjectForm(
             org_user=org_user,
             project=project,
             search_q=guest_search_q,
+            initial={'guest': presets['guest']} if 'guest' in presets else {},
         )
 
         # Add resource formset

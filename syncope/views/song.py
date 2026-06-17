@@ -15,7 +15,7 @@ from syncope.forms import  SongForm
 from syncope.forms import  QuoteFormSet, LyricsTranslationFormSet, SongResourceFormSet
 from syncope.mixins import  SongOwnerMixin
 from syncope.permissions import AccessControl
-from syncope.utils import resource_icon_list
+from syncope.utils import resource_icon_list, add_query_param
 
 
 def save_song_resources(song, resource_formset, owner_user):
@@ -162,11 +162,31 @@ class SongDetailView(SongOwnerMixin, DetailView):
         return context
 
 
+class SelectPersonInitialMixin:
+    person_preset_fields = []
+    person_preset_map = {}
+
+    def get_initial(self):
+        initial = super().get_initial()
+        if self.person_preset_map:
+            for query_key, form_key in self.person_preset_map.items():
+                pk = self.request.GET.get(query_key)
+                if pk:
+                    initial[form_key] = pk
+        else:
+            for field in self.person_preset_fields:
+                pk = self.request.GET.get(f'select_{field}')
+                if pk:
+                    initial[field] = pk
+        return initial
+
+
 @method_decorator(login_required, name='dispatch')
-class SongCreateView(SongOwnerMixin, CreateView):
+class SongCreateView(SongOwnerMixin, SelectPersonInitialMixin, CreateView):
     form_class = SongForm
     template_name = "syncope/song_form.html"
     permission_check_method = AccessControl.can_manage_song
+    person_preset_fields = ['composer', 'arranger', 'poet', 'translator']
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -245,7 +265,7 @@ class SongCreateView(SongOwnerMixin, CreateView):
     def get_success_url(self):
         next_url = self.request.POST.get('next') or self.request.GET.get('next', '')
         if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
-            return next_url
+            return add_query_param(next_url, {'select_song': self.object.pk})
         return reverse_lazy("syncope:song_detail", kwargs={
             "username": self.owner_user.username,
             "pk": self.object.pk
@@ -253,10 +273,11 @@ class SongCreateView(SongOwnerMixin, CreateView):
 
 
 @method_decorator(login_required, name='dispatch')
-class SongUpdateView(SongOwnerMixin, UpdateView):
+class SongUpdateView(SongOwnerMixin, SelectPersonInitialMixin, UpdateView):
     form_class = SongForm
     template_name = "syncope/song_form.html"
     permission_check_method = AccessControl.can_manage_song
+    person_preset_fields = ['composer', 'arranger', 'poet', 'translator']
 
     def get_queryset(self):
         return Song.objects.filter(user=self.owner_user)

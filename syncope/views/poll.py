@@ -15,6 +15,25 @@ from syncope.forms import PollCreateForm, PollPersonForm, PollAttendanceForm, Po
 from syncope.permissions import AccessControl
 
 
+class SelectPersonInitialMixin:
+    person_preset_fields = []
+    person_preset_map = {}
+
+    def _get_initial_with_presets(self):
+        initial = {}
+        if self.person_preset_map:
+            for query_key, form_key in self.person_preset_map.items():
+                pk = self.request.GET.get(query_key)
+                if pk:
+                    initial[form_key] = pk
+        else:
+            for field in self.person_preset_fields:
+                pk = self.request.GET.get(f'select_{field}')
+                if pk:
+                    initial[field] = pk
+        return initial
+
+
 class PollAdminMixin:
     def dispatch(self, request, *args, **kwargs):
         if not AccessControl.has_permission(request.user, "create", self.kwargs.get("username")):
@@ -131,12 +150,13 @@ class PollDeleteView(PollAdminMixin, DeleteView):
 
 
 @method_decorator(login_required, name="dispatch")
-class PollPersonView(PollAdminMixin, View):
+class PollPersonView(PollAdminMixin, SelectPersonInitialMixin, View):
     """
     Access from admin to only persons within the same customuser-organization.
     Search menu for the persons, indexes first name, last name, role, skill, voice, instrument.
     """
     template_name = "syncope/poll_person.html"
+    person_preset_map = {'select_person': 'person'}
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
@@ -145,7 +165,9 @@ class PollPersonView(PollAdminMixin, View):
 
     def get(self, request, username, pk):
         q = request.GET.get('q', '').strip()
-        form = PollPersonForm(initial={'poll': self.poll}, org_user=self.org_user, poll=self.poll, search_q=q or None)
+        initial = {'poll': self.poll}
+        initial.update(self._get_initial_with_presets())
+        form = PollPersonForm(initial=initial, org_user=self.org_user, poll=self.poll, search_q=q or None)
         return render(request, self.template_name, {
             'form': form,
             'bulk_import_form': PollBulkImportForm(),

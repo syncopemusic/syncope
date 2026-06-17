@@ -13,12 +13,32 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.utils.http import url_has_allowed_host_and_scheme
 from syncope.models import CustomUser, Person, Role
 from syncope.models import Event, EventSong, Attendance, AttendanceType, EventResource, EventSongResource, Resource, SongResource
 from syncope.forms import EventForm, EventSongFormSet, AttendanceFormSet, AddAttendanceForm
 from syncope.forms import AddSongToEventForm, EventResourceFormSet, EventSongResourceFormSet
 from syncope.permissions import AccessControl
-from syncope.utils import resource_icon_list
+from syncope.utils import resource_icon_list, add_query_param
+
+
+class SelectPersonInitialMixin:
+    person_preset_fields = []
+    person_preset_map = {}
+
+    def _get_initial_with_presets(self):
+        initial = {}
+        if self.person_preset_map:
+            for query_key, form_key in self.person_preset_map.items():
+                pk = self.request.GET.get(query_key)
+                if pk:
+                    initial[form_key] = pk
+        else:
+            for field in self.person_preset_fields:
+                pk = self.request.GET.get(f'select_{field}')
+                if pk:
+                    initial[field] = pk
+        return initial
 
 
 @method_decorator(login_required, name='dispatch')
@@ -57,6 +77,13 @@ class EventCreateView(CreateView):
         # kwargs['username'] = self.request.user
         return kwargs
 
+    def get_initial(self):
+        initial = super().get_initial()
+        project_pk = self.request.GET.get('project')
+        if project_pk:
+            initial['project'] = project_pk
+        return initial
+
     def form_valid(self, form):
         user_to_assign = self.customuser if self.customuser else self.request.user
         form.instance.user = user_to_assign
@@ -76,16 +103,20 @@ class EventCreateView(CreateView):
 
 
     def get_success_url(self):
+        next_url = self.request.POST.get('next') or self.request.GET.get('next', '')
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
+            return add_query_param(next_url, {'select_event': self.object.pk})
         return reverse_lazy("syncope:event_update", kwargs={
             "username": self.customuser.username,
             "pk": self.object.pk
         })
 
 @method_decorator(login_required, name='dispatch')
-class EventUpdateView(UpdateView):
+class EventUpdateView(SelectPersonInitialMixin, UpdateView):
     model = Event
     form_class = EventForm
     template_name = 'syncope/event_update.html'
+    person_preset_map = {'select_person': 'person', 'select_song': 'song'}
 
     def dispatch(self, request, *args, **kwargs):
         url_username = self.kwargs.get("username")
@@ -225,15 +256,18 @@ class EventUpdateView(UpdateView):
         context['admin_override'] = self.request.GET.get('admin_override') == 'true' and self.is_admin
         context['search_q'] = search_q
         context['song_search_q'] = song_search_q
+        presets = self._get_initial_with_presets()
         context['add_form'] = AddAttendanceForm(
             org_user=self.customuser,
             event=event,
             search_q=search_q,
+            initial={'person': presets['person']} if 'person' in presets else {},
         ) if self.is_admin else None
         context['add_song_form'] = AddSongToEventForm(
             org_user=self.customuser,
             event=event,
             search_q=song_search_q,
+            initial={'song': presets['song']} if 'song' in presets else {},
         ) if self.is_admin else None
         return context
 
