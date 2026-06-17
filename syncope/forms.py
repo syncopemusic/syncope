@@ -1,8 +1,9 @@
 from django import forms
 import datetime
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from django.utils import timezone
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
-    PollAttendance
+    PollAttendance, Invitation
 from .models import Event, EventSong, Attendance, AttendanceType,  Voice, Instrument, EventType, EventResource, EventSongResource
 from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource, ProjectResource
 from django.forms import inlineformset_factory, BaseInlineFormSet
@@ -738,3 +739,54 @@ class PollBulkImportForm(forms.Form):
         self.fields['skill_criteria'].choices = [('all', 'All skills')] + list(
             Skill.objects.values_list('title', 'title')
         )
+
+
+class InvitationForm(forms.ModelForm):
+    recipient_username = forms.CharField(
+        max_length=250,
+        widget=forms.TextInput(attrs={"autocomplete": "off"})
+    )
+
+    class Meta:
+        model = Invitation
+        fields = ['existing_person', 'copy_details', 'expires_at']
+        widgets = {
+            "expires_at": forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+        }
+
+    def __init__(self, *args, customuser, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['expires_at'].initial = timezone.now() + datetime.timedelta(days=7)
+        is_org = Organization.objects.filter(user=customuser).exists()
+        if is_org:
+            self.fields['recipient_username'].label = "Username to invite"
+            self.fields['existing_person'].queryset = Person.objects.unlinked_in_org(customuser)
+            self.fields['existing_person'].label = "Link to existing member record (optional)"
+            self.fields['existing_person'].empty_label = "-- Create new person on accept --"
+            del self.fields['copy_details']
+        else:
+            self.fields['recipient_username'].label = "Organization username to request"
+            self.fields['existing_person'].queryset = Person.objects.none()
+            self.fields['existing_person'].widget = forms.HiddenInput()
+            self.fields['existing_person'].required = False
+            self.fields['copy_details'].label = (
+                "Allow my profile details (name, email, address, phone, birth date) "
+                "to be copied to the new member record"
+            )
+
+        self.order_fields(['recipient_username', 'existing_person', 'copy_details', 'expires_at'])
+
+
+class InvitationAcceptForm(forms.Form):
+    """Used by an organization admin when accepting a REQUEST, to optionally
+    link the requester to an existing (unlinked) member record."""
+    existing_person = forms.ModelChoiceField(
+        queryset=Person.objects.none(),
+        required=False,
+        label="Link to existing member record (optional)",
+    )
+
+    def __init__(self, *args, organization_user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['existing_person'].queryset = Person.objects.unlinked_in_org(organization_user)
+        self.fields['existing_person'].empty_label = "-- Create new member record --"

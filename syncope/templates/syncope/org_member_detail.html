@@ -7,9 +7,25 @@
     <a href="{%  url 'syncope:org_member_edit' url_username person.pk %}">EDIT person</a>
     &nbsp;|&nbsp;
     <a href="{% url 'syncope:org_member_delete' url_username person.pk %}" class="btn-danger" style="display: inline-block; text-decoration: none;">Delete Member</a>
+    {% if is_linked and can_unlink %}
+    &nbsp;|&nbsp;
+    <form method="post" action="{% url 'syncope:org_member_unlink' url_username person.pk %}" style="display:inline;" onclick="return confirm('Unlink this member from their account? They will lose access associated with this connection.')">
+        {% csrf_token %}
+        <button type="submit" class="btn-danger" style="width: auto;">Unlink Account</button>
+    </form>
+    {% endif %}
 </p>
 {% else %}
-<p><a href="{%  url 'syncope:org_member_edit' url_username person.pk %}">EDIT person</a></p>
+<p>
+    <a href="{%  url 'syncope:org_member_edit' url_username person.pk %}">EDIT person</a>
+    {% if is_linked and can_unlink %}
+    &nbsp;|&nbsp;
+    <form method="post" action="{% url 'syncope:org_member_unlink' url_username person.pk %}" style="display:inline;" onclick="return confirm('Unlink your account from this organization member record?')">
+        {% csrf_token %}
+        <button type="submit" class="btn-danger" style="width: auto;">Unlink Account</button>
+    </form>
+    {% endif %}
+</p>
 {% endif %}
 
 <h2>{{ person }}</h2>

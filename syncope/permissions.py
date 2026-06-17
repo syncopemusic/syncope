@@ -445,13 +445,36 @@ class AccessControl:
         return Membership.objects.filter(user=url_username)
 
     @classmethod
-    def can_delete_project(cls, auth_user, url_username):
+    def _is_admin_for_org(cls, auth_user, url_username):
         """
-        Check if auth_user can delete a project in the organization.
-        Only ADMIN role can delete projects.
+        Check if auth_user is ADMIN in the organization.
         """
         if not auth_user.is_authenticated:
             return False
 
         roles = cls.get_org_roles(auth_user, url_username)
         return roles.filter(id=Role.ADMIN).exists()
+
+    @classmethod
+    def can_delete_project(cls, auth_user, url_username):
+        """
+        Check if auth_user can delete a project in the organization.
+        Only ADMIN role can delete projects.
+        """
+        return cls._is_admin_for_org(auth_user, url_username)
+
+    @classmethod
+    def can_manage_invite(cls, auth_user, url_username):
+        """
+        Check if auth_user can accept or create an invitation in the organization.
+        Only ADMIN role can accept or create invitations.
+        """
+        return cls._is_admin_for_org(auth_user, url_username)
+
+    @classmethod
+    def is_person_owner(cls, auth_user, person):
+        """
+        Check if auth_user owns the given person record.
+        A person is owned by a user if its owner field points to that user.
+        """
+        return person.owner_id is not None and person.owner.user_id == auth_user.id

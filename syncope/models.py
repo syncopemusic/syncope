@@ -231,6 +231,14 @@ class PersonQuerySet(models.QuerySet):
             Q(membership_period__ended_at__isnull=True)
         ).distinct()
 
+    def unlinked_in_org(self, org_user):
+        """Filter unlinked persons in an organization (can be linked to invitations/requests)."""
+        return self.filter(
+            memberships__user=org_user,
+            owner__isnull=True,
+            user__isnull=True,
+        ).distinct().order_by('-created_at')
+
 
 class Skill(models.Model):
     """
@@ -315,6 +323,10 @@ class Person(models.Model):
                 name="unique_user_per_person"
             )
         ]
+
+    def is_unlinked(self):
+        """Check if this person record can be linked to an invitation (is not already linked)."""
+        return self.owner_id is None and self.user_id is None
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
@@ -755,7 +767,7 @@ class Share(models.Model):
 
 class ShareVisit(models.Model):
     id = models.AutoField(primary_key=True)
-    share = models.ForeignKey(Share, on_delete=models.PROTECT, related_name="share_visits", db_index=True)
+    share = models.ForeignKey(Share, on_delete=models.CASCADE, related_name="share_visits", db_index=True)
     visited_at = models.DateTimeField(auto_now_add=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
 
@@ -768,3 +780,59 @@ def create_share_for_resource(sender, instance, created, **kwargs):
             resource=instance,
             defaults={"id": generate_share_id()},
         )
+
+
+class InvitationType(models.Model):
+    INVITE = 1
+    REQUEST = 2
+
+    name = models.CharField("invitation type", max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class InvitationStatus(models.Model):
+    PENDING = 1
+    APPROVED = 2
+    REJECTED = 3
+    WITHDRAWN = 4
+
+    name = models.CharField("invitation status", max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Invitation(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    invitation_type = models.ForeignKey(InvitationType, on_delete=models.PROTECT, related_name="invitations")
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="sent_invitations")
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="received_invitations")
+    status = models.ForeignKey(InvitationStatus, on_delete=models.PROTECT, related_name="invitations", default=InvitationStatus.PENDING)
+
+    admin_involved = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="invitations_admin_involved"
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    existing_person = models.ForeignKey(Person, on_delete=models.SET_NULL, null=True, blank=True, related_name="existing_persons")
+    copy_details = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sender", "recipient"],
+                condition=models.Q(status_id=InvitationStatus.PENDING),
+                name="unique_pending_invitation_per_pair"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.invitation_type}: {self.sender} → {self.recipient} ({self.status})"

@@ -6,8 +6,9 @@ from .views.event import EventCreateView, EventDetailView, EventUpdateView, Even
 from .views.event import event_add_song, event_add_attendance
 from .views.home import HomeView, SkillListAndCreateView
 from .views.importing import ImportHubView, ImportDashboardView, CombineProjectsView
+from .views.invitation import InvitationListView, InvitationCreateView, InvitationUpdateView
 from .views.organization import OrganizationCreateView, OrganizationDashboard
-from .views.person import PersonUpdateView, OrgMemberAddView, OrgMemberEditView, OrgMemberListView, OrgMemberDetailView, OrgMemberDeleteView
+from .views.person import PersonUpdateView, OrgMemberAddView, OrgMemberEditView, OrgMemberListView, OrgMemberDetailView, OrgMemberDeleteView, org_member_unlink
 from .views.project import ProjectDeleteView, ProjectCreateView, ProjectDetailView, ProjectUpdateView, ProjectListView
 from .views.project import project_add_guest, project_add_event, project_remove_event, project_remove_song, project_add_song, project_remove_guest
 from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongUpdateView, SongQuoteView
@@ -23,6 +24,9 @@ urlpatterns = [
     path("signup/", SignUp.as_view(), name="signup"),
 
     path("<str:username>/person/update/", PersonUpdateView.as_view(), name="person_update"),
+    path("<str:username>/invitations/", InvitationListView.as_view(), name="invitation_list"),
+    path("<str:username>/invitations/new/", InvitationCreateView.as_view(), name="invitation_new"),
+    path("<str:username>/invitations/<int:pk>/", InvitationUpdateView.as_view(), name="invitation_detail"),
     path("logout/", UserLogoutView.as_view(), name="logout"),
     path("login/", UserLoginView.as_view(), name="login"),
 
@@ -56,6 +60,7 @@ urlpatterns = [
     path("<str:username>/members/<int:pk>/", OrgMemberDetailView.as_view(), name="org_member_detail"),
     path("<str:username>/members/<int:pk>/edit/", OrgMemberEditView.as_view(), name="org_member_edit"),
     path("<str:username>/members/<int:pk>/delete/", OrgMemberDeleteView.as_view(), name="org_member_delete"),
+    path("<str:username>/members/<int:pk>/unlink/", org_member_unlink, name="org_member_unlink"),
 
     path("<str:username>/songs/", SongListView.as_view(), name="song_list"),
     path("<str:username>/songs/new/", SongCreateView.as_view(), name="song_new"),
