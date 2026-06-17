@@ -95,7 +95,7 @@ class OrganizationForm(forms.ModelForm):
 
 
 class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
-    VALID_PRESETS = {'composer', 'poet', 'translator'}
+    VALID_PRESETS = {'composer', 'poet', 'translator', 'arranger'}
     # Person
     first_name = forms.CharField(max_length=100)
     last_name = forms.CharField(max_length=100)
@@ -183,6 +183,13 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
                 self.initial['roles'] = [external_role.id]
                 self.initial["skills"] = [translator_skill.id]
 
+        elif preset == 'arranger':
+            arranger_skill = Skill.objects.filter(title__iexact="arranger").first()
+            external_role = Role.objects.filter(title__iexact="external").first()
+            if arranger_skill and external_role:
+                self.initial['roles'] = [external_role.id]
+                self.initial["skills"] = [arranger_skill.id]
+
 
 
 class QuoteForm(forms.ModelForm):
@@ -206,8 +213,10 @@ class SongForm(forms.ModelForm):
             "internal_id",
             "title",
             "composer",
+            "arranger",
             "poet",
             "translator",
+            "origin",
             "number_of_pages",
             "number_of_copies",
             "year",
@@ -227,6 +236,7 @@ class SongForm(forms.ModelForm):
 
         if user:
             self.fields['composer'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.COMPOSER)
+            self.fields['arranger'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.ARRANGER)
             self.fields['poet'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.POET)
             self.fields['translator'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.TRANSLATOR)
 

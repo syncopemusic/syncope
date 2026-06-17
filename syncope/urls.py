@@ -61,6 +61,8 @@ urlpatterns = [
          OrgMemberAddView.as_view(),{'preset': 'poet'},name="org_member_new_poet"),
     path("<str:username>/members/new-translator/",
          OrgMemberAddView.as_view(),{'preset': 'translator'},name="org_member_new_translator"),
+    path("<str:username>/members/new-arranger/",
+         OrgMemberAddView.as_view(),{'preset': 'arranger'},name="org_member_new_arranger"),
     path("<str:username>/members/<int:pk>/", OrgMemberDetailView.as_view(), name="org_member_detail"),
     path("<str:username>/members/<int:pk>/edit/", OrgMemberEditView.as_view(), name="org_member_edit"),
     path("<str:username>/members/<int:pk>/delete/", OrgMemberDeleteView.as_view(), name="org_member_delete"),

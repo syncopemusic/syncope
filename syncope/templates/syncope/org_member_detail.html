@@ -105,6 +105,23 @@
 </table>
 {% endif %}
 
+<!-- Arrangers -->
+{% if arranged_songs %}
+<h3>Arranged Songs</h3>
+<table>
+  <tr>
+    <th></th>
+    <th>Title</th>
+  </tr>
+  {% for song in arranged_songs %}
+  <tr>
+    <td>{{ forloop.counter }}</td>
+    <td><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
 <!-- Translators -->
 {% if translation_pairs %}
 <h3>Translations</h3>

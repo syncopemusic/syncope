@@ -46,6 +46,14 @@
             -
         {% endif %}
     </td></tr>
+    <tr><th>Arranger</th><td>
+        {% if song.arranger %}
+            <a href="{%  url 'syncope:org_member_detail' url_username song.arranger.pk %}">{{ song.arranger }}</a>
+        {% else %}
+            -
+        {% endif %}
+    </td></tr>
+    <tr><th>Origin</th><td>{{ song.origin|default:"-" }}</td></tr>
     <tr><th>Type</th><td>{{ song.group }}</td></tr>
     <tr><th>Year</th><td>{{ song.year|default:"-" }}</td></tr>
     <tr><th>Voices</th><td>{{ song.number_of_voices|default:"-" }}</td></tr>

@@ -19,6 +19,10 @@
         <a href="{%  url 'syncope:org_member_new_translator' url_username %}">
             + Translator
         </a>
+
+        <a href="{%  url 'syncope:org_member_new_arranger' url_username %}">
+            + Arranger
+        </a>
 </p>
 {% endif %}
 {% if url_username == user.username %}
@@ -35,6 +39,10 @@
 
         <a href="{%  url 'syncope:org_member_new_translator' user.username %}">
             + Add Translator
+        </a>
+
+        <a href="{%  url 'syncope:org_member_new_arranger' user.username %}">
+            + Add Arranger
         </a>
 
     </p>
