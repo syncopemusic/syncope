@@ -15,6 +15,12 @@ class CustomUserCreationForm(UserCreationForm):
         model = CustomUser
         fields = ("email", "username",)
 
+    def clean_email(self):
+        email = self.cleaned_data.get("email")
+        if email and CustomUser.objects.filter(email=email).exists():
+            raise forms.ValidationError("An account with this email already exists.")
+        return email
+
 
 class CustomUserChangeForm(UserChangeForm):
     class Meta:
@@ -80,6 +86,12 @@ class OrganizationForm(forms.ModelForm):
         widgets = {
             "address": forms.Textarea(attrs={"rows": 4}),
         }
+
+    def clean_email(self):
+        email = self.cleaned_data.get("email")
+        if email and CustomUser.objects.filter(email=email).exists():
+            raise forms.ValidationError("An account with this email already exists.")
+        return email
 
 
 class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
