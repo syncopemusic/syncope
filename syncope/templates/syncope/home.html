@@ -9,7 +9,7 @@
   {% if person %}
     <p>{{ person.first_name }} {{ person.last_name }}</p>
 <p><a href="{%  url 'syncope:org_new' %}">Create organization</a></p>
-{% if memberships %}
+{% if org_memberships %}
 
 <p>Your memberships:</p>
         <ul>

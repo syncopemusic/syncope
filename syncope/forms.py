@@ -77,6 +77,9 @@ class OrganizationForm(forms.ModelForm):
     class Meta:
         model = Organization
         fields = ["name", "email", "address"]
+        widgets = {
+            "address": forms.Textarea(attrs={"rows": 4}),
+        }
 
 
 class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
