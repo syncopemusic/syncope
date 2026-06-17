@@ -24,7 +24,7 @@
 
 <table>
     <tr>
-        <th><a href="?sort=id{% if current_sort == 'id' and not reverse %}&reverse=true{% endif %}">#{% if current_sort == 'id' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th>#</th>
         <th>🔗</th>
         <th><a href="?sort=date{% if current_sort == 'date' and not reverse %}&reverse=true{% endif %}">Date{% if current_sort == 'date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th><a href="?sort=type{% if current_sort == 'type' and not reverse %}&reverse=true{% endif %}">Type{% if current_sort == 'type' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>

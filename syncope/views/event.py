@@ -440,7 +440,6 @@ class EventListView(ListView):
             reverse = True
 
         sort_field_map = {
-            'id': 'pk',
             'date': 'started_at',
             'type': 'event_type__name',
             'project': 'project__title',

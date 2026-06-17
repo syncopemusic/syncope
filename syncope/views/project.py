@@ -124,7 +124,6 @@ class ProjectListView(LoginRequiredMixin, ListView):
             reverse = True
 
         sort_field_map = {
-            'id': 'pk',
             'title': 'title',
             'start_date': 'start_date',
             'end_date': 'end_date',
