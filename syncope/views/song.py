@@ -56,7 +56,10 @@ class SongListView(SongOwnerMixin, ListView):
                     Q(title__icontains=q) |
                     Q(composer__last_name__icontains=q) |
                     Q(poet__last_name__icontains=q) |
-                    Q(keywords__icontains=q)
+                    Q(arranger__last_name__icontains=q) |
+                    Q(origin__icontains=q) |
+                    Q(keywords__icontains=q) |
+                    Q(languagecode__language_code__icontains=q)
                 ).distinct()
 
         # Handle sorting
@@ -68,6 +71,9 @@ class SongListView(SongOwnerMixin, ListView):
             'title': 'title',
             'composer': 'composer__last_name',
             'poet': 'poet__last_name',
+            'arranger': 'arranger__last_name',
+            'origin': 'origin',
+            'languagecode': 'languagecode__language_code',
         }
 
         sort_field = sort_field_map.get(sort, 'internal_id')
@@ -95,7 +101,7 @@ class SongListView(SongOwnerMixin, ListView):
                 distinct=True,
             ),
         )
-        return qs.order_by(sort_field).select_related('composer', 'poet').prefetch_related('song_resource__resource')
+        return qs.order_by(sort_field).select_related('composer', 'poet', 'arranger', 'languagecode').prefetch_related('song_resource__resource')
 
 
     def get_context_data(self, **kwargs):
@@ -115,6 +121,9 @@ class SongDetailView(SongOwnerMixin, DetailView):
     template_name = "syncope/song_detail.html"
     context_object_name = "song"
     permission_check_method = AccessControl.can_view_song
+
+    def get_queryset(self):
+        return Song.objects.filter(user=self.owner_user).select_related('languagecode')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

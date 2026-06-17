@@ -433,6 +433,14 @@ class Song(models.Model):
         null=True,
         blank=True
     )
+    arranger = models.ForeignKey(
+        Person,
+        on_delete=models.SET_NULL,
+        related_name="arranged_songs",
+        limit_choices_to={'person_skill__skill_id': Skill.ARRANGER},
+        null=True,
+        blank=True
+    )
     poet = models.ForeignKey(
         Person,
         on_delete=models.SET_NULL,
@@ -449,6 +457,8 @@ class Song(models.Model):
         null=True,
         blank=True
     )
+
+    origin = models.CharField("Origin", max_length=150, blank=True, null=True)
 
     year = models.IntegerField("year of creation", blank=True, null=True)
     ensemble = models.CharField("ensemble", max_length=250, blank=True, null=True)

@@ -6,7 +6,7 @@
 <h2>Song Archive</h2>
 
 <form method="get" style="display:flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
-    <input type="text" name="q" value="{{ q }}" placeholder="Search by ID, title, composer, poet, keywords" style="flex: 1;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by ID, title, composer, arranger, poet, origin, keywords, language" style="flex: 1;">
     <button type="submit">Search</button>
     {% if q %}<a href="?">Clear</a>{% endif %}
 </form>
@@ -43,6 +43,21 @@
                     Poet {% if current_sort == 'poet' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
+            <th>
+                <a href="?q={{ q }}&sort=arranger{% if current_sort == 'arranger' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+                    Arranger {% if current_sort == 'arranger' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+                </a>
+            </th>
+            <th>
+                <a href="?q={{ q }}&sort=origin{% if current_sort == 'origin' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+                    Origin {% if current_sort == 'origin' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+                </a>
+            </th>
+            <th>
+                <a href="?q={{ q }}&sort=languagecode{% if current_sort == 'languagecode' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+                    Lang {% if current_sort == 'languagecode' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+                </a>
+            </th>
 <!--            <th>Keywords</th>-->
             <th>Copies</th>
             <th></th>
@@ -73,6 +88,11 @@
             <td>
                 {% include "syncope/person_link.html" with person=song.poet %}
             </td>
+            <td>
+                {% include "syncope/person_link.html" with person=song.arranger %}
+            </td>
+            <td>{{ song.origin|default:"-" }}</td>
+            <td>{{ song.languagecode.language_code|default:"-" }}</td>
 <!--            <td>{{ song.keywords|default:"-" }}</td>-->
             <td>{{ song.number_of_copies|default:"-" }}</td>
             <td><a href="{%  url 'syncope:song_update' url_username song.pk %}">Edit</a></td>

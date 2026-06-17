@@ -23,6 +23,8 @@ POET_LAST_NAME_KEY = "poet_last_name"
 POET_FIRST_NAME_KEY = "poet_first_name"
 TRANSLATOR_LAST_NAME_KEY = "translator_last_name"
 TRANSLATOR_FIRST_NAME_KEY = "translator_first_name"
+ARRANGER_LAST_NAME_KEY = "arranger_last_name"
+ARRANGER_FIRST_NAME_KEY = "arranger_first_name"
 YEAR_KEY = "year"
 ENSEMBLE_KEY = "ensemble"
 NUMBER_OF_PAGES_KEY = "number_of_pages"
@@ -42,6 +44,8 @@ ALLOWED_SONG_KEYS = [
     POET_FIRST_NAME_KEY,
     TRANSLATOR_LAST_NAME_KEY,
     TRANSLATOR_FIRST_NAME_KEY,
+    ARRANGER_LAST_NAME_KEY,
+    ARRANGER_FIRST_NAME_KEY,
     YEAR_KEY,
     ENSEMBLE_KEY,
     NUMBER_OF_PAGES_KEY,
@@ -111,6 +115,8 @@ def import_songs(org_user, request, file_path, delimiter=";"):
             poet_first_name = (row.get(POET_FIRST_NAME_KEY) or '').strip()
             translator_last_name = (row.get(TRANSLATOR_LAST_NAME_KEY) or '').strip()
             translator_first_name = (row.get(TRANSLATOR_FIRST_NAME_KEY) or '').strip()
+            arranger_last_name = (row.get(ARRANGER_LAST_NAME_KEY) or '').strip()
+            arranger_first_name = (row.get(ARRANGER_FIRST_NAME_KEY) or '').strip()
             year_value = (row.get(YEAR_KEY) or '').strip()
             ensemble_value = (row.get(ENSEMBLE_KEY) or '').strip()
             number_of_pages_value = (row.get(NUMBER_OF_PAGES_KEY) or '').strip()
@@ -130,6 +136,9 @@ def import_songs(org_user, request, file_path, delimiter=";"):
                 translator = _get_or_create_person_with_skill(
                     org_user, translator_last_name, translator_first_name, Skill.TRANSLATOR, today
                 )
+                arranger = _get_or_create_person_with_skill(
+                    org_user, arranger_last_name, arranger_first_name, Skill.ARRANGER, today
+                )
 
                 languagecode = None
                 if language_code_value:
@@ -142,6 +151,7 @@ def import_songs(org_user, request, file_path, delimiter=";"):
                     composer=composer,
                     poet=poet,
                     translator=translator,
+                    arranger=arranger,
                     number_of_pages=number_of_pages_value or None,
                     number_of_copies=number_of_copies_value or None,
                     number_of_voices=number_of_voices_value or None,

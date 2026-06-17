@@ -320,6 +320,11 @@ class OrgMemberDetailView(DetailView):
         if written_songs.exists():
             context["written_songs"] = written_songs
 
+        # Arranged songs
+        arranged_songs = person.arranged_songs.all()
+        if arranged_songs.exists():
+            context["arranged_songs"] = arranged_songs
+
         # Translation pairs with song counts
         translations = LyricsTranslation.objects.filter(
             translator=person
