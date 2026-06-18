@@ -235,10 +235,16 @@ class SongForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if user:
-            self.fields['composer'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.COMPOSER).order_by('-created_at')
-            self.fields['arranger'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.ARRANGER).order_by('-created_at')
-            self.fields['poet'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.POET).order_by('-created_at')
-            self.fields['translator'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.TRANSLATOR).order_by('-created_at')
+            person_field_skills = {
+                'composer': Skill.COMPOSER,
+                'arranger': Skill.ARRANGER,
+                'poet': Skill.POET,
+                'translator': Skill.TRANSLATOR,
+            }
+            for field_name, skill_id in person_field_skills.items():
+                self.fields[field_name].queryset = Person.objects.for_user_with_skill(
+                    user=user, skill_id=skill_id
+                ).order_by('-created_at')
 
 
 class ProjectForm(forms.ModelForm):

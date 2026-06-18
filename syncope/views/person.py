@@ -23,10 +23,11 @@ from syncope.models import CustomUser, Organization, Person, Membership, Role, S
 from syncope.models import Attendance, AttendanceType, EventType, Voice, Instrument,  Project, LyricsTranslation, PersonResource, Resource
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param
+from syncope.mixins import DraftMixin
 
 
 @method_decorator(login_required, name='dispatch')
-class PersonUpdateView(UpdateView):
+class PersonUpdateView(DraftMixin, UpdateView):
     template_name = "syncope/person_form.html"
     form_class = PersonForm
     context_object_name = "person_create"
@@ -431,7 +432,7 @@ class OrgMemberDetailView(DetailView):
 
 
 @method_decorator(login_required, name='dispatch')
-class OrgMemberAddView( FormView):  # OrgMemberMixin,
+class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
     """Add new person."""
     template_name = "syncope/org_member_form.html"
     form_class = OrgMemberForm
@@ -633,7 +634,7 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
 
 
 @method_decorator(login_required, name='dispatch')
-class OrgMemberEditView( FormView):  # OrgMemberMixin,
+class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
     """Edit existing member. Admin can edit everybody, user can edit its own."""
     template_name = "syncope/org_member_form.html"
     form_class = OrgMemberForm

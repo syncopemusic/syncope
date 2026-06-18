@@ -20,6 +20,7 @@ from syncope.forms import EventForm, EventSongFormSet, AttendanceFormSet, AddAtt
 from syncope.forms import AddSongToEventForm, EventResourceFormSet, EventSongResourceFormSet
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param
+from syncope.mixins import DraftMixin
 
 
 class SelectPersonInitialMixin:
@@ -42,7 +43,7 @@ class SelectPersonInitialMixin:
 
 
 @method_decorator(login_required, name='dispatch')
-class EventCreateView(CreateView):
+class EventCreateView(DraftMixin, CreateView):
     """Step 1: Create event with basic info only"""
     model = Event
     form_class = EventForm
@@ -112,7 +113,7 @@ class EventCreateView(CreateView):
         })
 
 @method_decorator(login_required, name='dispatch')
-class EventUpdateView(SelectPersonInitialMixin, UpdateView):
+class EventUpdateView(DraftMixin, SelectPersonInitialMixin, UpdateView):
     model = Event
     form_class = EventForm
     template_name = 'syncope/event_update.html'
@@ -257,17 +258,18 @@ class EventUpdateView(SelectPersonInitialMixin, UpdateView):
         context['search_q'] = search_q
         context['song_search_q'] = song_search_q
         presets = self._get_initial_with_presets()
+        preset_initial = {k: presets[k] for k in ['person', 'song'] if k in presets}
         context['add_form'] = AddAttendanceForm(
             org_user=self.customuser,
             event=event,
             search_q=search_q,
-            initial={'person': presets['person']} if 'person' in presets else {},
+            initial={'person': preset_initial.get('person')} if 'person' in preset_initial else {},
         ) if self.is_admin else None
         context['add_song_form'] = AddSongToEventForm(
             org_user=self.customuser,
             event=event,
             search_q=song_search_q,
-            initial={'song': presets['song']} if 'song' in presets else {},
+            initial={'song': preset_initial.get('song')} if 'song' in preset_initial else {},
         ) if self.is_admin else None
         return context
 

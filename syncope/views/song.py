@@ -13,7 +13,7 @@ from syncope.models import Song, EventType
 from syncope.models import Event, SongResource, Resource, EventSongResource
 from syncope.forms import  SongForm
 from syncope.forms import  QuoteFormSet, LyricsTranslationFormSet, SongResourceFormSet
-from syncope.mixins import  SongOwnerMixin
+from syncope.mixins import  SongOwnerMixin, DraftMixin
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param
 
@@ -182,7 +182,7 @@ class SelectPersonInitialMixin:
 
 
 @method_decorator(login_required, name='dispatch')
-class SongCreateView(SongOwnerMixin, SelectPersonInitialMixin, CreateView):
+class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, CreateView):
     form_class = SongForm
     template_name = "syncope/song_form.html"
     permission_check_method = AccessControl.can_manage_song
@@ -273,7 +273,7 @@ class SongCreateView(SongOwnerMixin, SelectPersonInitialMixin, CreateView):
 
 
 @method_decorator(login_required, name='dispatch')
-class SongUpdateView(SongOwnerMixin, SelectPersonInitialMixin, UpdateView):
+class SongUpdateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, UpdateView):
     form_class = SongForm
     template_name = "syncope/song_form.html"
     permission_check_method = AccessControl.can_manage_song

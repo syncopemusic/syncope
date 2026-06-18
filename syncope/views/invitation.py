@@ -14,6 +14,7 @@ from syncope.models import (
     Person, Membership, MembershipPeriod, PersonRole, Role
 )
 from syncope.permissions import AccessControl
+from syncope.mixins import DraftMixin
 
 
 class SelectPersonInitialMixin:
@@ -103,7 +104,7 @@ class InvitationListView(InvitationAccessMixin, ListView):
 
 # 2. Trigger: create invite
 @method_decorator(login_required, name="dispatch")
-class InvitationCreateView(InvitationAccessMixin, SelectPersonInitialMixin, CreateView):
+class InvitationCreateView(DraftMixin, InvitationAccessMixin, SelectPersonInitialMixin, CreateView):
     model = Invitation
     form_class = InvitationForm
     template_name = "syncope/invitation_form.html"

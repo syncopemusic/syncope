@@ -13,6 +13,8 @@ from datetime import timedelta
 from syncope.models import CustomUser, PollAttendance, Poll, PollPerson, PollEvent, PollAttendanceType, Person, Role
 from syncope.forms import PollCreateForm, PollPersonForm, PollAttendanceForm, PollEventForm, PollBulkImportForm
 from syncope.permissions import AccessControl
+from syncope.mixins import DraftMixin
+from syncope.utils import save_draft, get_draft, clear_draft
 
 
 class SelectPersonInitialMixin:
@@ -83,7 +85,7 @@ class PollListView(ListView):
 
 
 @method_decorator(login_required, name="dispatch")
-class PollCreateUpdateView(PollAdminMixin, UpdateView):
+class PollCreateUpdateView(DraftMixin, PollAdminMixin, UpdateView):
     """Creates or updates basic poll details. Requires title, description, user."""
     model = Poll
     form_class = PollCreateForm
@@ -244,6 +246,7 @@ class PollEventView(PollAdminMixin, View):
                 'location': last_event.location,
                 'details': last_event.details,
             })
+        initial.update(get_draft(request, "PollEventView_new"))
         form = PollEventForm(initial=initial)
         return render(request, self.template_name, {
             'form': form,
@@ -257,6 +260,7 @@ class PollEventView(PollAdminMixin, View):
         form = PollEventForm(request.POST)
         if form.is_valid():
             event = form.save()
+            clear_draft(request, "PollEventView_new")
             date_str = event.started_at.strftime('%d %b')
             time_str = event.started_at.strftime('%H:%M')
             end_time_str = event.ended_at.strftime('%H:%M') if event.ended_at else ''
@@ -269,6 +273,7 @@ class PollEventView(PollAdminMixin, View):
                 msg += f" - {event.details}"
             messages.success(request, msg)
             return redirect('syncope:poll_events', username=username, pk=pk)
+        save_draft(request, "PollEventView_new", list(form.fields.keys()))
         return render(request, self.template_name, {
             'form': form,
             'poll': self.poll,
@@ -278,7 +283,7 @@ class PollEventView(PollAdminMixin, View):
 
 
 @method_decorator(login_required, name="dispatch")
-class PollEventUpdateView(PollAdminMixin, UpdateView):
+class PollEventUpdateView(DraftMixin, PollAdminMixin, UpdateView):
     """Edit an existing poll event slot."""
     model = PollEvent
     form_class = PollEventForm

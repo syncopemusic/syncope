@@ -18,6 +18,7 @@ from syncope.forms import  AddEventToProjectForm
 from syncope.forms import AddSongToProjectForm, AddGuestToProjectForm, ProjectResourceFormSet
 from syncope.utils import resource_icon_list
 from syncope.permissions import AccessControl
+from syncope.mixins import DraftMixin
 
 
 class SelectPersonInitialMixin:
@@ -188,7 +189,7 @@ class ProjectListView(LoginRequiredMixin, ListView):
 
 
 @method_decorator(login_required, name="dispatch")
-class ProjectCreateView(LoginRequiredMixin, CreateView):
+class ProjectCreateView(DraftMixin, LoginRequiredMixin, CreateView):
     model = Project
     form_class = ProjectForm
     template_name = 'syncope/project_form.html'
@@ -222,7 +223,7 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
 
 
 @method_decorator(login_required, name="dispatch")
-class ProjectUpdateView(LoginRequiredMixin, SelectPersonInitialMixin, UpdateView):
+class ProjectUpdateView(DraftMixin, LoginRequiredMixin, SelectPersonInitialMixin, UpdateView):
     model = Project
     form_class = ProjectForm
     template_name = 'syncope/project_update.html'
