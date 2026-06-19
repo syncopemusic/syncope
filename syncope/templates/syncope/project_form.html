@@ -7,6 +7,7 @@
 <p><small>You can add other details after initial save.</small></p>
 <form method="post">
     {% csrf_token %}
+    <input type="hidden" name="draft_key" value="{{ draft_key }}">
 
     <div class="form-group">
         <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>

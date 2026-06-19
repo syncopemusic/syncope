@@ -160,55 +160,6 @@
         });
       });
     </script>
-
-    <script>
-      (function () {
-        var form = document.querySelector('form[method="post"]');
-        if (!form) {
-          console.log('[autosave] No form found');
-          return;
-        }
-        var key = 'autosave:' + location.pathname;
-        console.log('[autosave] Initialized for', key);
-
-        var saved = null;
-        try {
-          saved = JSON.parse(sessionStorage.getItem(key) || 'null');
-          if (saved) {
-            console.log('[autosave] Restoring', saved);
-            Object.keys(saved).forEach(function (name) {
-              var el = form.querySelector('[name="' + name + '"]');
-              if (el && !el.value) {
-                el.value = saved[name];
-                console.log('[autosave] Restored field', name);
-              }
-            });
-          }
-        } catch (e) {
-          console.error('[autosave] Error restoring:', e);
-        }
-
-        var timer;
-        form.addEventListener('input', function () {
-          clearTimeout(timer);
-          timer = setTimeout(function () {
-            var data = {};
-            new FormData(form).forEach(function (val, name) {
-              if (name !== 'csrfmiddlewaretoken') data[name] = val;
-            });
-            console.log('[autosave] Saving', data);
-            try { sessionStorage.setItem(key, JSON.stringify(data)); } catch (e) {
-              console.error('[autosave] Error saving:', e);
-            }
-          }, 500);
-        });
-
-        form.addEventListener('submit', function () {
-          console.log('[autosave] Form submitted, clearing');
-          try { sessionStorage.removeItem(key); } catch (e) {}
-        });
-      })();
-    </script>
 {{ form.media }}
 </body>
 </html>

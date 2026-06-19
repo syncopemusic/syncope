@@ -7,6 +7,7 @@
 
 <form method="post">
     {% csrf_token %}
+    <input type="hidden" name="draft_key" value="{{ draft_key }}">
 
     <div class="form-group">
         <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
@@ -69,12 +70,9 @@
         <tbody>
             {% for event in events %}
             <tr style="border-bottom: 1px solid #eee;">
-
                 <td style="padding: 8px;">{{ event.name }}{% if event.resource_count > 0 %} - 🔗{% endif %}
             {% if event.event_song_resource_count > 0 %}🎵{% endif %}</td>
-
                 <td style="padding: 8px;">{% if event.started_at %}<span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="date-time">{{ event.started_at|date:"M d, Y H:i" }}</span>{% if event.ended_at %} - <span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="time">{{ event.ended_at|date:"H:i" }}</span>{% endif %}{% else %}-{% endif %}</td>
-
                 <td style="text-align: center; padding: 8px;">
                     {% if is_admin %}
                     <form method="post" action="{%  url 'syncope:project_remove_event' url_username form.instance.pk event.pk %}" style="display: inline;">
@@ -90,30 +88,27 @@
 </div>
 {% endif %}
 
-<div>
-    <h4>Add Event to Project</h4>
-    <a href="{% url 'syncope:event_new' url_username %}?project={{ form.instance.pk }}&next={{ request.get_full_path|urlencode }}">
-        <button type="button">+ Create New Event</button>
-    </a>
+<p>
+    <a href="{% url 'syncope:event_new' url_username %}?project={{ form.instance.pk }}&next={{ request.get_full_path|urlencode }}">+ Create New Event</a>
+</p>
 
-    <form method="get" style="margin: 10px 0;">
-        <input type="text" name="event_q" value="{{ event_search_q }}" placeholder="Search by event name">
-        <button type="submit">Search</button>
-        {% if event_search_q %}<a href="{%  url 'syncope:project_update' url_username form.instance.pk %}">Clear</a>{% endif %}
-    </form>
+<form method="get" style="margin: 10px 0;">
+    <input type="text" name="event_q" value="{{ event_search_q }}" placeholder="Search by event name">
+    <button type="submit">Search</button>
+    {% if event_search_q %}<a href="{%  url 'syncope:project_update' url_username form.instance.pk %}">Clear</a>{% endif %}
+</form>
 
-    {% if add_event_form.fields.event.queryset.exists %}
-    <form method="post" action="{%  url 'syncope:project_new_event' url_username form.instance.pk %}">
-        {% csrf_token %}
-        <div>{{ add_event_form.event }}</div>
-        <button type="submit">Add Event to Project</button>
-    </form>
-    {% elif event_search_q %}
-        <p>No matching events found.</p>
-    {% else %}
-        <p>No events available to add.</p>
-    {% endif %}
-</div>
+{% if add_event_form.fields.event.queryset.exists %}
+<form method="post" action="{%  url 'syncope:project_new_event' url_username form.instance.pk %}">
+    {% csrf_token %}
+    <div>{{ add_event_form.event }}</div>
+    <button type="submit">Add Event to Project</button>
+</form>
+{% elif event_search_q %}
+    <p>No matching events found.</p>
+{% else %}
+    <p>No events available to add.</p>
+{% endif %}
 
 <h3 id="songs-section">Project Songs</h3>
 
@@ -150,30 +145,27 @@
 </div>
 {% endif %}
 
-<div style="margin-bottom: 20px;">
-    <h4>Add Song to Project</h4>
-    <a href="{% url 'syncope:song_new' url_username %}?next={{ request.get_full_path|urlencode }}">
-        <button type="button">+ Create New Song to Archive</button>
-    </a>
+<p>
+    <a href="{% url 'syncope:song_new' url_username %}?next={{ request.get_full_path|urlencode }}">+ Create New Song to Archive</a>
+</p>
 
-    <form method="get" style="margin: 10px 0;">
-        <input type="text" name="song_q" value="{{ song_search_q }}" placeholder="Search by title, composer, or ID">
-        <button type="submit">Search</button>
-        {% if song_search_q %}<a href="{%  url 'syncope:project_update' url_username form.instance.pk %}">Clear</a>{% endif %}
-    </form>
+<form method="get" style="margin: 10px 0;">
+    <input type="text" name="song_q" value="{{ song_search_q }}" placeholder="Search by title, composer, or ID">
+    <button type="submit">Search</button>
+    {% if song_search_q %}<a href="{%  url 'syncope:project_update' url_username form.instance.pk %}">Clear</a>{% endif %}
+</form>
 
-    {% if add_song_form.fields.song.queryset.exists %}
-    <form method="post" action="{%  url 'syncope:project_new_song' url_username form.instance.pk %}">
-        {% csrf_token %}
-        <div>{{ add_song_form.song }}</div>
-        <button type="submit">Add Song to Project</button>
-    </form>
-    {% elif song_search_q %}
-        <p>No matching songs found.</p>
-    {% else %}
-        <p>No songs available to add.</p>
-    {% endif %}
-</div>
+{% if add_song_form.fields.song.queryset.exists %}
+<form method="post" action="{%  url 'syncope:project_new_song' url_username form.instance.pk %}">
+    {% csrf_token %}
+    <div>{{ add_song_form.song }}</div>
+    <button type="submit">Add Song to Project</button>
+</form>
+{% elif song_search_q %}
+    <p>No matching songs found.</p>
+{% else %}
+    <p>No songs available to add.</p>
+{% endif %}
 
 <h3 id="guests-section">Project Guests</h3>
 
@@ -206,29 +198,26 @@
 </div>
 {% endif %}
 
-<div>
-    <h4>Add Guest to Project</h4>
-    <a href="{% url 'syncope:org_member_new' url_username %}?next={{ request.get_full_path|urlencode }}">
-        <button type="button">+ Create New Person</button>
-    </a>
+<p>
+    <a href="{% url 'syncope:org_member_new' url_username %}?next={{ request.get_full_path|urlencode }}">+ Create New Person</a>
+</p>
 
-    <form method="get" style="margin: 10px 0;">
-        <input type="text" name="guest_q" value="{{ guest_search_q }}" placeholder="Search by name">
-        <button type="submit">Search</button>
-        {% if guest_search_q %}<a href="{%  url 'syncope:project_update' url_username form.instance.pk %}">Clear</a>{% endif %}
-    </form>
+<form method="get" style="margin: 10px 0;">
+    <input type="text" name="guest_q" value="{{ guest_search_q }}" placeholder="Search by name">
+    <button type="submit">Search</button>
+    {% if guest_search_q %}<a href="{%  url 'syncope:project_update' url_username form.instance.pk %}">Clear</a>{% endif %}
+</form>
 
-    {% if add_guest_form.fields.guest.queryset.exists %}
-    <form method="post" action="{%  url 'syncope:project_new_guest' url_username form.instance.pk %}">
-        {% csrf_token %}
-        <div>{{ add_guest_form.guest }}</div>
-        <button type="submit">Add Guest to Project</button>
-    </form>
-    {% elif guest_search_q %}
-        <p>No matching guests found.</p>
-    {% else %}
-        <p>No guests available to add.</p>
-    {% endif %}
-</div>
+{% if add_guest_form.fields.guest.queryset.exists %}
+<form method="post" action="{%  url 'syncope:project_new_guest' url_username form.instance.pk %}">
+    {% csrf_token %}
+    <div>{{ add_guest_form.guest }}</div>
+    <button type="submit">Add Guest to Project</button>
+</form>
+{% elif guest_search_q %}
+    <p>No matching guests found.</p>
+{% else %}
+    <p>No guests available to add.</p>
+{% endif %}
 
 {% endblock %}

@@ -1,4 +1,3 @@
-# utils.py
 from .models import (Song, Membership, CustomUser, Attendance, AttendanceType,
                      Person, PersonRole, PersonSkill,
                      MembershipPeriod, Role, Skill, ApproximateDate,
@@ -1137,20 +1136,3 @@ def resource_icon_list(resource_qs):
     ]
 
 
-def save_draft(request, key, fields):
-    request.session.setdefault("drafts", {})[key] = {
-        field: request.POST.get(field, "")
-        for field in fields
-    }
-
-    request.session.modified = True
-
-
-def get_draft(request, key):
-    return request.session.get("drafts", {}).get(key, {})
-
-
-def clear_draft(request, key):
-    if "drafts" in request.session and key in request.session["drafts"]:
-        del request.session["drafts"][key]
-        request.session.modified = True

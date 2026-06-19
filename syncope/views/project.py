@@ -18,7 +18,7 @@ from syncope.forms import  AddEventToProjectForm
 from syncope.forms import AddSongToProjectForm, AddGuestToProjectForm, ProjectResourceFormSet
 from syncope.utils import resource_icon_list
 from syncope.permissions import AccessControl
-from syncope.mixins import DraftMixin
+from syncope.views.drafts import DraftMixin, clear_draft
 
 
 class SelectPersonInitialMixin:
@@ -274,6 +274,8 @@ class ProjectUpdateView(DraftMixin, LoginRequiredMixin, SelectPersonInitialMixin
         )
         if rf.is_valid():
             self._save_resources(self.object, rf)
+
+        clear_draft(self.request, self.get_draft_key())
         return redirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):

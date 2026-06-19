@@ -5,15 +5,18 @@
 <h2>New Invitation</h2>
 
 {% if is_org %}
-<p>
-    <a href="{% url 'syncope:org_member_new' url_username %}?next={{ request.get_full_path|urlencode }}">
-        <button type="button">+ Create New Person</button>
-    </a>
-</p>
+<form method="post" style="display:inline;">
+    {% csrf_token %}
+    <input type="hidden" name="draft_key" value="{{ draft_key }}">
+    <button type="submit"
+            formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new' url_username %}&next={{ request.get_full_path|urlencode }}"
+            style="margin-bottom:1rem;">+ Create New Person</button>
+</form>
 {% endif %}
 
 <form method="post">
     {% csrf_token %}
+    <input type="hidden" name="draft_key" value="{{ draft_key }}">
     {{ form.as_p }}
     <button type="submit">Send</button>
 </form>

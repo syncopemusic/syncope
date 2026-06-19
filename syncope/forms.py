@@ -233,6 +233,7 @@ class SongForm(forms.ModelForm):
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.user = user
 
         if user:
             person_field_skills = {
@@ -244,7 +245,17 @@ class SongForm(forms.ModelForm):
             for field_name, skill_id in person_field_skills.items():
                 self.fields[field_name].queryset = Person.objects.for_user_with_skill(
                     user=user, skill_id=skill_id
-                ).order_by('-created_at')
+                )
+
+    def clean_internal_id(self):
+        value = self.cleaned_data.get("internal_id")
+        if value is not None and self.user:
+            qs = Song.objects.filter(user=self.user, internal_id=value)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError("ID already in use.")
+        return value
 
 
 class ProjectForm(forms.ModelForm):

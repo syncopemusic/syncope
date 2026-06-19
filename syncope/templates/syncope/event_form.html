@@ -7,6 +7,7 @@
 <p><small>You can edit participation, add guests and manage songs at a later page.</small></p>
 <form method="post">
     {% csrf_token %}
+    <input type="hidden" name="draft_key" value="{{ draft_key }}">
     {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
     {{ form.as_p }}
     <button type="submit">Add event</button>

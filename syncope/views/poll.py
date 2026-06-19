@@ -13,8 +13,7 @@ from datetime import timedelta
 from syncope.models import CustomUser, PollAttendance, Poll, PollPerson, PollEvent, PollAttendanceType, Person, Role
 from syncope.forms import PollCreateForm, PollPersonForm, PollAttendanceForm, PollEventForm, PollBulkImportForm
 from syncope.permissions import AccessControl
-from syncope.mixins import DraftMixin
-from syncope.utils import save_draft, get_draft, clear_draft
+from syncope.views.drafts import DraftMixin, save_draft, get_draft, clear_draft
 
 
 class SelectPersonInitialMixin:
@@ -224,7 +223,7 @@ class PollPersonView(PollAdminMixin, SelectPersonInitialMixin, View):
 
 
 @method_decorator(login_required, name="dispatch")
-class PollEventView(PollAdminMixin, View):
+class PollEventView(DraftMixin, PollAdminMixin, View):
     """
     Adds date and location possibilities to the poll.
     """
@@ -246,7 +245,7 @@ class PollEventView(PollAdminMixin, View):
                 'location': last_event.location,
                 'details': last_event.details,
             })
-        initial.update(get_draft(request, "PollEventView_new"))
+        initial.update(get_draft(request, self.get_draft_key()))
         form = PollEventForm(initial=initial)
         return render(request, self.template_name, {
             'form': form,
@@ -260,7 +259,7 @@ class PollEventView(PollAdminMixin, View):
         form = PollEventForm(request.POST)
         if form.is_valid():
             event = form.save()
-            clear_draft(request, "PollEventView_new")
+            clear_draft(request, self.get_draft_key())
             date_str = event.started_at.strftime('%d %b')
             time_str = event.started_at.strftime('%H:%M')
             end_time_str = event.ended_at.strftime('%H:%M') if event.ended_at else ''
@@ -273,7 +272,7 @@ class PollEventView(PollAdminMixin, View):
                 msg += f" - {event.details}"
             messages.success(request, msg)
             return redirect('syncope:poll_events', username=username, pk=pk)
-        save_draft(request, "PollEventView_new", list(form.fields.keys()))
+        save_draft(request, self.get_draft_key(), list(form.fields.keys()))
         return render(request, self.template_name, {
             'form': form,
             'poll': self.poll,

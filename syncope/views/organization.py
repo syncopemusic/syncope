@@ -15,7 +15,7 @@ from syncope.models import MembershipPeriod, PersonRole, EventSongResource, Proj
 from syncope.models import CustomUser, Organization, Person, Membership, Role, Resource, Song, Event, Project, Poll, Share
 from syncope.forms import OrganizationForm
 from syncope.permissions import AccessControl
-from syncope.mixins import DraftMixin
+from syncope.views.drafts import DraftMixin
 
 
 class OrgAdminMixin:

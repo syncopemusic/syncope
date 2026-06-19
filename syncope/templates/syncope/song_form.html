@@ -6,6 +6,7 @@
 
 <form method="post">
     {% csrf_token %}
+    <input type="hidden" name="draft_key" value="{{ draft_key }}">
     {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
 
     <div>
@@ -35,9 +36,9 @@
     <div>
         <label for="{{ form.composer.id_for_label }}">{{ form.composer.label }}</label>
         {{ form.composer }}
-        <a href="{% url 'syncope:org_member_new_composer' url_username %}?next={{ request.get_full_path|urlencode }}">
-            <button type="button" title="Add new Composer">+</button>
-        </a>
+        <button type="submit"
+                formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_composer' url_username %}&next={{ request.get_full_path|urlencode }}"
+                title="Add new Composer">+</button>
         {% if form.composer.help_text %}<p class="helptext">{{ form.composer.help_text }}</p>{% endif %}
         {% if form.composer.errors %}
             <ul class="errorlist">
@@ -49,9 +50,9 @@
     <div>
         <label for="{{ form.arranger.id_for_label }}">{{ form.arranger.label }}</label>
         {{ form.arranger }}
-        <a href="{% url 'syncope:org_member_new_arranger' url_username %}?next={{ request.get_full_path|urlencode }}">
-            <button type="button" title="Add new Arranger">+</button>
-        </a>
+        <button type="submit"
+                formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_arranger' url_username %}&next={{ request.get_full_path|urlencode }}"
+                title="Add new Arranger">+</button>
         {% if form.arranger.help_text %}<p class="helptext">{{ form.arranger.help_text }}</p>{% endif %}
         {% if form.arranger.errors %}
             <ul class="errorlist">
@@ -63,9 +64,9 @@
     <div>
         <label for="{{ form.poet.id_for_label }}">{{ form.poet.label }}</label>
         {{ form.poet }}
-        <a href="{% url 'syncope:org_member_new_poet' url_username %}?next={{ request.get_full_path|urlencode }}">
-            <button type="button" title="Add new Poet">+</button>
-        </a>
+        <button type="submit"
+                formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_poet' url_username %}&next={{ request.get_full_path|urlencode }}"
+                title="Add new Poet">+</button>
         {% if form.poet.help_text %}<p class="helptext">{{ form.poet.help_text }}</p>{% endif %}
         {% if form.poet.errors %}
             <ul class="errorlist">
@@ -77,9 +78,9 @@
     <div>
         <label for="{{ form.translator.id_for_label }}">{{ form.translator.label }}</label>
         {{ form.translator }}
-        <a href="{% url 'syncope:org_member_new_translator' url_username %}?next={{ request.get_full_path|urlencode }}">
-            <button type="button" title="Add new Translator">+</button>
-        </a>
+        <button type="submit"
+                formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_translator' url_username %}&next={{ request.get_full_path|urlencode }}"
+                title="Add new Translator">+</button>
         {% if form.translator.help_text %}<p class="helptext">{{ form.translator.help_text }}</p>{% endif %}
         {% if form.translator.errors %}
             <ul class="errorlist">

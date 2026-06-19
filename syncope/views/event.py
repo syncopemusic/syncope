@@ -18,9 +18,9 @@ from syncope.models import CustomUser, Person, Role
 from syncope.models import Event, EventSong, Attendance, AttendanceType, EventResource, EventSongResource, Resource, SongResource
 from syncope.forms import EventForm, EventSongFormSet, AttendanceFormSet, AddAttendanceForm
 from syncope.forms import AddSongToEventForm, EventResourceFormSet, EventSongResourceFormSet
+from syncope.views.drafts import DraftMixin, clear_draft
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param
-from syncope.mixins import DraftMixin
 
 
 class SelectPersonInitialMixin:
@@ -397,6 +397,7 @@ class EventUpdateView(DraftMixin, SelectPersonInitialMixin, UpdateView):
     def form_valid(self, form):
         self.get_context_data()  # ensures formsets are built and cached on self
         admin_override = self.request.POST.get('admin_override') == 'true' and self.is_admin
+        clear_draft(self.request, self.get_draft_key())
 
         if not self._song_formset.is_valid():
             messages.error(self.request, "Please fix errors in the songs section.")

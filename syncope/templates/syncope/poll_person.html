@@ -4,9 +4,13 @@
 
 {% block content %}
 <h2>{{ poll.title }} — Persons</h2>
-<a href="{% url 'syncope:org_member_new' url_username %}?next={{ request.get_full_path|urlencode }}">
-    <button type="button" style="margin-top: 1rem; padding: 0.5rem 1rem;">+ Create New Person</button>
-</a>
+<form method="post" style="display:inline;">
+    {% csrf_token %}
+    <input type="hidden" name="draft_key" value="{{ draft_key }}">
+    <button type="submit"
+            formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new' url_username %}&next={{ request.get_full_path|urlencode }}"
+            style="margin-top: 1rem; padding: 0.5rem 1rem;">+ Create New Person</button>
+</form>
 <p><small>Search for persons to limit the dropdown menu; select from the dropdown and press "Add".</small></p>
 <form method="get">
     <input type="text" name="q" value="{{ q }}" placeholder="Search by name, role, skill, voice, instrument">

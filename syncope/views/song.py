@@ -13,7 +13,8 @@ from syncope.models import Song, EventType
 from syncope.models import Event, SongResource, Resource, EventSongResource
 from syncope.forms import  SongForm
 from syncope.forms import  QuoteFormSet, LyricsTranslationFormSet, SongResourceFormSet
-from syncope.mixins import  SongOwnerMixin, DraftMixin
+from syncope.mixins import  SongOwnerMixin
+from syncope.views.drafts import DraftMixin, clear_draft
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param
 
@@ -197,32 +198,27 @@ class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Creat
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
         context['can_manage'] = True
-        if quote_formset is not None:
-            context['quote_formset'] = quote_formset
-        elif self.request.POST:
-            context['quote_formset'] = QuoteFormSet(self.request.POST, prefix='quotes')
-        else:
-            context['quote_formset'] = QuoteFormSet(prefix='quotes')
-        if translation_formset is not None:
-            context['translation_formset'] = translation_formset
-        elif self.request.POST:
-            context['translation_formset'] = LyricsTranslationFormSet(
-                self.request.POST, prefix='translations', user=self.owner_user
+
+        context['quote_formset'] = (
+            quote_formset or self._get_formset_from_draft(
+                QuoteFormSet, 'quotes',
+                data=self.request.POST if self.request.POST else None
             )
-        else:
-            context['translation_formset'] = LyricsTranslationFormSet(
-                prefix='translations', user=self.owner_user
+        )
+        context['translation_formset'] = (
+            translation_formset or self._get_formset_from_draft(
+                LyricsTranslationFormSet, 'translations',
+                data=self.request.POST if self.request.POST else None,
+                user=self.owner_user
             )
-        if songresource_formset is not None:
-            context['songresource_formset'] = songresource_formset
-        elif self.request.POST:
-            context['songresource_formset'] = SongResourceFormSet(
-                self.request.POST, prefix='resources', user=self.owner_user
+        )
+        context['songresource_formset'] = (
+            songresource_formset or self._get_formset_from_draft(
+                SongResourceFormSet, 'resources',
+                data=self.request.POST if self.request.POST else None,
+                user=self.owner_user
             )
-        else:
-            context['songresource_formset'] = SongResourceFormSet(
-                prefix='resources', user=self.owner_user
-            )
+        )
         return context
 
     def post(self, request, *args, **kwargs):
@@ -245,6 +241,7 @@ class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Creat
         return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
+        clear_draft(self.request, self.get_draft_key())
         form.instance.user = self.owner_user
         self.object = form.save()
         kf = QuoteFormSet(self.request.POST, instance=self.object, prefix='quotes')
@@ -291,32 +288,30 @@ class SongUpdateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Updat
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
         context['can_manage'] = True
-        if quote_formset is not None:
-            context['quote_formset'] = quote_formset
-        elif self.request.POST:
-            context['quote_formset'] = QuoteFormSet(self.request.POST, instance=self.object, prefix='quotes')
-        else:
-            context['quote_formset'] = QuoteFormSet(instance=self.object, prefix='quotes')
-        if translation_formset is not None:
-            context['translation_formset'] = translation_formset
-        elif self.request.POST:
-            context['translation_formset'] = LyricsTranslationFormSet(
-                self.request.POST, instance=self.object, prefix='translations', user=self.owner_user
+
+        context['quote_formset'] = (
+            quote_formset or self._get_formset_from_draft(
+                QuoteFormSet, 'quotes',
+                data=self.request.POST if self.request.POST else None,
+                instance=self.object
             )
-        else:
-            context['translation_formset'] = LyricsTranslationFormSet(
-                instance=self.object, prefix='translations', user=self.owner_user
+        )
+        context['translation_formset'] = (
+            translation_formset or self._get_formset_from_draft(
+                LyricsTranslationFormSet, 'translations',
+                data=self.request.POST if self.request.POST else None,
+                instance=self.object,
+                user=self.owner_user
             )
-        if resource_formset is not None:
-            context['resource_formset'] = resource_formset
-        elif self.request.POST:
-            context['resource_formset'] = SongResourceFormSet(
-                self.request.POST, instance=self.object, prefix='resources', user=self.owner_user
+        )
+        context['resource_formset'] = (
+            resource_formset or self._get_formset_from_draft(
+                SongResourceFormSet, 'resources',
+                data=self.request.POST if self.request.POST else None,
+                instance=self.object,
+                user=self.owner_user
             )
-        else:
-            context['resource_formset'] = SongResourceFormSet(
-                instance=self.object, prefix='resources', user=self.owner_user
-            )
+        )
         return context
 
     def post(self, request, *args, **kwargs):
@@ -342,6 +337,7 @@ class SongUpdateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Updat
         save_song_resources(song, resource_formset, self.owner_user)
 
     def form_valid(self, form):
+        clear_draft(self.request, self.get_draft_key())
         form.instance.user = self.owner_user
         self.object = form.save()
         kf = QuoteFormSet(self.request.POST, instance=self.object, prefix='quotes')

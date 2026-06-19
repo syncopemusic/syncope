@@ -14,7 +14,7 @@ from syncope.models import (
     Person, Membership, MembershipPeriod, PersonRole, Role
 )
 from syncope.permissions import AccessControl
-from syncope.mixins import DraftMixin
+from syncope.views.drafts import DraftMixin
 
 
 class SelectPersonInitialMixin:

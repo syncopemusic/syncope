@@ -23,7 +23,7 @@ from syncope.models import CustomUser, Organization, Person, Membership, Role, S
 from syncope.models import Attendance, AttendanceType, EventType, Voice, Instrument,  Project, LyricsTranslation, PersonResource, Resource
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param
-from syncope.mixins import DraftMixin
+from syncope.views.drafts import DraftMixin
 
 
 @method_decorator(login_required, name='dispatch')

@@ -1,4 +1,3 @@
-# mixins.py
 from django.http import Http404
 from django.views.generic import ListView, DeleteView, CreateView, UpdateView
 from django.views.generic.edit import FormMixin
@@ -12,27 +11,7 @@ from django.core.exceptions import PermissionDenied
 from django.views.generic import DetailView
 from .models import CustomUser
 from .models import Event, Attendance, EventSong
-from .utils import save_draft, get_draft, clear_draft
-
-
-
-class DraftMixin:
-    def get_draft_key(self):
-        pk = self.kwargs.get("pk", "new")
-        return f"{self.__class__.__name__}_{pk}"
-
-    def get_initial(self):
-        initial = super().get_initial()
-        initial.update(get_draft(self.request, self.get_draft_key()))
-        return initial
-
-    def form_invalid(self, form):
-        save_draft(self.request, self.get_draft_key(), list(form.fields.keys()))
-        return super().form_invalid(form)
-
-    def form_valid(self, form):
-        clear_draft(self.request, self.get_draft_key())
-        return super().form_valid(form)
+from .views.drafts import DraftMixin as BaseDraftMixin
 
 
 class SongOwnerMixin:
@@ -58,7 +37,7 @@ class SongOwnerMixin:
         return super().dispatch(request, *args, **kwargs)
 
 
-class SkillListAndCreateMixin(DraftMixin, FormMixin, ListView):
+class SkillListAndCreateMixin(BaseDraftMixin, FormMixin, ListView):
     model = Skill
     form_class = SkillForm
     template_name = "syncope/skill_list.html"
