@@ -5,7 +5,7 @@
 {% block content %}
 <h2>Edit Project</h2>
 
-<form method="post">
+<form method="post" id="project-form">
     {% csrf_token %}
     <input type="hidden" name="draft_key" value="{{ draft_key }}">
 
@@ -50,6 +50,11 @@
         </div>
     {% endfor %}
 
+    {% if is_admin %}
+    <button type="submit" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:event_new' url_username %}?project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23add-event-section" title="Create new event">+ New Event</button>
+    <button type="submit" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:song_new' url_username %}?auto_add_project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23songs-section" title="Create new song">+ New Song</button>
+    <button type="submit" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new' url_username %}?auto_add_project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23guests-section" title="Create new person">+ New Person</button>
+    {% endif %}
     <button type="submit">Save</button>
     <a href="{%  url 'syncope:project_detail' url_username project.id %}">Cancel</a>
 </form>
@@ -89,7 +94,7 @@
 {% endif %}
 
 <p>
-    <a href="{% url 'syncope:event_new' url_username %}?project={{ form.instance.pk }}&next={{ request.get_full_path|urlencode }}">+ Create New Event</a>
+    <button type="submit" form="project-form" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:event_new' url_username %}?project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23add-event-section">+ Create New Event</button>
 </p>
 
 <form method="get" style="margin: 10px 0;">
@@ -102,7 +107,7 @@
 <form method="post" action="{%  url 'syncope:project_new_event' url_username form.instance.pk %}">
     {% csrf_token %}
     <div>{{ add_event_form.event }}</div>
-    <button type="submit">Add Event to Project</button>
+    <button type="submit">Save this Event to Project</button>
 </form>
 {% elif event_search_q %}
     <p>No matching events found.</p>
@@ -146,7 +151,7 @@
 {% endif %}
 
 <p>
-    <a href="{% url 'syncope:song_new' url_username %}?next={{ request.get_full_path|urlencode }}">+ Create New Song to Archive</a>
+    <button type="submit" form="project-form" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:song_new' url_username %}?auto_add_project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23songs-section">+ Create New Song to Archive</button>
 </p>
 
 <form method="get" style="margin: 10px 0;">
@@ -159,7 +164,7 @@
 <form method="post" action="{%  url 'syncope:project_new_song' url_username form.instance.pk %}">
     {% csrf_token %}
     <div>{{ add_song_form.song }}</div>
-    <button type="submit">Add Song to Project</button>
+    <button type="submit">Save this Song to Project</button>
 </form>
 {% elif song_search_q %}
     <p>No matching songs found.</p>
@@ -199,7 +204,7 @@
 {% endif %}
 
 <p>
-    <a href="{% url 'syncope:org_member_new' url_username %}?next={{ request.get_full_path|urlencode }}">+ Create New Person</a>
+    <button type="submit" form="project-form" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new' url_username %}?auto_add_project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23guests-section">+ Create New Person</button>
 </p>
 
 <form method="get" style="margin: 10px 0;">
@@ -212,7 +217,7 @@
 <form method="post" action="{%  url 'syncope:project_new_guest' url_username form.instance.pk %}">
     {% csrf_token %}
     <div>{{ add_guest_form.guest }}</div>
-    <button type="submit">Add Guest to Project</button>
+    <button type="submit">Save this Guest to Project</button>
 </form>
 {% elif guest_search_q %}
     <p>No matching guests found.</p>

@@ -3,14 +3,14 @@ from django.urls import reverse_lazy, reverse
 from django.http import HttpResponseRedirect, HttpResponseForbidden
 from django.views.generic import ListView, CreateView, UpdateView,  DetailView, View
 from django.views.generic.edit import DeleteView
-from django.db.models import Q, Exists, OuterRef, Count
+from django.db.models import Q, Exists, OuterRef, Count, Max
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from syncope.models import Song, EventType
-from syncope.models import Event, SongResource, Resource, EventSongResource
+from syncope.models import Event, SongResource, Resource, EventSongResource, EventSong, Project
 from syncope.forms import  SongForm
 from syncope.forms import  QuoteFormSet, LyricsTranslationFormSet, SongResourceFormSet
 from syncope.mixins import  SongOwnerMixin
@@ -198,24 +198,25 @@ class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Creat
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
         context['can_manage'] = True
+        post_data = self.request.POST or None
 
         context['quote_formset'] = (
             quote_formset or self._get_formset_from_draft(
                 QuoteFormSet, 'quotes',
-                data=self.request.POST if self.request.POST else None
+                data=post_data
             )
         )
         context['translation_formset'] = (
             translation_formset or self._get_formset_from_draft(
                 LyricsTranslationFormSet, 'translations',
-                data=self.request.POST if self.request.POST else None,
+                data=post_data,
                 user=self.owner_user
             )
         )
         context['songresource_formset'] = (
             songresource_formset or self._get_formset_from_draft(
                 SongResourceFormSet, 'resources',
-                data=self.request.POST if self.request.POST else None,
+                data=post_data,
                 user=self.owner_user
             )
         )
@@ -261,11 +262,37 @@ class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Creat
 
     def get_success_url(self):
         next_url = self.request.POST.get('next') or self.request.GET.get('next', '')
-        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
-            return add_query_param(next_url, {'select_song': self.object.pk})
+        host = self.request.get_host()
+        safe_next = next_url if (next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={host})) else None
+        draft_key = self.request.GET.get('draft_key')
+
+        auto_add_event = self.request.GET.get('auto_add_event')
+        auto_add_project = self.request.GET.get('auto_add_project')
+
+        if safe_next and auto_add_event:
+            event = Event.objects.filter(pk=auto_add_event, user=self.owner_user).first()
+            if event:
+                next_order = (event.eventsong_set.aggregate(Max('order'))['order__max'] or 0) + 1
+                EventSong.objects.get_or_create(
+                    event=event, song=self.object,
+                    defaults={'order': next_order, 'encore': False},
+                )
+            if draft_key:
+                safe_next = add_query_param(safe_next, {'draft_key': draft_key})
+            return safe_next
+
+        if safe_next and auto_add_project:
+            project = Project.objects.filter(pk=auto_add_project, user=self.owner_user).first()
+            if project:
+                project.songs.add(self.object)
+            if draft_key:
+                safe_next = add_query_param(safe_next, {'draft_key': draft_key})
+            return safe_next
+
+        if safe_next:
+            return add_query_param(safe_next, {'select_song': self.object.pk})
         return reverse_lazy("syncope:song_detail", kwargs={
-            "username": self.owner_user.username,
-            "pk": self.object.pk
+            "username": self.owner_user.username, "pk": self.object.pk
         })
 
 
@@ -288,18 +315,19 @@ class SongUpdateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Updat
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
         context['can_manage'] = True
+        post_data = self.request.POST or None
 
         context['quote_formset'] = (
             quote_formset or self._get_formset_from_draft(
                 QuoteFormSet, 'quotes',
-                data=self.request.POST if self.request.POST else None,
+                data=post_data,
                 instance=self.object
             )
         )
         context['translation_formset'] = (
             translation_formset or self._get_formset_from_draft(
                 LyricsTranslationFormSet, 'translations',
-                data=self.request.POST if self.request.POST else None,
+                data=post_data,
                 instance=self.object,
                 user=self.owner_user
             )
@@ -307,7 +335,7 @@ class SongUpdateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Updat
         context['resource_formset'] = (
             resource_formset or self._get_formset_from_draft(
                 SongResourceFormSet, 'resources',
-                data=self.request.POST if self.request.POST else None,
+                data=post_data,
                 instance=self.object,
                 user=self.owner_user
             )

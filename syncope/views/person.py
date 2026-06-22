@@ -20,7 +20,7 @@ from django.http import HttpResponseRedirect
 from syncope.forms import OrgMemberForm
 from syncope.models import MembershipPeriod,  PersonSkill,  PersonRole
 from syncope.models import CustomUser, Organization, Person, Membership, Role, Skill, Singer, Instrumentalist
-from syncope.models import Attendance, AttendanceType, EventType, Voice, Instrument,  Project, LyricsTranslation, PersonResource, Resource
+from syncope.models import Attendance, AttendanceType, Event, EventType, Voice, Instrument,  Project, LyricsTranslation, PersonResource, Resource
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param
 from syncope.views.drafts import DraftMixin
@@ -499,9 +499,35 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
             self._add_dates(person, form)
 
         next_url = self.request.GET.get('next', '')
-        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
+        host = self.request.get_host()
+        safe_next = next_url if (next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={host})) else None
+        draft_key = self.request.GET.get('draft_key')
+
+        auto_add_event = self.request.GET.get('auto_add_event')
+        auto_add_project = self.request.GET.get('auto_add_project')
+
+        if safe_next and auto_add_event:
+            event = Event.objects.filter(pk=auto_add_event, user=self.customuser).first()
+            if event:
+                Attendance.objects.get_or_create(
+                    event=event, person=person,
+                    defaults={'attendance_type_id': AttendanceType.PRESENT},
+                )
+            if draft_key:
+                safe_next = add_query_param(safe_next, {'draft_key': draft_key})
+            return redirect(safe_next)
+
+        if safe_next and auto_add_project:
+            project = Project.objects.filter(pk=auto_add_project, user=self.customuser).first()
+            if project:
+                project.guests.add(person)
+            if draft_key:
+                safe_next = add_query_param(safe_next, {'draft_key': draft_key})
+            return redirect(safe_next)
+
+        if safe_next:
             preset = self.kwargs.get('preset', '')
-            next_url = add_query_param(next_url, {f'select_{preset or "person"}': person.pk})
+            next_url = add_query_param(safe_next, {f'select_{preset or "person"}': person.pk})
             return redirect(next_url)
         return redirect("syncope:org_member_list", username=self.kwargs["username"])
 

@@ -56,6 +56,15 @@ class DraftMixin:
             draft = get_draft(self.request, self.get_draft_key())
             if draft:
                 form.initial.update(draft)
+            # URL select params always win over draft values
+            for field in getattr(self, 'person_preset_fields', []):
+                pk = self.request.GET.get(f'select_{field}')
+                if pk:
+                    form.initial[field] = pk
+            for query_key, form_key in getattr(self, 'person_preset_map', {}).items():
+                pk = self.request.GET.get(query_key)
+                if pk:
+                    form.initial[form_key] = pk
         return form
 
     def _get_draft_querydict(self):

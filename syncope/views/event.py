@@ -105,7 +105,12 @@ class EventCreateView(DraftMixin, CreateView):
 
     def get_success_url(self):
         next_url = self.request.POST.get('next') or self.request.GET.get('next', '')
+        draft_key = self.request.GET.get('draft_key')
         if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
+            if self.object.project_id:
+                if draft_key:
+                    next_url = add_query_param(next_url, {'draft_key': draft_key})
+                return next_url
             return add_query_param(next_url, {'select_event': self.object.pk})
         return reverse_lazy("syncope:event_update", kwargs={
             "username": self.customuser.username,
