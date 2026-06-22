@@ -7,10 +7,9 @@ from .views.event import event_add_song, event_add_attendance
 from .views.home import HomeView, SkillListAndCreateView
 from .views.importing import ImportHubView, ImportDashboardView, CombineProjectsView
 from .views.organization import OrganizationCreateView, OrganizationDashboard, OrganizationUpdateView, OrganizationDeleteView
-from .views.person import PersonUpdateView, OrgMemberAddView, OrgMemberEditView, OrgMemberListView, OrgMemberDetailView, OrgMemberDeleteView
+from .views.person import PersonUpdateView, OrgMemberAddView, OrgMemberEditView, OrgMemberListView, OrgPersonnelListView, OrgMemberDetailView, OrgMemberDeleteView, org_member_unlink
 from .views.invitation import InvitationListView, InvitationCreateView, InvitationUpdateView
 from .views.organization import OrganizationCreateView, OrganizationDashboard
-from .views.person import PersonUpdateView, OrgMemberAddView, OrgMemberEditView, OrgMemberListView, OrgMemberDetailView, OrgMemberDeleteView, org_member_unlink
 from .views.project import ProjectDeleteView, ProjectCreateView, ProjectDetailView, ProjectUpdateView, ProjectListView
 from .views.project import project_add_guest, project_add_event, project_remove_event, project_remove_song, project_add_song, project_remove_guest
 from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongUpdateView, SongQuoteView
@@ -63,6 +62,7 @@ urlpatterns = [
          OrgMemberAddView.as_view(),{'preset': 'translator'},name="org_member_new_translator"),
     path("<str:username>/members/new-arranger/",
          OrgMemberAddView.as_view(),{'preset': 'arranger'},name="org_member_new_arranger"),
+    path("<str:username>/songs/persons/", OrgPersonnelListView.as_view(), name="org_personnel_list"),
     path("<str:username>/members/<int:pk>/", OrgMemberDetailView.as_view(), name="org_member_detail"),
     path("<str:username>/members/<int:pk>/edit/", OrgMemberEditView.as_view(), name="org_member_edit"),
     path("<str:username>/members/<int:pk>/delete/", OrgMemberDeleteView.as_view(), name="org_member_delete"),

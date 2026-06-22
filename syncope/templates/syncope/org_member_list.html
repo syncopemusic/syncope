@@ -6,62 +6,41 @@
 {% if membership and ADMIN_ROLE in membership.person.roles.all %}
 <p>
         <a href="{%  url 'syncope:org_member_new' url_username %}">
-            + blank new form
-        </a>
-        <a href="{%  url 'syncope:org_member_new_composer' url_username %}">
-            + Composer
-        </a>
-
-        <a href="{%  url 'syncope:org_member_new_poet' url_username %}">
-            + Poet
-        </a>
-
-        <a href="{%  url 'syncope:org_member_new_translator' url_username %}">
-            + Translator
-        </a>
-
-        <a href="{%  url 'syncope:org_member_new_arranger' url_username %}">
-            + Arranger
+            + new member
         </a>
 </p>
 {% endif %}
 {% if url_username == user.username %}
     <p>
         This is your personal page.
-
-        <a href="{%  url 'syncope:org_member_new_composer' user.username %}">
-            + Add Composer
-        </a>
-
-        <a href="{%  url 'syncope:org_member_new_poet' user.username %}">
-            + Add Poet
-        </a>
-
-        <a href="{%  url 'syncope:org_member_new_translator' user.username %}">
-            + Add Translator
-        </a>
-
-        <a href="{%  url 'syncope:org_member_new_arranger' user.username %}">
-            + Add Arranger
-        </a>
-
     </p>
 {% else %}
     <p>This is organization: {{ url_username }}</p>
 {% endif %}
-<form method="get" style="display:flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
-    <input type="text" name="q" value="{{ q }}" placeholder="Filter by skill, voice or instrument" style="flex: 1;">
-    <select name="role">
-        <option value="" {% if not selected_role %}selected{% endif %}>All roles</option>
-        {% for role in available_roles %}
-            <option value="{{ role.id }}" {% if selected_role|add:"" == role.id|add:"" %}selected{% endif %}>{{ role.title }}</option>
-        {% endfor %}
-    </select>
-    {% if current_sort != 'name' %}<input type="hidden" name="sort" value="{{ current_sort }}">{% endif %}
-    {% if reverse %}<input type="hidden" name="reverse" value="true">{% endif %}
-    <button type="submit">Filter</button>
-    {% if q or selected_role %}<a href="?{% if current_sort != 'name' %}sort={{ current_sort }}{% endif %}{% if reverse %}&reverse=true{% endif %}">Clear</a>{% endif %}
-</form>
+<div style="margin-bottom: 1em;">
+    <div style="margin-bottom: 0.5em;">
+        <a href="?status=active{% if q %}&q={{ q }}{% endif %}{% if current_sort != 'name' %}&sort={{ current_sort }}{% endif %}{% if reverse %}&reverse=true{% endif %}"
+           style="padding: 0.5em 1em; text-decoration: none; {% if current_status == 'active' %}font-weight: bold; border-bottom: 2px solid #333;{% else %}color: #666;{% endif %}">
+            Active Members
+        </a>
+        <a href="?status=inactive{% if q %}&q={{ q }}{% endif %}{% if current_sort != 'name' %}&sort={{ current_sort }}{% endif %}{% if reverse %}&reverse=true{% endif %}"
+           style="padding: 0.5em 1em; text-decoration: none; margin-left: 0.5em; {% if current_status == 'inactive' %}font-weight: bold; border-bottom: 2px solid #333;{% else %}color: #666;{% endif %}">
+            Inactive Members
+        </a>
+        <a href="?status=all{% if q %}&q={{ q }}{% endif %}{% if current_sort != 'name' %}&sort={{ current_sort }}{% endif %}{% if reverse %}&reverse=true{% endif %}"
+           style="padding: 0.5em 1em; text-decoration: none; margin-left: 0.5em; {% if current_status == 'all' %}font-weight: bold; border-bottom: 2px solid #333;{% else %}color: #666;{% endif %}">
+            All
+        </a>
+    </div>
+    <form method="get" style="display:flex; gap: 0.5em; align-items: center;">
+        <input type="text" name="q" value="{{ q }}" placeholder="Filter by skill, voice or instrument" style="flex: 1;">
+        {% if current_sort != 'name' %}<input type="hidden" name="sort" value="{{ current_sort }}">{% endif %}
+        {% if reverse %}<input type="hidden" name="reverse" value="true">{% endif %}
+        <input type="hidden" name="status" value="{{ current_status }}">
+        <button type="submit">Filter</button>
+        {% if q %}<a href="?status={{ current_status }}{% if current_sort != 'name' %}&sort={{ current_sort }}{% endif %}{% if reverse %}&reverse=true{% endif %}">Clear</a>{% endif %}
+    </form>
+</div>
 
 <div style="display:none;">{% csrf_token %}</div>
 
@@ -74,22 +53,22 @@
         <th></th>
 
         <th>
-            <a href="?q={{ q }}&role={{ selected_role }}&sort=name{% if current_sort == 'name' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+            <a href="?q={{ q }}&status={{ current_status }}&sort=name{% if current_sort == 'name' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                 Name {% if current_sort == 'name' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
         <th>
-            <a href="?q={{ q }}&role={{ selected_role }}&sort=email{% if current_sort == 'email' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+            <a href="?q={{ q }}&status={{ current_status }}&sort=email{% if current_sort == 'email' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                 Email {% if current_sort == 'email' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
         <th>
-            <a href="?q={{ q }}&role={{ selected_role }}&sort=skill{% if current_sort == 'skill' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+            <a href="?q={{ q }}&status={{ current_status }}&sort=skill{% if current_sort == 'skill' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                 Skill {% if current_sort == 'skill' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
         <th>
-            <a href="?q={{ q }}&role={{ selected_role }}&sort=voice_instrument{% if current_sort == 'voice_instrument' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+            <a href="?q={{ q }}&status={{ current_status }}&sort=voice_instrument{% if current_sort == 'voice_instrument' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                 Voice/Instrument {% if current_sort == 'voice_instrument' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
