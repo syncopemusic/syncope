@@ -6,7 +6,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
-from syncope.forms import PersonForm, PersonResourceFormSet
+from syncope.forms import PersonForm, PersonResourceFormSet, MembershipPeriodFormSet, merge_consecutive_periods
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy, reverse
 from datetime import datetime
@@ -148,8 +148,82 @@ class PersonUpdateView(DraftMixin, UpdateView):
         if rf.is_valid():
             self._save_resources(self.object, rf)
 
+        self._update_skills(form.cleaned_data["skills"])
+        self._update_voices(form.cleaned_data["voices"])
+        self._update_instruments(form.cleaned_data["instruments"])
+
         return redirect(self.get_success_url())
 
+    def _update_skills(self, new_skills):
+        current_skills = PersonSkill.objects.filter(person=self.object)
+        current_skill_ids = set(current_skills.values_list("skill_id", flat=True))
+
+        new_skill_ids = {skill.id for skill in new_skills}
+
+        for skill_id in (new_skill_ids - current_skill_ids):
+            PersonSkill.objects.create(
+                person=self.object,
+                skill_id=skill_id
+            )
+
+        removed_skill_ids = current_skill_ids - new_skill_ids
+        current_skills.filter(skill_id__in=removed_skill_ids).delete()
+
+    def _update_voices(self, new_voices):
+        current_singers = Singer.objects.filter(person=self.object)
+        current_voice_ids = set(current_singers.values_list("voice_id", flat=True))
+
+        new_voice_ids = {voice.id for voice in new_voices}
+
+        for voice_id in (new_voice_ids - current_voice_ids):
+            Singer.objects.create(
+                person=self.object,
+                voice_id=voice_id
+            )
+
+        removed_voice_ids = current_voice_ids - new_voice_ids
+        current_singers.filter(voice_id__in=removed_voice_ids).delete()
+
+        singer_skill = Skill.objects.filter(title__iexact='singer').first()
+        if singer_skill:
+            if new_voices:
+                PersonSkill.objects.get_or_create(
+                    person=self.object,
+                    skill=singer_skill
+                )
+            else:
+                PersonSkill.objects.filter(
+                    person=self.object,
+                    skill=singer_skill
+                ).delete()
+
+    def _update_instruments(self, new_instruments):
+        current_instrumentalists = Instrumentalist.objects.filter(person=self.object)
+        current_instrument_ids = set(current_instrumentalists.values_list("instrument_id", flat=True))
+
+        new_instrument_ids = {instrument.id for instrument in new_instruments}
+
+        for instrument_id in (new_instrument_ids - current_instrument_ids):
+            Instrumentalist.objects.create(
+                person=self.object,
+                instrument_id=instrument_id
+            )
+
+        removed_instrument_ids = current_instrument_ids - new_instrument_ids
+        current_instrumentalists.filter(instrument_id__in=removed_instrument_ids).delete()
+
+        instrumentalist_skill = Skill.objects.filter(title__iexact='instrumentalist').first()
+        if instrumentalist_skill:
+            if new_instruments:
+                PersonSkill.objects.get_or_create(
+                    person=self.object,
+                    skill=instrumentalist_skill
+                )
+            else:
+                PersonSkill.objects.filter(
+                    person=self.object,
+                    skill=instrumentalist_skill
+                ).delete()
 
 
 @method_decorator(login_required, name='dispatch')
@@ -747,37 +821,61 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
         context = super().get_context_data(**kwargs)
         context["organization"] = self.customuser
         context['is_admin'] = True
+
+        period_qs = MembershipPeriod.objects.filter(
+            person=self.person, user=self.customuser
+        ).order_by('role_id', 'started_at')
+
+        period_kwargs = dict(instance=self.person, prefix='periods', user=self.customuser, person=self.person, queryset=period_qs)
+
         if self.request.POST:
             context['resource_formset'] = PersonResourceFormSet(
                 self.request.POST, instance=self.person, prefix='resources', user=self.request.user
             )
+            context['period_formset'] = MembershipPeriodFormSet(self.request.POST, **period_kwargs)
         else:
             context['resource_formset'] = PersonResourceFormSet(
                 instance=self.person, prefix='resources', user=self.request.user
             )
+            context['period_formset'] = MembershipPeriodFormSet(**period_kwargs)
         return context
 
     def form_valid(self, form):
         with transaction.atomic():
-            # 1. update person info
+            # 1. save period formset
+            pf = MembershipPeriodFormSet(
+                self.request.POST, instance=self.person, prefix='periods',
+                user=self.customuser, person=self.person,
+                queryset=MembershipPeriod.objects.filter(person=self.person, user=self.customuser),
+            )
+            if pf.is_valid():
+                pf.save()
+
+            # 2. update person info
             self._update_person_info(form)
 
-            # 2. update roles
+            # 3. update roles (auto-creates/closes periods for checkbox changes)
             self._update_roles(form.cleaned_data["roles"])
 
-            # 3. update skills
+            # 4. merge any same-boundary periods created by step 1+3 interaction
+            merge_consecutive_periods(self.person, self.customuser)
+
+            # 5. reconcile PersonRole with final open-period state
+            self._reconcile_roles_with_periods()
+
+            # 6. update skills
             self._update_skills(form.cleaned_data["skills"])
 
-            # 4. update voices
+            # 7. update voices
             self._update_voices(form.cleaned_data["voices"])
 
-            # 5. update instruments
+            # 8. update instruments
             self._update_instruments(form.cleaned_data["instruments"])
 
-            # 6. update date fields
+            # 9. update date fields
             self._update_dates(form)
 
-            # 7. save resources
+            # 10. save resources
             rf = PersonResourceFormSet(
                 self.request.POST, instance=self.person, prefix='resources', user=self.request.user
             )
@@ -973,6 +1071,20 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
         else:
             self.person.death_approximate = None
         self.person.save()
+
+    def _reconcile_roles_with_periods(self):
+        """Sync PersonRole with final open-period state. Open periods are authoritative."""
+        open_role_ids = set(
+            MembershipPeriod.objects.filter(
+                person=self.person, user=self.customuser, ended_at__isnull=True
+            ).values_list('role_id', flat=True)
+        )
+        current_role_ids = set(self.person.roles.values_list('id', flat=True))
+        for role_id in (open_role_ids - current_role_ids):
+            PersonRole.objects.create(person=self.person, role_id=role_id)
+        PersonRole.objects.filter(
+            person=self.person, role_id__in=(current_role_ids - open_role_ids)
+        ).delete()
 
 
 @method_decorator(login_required, name="dispatch")

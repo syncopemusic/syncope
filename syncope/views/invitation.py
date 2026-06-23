@@ -11,7 +11,8 @@ from django.views.generic import CreateView, ListView, DetailView
 from syncope.forms import InvitationForm, InvitationAcceptForm
 from syncope.models import (
     CustomUser, Invitation, InvitationType, InvitationStatus, Organization,
-    Person, Membership, MembershipPeriod, PersonRole, Role
+    Person, Membership, MembershipPeriod, PersonRole, Role,
+    PersonSkill, Singer, Instrumentalist
 )
 from syncope.permissions import AccessControl
 from syncope.views.drafts import DraftMixin
@@ -302,7 +303,10 @@ class InvitationUpdateView(InvitationAccessMixin, DetailView):
             )
             return
 
-        transfer_fields = ["first_name", "last_name", "email", "address", "phone", "birth_date"]
+        transfer_fields = [
+            "first_name", "last_name", "email", "address", "phone",
+            "birth_date", "birth_approximate", "death_date", "death_approximate",
+        ]
 
         org_person = invitation.existing_person
         if org_person and not org_person.is_unlinked():
@@ -319,6 +323,7 @@ class InvitationUpdateView(InvitationAccessMixin, DetailView):
                 for field in transfer_fields:
                     setattr(org_person, field, getattr(human_person, field))
                 org_person.save(update_fields=["owner"] + transfer_fields)
+                self._copy_skills_voices_instruments(human_person, org_person)
             else:
                 org_person.save(update_fields=["owner"])
             Membership.objects.get_or_create(user=org_user, person=org_person)
@@ -332,6 +337,9 @@ class InvitationUpdateView(InvitationAccessMixin, DetailView):
 
         Membership.objects.get_or_create(user=org_user, person=org_person)
 
+        if copy_details:
+            self._copy_skills_voices_instruments(human_person, org_person)
+
         role = Role.objects.get(id=Role.EXTERNAL)
         PersonRole.objects.create(person=org_person, role=role)
         MembershipPeriod.objects.create(
@@ -340,6 +348,28 @@ class InvitationUpdateView(InvitationAccessMixin, DetailView):
             role=role,
             started_at=timezone.now().date(),
         )
+
+    def _copy_skills_voices_instruments(self, human_person, org_person):
+        human_skill_ids = set(PersonSkill.objects.filter(person=human_person).values_list('skill_id', flat=True))
+        org_skill_ids = set(PersonSkill.objects.filter(person=org_person).values_list('skill_id', flat=True))
+        PersonSkill.objects.bulk_create([
+            PersonSkill(person=org_person, skill_id=skill_id)
+            for skill_id in (human_skill_ids - org_skill_ids)
+        ], ignore_conflicts=True)
+
+        human_voice_ids = set(Singer.objects.filter(person=human_person).values_list('voice_id', flat=True))
+        org_voice_ids = set(Singer.objects.filter(person=org_person).values_list('voice_id', flat=True))
+        Singer.objects.bulk_create([
+            Singer(person=org_person, voice_id=voice_id)
+            for voice_id in (human_voice_ids - org_voice_ids)
+        ], ignore_conflicts=True)
+
+        human_instrument_ids = set(Instrumentalist.objects.filter(person=human_person).values_list('instrument_id', flat=True))
+        org_instrument_ids = set(Instrumentalist.objects.filter(person=org_person).values_list('instrument_id', flat=True))
+        Instrumentalist.objects.bulk_create([
+            Instrumentalist(person=org_person, instrument_id=instrument_id)
+            for instrument_id in (human_instrument_ids - org_instrument_ids)
+        ], ignore_conflicts=True)
 
     def _expired(self, invitation):
         messages.error(self.request, "This invitation has expired and can no longer be accepted.")

@@ -52,6 +52,33 @@
     <!-- Roles -->
     {{ form.roles.label_tag }}
     {{ form.roles }}
+
+    <!-- Membership Periods -->
+    {% if period_formset %}
+    {{ period_formset.management_form }}
+    <p>Membership Periods:</p>
+    {% for p_form in period_formset %}
+    <div>
+        {{ p_form.id }}
+        {{ p_form.role.label_tag }} {{ p_form.role }}
+        {{ p_form.started_at.label_tag }} {{ p_form.started_at }}
+        {{ p_form.ended_at.label_tag }} {{ p_form.ended_at }}
+        <small class="form-text">{{ p_form.ended_at.help_text }}</small>
+        {% if p_form.instance.pk %}
+            <input type="checkbox" name="{{ p_form.DELETE.html_name }}" id="{{ p_form.DELETE.auto_id }}"
+                   onclick="return confirm('Delete this period? Press Save to confirm.');">
+            <small class="form-text">Delete</small>
+        {% endif %}
+        {% if p_form.errors %}<small style="color:red">{{ p_form.errors }}</small>{% endif %}
+    </div>
+    {% empty %}
+    <p><small>No membership periods recorded.</small></p>
+    {% endfor %}
+    {% if period_formset.non_form_errors %}
+        <p style="color:red">{{ period_formset.non_form_errors }}</p>
+    {% endif %}
+    {% endif %}
+
     <!-- Voices (renders as native <select multiple>) -->
     <p>{{ form.voices.label_tag }}
         {{ form.voices }}</p>

@@ -5,7 +5,8 @@ from django.utils import timezone
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
     PollAttendance, Invitation
 from .models import Event, EventSong, Attendance, AttendanceType,  Voice, Instrument, EventType, EventResource, EventSongResource
-from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource, ProjectResource
+from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource, ProjectResource, \
+    MembershipPeriod, PersonRole
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q
 
@@ -63,9 +64,13 @@ class PersonForm(forms.ModelForm):
             "address",
             "phone",
             "birth_date",
+            "birth_approximate",
+            "death_date",
+            "death_approximate",
         ]
         widgets = {
             "birth_date": forms.DateInput(attrs={'type': 'date'}),
+            "death_date": forms.DateInput(attrs={'type': 'date'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -684,6 +689,98 @@ ProjectResourceFormSet = inlineformset_factory(
     Project, ProjectResource, form=ProjectResourceForm,
     formset=BaseResourceFormSet, extra=1, can_delete=True,
 )
+
+
+class MembershipPeriodForm(forms.ModelForm):
+    class Meta:
+        model = MembershipPeriod
+        fields = ['role', 'started_at', 'ended_at']
+        widgets = {
+            'started_at': forms.DateInput(attrs={'type': 'date'}),
+            'ended_at': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def __init__(self, *args, user=None, person=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['ended_at'].help_text = "Leave blank if still active"
+
+    def clean(self):
+        cleaned = super().clean()
+        start = cleaned.get('started_at')
+        end = cleaned.get('ended_at')
+        if start and end and end < start:
+            raise forms.ValidationError("End date must be after start date.")
+        return cleaned
+
+
+class BaseMembershipPeriodFormSet(BaseInlineFormSet):
+    def __init__(self, *args, user=None, person=None, **kwargs):
+        self.user = user
+        self.person = person
+        super().__init__(*args, **kwargs)
+
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs['user'] = self.user
+        kwargs['person'] = self.person
+        return kwargs
+
+    def save_new(self, form, commit=True):
+        obj = super().save_new(form, commit=False)
+        obj.user = self.user
+        if commit:
+            obj.save()
+        return obj
+
+    def clean(self):
+        if any(self.errors):
+            return
+        from collections import defaultdict
+        by_role = defaultdict(list)
+        for form in self.forms:
+            if not form.cleaned_data or form.cleaned_data.get('DELETE'):
+                continue
+            role = form.cleaned_data.get('role')
+            start = form.cleaned_data.get('started_at')
+            end = form.cleaned_data.get('ended_at')
+            if role and start:
+                by_role[role.id].append((start, end))
+        for role_id, periods in by_role.items():
+            periods.sort(key=lambda p: p[0])
+            for i in range(len(periods) - 1):
+                _, end_a = periods[i]
+                start_b, _ = periods[i + 1]
+                if end_a is None or start_b <= end_a:
+                    raise forms.ValidationError("Periods for the same role must not overlap.")
+
+
+MembershipPeriodFormSet = inlineformset_factory(
+    Person, MembershipPeriod, fk_name='person',
+    form=MembershipPeriodForm, formset=BaseMembershipPeriodFormSet,
+    extra=1, can_delete=True,
+)
+
+
+def merge_consecutive_periods(person, org_user):
+    """Merge same-role periods where A.ended_at == B.started_at."""
+    periods = list(
+        MembershipPeriod.objects.filter(person=person, user=org_user)
+        .order_by('role_id', 'started_at')
+    )
+    by_role = {}
+    for p in periods:
+        by_role.setdefault(p.role_id, []).append(p)
+    for role_periods in by_role.values():
+        i = 0
+        while i < len(role_periods) - 1:
+            a, b = role_periods[i], role_periods[i + 1]
+            if a.ended_at is not None and a.ended_at == b.started_at:
+                a.ended_at = b.ended_at
+                a.save(update_fields=['ended_at'])
+                b.delete()
+                role_periods.pop(i + 1)
+            else:
+                i += 1
 
 
 class PollCreateForm(forms.ModelForm):
