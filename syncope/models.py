@@ -216,8 +216,8 @@ class PersonQuerySet(models.QuerySet):
         ).distinct()
 
     def for_user_with_skill(self, user, skill_id):
-        """Generic method - any skill any organization"""
-        return self.in_org_user(user).with_skill(skill_id)
+        """Generic method - any skill any organization. Returns persons ordered by most recently created first."""
+        return self.in_org_user(user).with_skill(skill_id).order_by('-created_at')
 
     def active_performers(self, org_user, at_date):
         """Persons with an active MEMBER period at the given date.

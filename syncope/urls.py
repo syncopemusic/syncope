@@ -17,11 +17,14 @@ from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetail
 from .views.user_login_register import SignUp, UserLoginView, UserLogoutView
 from .views.poll import PollListView, PollCreateUpdateView, PollDetailView, PollDeleteView, PollPersonView, PollEventView, PollEventUpdateView, PollEventAttendanceView, PollPersonAttendanceView, poll_person_remove, poll_event_remove
 from .views.share import create_share_link, visit_share
+from .views.drafts import save_draft_and_go
 
 
 app_name = 'syncope'
 
 urlpatterns = [
+
+    path("save-draft/go/", save_draft_and_go, name="save_draft_and_go"),
 
     path("signup/", SignUp.as_view(), name="signup"),
 

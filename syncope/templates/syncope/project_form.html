@@ -1,12 +1,13 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}{% if form.instance.pk %}Edit{% else %}New{% endif %} Project{% endblock %}
+{% block title %}New Project{% endblock %}
 
 {% block content %}
-<h2>{% if form.instance.pk %}Edit{% else %}New{% endif %} Project</h2>
-
+<h2>New Project</h2>
+<p><small>You can add other details after initial save.</small></p>
 <form method="post">
     {% csrf_token %}
+    <input type="hidden" name="draft_key" value="{{ draft_key }}">
 
     <div class="form-group">
         <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>

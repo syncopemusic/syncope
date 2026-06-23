@@ -1,4 +1,3 @@
-# utils.py
 from .models import (Song, Membership, CustomUser, Attendance, AttendanceType,
                      Person, PersonRole, PersonSkill,
                      MembershipPeriod, Role, Skill, ApproximateDate,
@@ -11,8 +10,16 @@ from .permissions import AccessControl
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q, Min, Max
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
 
+
+def add_query_param(url, params):
+    """Add or update query parameters in a URL, preserving existing ones."""
+    parsed = urlparse(url)
+    qs = parse_qs(parsed.query)
+    for key, value in params.items():
+        qs[key] = [str(value)]
+    return urlunparse(parsed._replace(query=urlencode(qs, doseq=True)))
 
 
 INTERNAL_ID_KEY = "internal_id"
@@ -1127,3 +1134,5 @@ def resource_icon_list(resource_qs):
          'desc': r.resource.description or r.resource.url}
         for r in resource_qs
     ]
+
+

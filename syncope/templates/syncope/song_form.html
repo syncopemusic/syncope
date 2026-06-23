@@ -6,19 +6,208 @@
 
 <form method="post">
     {% csrf_token %}
+    <input type="hidden" name="draft_key" value="{{ draft_key }}">
     {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
 
-    {% for field in form %}
-        <div>
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-                <ul class="errorlist">
-                    {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
-                </ul>
-            {% endif %}
-        </div>
-    {% endfor %}
+    <div>
+        <label for="{{ form.internal_id.id_for_label }}">{{ form.internal_id.label }}</label>
+        {{ form.internal_id }}
+        {# extra: add links/buttons for internal_id here #}
+        {% if form.internal_id.help_text %}<p class="helptext">{{ form.internal_id.help_text }}</p>{% endif %}
+        {% if form.internal_id.errors %}
+            <ul class="errorlist">
+                {% for error in form.internal_id.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
+        {{ form.title }}
+        {# extra: add links/buttons for title here #}
+        {% if form.title.help_text %}<p class="helptext">{{ form.title.help_text }}</p>{% endif %}
+        {% if form.title.errors %}
+            <ul class="errorlist">
+                {% for error in form.title.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="{{ form.composer.id_for_label }}">{{ form.composer.label }}</label>
+        {{ form.composer }}
+        <button type="submit"
+                formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_composer' url_username %}&next={{ request.get_full_path|urlencode }}"
+                title="Add new Composer">+</button>
+        {% if form.composer.help_text %}<p class="helptext">{{ form.composer.help_text }}</p>{% endif %}
+        {% if form.composer.errors %}
+            <ul class="errorlist">
+                {% for error in form.composer.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="{{ form.arranger.id_for_label }}">{{ form.arranger.label }}</label>
+        {{ form.arranger }}
+        <button type="submit"
+                formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_arranger' url_username %}&next={{ request.get_full_path|urlencode }}"
+                title="Add new Arranger">+</button>
+        {% if form.arranger.help_text %}<p class="helptext">{{ form.arranger.help_text }}</p>{% endif %}
+        {% if form.arranger.errors %}
+            <ul class="errorlist">
+                {% for error in form.arranger.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="{{ form.poet.id_for_label }}">{{ form.poet.label }}</label>
+        {{ form.poet }}
+        <button type="submit"
+                formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_poet' url_username %}&next={{ request.get_full_path|urlencode }}"
+                title="Add new Poet">+</button>
+        {% if form.poet.help_text %}<p class="helptext">{{ form.poet.help_text }}</p>{% endif %}
+        {% if form.poet.errors %}
+            <ul class="errorlist">
+                {% for error in form.poet.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="{{ form.translator.id_for_label }}">{{ form.translator.label }}</label>
+        {{ form.translator }}
+        <button type="submit"
+                formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_translator' url_username %}&next={{ request.get_full_path|urlencode }}"
+                title="Add new Translator">+</button>
+        {% if form.translator.help_text %}<p class="helptext">{{ form.translator.help_text }}</p>{% endif %}
+        {% if form.translator.errors %}
+            <ul class="errorlist">
+                {% for error in form.translator.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="{{ form.origin.id_for_label }}">{{ form.origin.label }}</label>
+        {{ form.origin }}
+        {# extra: add links/buttons for origin here #}
+        {% if form.origin.help_text %}<p class="helptext">{{ form.origin.help_text }}</p>{% endif %}
+        {% if form.origin.errors %}
+            <ul class="errorlist">
+                {% for error in form.origin.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="{{ form.number_of_pages.id_for_label }}">{{ form.number_of_pages.label }}</label>
+        {{ form.number_of_pages }}
+        {# extra: add links/buttons for number_of_pages here #}
+        {% if form.number_of_pages.help_text %}<p class="helptext">{{ form.number_of_pages.help_text }}</p>{% endif %}
+        {% if form.number_of_pages.errors %}
+            <ul class="errorlist">
+                {% for error in form.number_of_pages.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="{{ form.number_of_copies.id_for_label }}">{{ form.number_of_copies.label }}</label>
+        {{ form.number_of_copies }}
+        {# extra: add links/buttons for number_of_copies here #}
+        {% if form.number_of_copies.help_text %}<p class="helptext">{{ form.number_of_copies.help_text }}</p>{% endif %}
+        {% if form.number_of_copies.errors %}
+            <ul class="errorlist">
+                {% for error in form.number_of_copies.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="{{ form.year.id_for_label }}">{{ form.year.label }}</label>
+        {{ form.year }}
+        {# extra: add links/buttons for year here #}
+        {% if form.year.help_text %}<p class="helptext">{{ form.year.help_text }}</p>{% endif %}
+        {% if form.year.errors %}
+            <ul class="errorlist">
+                {% for error in form.year.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="{{ form.ensemble.id_for_label }}">{{ form.ensemble.label }}</label>
+        {{ form.ensemble }}
+        {# extra: add links/buttons for ensemble here #}
+        {% if form.ensemble.help_text %}<p class="helptext">{{ form.ensemble.help_text }}</p>{% endif %}
+        {% if form.ensemble.errors %}
+            <ul class="errorlist">
+                {% for error in form.ensemble.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="{{ form.number_of_voices.id_for_label }}">{{ form.number_of_voices.label }}</label>
+        {{ form.number_of_voices }}
+        {# extra: add links/buttons for number_of_voices here #}
+        {% if form.number_of_voices.help_text %}<p class="helptext">{{ form.number_of_voices.help_text }}</p>{% endif %}
+        {% if form.number_of_voices.errors %}
+            <ul class="errorlist">
+                {% for error in form.number_of_voices.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="{{ form.additional_notes.id_for_label }}">{{ form.additional_notes.label }}</label>
+        {{ form.additional_notes }}
+        {# extra: add links/buttons for additional_notes here #}
+        {% if form.additional_notes.help_text %}<p class="helptext">{{ form.additional_notes.help_text }}</p>{% endif %}
+        {% if form.additional_notes.errors %}
+            <ul class="errorlist">
+                {% for error in form.additional_notes.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="{{ form.lyrics.id_for_label }}">{{ form.lyrics.label }}</label>
+        {{ form.lyrics }}
+        {# extra: add links/buttons for lyrics here #}
+        {% if form.lyrics.help_text %}<p class="helptext">{{ form.lyrics.help_text }}</p>{% endif %}
+        {% if form.lyrics.errors %}
+            <ul class="errorlist">
+                {% for error in form.lyrics.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="{{ form.languagecode.id_for_label }}">{{ form.languagecode.label }}</label>
+        {{ form.languagecode }}
+        {# extra: add links/buttons for languagecode here #}
+        {% if form.languagecode.help_text %}<p class="helptext">{{ form.languagecode.help_text }}</p>{% endif %}
+        {% if form.languagecode.errors %}
+            <ul class="errorlist">
+                {% for error in form.languagecode.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="{{ form.keywords.id_for_label }}">{{ form.keywords.label }}</label>
+        {{ form.keywords }}
+        {# extra: add links/buttons for keywords here #}
+        {% if form.keywords.help_text %}<p class="helptext">{{ form.keywords.help_text }}</p>{% endif %}
+        {% if form.keywords.errors %}
+            <ul class="errorlist">
+                {% for error in form.keywords.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
 
     <h3>Quotes</h3>
     {{ quote_formset.management_form }}
