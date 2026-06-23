@@ -26,6 +26,13 @@ from syncope.utils import resource_icon_list
 
 NON_EXTERNAL_ROLES = [Role.ADMIN, Role.MEMBER, Role.SUPPORTER]
 
+SKILL_MAP = {
+    'composers': Skill.COMPOSER,
+    'poets': Skill.POET,
+    'arrangers': Skill.ARRANGER,
+    'translators': Skill.TRANSLATOR,
+}
+
 
 def _build_person_queryset(visible_memberships, q=''):
     """Build base person queryset with prefetch and search filtering."""
@@ -215,113 +222,65 @@ class PersonUpdateView(UpdateView):
 
 
 @method_decorator(login_required, name='dispatch')
-class OrgMemberListView(ListView):
-    """Shows all members of a CustomUser."""
-    template_name = "syncope/org_member_list.html"
-    context_object_name = "members"
+class PersonListView(ListView):
+    """Shows members (active/inactive) or persons with song skills (composers/poets/arrangers/translators)."""
+    template_name = "syncope/person_list.html"
+    context_object_name = "persons"
     organization = None
+
+    def dispatch(self, request, *args, **kwargs):
+        list_type = kwargs.get('list_type')
+        valid_types = {'active', 'inactive', 'others', 'all'} | set(SKILL_MAP.keys())
+        if list_type not in valid_types:
+            raise Http404
+        if list_type in ('others', 'all'):
+            url_username = kwargs.get('username')
+            if not AccessControl.has_permission(request.user, 'delete', url_username):
+                return HttpResponseForbidden()
+        return super().dispatch(request, *args, **kwargs)
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
         url_username = self.kwargs["username"]
-        self.organization = get_object_or_404(
-            CustomUser,
-            username=url_username
-        )
+        self.organization = get_object_or_404(CustomUser, username=url_username)
 
     def get_queryset(self):
+        list_type = self.kwargs["list_type"]
         url_username = self.kwargs["username"]
         org_user = get_object_or_404(CustomUser, username=url_username)
-
-        # Get all memberships for this organization
-        visible_memberships = AccessControl.get_visible_members(
-            self.request.user,
-            url_username
-        )
+        visible_memberships = AccessControl.get_visible_members(self.request.user, url_username)
 
         q = self.request.GET.get('q', '').strip()
         queryset = _build_person_queryset(visible_memberships, q)
 
-        # Handle status filter: active / inactive / all
-        session_key = f'member_list_status_{self.kwargs["username"]}'
-        if 'status' in self.request.GET:
-            status = self.request.GET.get('status', '').strip()
-            self.request.session[session_key] = status
+        if list_type in ('active', 'inactive'):
+            periods = _filter_membership_periods_by_status(org_user, list_type)
+            queryset = queryset.filter(person__membership_period__in=periods).distinct()
+        elif list_type == 'others':
+            ever_member_ids = MembershipPeriod.objects.filter(
+                user=org_user, role_id__in=NON_EXTERNAL_ROLES
+            ).values_list('person_id', flat=True)
+            queryset = queryset.exclude(person_id__in=ever_member_ids)
+            queryset = queryset.exclude(person__skills__id__in=SKILL_MAP.values()).distinct()
+        elif list_type == 'all':
+            pass
         else:
-            status = self.request.session.get(session_key)
-            if status is None:
-                status = 'active'
-                self.request.session[session_key] = status
+            skill_id = SKILL_MAP[list_type]
+            queryset = queryset.filter(person__skills__id=skill_id).distinct()
 
-        periods = _filter_membership_periods_by_status(org_user, status)
-        queryset = queryset.filter(person__membership_period__in=periods).distinct()
-        queryset = _annotate_person_queryset(queryset)
-        return _apply_person_sort(queryset, self.request)
+        return _apply_person_sort(_annotate_person_queryset(queryset), self.request)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["organization"] = self.organization
-        context["url_username"] = self.kwargs["username"]
-        context["q"] = self.request.GET.get('q', '')
-        context["current_sort"] = self.request.GET.get('sort', 'name')
-        context["reverse"] = self.request.GET.get('reverse', 'false') == 'true'
-        session_key = f'member_list_status_{self.kwargs["username"]}'
-        if 'status' in self.request.GET:
-            context["current_status"] = self.request.GET.get('status', '')
-        else:
-            context["current_status"] = self.request.session.get(session_key, 'active')
-
-        for member in context['members']:
-            member.resource_icons = resource_icon_list(member.person.person_resource.all())
-
-        return context
-
-@method_decorator(login_required, name='dispatch')
-class OrgPersonnelListView(ListView):
-    """Shows song personnel (composers, poets, arrangers, translators) for an organization."""
-    template_name = "syncope/org_personnel_list.html"
-    context_object_name = "personnel"
-    organization = None
-
-    def setup(self, request, *args, **kwargs):
-        super().setup(request, *args, **kwargs)
-        url_username = self.kwargs["username"]
-        self.organization = get_object_or_404(
-            CustomUser,
-            username=url_username
-        )
-
-    def get_queryset(self):
-        url_username = self.kwargs["username"]
-        org_user = get_object_or_404(CustomUser, username=url_username)
-
-        # Get all memberships for this organization
-        visible_memberships = AccessControl.get_visible_members(
-            self.request.user,
-            url_username
-        )
-
-        q = self.request.GET.get('q', '').strip()
-        queryset = _build_person_queryset(visible_memberships, q)
-
-        # Filter to only persons with EXTERNAL-only MembershipPeriods
-        non_external_persons = MembershipPeriod.objects.filter(
-            user=org_user,
-            role_id__in=NON_EXTERNAL_ROLES
-        ).values_list('person_id', flat=True)
-        queryset = queryset.exclude(person_id__in=non_external_persons).distinct()
-        queryset = _annotate_person_queryset(queryset)
-        return _apply_person_sort(queryset, self.request)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+        list_type = self.kwargs["list_type"]
+        context["list_type"] = list_type
         context["organization"] = self.organization
         context["url_username"] = self.kwargs["username"]
         context["q"] = self.request.GET.get('q', '')
         context["current_sort"] = self.request.GET.get('sort', 'name')
         context["reverse"] = self.request.GET.get('reverse', 'false') == 'true'
 
-        for person in context['personnel']:
+        for person in context['persons']:
             person.resource_icons = resource_icon_list(person.person.person_resource.all())
 
         return context

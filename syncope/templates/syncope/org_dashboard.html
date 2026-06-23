@@ -12,6 +12,11 @@ Welcome, {{ user.username }}
 {% if is_admin %}
 <a href="{% url 'syncope:org_edit' url_username %}">Edit</a>
 <a href="{% url 'syncope:org_delete' url_username %}">Delete</a>
+<hr>
+<h3>Admin</h3>
+<ul>
+    <li><a href="{% url 'syncope:org_member_list_all' url_username %}">All Persons</a></li>
+</ul>
 {% endif %}
 
 <hr>

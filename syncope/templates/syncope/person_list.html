@@ -1,15 +1,58 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}Members{% endblock %}
+{% block title %}
+{% if list_type == 'active' %}Active Members
+{% elif list_type == 'inactive' %}Inactive Members
+{% elif list_type == 'others' %}Unspecified
+{% elif list_type == 'all' %}All Persons
+{% elif list_type == 'composers' %}Composers
+{% elif list_type == 'poets' %}Poets
+{% elif list_type == 'arrangers' %}Arrangers
+{% elif list_type == 'translators' %}Translators
+{% endif %}
+{% endblock %}
 
 {% block content %}
+<h1>
+{% if list_type == 'active' %}Active Members
+{% elif list_type == 'inactive' %}Inactive Members
+{% elif list_type == 'others' %}Unspecified
+{% elif list_type == 'all' %}All Persons
+{% elif list_type == 'composers' %}Composers
+{% elif list_type == 'poets' %}Poets
+{% elif list_type == 'arrangers' %}Arrangers
+{% elif list_type == 'translators' %}Translators
+{% endif %}
+</h1>
+
 {% if membership and ADMIN_ROLE in membership.person.roles.all %}
 <p>
-        <a href="{%  url 'syncope:org_member_new' url_username %}">
-            + new member
-        </a>
+{% if list_type == 'active' %}
+    <a href="{% url 'syncope:org_member_new' url_username %}">
+        + new member
+    </a>
+{% elif list_type == 'inactive' %}
+{% elif list_type == 'others' %}
+{% elif list_type == 'composers' %}
+    <a href="{% url 'syncope:org_member_new_composer' url_username %}">
+        + Composer
+    </a>
+{% elif list_type == 'poets' %}
+    <a href="{% url 'syncope:org_member_new_poet' url_username %}">
+        + Poet
+    </a>
+{% elif list_type == 'arrangers' %}
+    <a href="{% url 'syncope:org_member_new_arranger' url_username %}">
+        + Arranger
+    </a>
+{% elif list_type == 'translators' %}
+    <a href="{% url 'syncope:org_member_new_translator' url_username %}">
+        + Translator
+    </a>
+{% endif %}
 </p>
 {% endif %}
+
 {% if url_username == user.username %}
     <p>
         This is your personal page.
@@ -17,121 +60,115 @@
 {% else %}
     <p>This is organization: {{ url_username }}</p>
 {% endif %}
-<div style="margin-bottom: 1em;">
-    <div style="margin-bottom: 0.5em;">
-        <a href="?status=active{% if q %}&q={{ q }}{% endif %}{% if current_sort != 'name' %}&sort={{ current_sort }}{% endif %}{% if reverse %}&reverse=true{% endif %}"
-           style="padding: 0.5em 1em; text-decoration: none; {% if current_status == 'active' %}font-weight: bold; border-bottom: 2px solid #333;{% else %}color: #666;{% endif %}">
-            Active Members
-        </a>
-        <a href="?status=inactive{% if q %}&q={{ q }}{% endif %}{% if current_sort != 'name' %}&sort={{ current_sort }}{% endif %}{% if reverse %}&reverse=true{% endif %}"
-           style="padding: 0.5em 1em; text-decoration: none; margin-left: 0.5em; {% if current_status == 'inactive' %}font-weight: bold; border-bottom: 2px solid #333;{% else %}color: #666;{% endif %}">
-            Inactive Members
-        </a>
-        <a href="?status=all{% if q %}&q={{ q }}{% endif %}{% if current_sort != 'name' %}&sort={{ current_sort }}{% endif %}{% if reverse %}&reverse=true{% endif %}"
-           style="padding: 0.5em 1em; text-decoration: none; margin-left: 0.5em; {% if current_status == 'all' %}font-weight: bold; border-bottom: 2px solid #333;{% else %}color: #666;{% endif %}">
-            All
-        </a>
-    </div>
-    <form method="get" style="display:flex; gap: 0.5em; align-items: center;">
-        <input type="text" name="q" value="{{ q }}" placeholder="Filter by skill, voice or instrument" style="flex: 1;">
-        {% if current_sort != 'name' %}<input type="hidden" name="sort" value="{{ current_sort }}">{% endif %}
-        {% if reverse %}<input type="hidden" name="reverse" value="true">{% endif %}
-        <input type="hidden" name="status" value="{{ current_status }}">
-        <button type="submit">Filter</button>
-        {% if q %}<a href="?status={{ current_status }}{% if current_sort != 'name' %}&sort={{ current_sort }}{% endif %}{% if reverse %}&reverse=true{% endif %}">Clear</a>{% endif %}
-    </form>
-</div>
+
+<form method="get" style="display:flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Filter by skill, voice or instrument" style="flex: 1;">
+    {% if current_sort != 'name' %}<input type="hidden" name="sort" value="{{ current_sort }}">{% endif %}
+    {% if reverse %}<input type="hidden" name="reverse" value="true">{% endif %}
+    <button type="submit">Filter</button>
+    {% if q %}<a href="?{% if current_sort != 'name' %}sort={{ current_sort }}{% endif %}{% if reverse %}&reverse=true{% endif %}">Clear</a>{% endif %}
+</form>
 
 <div style="display:none;">{% csrf_token %}</div>
 
 <table>
     <thead>
     <tr>
-
         <th>#</th>
-
         <th></th>
-
         <th>
-            <a href="?q={{ q }}&status={{ current_status }}&sort=name{% if current_sort == 'name' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+            <a href="?q={{ q }}&sort=name{% if current_sort == 'name' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                 Name {% if current_sort == 'name' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
         <th>
-            <a href="?q={{ q }}&status={{ current_status }}&sort=email{% if current_sort == 'email' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+            <a href="?q={{ q }}&sort=email{% if current_sort == 'email' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                 Email {% if current_sort == 'email' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
+        {% if list_type in 'active inactive all' %}
         <th>
-            <a href="?q={{ q }}&status={{ current_status }}&sort=skill{% if current_sort == 'skill' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+            <a href="?q={{ q }}&sort=skill{% if current_sort == 'skill' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                 Skill {% if current_sort == 'skill' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
         <th>
-            <a href="?q={{ q }}&status={{ current_status }}&sort=voice_instrument{% if current_sort == 'voice_instrument' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+            <a href="?q={{ q }}&sort=voice_instrument{% if current_sort == 'voice_instrument' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                 Voice/Instrument {% if current_sort == 'voice_instrument' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
         <th>Roles</th>
+        {% endif %}
         <th>Resources</th>
         <th>Actions</th>
     </tr>
     </thead>
     <tbody>
-        {% for member in members %}
+        {% for person in persons %}
         <tr>
             <td>{{ forloop.counter }}</td>
             <td style="position: relative;">
-                <button class="share-member-btn" data-member-pk="{{ member.person.id }}"
+                <button class="share-member-btn" data-member-pk="{{ person.person.id }}"
                         style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
                     <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
                 </button>
                 <span class="share-member-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
             </td>
             <td>
-                <a href="{%  url 'syncope:org_member_detail' url_username member.person.id %}">
-                {{ member.person.first_name }} {{ member.person.last_name }}
+                <a href="{% url 'syncope:org_member_detail' url_username person.person.id %}">
+                {{ person.person.first_name }} {{ person.person.last_name }}
                 </a>
             </td>
-            <td>{{ member.person.email }}</td>
+            <td>{{ person.person.email }}</td>
+            {% if list_type in 'active inactive all' %}
             <td>
-                {% for skill in member.person.skills.all %}
+                {% for skill in person.person.skills.all %}
                     {{ skill.title }}
                 {% empty %}
                     No skills
                 {% endfor %}
             </td>
             <td>
-                {% for singer in member.person.singer_set.all %}
+                {% for singer in person.person.singer_set.all %}
                     {{ singer.voice.name }}
                 {% empty %}
 
                 {% endfor %}
-                {% for instrumentalist in member.person.instrumentalist_set.all %}
+                {% for instrumentalist in person.person.instrumentalist_set.all %}
                     {{ instrumentalist.instrument.name }}
                 {% empty %}
                 {% endfor %}
             </td>
-            <td>{% for role in member.person.roles.all %}
+            <td>{% for role in person.person.roles.all %}
                     {{ role.title }}
                 {% empty %}
                     No roles
                 {% endfor %}</td>
+            {% endif %}
             <td>
-              {% for link in member.resource_icons %} {% if forloop.first %}
+              {% for link in person.resource_icons %} {% if forloop.first %}
                 {{ link.icon }}
                 {% endif %} {% endfor %}
             </td>
             <td>
-                <a href="{%  url 'syncope:org_member_edit' url_username member.person.id %}">
+                <a href="{% url 'syncope:org_member_edit' url_username person.person.id %}">
                     Edit
                 </a>
             </td>
-
         </tr>
         {% empty %}
         <tr>
-            <td>No members yet</td>
+            <td>
+            {% if list_type == 'active' %}No active members
+            {% elif list_type == 'inactive' %}No inactive members
+            {% elif list_type == 'others' %}No unspecified persons
+            {% elif list_type == 'all' %}No persons
+            {% elif list_type == 'composers' %}No composers yet
+            {% elif list_type == 'poets' %}No poets yet
+            {% elif list_type == 'arrangers' %}No arrangers yet
+            {% elif list_type == 'translators' %}No translators yet
+            {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>

@@ -1,5 +1,5 @@
 # syncope/context_processors.py
-from .models import Membership, Role, Invitation, InvitationStatus
+from .models import Membership, Role, Invitation, InvitationStatus, MembershipPeriod, Skill
 from django.db.models import Q
 
 from .permissions import AccessControl
@@ -67,6 +67,18 @@ def user_person(request):
 
     for membership in context["memberships"]:
         membership.pending_invitations = counts.get(membership.user_id, 0)
+
+        ever_had_role = MembershipPeriod.objects.filter(
+            user=membership.user,
+            role_id__in=[Role.ADMIN, Role.MEMBER, Role.SUPPORTER],
+        ).values("person_id")
+        membership.has_unspecified = Membership.objects.filter(
+            user=membership.user,
+        ).exclude(person_id__in=ever_had_role).exclude(
+            person__skills__id__in=[
+                Skill.COMPOSER, Skill.POET, Skill.ARRANGER, Skill.TRANSLATOR,
+            ]
+        ).exists()
 
     # Derive the single membership relevant to the current page (for child template checks)
     url_username = context["url_username"]

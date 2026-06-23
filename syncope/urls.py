@@ -7,7 +7,7 @@ from .views.event import event_add_song, event_add_attendance
 from .views.home import HomeView, SkillListAndCreateView
 from .views.importing import ImportHubView, ImportDashboardView, CombineProjectsView
 from .views.organization import OrganizationCreateView, OrganizationDashboard, OrganizationUpdateView, OrganizationDeleteView
-from .views.person import PersonUpdateView, OrgMemberAddView, OrgMemberEditView, OrgMemberListView, OrgPersonnelListView, OrgMemberDetailView, OrgMemberDeleteView, org_member_unlink
+from .views.person import PersonUpdateView, OrgMemberAddView, OrgMemberEditView, PersonListView, OrgMemberDetailView, OrgMemberDeleteView, org_member_unlink
 from .views.invitation import InvitationListView, InvitationCreateView, InvitationUpdateView
 from .views.organization import OrganizationCreateView, OrganizationDashboard
 from .views.project import ProjectDeleteView, ProjectCreateView, ProjectDetailView, ProjectUpdateView, ProjectListView
@@ -52,7 +52,11 @@ urlpatterns = [
     path("<str:username>/events/<int:event_pk>/attendance/<int:pk>/delete/", AttendanceDeleteView.as_view(), name="attendance_delete"),
     path("<str:username>/events/<int:pk>/songs/new/", event_add_song, name="event_new_song"),
 
-    path("<str:username>/members/", OrgMemberListView.as_view(), name="org_member_list"),
+    path("<str:username>/members/", RedirectView.as_view(pattern_name="syncope:org_member_list", permanent=False)),
+    path("<str:username>/members/active/", PersonListView.as_view(), {"list_type": "active"}, name="org_member_list"),
+    path("<str:username>/members/inactive/", PersonListView.as_view(), {"list_type": "inactive"}, name="org_member_list_inactive"),
+    path("<str:username>/members/others/", PersonListView.as_view(), {"list_type": "others"}, name="org_member_list_others"),
+    path("<str:username>/members/all/", PersonListView.as_view(), {"list_type": "all"}, name="org_member_list_all"),
     path("<str:username>/members/new/", OrgMemberAddView.as_view(),name="org_member_new"),
     path("<str:username>/members/new-composer/",
          OrgMemberAddView.as_view(),{'preset': 'composer'},name="org_member_new_composer"),
@@ -62,7 +66,11 @@ urlpatterns = [
          OrgMemberAddView.as_view(),{'preset': 'translator'},name="org_member_new_translator"),
     path("<str:username>/members/new-arranger/",
          OrgMemberAddView.as_view(),{'preset': 'arranger'},name="org_member_new_arranger"),
-    path("<str:username>/songs/persons/", OrgPersonnelListView.as_view(), name="org_personnel_list"),
+    path("<str:username>/songs/composers/", PersonListView.as_view(), {"list_type": "composers"}, name="org_composers_list"),
+    path("<str:username>/songs/poets/", PersonListView.as_view(), {"list_type": "poets"}, name="org_poets_list"),
+    path("<str:username>/songs/arrangers/", PersonListView.as_view(), {"list_type": "arrangers"}, name="org_arrangers_list"),
+    path("<str:username>/songs/translators/", PersonListView.as_view(), {"list_type": "translators"}, name="org_translators_list"),
+    path("<str:username>/songs/persons/", RedirectView.as_view(pattern_name="syncope:org_composers_list", permanent=True)),
     path("<str:username>/members/<int:pk>/", OrgMemberDetailView.as_view(), name="org_member_detail"),
     path("<str:username>/members/<int:pk>/edit/", OrgMemberEditView.as_view(), name="org_member_edit"),
     path("<str:username>/members/<int:pk>/delete/", OrgMemberDeleteView.as_view(), name="org_member_delete"),
