@@ -7,8 +7,6 @@ from django.views.decorators.http import require_POST
 from syncope.utils import add_query_param
 
 
-# --- Session helpers ---
-
 def save_draft(request, key, fields):
     request.session.setdefault("drafts", {})[key] = {
         f: request.POST.get(f, "") for f in fields
@@ -26,8 +24,6 @@ def clear_draft(request, key):
         del drafts[key]
         request.session.modified = True
 
-
-# --- Mixin ---
 
 class DraftMixin:
     def get_draft_key(self):
@@ -93,8 +89,6 @@ class DraftMixin:
         clear_draft(self.request, self.get_draft_key())
         return super().form_valid(form)
 
-
-# --- View ---
 
 @login_required
 @require_POST
