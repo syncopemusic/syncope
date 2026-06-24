@@ -12,10 +12,11 @@ from syncope.forms import InvitationForm, InvitationAcceptForm
 from syncope.models import (
     CustomUser, Invitation, InvitationType, InvitationStatus, Organization,
     Person, Membership, MembershipPeriod, PersonRole, Role,
-    PersonSkill, Singer, Instrumentalist
+    PersonSkill, Singer, Instrumentalist, PersonResource
 )
 from syncope.permissions import AccessControl
 from syncope.views.drafts import DraftMixin
+from syncope.utils import bulk_copy_m2m_relations
 
 
 class SelectPersonInitialMixin:
@@ -339,6 +340,7 @@ class InvitationUpdateView(InvitationAccessMixin, DetailView):
 
         if copy_details:
             self._copy_skills_voices_instruments(human_person, org_person)
+            self._copy_resources(human_person, org_person)
 
         role = Role.objects.get(id=Role.EXTERNAL)
         PersonRole.objects.create(person=org_person, role=role)
@@ -350,26 +352,9 @@ class InvitationUpdateView(InvitationAccessMixin, DetailView):
         )
 
     def _copy_skills_voices_instruments(self, human_person, org_person):
-        human_skill_ids = set(PersonSkill.objects.filter(person=human_person).values_list('skill_id', flat=True))
-        org_skill_ids = set(PersonSkill.objects.filter(person=org_person).values_list('skill_id', flat=True))
-        PersonSkill.objects.bulk_create([
-            PersonSkill(person=org_person, skill_id=skill_id)
-            for skill_id in (human_skill_ids - org_skill_ids)
-        ], ignore_conflicts=True)
-
-        human_voice_ids = set(Singer.objects.filter(person=human_person).values_list('voice_id', flat=True))
-        org_voice_ids = set(Singer.objects.filter(person=org_person).values_list('voice_id', flat=True))
-        Singer.objects.bulk_create([
-            Singer(person=org_person, voice_id=voice_id)
-            for voice_id in (human_voice_ids - org_voice_ids)
-        ], ignore_conflicts=True)
-
-        human_instrument_ids = set(Instrumentalist.objects.filter(person=human_person).values_list('instrument_id', flat=True))
-        org_instrument_ids = set(Instrumentalist.objects.filter(person=org_person).values_list('instrument_id', flat=True))
-        Instrumentalist.objects.bulk_create([
-            Instrumentalist(person=org_person, instrument_id=instrument_id)
-            for instrument_id in (human_instrument_ids - org_instrument_ids)
-        ], ignore_conflicts=True)
+        bulk_copy_m2m_relations(human_person, org_person, PersonSkill, id_field='skill_id')
+        bulk_copy_m2m_relations(human_person, org_person, Singer, id_field='voice_id')
+        bulk_copy_m2m_relations(human_person, org_person, Instrumentalist, id_field='instrument_id')
 
     def _expired(self, invitation):
         messages.error(self.request, "This invitation has expired and can no longer be accepted.")

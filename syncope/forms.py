@@ -75,7 +75,12 @@ class PersonForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user", None)
+        own_profile = kwargs.pop("own_profile", False)
         super().__init__(*args, **kwargs)
+
+        if own_profile:
+            for field in ("death_date", "birth_approximate", "death_approximate"):
+                self.fields.pop(field, None)
 
         if self.instance.pk:
             # editing current user
@@ -85,6 +90,8 @@ class PersonForm(forms.ModelForm):
             self.fields["email"].initial = user.email
 
 class OrganizationForm(forms.ModelForm):
+    email = forms.EmailField(required=True)
+
     class Meta:
         model = Organization
         fields = ["name", "email", "address"]
@@ -200,15 +207,23 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
 class QuoteForm(forms.ModelForm):
     class Meta:
         model = Quote
-        fields = ['word', 'bar_number']
+        fields = ['word', 'bar_number', 'date', 'person']
         labels = {
             'word': 'Quote',
             'bar_number': 'Bar Number',
+            'date': 'Date',
+            'person': 'Person',
         }
         widgets = {
             'word': forms.TextInput(attrs={'placeholder': 'Quote text'}),
             'bar_number': forms.TextInput(attrs={'placeholder': '43'}),
+            'date': forms.DateInput(attrs={'type': 'date'}),
         }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['person'].queryset = Person.objects.in_org_user(user)
 
 
 class SongForm(forms.ModelForm):
@@ -234,6 +249,9 @@ class SongForm(forms.ModelForm):
         ]
         widgets = {
             "lyrics": forms.Textarea(attrs={'rows': 12}),
+        }
+        labels = {
+            "languagecode": "Language",
         }
 
     def __init__(self, *args, user=None, **kwargs):
@@ -557,10 +575,23 @@ AttendanceFormSet = inlineformset_factory(
     can_delete=True,
 )
 
+
+class BaseQuoteFormSet(BaseInlineFormSet):
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs['user'] = self.user
+        return kwargs
+
+
 QuoteFormSet = inlineformset_factory(
     Song,
     Quote,
     form=QuoteForm,
+    formset=BaseQuoteFormSet,
     extra=1,
     can_delete=True,
 )
@@ -759,28 +790,6 @@ MembershipPeriodFormSet = inlineformset_factory(
     form=MembershipPeriodForm, formset=BaseMembershipPeriodFormSet,
     extra=1, can_delete=True,
 )
-
-
-def merge_consecutive_periods(person, org_user):
-    """Merge same-role periods where A.ended_at == B.started_at."""
-    periods = list(
-        MembershipPeriod.objects.filter(person=person, user=org_user)
-        .order_by('role_id', 'started_at')
-    )
-    by_role = {}
-    for p in periods:
-        by_role.setdefault(p.role_id, []).append(p)
-    for role_periods in by_role.values():
-        i = 0
-        while i < len(role_periods) - 1:
-            a, b = role_periods[i], role_periods[i + 1]
-            if a.ended_at is not None and a.ended_at == b.started_at:
-                a.ended_at = b.ended_at
-                a.save(update_fields=['ended_at'])
-                b.delete()
-                role_periods.pop(i + 1)
-            else:
-                i += 1
 
 
 class PollCreateForm(forms.ModelForm):

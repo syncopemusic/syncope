@@ -41,7 +41,11 @@
             </td>
 
             <td> <a href="{%  url 'syncope:event_detail' url_username event.id %}">
+                {% if event.started_at %}
                 <span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime">{{ event.started_at|date:"d M, Y, H:i" }}</span>
+                {% else %}
+                no date yet
+                {% endif %}
                 </a>
             </td>
             <td>{{ event.event_type }}</td>

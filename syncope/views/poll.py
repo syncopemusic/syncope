@@ -14,6 +14,7 @@ from syncope.models import CustomUser, PollAttendance, Poll, PollPerson, PollEve
 from syncope.forms import PollCreateForm, PollPersonForm, PollAttendanceForm, PollEventForm, PollBulkImportForm
 from syncope.permissions import AccessControl
 from syncope.views.drafts import DraftMixin, save_draft, get_draft, clear_draft
+from syncope.utils import group_by_section
 
 
 class SelectPersonInitialMixin:
@@ -169,11 +170,18 @@ class PollPersonView(PollAdminMixin, SelectPersonInitialMixin, View):
         initial = {'poll': self.poll}
         initial.update(self._get_initial_with_presets())
         form = PollPersonForm(initial=initial, org_user=self.org_user, poll=self.poll, search_q=q or None)
+        poll_persons_qs = list(self.poll.poll_persons.select_related('person').prefetch_related(
+            'person__singer_set__voice',
+            'person__instrumentalist_set__instrument',
+            'person__person_skill__skill',
+        ))
+        grouped_poll_persons = group_by_section(poll_persons_qs, lambda pp: pp.person)
         return render(request, self.template_name, {
             'form': form,
             'bulk_import_form': PollBulkImportForm(),
             'poll': self.poll,
-            'poll_persons': self.poll.poll_persons.select_related('person'),
+            'poll_persons': poll_persons_qs,
+            'grouped_poll_persons': grouped_poll_persons,
             'url_username': username,
             'q': q,
             'is_admin': True,
@@ -186,11 +194,18 @@ class PollPersonView(PollAdminMixin, SelectPersonInitialMixin, View):
         if form.is_valid():
             form.save()
             return redirect('syncope:poll_persons', username=username, pk=pk)
+        poll_persons_qs = list(self.poll.poll_persons.select_related('person').prefetch_related(
+            'person__singer_set__voice',
+            'person__instrumentalist_set__instrument',
+            'person__person_skill__skill',
+        ))
+        grouped_poll_persons = group_by_section(poll_persons_qs, lambda pp: pp.person)
         return render(request, self.template_name, {
             'form': form,
             'bulk_import_form': PollBulkImportForm(),
             'poll': self.poll,
-            'poll_persons': self.poll.poll_persons.select_related('person'),
+            'poll_persons': poll_persons_qs,
+            'grouped_poll_persons': grouped_poll_persons,
             'url_username': username,
         })
 
@@ -480,7 +495,11 @@ class PollDetailView(DetailView):
 
         poll = self.object
         poll_events = list(poll.poll_events.select_related('event_type').order_by('started_at'))
-        poll_persons = list(poll.poll_persons.select_related('person'))
+        poll_persons = list(poll.poll_persons.select_related('person').prefetch_related(
+            'person__singer_set__voice',
+            'person__instrumentalist_set__instrument',
+            'person__person_skill__skill',
+        ))
 
         person_attendance = {}
         for pa in PollAttendance.objects.filter(poll_person__poll=poll).select_related('poll_attendance_type'):
@@ -499,9 +518,12 @@ class PollDetailView(DetailView):
                 })
             table_rows.append({'person': pp, 'event_cells': event_cells})
 
+        grouped_table_rows = group_by_section(table_rows, lambda row: row['person'].person)
+
         context['poll_events'] = poll_events
         context['poll_persons'] = poll_persons
         context['table_rows'] = table_rows
+        context['grouped_table_rows'] = grouped_table_rows
         context['is_admin'] = (
             self.request.user.is_authenticated and
             AccessControl.has_permission(self.request.user, "create", self.kwargs.get('username'))

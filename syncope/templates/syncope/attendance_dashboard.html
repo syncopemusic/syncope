@@ -108,8 +108,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for row in dashboard_data %}
-                        <tr>
+                    {% for group in grouped_dashboard_data %}
+                        {% for row in group.items %}
+                        <tr {% if forloop.first and not forloop.parentloop.first %}style="border-top: 3px solid #333;"{% endif %}>
                             <td>{{ forloop.counter }}</td>
                             <td class="sticky-col member-name">{{ row.member }}</td>
                             {% for cell in row.attendance_cells %}
@@ -125,8 +126,9 @@
                             <td>{{ row.total_present }}/{{ row.total_events }}</td>
                             <td>{{ row.percentage|floatformat:0 }}%</td>
                         </tr>
+                        {% endfor %}
                     {% endfor %}
-                    <tr class="totals-row">
+                    <tr class="totals-row" style="border-top: 3px solid #333;">
                         <td class="sticky-col"><strong>Event Total</strong></td>
                         {% for total in event_totals %}
                             <td>{{ total.present }}/{{ total.total }}</td>
