@@ -1,6 +1,5 @@
 from django.http import Http404, HttpResponseForbidden
 from django.utils.decorators import method_decorator
-from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
@@ -24,6 +23,111 @@ from syncope.models import Attendance, AttendanceType, Event, EventType, Voice, 
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param
 from syncope.views.drafts import DraftMixin
+
+NON_EXTERNAL_ROLES = [Role.ADMIN, Role.MEMBER, Role.SUPPORTER]
+
+SKILL_MAP = {
+    'composers': Skill.COMPOSER,
+    'poets': Skill.POET,
+    'arrangers': Skill.ARRANGER,
+    'translators': Skill.TRANSLATOR,
+}
+
+CONTEXT_TYPE_LIST_MAP = {
+    'composers': 'org_composers_list',
+    'poets': 'org_poets_list',
+    'arrangers': 'org_arrangers_list',
+    'translators': 'org_translators_list',
+}
+
+PRESET_LIST_MAP = {
+    'composer': 'org_composers_list',
+    'poet': 'org_poets_list',
+    'arranger': 'org_arrangers_list',
+    'translator': 'org_translators_list',
+}
+
+_DETAIL_URL_NAMES = {
+    'composers': 'syncope:org_composer_detail',
+    'poets': 'syncope:org_poet_detail',
+    'arrangers': 'syncope:org_arranger_detail',
+    'translators': 'syncope:org_translator_detail',
+}
+
+_EDIT_URL_NAMES = {
+    'composers': 'syncope:org_composer_edit',
+    'poets': 'syncope:org_poet_edit',
+    'arrangers': 'syncope:org_arranger_edit',
+    'translators': 'syncope:org_translator_edit',
+}
+
+_DELETE_URL_NAMES = {
+    'composers': 'syncope:org_composer_delete',
+    'poets': 'syncope:org_poet_delete',
+    'arrangers': 'syncope:org_arranger_delete',
+    'translators': 'syncope:org_translator_delete',
+}
+
+
+def _build_person_queryset(visible_memberships, q=''):
+    """Build base person queryset with prefetch and search filtering."""
+    queryset = visible_memberships.select_related('person').prefetch_related(
+        'person__skills', 'person__roles',
+        'person__singer_set__voice', 'person__instrumentalist_set__instrument',
+        'person__person_resource__resource',
+        'person__membership_period',
+    )
+
+    if q:
+        queryset = queryset.filter(
+            Q(person__first_name__icontains=q) |
+            Q(person__last_name__icontains=q) |
+            Q(person__skills__title__icontains=q) |
+            Q(person__singer__voice__name__icontains=q) |
+            Q(person__instrumentalist__instrument__name__icontains=q)
+        ).distinct()
+
+    return queryset
+
+
+def _annotate_person_queryset(queryset):
+    """Add performance-related annotations to person queryset."""
+    return queryset.annotate(
+        first_skill=Min('person__skills__title'),
+        first_voice=Min('person__singer__voice__name'),
+        first_instrument=Min('person__instrumentalist__instrument__name'),
+    ).annotate(
+        first_voice_or_instrument=Coalesce('first_voice', 'first_instrument', Value('')),
+    )
+
+
+def _filter_membership_periods_by_status(org_user, status):
+    """Filter membership periods by active/inactive/all status."""
+    base_query = MembershipPeriod.objects.filter(
+        user=org_user,
+        role_id__in=NON_EXTERNAL_ROLES
+    )
+    if status == 'active':
+        return base_query.filter(ended_at__isnull=True)
+    elif status == 'inactive':
+        return base_query.filter(ended_at__isnull=False)
+    return base_query
+
+
+def _apply_person_sort(queryset, request):
+    """Apply sorting to person querysets based on GET parameters."""
+    sort_field_map = {
+        'name': ('person__last_name', 'person__first_name'),
+        'email': ('person__email',),
+        'skill': ('first_skill',),
+        'voice_instrument': ('first_voice_or_instrument',),
+    }
+    sort_key = request.GET.get('sort', 'name')
+    reverse = request.GET.get('reverse', 'false') == 'true'
+    fields = sort_field_map.get(sort_key, sort_field_map['name'])
+    if reverse:
+        fields = tuple(f'-{f}' for f in fields)
+    return queryset.order_by(*fields)
 
 
 @method_decorator(login_required, name='dispatch')
@@ -153,106 +257,69 @@ class PersonUpdateView(DraftMixin, UpdateView):
 
 
 @method_decorator(login_required, name='dispatch')
-class OrgMemberListView(ListView):
-    """Shows all members of a CustomUser."""
-    template_name = "syncope/org_member_list.html"
-    context_object_name = "members"
+class PersonListView(ListView):
+    """Shows members (active/inactive) or persons with song skills (composers/poets/arrangers/translators)."""
+    template_name = "syncope/person_list.html"
+    context_object_name = "persons"
     organization = None
+
+    def dispatch(self, request, *args, **kwargs):
+        list_type = kwargs.get('list_type')
+        valid_types = {'active', 'inactive', 'others', 'all'} | set(SKILL_MAP.keys())
+        if list_type not in valid_types:
+            raise Http404
+        if list_type in ('others', 'all'):
+            url_username = kwargs.get('username')
+            if not AccessControl.has_permission(request.user, 'delete', url_username):
+                return HttpResponseForbidden()
+        return super().dispatch(request, *args, **kwargs)
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
         url_username = self.kwargs["username"]
-        self.organization = get_object_or_404(
-            CustomUser,
-            username=url_username
-        )
+        self.organization = get_object_or_404(CustomUser, username=url_username)
 
     def get_queryset(self):
+        list_type = self.kwargs["list_type"]
         url_username = self.kwargs["username"]
-
-        # Get all memberships for this organization
-        visible_memberships = AccessControl.get_visible_members(
-            self.request.user,
-            url_username
-        )
-
-        queryset = visible_memberships.select_related('person').prefetch_related(
-            'person__skills', 'person__roles',
-            'person__singer_set__voice', 'person__instrumentalist_set__instrument',
-            'person__person_resource__resource',
-        )
+        org_user = get_object_or_404(CustomUser, username=url_username)
+        visible_memberships = AccessControl.get_visible_members(self.request.user, url_username)
 
         q = self.request.GET.get('q', '').strip()
-        if q:
-            # When searching, include all matching results regardless of visibility filtering
-            # but still respect the base membership access
-            queryset = queryset.filter(
-                Q(person__first_name__icontains=q) |
-                Q(person__last_name__icontains=q) |
-                Q(person__skills__title__icontains=q) |
-                Q(person__singer__voice__name__icontains=q) |
-                Q(person__instrumentalist__instrument__name__icontains=q)
-            ).distinct()
+        queryset = _build_person_queryset(visible_memberships, q)
 
-        session_key = f'member_list_role_{self.kwargs["username"]}'
-        if 'role' in self.request.GET:
-            role_id = self.request.GET.get('role', '').strip()
-            self.request.session[session_key] = role_id
+        if list_type in ('active', 'inactive'):
+            periods = _filter_membership_periods_by_status(org_user, list_type)
+            queryset = queryset.filter(person__membership_period__in=periods).distinct()
+        elif list_type == 'others':
+            ever_member_ids = MembershipPeriod.objects.filter(
+                user=org_user, role_id__in=NON_EXTERNAL_ROLES
+            ).values_list('person_id', flat=True)
+            queryset = queryset.exclude(person_id__in=ever_member_ids)
+            queryset = queryset.exclude(person__skills__id__in=SKILL_MAP.values()).distinct()
+        elif list_type == 'all':
+            pass
         else:
-            role_id = self.request.session.get(session_key)
-            if role_id is None:
-                role_id = str(Role.MEMBER)
-                self.request.session[session_key] = role_id
+            skill_id = SKILL_MAP[list_type]
+            queryset = queryset.filter(person__skills__id=skill_id).distinct()
 
-        if role_id:
-            queryset = queryset.filter(person__roles__id=int(role_id))
-
-        queryset = queryset.annotate(
-            first_skill=Min('person__skills__title'),
-            first_voice=Min('person__singer__voice__name'),
-            first_instrument=Min('person__instrumentalist__instrument__name'),
-        ).annotate(
-            first_voice_or_instrument=Coalesce('first_voice', 'first_instrument', Value('')),
-        )
-
-        sort_field_map = {
-            'name': ('person__last_name', 'person__first_name'),
-            'email': ('person__email',),
-            'skill': ('first_skill',),
-            'voice_instrument': ('first_voice_or_instrument',),
-        }
-        sort_key = self.request.GET.get('sort', 'name')
-        reverse = self.request.GET.get('reverse', 'false') == 'true'
-        fields = sort_field_map.get(sort_key, sort_field_map['name'])
-        if reverse:
-            fields = tuple(f'-{f}' for f in fields)
-        return queryset.order_by(*fields)
+        return _apply_person_sort(_annotate_person_queryset(queryset), self.request)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        list_type = self.kwargs["list_type"]
+        context["list_type"] = list_type
         context["organization"] = self.organization
         context["url_username"] = self.kwargs["username"]
         context["q"] = self.request.GET.get('q', '')
         context["current_sort"] = self.request.GET.get('sort', 'name')
         context["reverse"] = self.request.GET.get('reverse', 'false') == 'true'
-        session_key = f'member_list_role_{self.kwargs["username"]}'
-        if 'role' in self.request.GET:
-            context["selected_role"] = self.request.GET.get('role', '')
-        else:
-            context["selected_role"] = self.request.session.get(session_key, str(Role.MEMBER))
 
-        url_username = self.kwargs["username"]
-        visible_members = AccessControl.get_visible_members(
-            self.request.user,
-            url_username
-        )
-        available_roles = Role.objects.filter(
-            persons__in=visible_members.values_list('person', flat=True)
-        ).distinct().order_by('title')
-        context["available_roles"] = available_roles
+        context['person_detail_url_name'] = _DETAIL_URL_NAMES.get(list_type, 'syncope:org_member_detail')
+        context['person_edit_url_name'] = _EDIT_URL_NAMES.get(list_type, 'syncope:org_member_edit')
 
-        for member in context['members']:
-            member.resource_icons = resource_icon_list(member.person.person_resource.all())
+        for person in context['persons']:
+            person.resource_icons = resource_icon_list(person.person.person_resource.all())
 
         return context
 
@@ -294,6 +361,17 @@ class OrgMemberDetailView(DetailView):
 
         context["url_username"] = url_username
         context["is_admin"] = AccessControl.has_permission(self.request.user, 'delete', url_username)
+
+        context_type = self.kwargs.get('context_type', '')
+        context['person_edit_url'] = reverse(
+            _EDIT_URL_NAMES.get(context_type, 'syncope:org_member_edit'),
+            kwargs={'username': url_username, 'pk': self.object.pk}
+        )
+        context['person_delete_url'] = reverse(
+            _DELETE_URL_NAMES.get(context_type, 'syncope:org_member_delete'),
+            kwargs={'username': url_username, 'pk': self.object.pk}
+        )
+
         context["person_data"] = AccessControl.filter_person_details(
             self.request.user,
             self.object,
@@ -498,38 +576,9 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
             # 6. add date fields
             self._add_dates(person, form)
 
-        next_url = self.request.GET.get('next', '')
-        host = self.request.get_host()
-        safe_next = next_url if (next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={host})) else None
-        draft_key = self.request.GET.get('draft_key')
-
-        auto_add_event = self.request.GET.get('auto_add_event')
-        auto_add_project = self.request.GET.get('auto_add_project')
-
-        if safe_next and auto_add_event:
-            event = Event.objects.filter(pk=auto_add_event, user=self.customuser).first()
-            if event:
-                Attendance.objects.get_or_create(
-                    event=event, person=person,
-                    defaults={'attendance_type_id': AttendanceType.PRESENT},
-                )
-            if draft_key:
-                safe_next = add_query_param(safe_next, {'draft_key': draft_key})
-            return redirect(safe_next)
-
-        if safe_next and auto_add_project:
-            project = Project.objects.filter(pk=auto_add_project, user=self.customuser).first()
-            if project:
-                project.guests.add(person)
-            if draft_key:
-                safe_next = add_query_param(safe_next, {'draft_key': draft_key})
-            return redirect(safe_next)
-
-        if safe_next:
-            preset = self.kwargs.get('preset', '')
-            next_url = add_query_param(safe_next, {f'select_{preset or "person"}': person.pk})
-            return redirect(next_url)
-        return redirect("syncope:org_member_list", username=self.kwargs["username"])
+        preset = self.kwargs.get('preset')
+        list_name = PRESET_LIST_MAP.get(preset, 'org_member_list')
+        return redirect(f"syncope:{list_name}", username=self.kwargs["username"])
 
     def _create_person(self, form):
         """
@@ -784,7 +833,9 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
             if rf.is_valid():
                 self._save_resources(rf)
 
-        return redirect("syncope:org_member_list",username=self.kwargs["username"])
+        context_type = self.kwargs.get('context_type')
+        list_name = CONTEXT_TYPE_LIST_MAP.get(context_type, 'org_member_list')
+        return redirect(f"syncope:{list_name}", username=self.kwargs["username"])
 
     def _save_resources(self, resource_formset):
         self.person.person_resource.all().delete()
@@ -999,12 +1050,18 @@ class OrgMemberDeleteView(LoginRequiredMixin, DeleteView):
         return response
 
     def get_success_url(self):
-        return reverse('syncope:org_member_list', kwargs={'username': self.kwargs.get('username')})
+        context_type = self.kwargs.get('context_type')
+        list_name = CONTEXT_TYPE_LIST_MAP.get(context_type, 'org_member_list')
+        return reverse(f"syncope:{list_name}", kwargs={'username': self.kwargs.get('username')})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['url_username'] = self.kwargs.get('username')
+        url_username = self.kwargs.get('username')
+        context['url_username'] = url_username
         context['is_admin'] = True
+        context_type = self.kwargs.get('context_type', '')
+        detail_url_name = _DETAIL_URL_NAMES.get(context_type, 'syncope:org_member_detail')
+        context['person_detail_url'] = reverse(detail_url_name, kwargs={'username': url_username, 'pk': self.object.pk})
         return context
 
 

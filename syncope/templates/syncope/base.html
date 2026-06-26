@@ -15,7 +15,6 @@
     <script src="{% static 'syncope/jquery-3.7.1.min.js' %}"></script>
 
 
-
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -44,8 +43,26 @@
                                             <ul class="org-submenu">
                                                 <!-- Songs visible to ADMIN and MEMBER -->
                                                 {% if ADMIN_ROLE in membership.person.roles.all or MEMBER_ROLE in membership.person.roles.all %}
-                                                    <li><a href="{%  url 'syncope:song_list' org.user.username %}">Songs</a></li>
-                                                    <li><a href="{%  url 'syncope:org_member_list' org.user.username %}">Members</a></li>
+                                                    <li>
+                                                        <a href="{%  url 'syncope:song_list' org.user.username %}">Songs</a>
+                                                        {% if '/songs/' in request.path or '/composers/' in request.path or '/poets/' in request.path or '/arrangers/' in request.path or '/translators/' in request.path %}
+                                                        <ul>
+                                                            <li><a href="{%  url 'syncope:org_composers_list' org.user.username %}">Composers</a></li>
+                                                            <li><a href="{%  url 'syncope:org_poets_list' org.user.username %}">Poets</a></li>
+                                                            <li><a href="{%  url 'syncope:org_arrangers_list' org.user.username %}">Arrangers</a></li>
+                                                            <li><a href="{%  url 'syncope:org_translators_list' org.user.username %}">Translators</a></li>
+                                                        </ul>
+                                                        {% endif %}
+                                                    </li>
+                                                    <li>
+                                                        <a href="{%  url 'syncope:org_member_list' org.user.username %}">Members</a>
+                                                        {% if '/members/' in request.path %}
+                                                        <ul>
+                                                            <li><a href="{%  url 'syncope:org_member_list' org.user.username %}">Active</a></li>
+                                                            <li><a href="{%  url 'syncope:org_member_list_inactive' org.user.username %}">Inactive</a></li>
+                                                        </ul>
+                                                        {% endif %}
+                                                    </li>
                                                     <li><a href="{%  url 'syncope:event_list' org.user.username %}">Events</a></li>
                                                     <li><a href="{%  url 'syncope:project_list' org.user.username %}">Projects</a></li>
                                                     <li><a href="{%  url 'syncope:attendance' org.user.username %}">Attendance</a></li>

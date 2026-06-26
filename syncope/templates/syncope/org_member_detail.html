@@ -4,9 +4,9 @@
 {% block content %}
 {% if is_admin %}
 <p>
-    <a href="{%  url 'syncope:org_member_edit' url_username person.pk %}">EDIT person</a>
+    <a href="{{ person_edit_url }}">EDIT person</a>
     &nbsp;|&nbsp;
-    <a href="{% url 'syncope:org_member_delete' url_username person.pk %}" class="btn-danger" style="display: inline-block; text-decoration: none;">Delete Member</a>
+    <a href="{{ person_delete_url }}" class="btn-danger" style="display: inline-block; text-decoration: none;">Delete Member</a>
     {% if is_linked and can_unlink %}
     &nbsp;|&nbsp;
     <form method="post" action="{% url 'syncope:org_member_unlink' url_username person.pk %}" style="display:inline;" onclick="return confirm('Unlink this member from their account? They will lose access associated with this connection.')">
@@ -17,7 +17,7 @@
 </p>
 {% else %}
 <p>
-    <a href="{%  url 'syncope:org_member_edit' url_username person.pk %}">EDIT person</a>
+    <a href="{{ person_edit_url }}">EDIT person</a>
     {% if is_linked and can_unlink %}
     &nbsp;|&nbsp;
     <form method="post" action="{% url 'syncope:org_member_unlink' url_username person.pk %}" style="display:inline;" onclick="return confirm('Unlink your account from this organization member record?')">
