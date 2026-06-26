@@ -1,6 +1,5 @@
 from django.http import Http404, HttpResponseForbidden
 from django.utils.decorators import method_decorator
-from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
@@ -31,6 +30,41 @@ SKILL_MAP = {
     'poets': Skill.POET,
     'arrangers': Skill.ARRANGER,
     'translators': Skill.TRANSLATOR,
+}
+
+CONTEXT_TYPE_LIST_MAP = {
+    'composers': 'org_composers_list',
+    'poets': 'org_poets_list',
+    'arrangers': 'org_arrangers_list',
+    'translators': 'org_translators_list',
+}
+
+PRESET_LIST_MAP = {
+    'composer': 'org_composers_list',
+    'poet': 'org_poets_list',
+    'arranger': 'org_arrangers_list',
+    'translator': 'org_translators_list',
+}
+
+_DETAIL_URL_NAMES = {
+    'composers': 'syncope:org_composer_detail',
+    'poets': 'syncope:org_poet_detail',
+    'arrangers': 'syncope:org_arranger_detail',
+    'translators': 'syncope:org_translator_detail',
+}
+
+_EDIT_URL_NAMES = {
+    'composers': 'syncope:org_composer_edit',
+    'poets': 'syncope:org_poet_edit',
+    'arrangers': 'syncope:org_arranger_edit',
+    'translators': 'syncope:org_translator_edit',
+}
+
+_DELETE_URL_NAMES = {
+    'composers': 'syncope:org_composer_delete',
+    'poets': 'syncope:org_poet_delete',
+    'arrangers': 'syncope:org_arranger_delete',
+    'translators': 'syncope:org_translator_delete',
 }
 
 
@@ -280,6 +314,9 @@ class PersonListView(ListView):
         context["current_sort"] = self.request.GET.get('sort', 'name')
         context["reverse"] = self.request.GET.get('reverse', 'false') == 'true'
 
+        context['person_detail_url_name'] = _DETAIL_URL_NAMES.get(list_type, 'syncope:org_member_detail')
+        context['person_edit_url_name'] = _EDIT_URL_NAMES.get(list_type, 'syncope:org_member_edit')
+
         for person in context['persons']:
             person.resource_icons = resource_icon_list(person.person.person_resource.all())
 
@@ -323,6 +360,17 @@ class OrgMemberDetailView(DetailView):
 
         context["url_username"] = url_username
         context["is_admin"] = AccessControl.has_permission(self.request.user, 'delete', url_username)
+
+        context_type = self.kwargs.get('context_type', '')
+        context['person_edit_url'] = reverse(
+            _EDIT_URL_NAMES.get(context_type, 'syncope:org_member_edit'),
+            kwargs={'username': url_username, 'pk': self.object.pk}
+        )
+        context['person_delete_url'] = reverse(
+            _DELETE_URL_NAMES.get(context_type, 'syncope:org_member_delete'),
+            kwargs={'username': url_username, 'pk': self.object.pk}
+        )
+
         context["person_data"] = AccessControl.filter_person_details(
             self.request.user,
             self.object,
@@ -527,10 +575,9 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
             # 6. add date fields
             self._add_dates(person, form)
 
-        next_url = self.request.GET.get('next', '')
-        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
-            return redirect(next_url)
-        return redirect("syncope:org_member_list", username=self.kwargs["username"])
+        preset = self.kwargs.get('preset')
+        list_name = PRESET_LIST_MAP.get(preset, 'org_member_list')
+        return redirect(f"syncope:{list_name}", username=self.kwargs["username"])
 
     def _create_person(self, form):
         """
@@ -785,7 +832,9 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
             if rf.is_valid():
                 self._save_resources(rf)
 
-        return redirect("syncope:org_member_list",username=self.kwargs["username"])
+        context_type = self.kwargs.get('context_type')
+        list_name = CONTEXT_TYPE_LIST_MAP.get(context_type, 'org_member_list')
+        return redirect(f"syncope:{list_name}", username=self.kwargs["username"])
 
     def _save_resources(self, resource_formset):
         self.person.person_resource.all().delete()
@@ -1000,12 +1049,18 @@ class OrgMemberDeleteView(LoginRequiredMixin, DeleteView):
         return response
 
     def get_success_url(self):
-        return reverse('syncope:org_member_list', kwargs={'username': self.kwargs.get('username')})
+        context_type = self.kwargs.get('context_type')
+        list_name = CONTEXT_TYPE_LIST_MAP.get(context_type, 'org_member_list')
+        return reverse(f"syncope:{list_name}", kwargs={'username': self.kwargs.get('username')})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['url_username'] = self.kwargs.get('username')
+        url_username = self.kwargs.get('username')
+        context['url_username'] = url_username
         context['is_admin'] = True
+        context_type = self.kwargs.get('context_type', '')
+        detail_url_name = _DETAIL_URL_NAMES.get(context_type, 'syncope:org_member_detail')
+        context['person_detail_url'] = reverse(detail_url_name, kwargs={'username': url_username, 'pk': self.object.pk})
         return context
 
 

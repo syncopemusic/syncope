@@ -45,7 +45,7 @@
                                                 {% if ADMIN_ROLE in membership.person.roles.all or MEMBER_ROLE in membership.person.roles.all %}
                                                     <li>
                                                         <a href="{%  url 'syncope:song_list' org.user.username %}">Songs</a>
-                                                        {% if '/songs/' in request.path %}
+                                                        {% if '/songs/' in request.path or '/composers/' in request.path or '/poets/' in request.path or '/arrangers/' in request.path or '/translators/' in request.path %}
                                                         <ul>
                                                             <li><a href="{%  url 'syncope:org_composers_list' org.user.username %}">Composers</a></li>
                                                             <li><a href="{%  url 'syncope:org_poets_list' org.user.username %}">Poets</a></li>

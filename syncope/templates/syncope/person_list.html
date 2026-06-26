@@ -115,7 +115,7 @@
                 <span class="share-member-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
             </td>
             <td>
-                <a href="{% url 'syncope:org_member_detail' url_username person.person.id %}">
+                <a href="{% url person_detail_url_name url_username person.person.id %}">
                 {{ person.person.first_name }} {{ person.person.last_name }}
                 </a>
             </td>
@@ -151,7 +151,7 @@
                 {% endif %} {% endfor %}
             </td>
             <td>
-                <a href="{% url 'syncope:org_member_edit' url_username person.person.id %}">
+                <a href="{% url person_edit_url_name url_username person.person.id %}">
                     Edit
                 </a>
             </td>
