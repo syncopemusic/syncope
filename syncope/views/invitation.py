@@ -14,6 +14,26 @@ from syncope.models import (
     Person, Membership, MembershipPeriod, PersonRole, Role
 )
 from syncope.permissions import AccessControl
+from syncope.views.drafts import DraftMixin
+
+
+class SelectPersonInitialMixin:
+    person_preset_fields = []
+    person_preset_map = {}
+
+    def get_initial(self):
+        initial = super().get_initial()
+        if self.person_preset_map:
+            for query_key, form_key in self.person_preset_map.items():
+                pk = self.request.GET.get(query_key)
+                if pk:
+                    initial[form_key] = pk
+        else:
+            for field in self.person_preset_fields:
+                pk = self.request.GET.get(f'select_{field}')
+                if pk:
+                    initial[field] = pk
+        return initial
 
 
 class InvitationAccessMixin:
@@ -84,10 +104,11 @@ class InvitationListView(InvitationAccessMixin, ListView):
 
 # 2. Trigger: create invite
 @method_decorator(login_required, name="dispatch")
-class InvitationCreateView(InvitationAccessMixin, CreateView):
+class InvitationCreateView(DraftMixin, InvitationAccessMixin, SelectPersonInitialMixin, CreateView):
     model = Invitation
     form_class = InvitationForm
     template_name = "syncope/invitation_form.html"
+    person_preset_map = {'select_person': 'existing_person'}
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()

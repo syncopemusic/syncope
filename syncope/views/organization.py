@@ -15,6 +15,7 @@ from syncope.models import MembershipPeriod, PersonRole, EventSongResource, Proj
 from syncope.models import CustomUser, Organization, Person, Membership, Role, Resource, Song, Event, Project, Poll, Share
 from syncope.forms import OrganizationForm
 from syncope.permissions import AccessControl
+from syncope.views.drafts import DraftMixin
 
 
 class OrgAdminMixin:
@@ -71,7 +72,7 @@ class OrganizationDashboard(TemplateView):
 
 
 @method_decorator(login_required, name='dispatch')
-class OrganizationCreateView(CreateView):
+class OrganizationCreateView(DraftMixin, CreateView):
     template_name = "syncope/org_form.html"
     form_class = OrganizationForm
     context_object_name = "org_create"
@@ -127,7 +128,7 @@ class OrganizationCreateView(CreateView):
 
 
 @method_decorator(login_required, name='dispatch')
-class OrganizationUpdateView(OrgAdminMixin, UpdateView):
+class OrganizationUpdateView(DraftMixin, OrgAdminMixin, UpdateView):
     model = Organization
     form_class = OrganizationForm
     template_name = "syncope/org_form.html"

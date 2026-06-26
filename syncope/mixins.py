@@ -1,4 +1,3 @@
-# mixins.py
 from django.http import Http404
 from django.views.generic import ListView, DeleteView, CreateView, UpdateView
 from django.views.generic.edit import FormMixin
@@ -12,7 +11,7 @@ from django.core.exceptions import PermissionDenied
 from django.views.generic import DetailView
 from .models import CustomUser
 from .models import Event, Attendance, EventSong
-
+from .views.drafts import DraftMixin as BaseDraftMixin
 
 
 class SongOwnerMixin:
@@ -38,7 +37,7 @@ class SongOwnerMixin:
         return super().dispatch(request, *args, **kwargs)
 
 
-class SkillListAndCreateMixin(FormMixin, ListView):
+class SkillListAndCreateMixin(BaseDraftMixin, FormMixin, ListView):
     model = Skill
     form_class = SkillForm
     template_name = "syncope/skill_list.html"
