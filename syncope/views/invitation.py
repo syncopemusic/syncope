@@ -11,10 +11,12 @@ from django.views.generic import CreateView, ListView, DetailView
 from syncope.forms import InvitationForm, InvitationAcceptForm
 from syncope.models import (
     CustomUser, Invitation, InvitationType, InvitationStatus, Organization,
-    Person, Membership, MembershipPeriod, PersonRole, Role
+    Person, Membership, MembershipPeriod, PersonRole, Role,
+    PersonSkill, Singer, Instrumentalist, PersonResource
 )
 from syncope.permissions import AccessControl
 from syncope.views.drafts import DraftMixin
+from syncope.utils import bulk_copy_m2m_relations
 
 
 class SelectPersonInitialMixin:
@@ -302,7 +304,10 @@ class InvitationUpdateView(InvitationAccessMixin, DetailView):
             )
             return
 
-        transfer_fields = ["first_name", "last_name", "email", "address", "phone", "birth_date"]
+        transfer_fields = [
+            "first_name", "last_name", "email", "address", "phone",
+            "birth_date", "birth_approximate", "death_date", "death_approximate",
+        ]
 
         org_person = invitation.existing_person
         if org_person and not org_person.is_unlinked():
@@ -319,6 +324,7 @@ class InvitationUpdateView(InvitationAccessMixin, DetailView):
                 for field in transfer_fields:
                     setattr(org_person, field, getattr(human_person, field))
                 org_person.save(update_fields=["owner"] + transfer_fields)
+                self._copy_skills_voices_instruments(human_person, org_person)
             else:
                 org_person.save(update_fields=["owner"])
             Membership.objects.get_or_create(user=org_user, person=org_person)
@@ -332,6 +338,10 @@ class InvitationUpdateView(InvitationAccessMixin, DetailView):
 
         Membership.objects.get_or_create(user=org_user, person=org_person)
 
+        if copy_details:
+            self._copy_skills_voices_instruments(human_person, org_person)
+            self._copy_resources(human_person, org_person)
+
         role = Role.objects.get(id=Role.EXTERNAL)
         PersonRole.objects.create(person=org_person, role=role)
         MembershipPeriod.objects.create(
@@ -340,6 +350,11 @@ class InvitationUpdateView(InvitationAccessMixin, DetailView):
             role=role,
             started_at=timezone.now().date(),
         )
+
+    def _copy_skills_voices_instruments(self, human_person, org_person):
+        bulk_copy_m2m_relations(human_person, org_person, PersonSkill, id_field='skill_id')
+        bulk_copy_m2m_relations(human_person, org_person, Singer, id_field='voice_id')
+        bulk_copy_m2m_relations(human_person, org_person, Instrumentalist, id_field='instrument_id')
 
     def _expired(self, invitation):
         messages.error(self.request, "This invitation has expired and can no longer be accepted.")

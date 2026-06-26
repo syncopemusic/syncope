@@ -1,4 +1,5 @@
 import secrets
+from django.db import IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import redirect, get_object_or_404
 from django.views.decorators.http import require_http_methods
@@ -72,12 +73,15 @@ def create_share_link(request):
         if not Share.objects.filter(pk=share_id).exists():
             break
 
-    # Create the share
-    share = Share.objects.create(
-        id=share_id,
-        created_by=request.user if request.user.is_authenticated else None,
-        **{field_name: obj}
-    )
+    # Create the share (handle concurrent race by catching IntegrityError)
+    try:
+        share = Share.objects.create(
+            id=share_id,
+            created_by=request.user if request.user.is_authenticated else None,
+            **{field_name: obj}
+        )
+    except IntegrityError:
+        share = Share.objects.get(**{field_name: obj})
 
     return JsonResponse({
         "share_id": share.id,
