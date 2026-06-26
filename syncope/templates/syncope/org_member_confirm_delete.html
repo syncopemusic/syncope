@@ -11,10 +11,10 @@
 <form method="post">
     {% csrf_token %}
     <button type="submit" class="danger">Delete</button>
-    <a href="{% url 'syncope:org_member_detail' url_username person.pk %}">Cancel</a>
+    <a href="{{ person_detail_url }}">Cancel</a>
 </form>
 {% else %}
-<p><a href="{% url 'syncope:org_member_detail' url_username person.pk %}">Back to Member</a></p>
+<p><a href="{{ person_detail_url }}">Back to Member</a></p>
 {% endif %}
 
 {% endblock %}
