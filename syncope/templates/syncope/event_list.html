@@ -5,14 +5,6 @@
 
 {% block content %}
 
-<style>
-.btn-full { display: inline; }
-.btn-short { display: none; }
-@media (max-width: 768px) {
-    .btn-full { display: none; }
-    .btn-short { display: inline; }
-}
-</style>
 {% if membership and ADMIN_ROLE in membership.person.roles.all %}
 <p><a href="{%  url 'syncope:event_new' url_username %}">
     + New Event</a></p>

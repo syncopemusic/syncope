@@ -61,6 +61,7 @@ urlpatterns = [
     path("<str:username>/members/others/", PersonListView.as_view(), {"list_type": "others"}, name="org_member_list_others"),
     path("<str:username>/members/all/", PersonListView.as_view(), {"list_type": "all"}, name="org_member_list_all"),
     path("<str:username>/members/new/", OrgMemberAddView.as_view(), name="org_member_new"),
+    path("<str:username>/members/new/member/", OrgMemberAddView.as_view(), {'preset': 'member'}, name="org_member_new_member"),
     path("<str:username>/members/<int:pk>/", OrgMemberDetailView.as_view(), name="org_member_detail"),
     path("<str:username>/members/<int:pk>/edit/", OrgMemberEditView.as_view(), name="org_member_edit"),
     path("<str:username>/members/<int:pk>/delete/", OrgMemberDeleteView.as_view(), name="org_member_delete"),

@@ -4,14 +4,6 @@
 {% block title %}Projects{% endblock %}
 
 {% block content %}
-<style>
-.btn-full { display: inline; }
-.btn-short { display: none; }
-@media (max-width: 768px) {
-    .btn-full { display: none; }
-    .btn-short { display: inline; }
-}
-</style>
 <h2>Projects</h2>
 {% if membership and ADMIN_ROLE in membership.person.roles.all %}
 <p>

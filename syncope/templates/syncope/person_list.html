@@ -28,7 +28,7 @@
 {% if membership and ADMIN_ROLE in membership.person.roles.all %}
 <p>
 {% if list_type == 'active' %}
-    <a href="{% url 'syncope:org_member_new' url_username %}">
+    <a href="{% url 'syncope:org_member_new_member' url_username %}">
         + new member
     </a>
 {% elif list_type == 'inactive' %}
@@ -71,12 +71,13 @@
 
 <div style="display:none;">{% csrf_token %}</div>
 
+<div class="table-container">
 <table>
     <thead>
     <tr>
-        <th>#</th>
+        <th class="col-num">#</th>
         <th></th>
-        <th>
+        <th class="sticky-col">
             <a href="?q={{ q }}&sort=name{% if current_sort == 'name' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                 Name {% if current_sort == 'name' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
@@ -106,7 +107,7 @@
     <tbody>
         {% for person in persons %}
         <tr>
-            <td>{{ forloop.counter }}</td>
+            <td class="col-num">{{ forloop.counter }}</td>
             <td style="position: relative;">
                 <button class="share-member-btn" data-member-pk="{{ person.person.id }}"
                         style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
@@ -114,7 +115,7 @@
                 </button>
                 <span class="share-member-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
             </td>
-            <td>
+            <td class="sticky-col">
                 <a href="{% url person_detail_url_name url_username person.person.id %}">
                 {{ person.person.first_name }} {{ person.person.last_name }}
                 </a>
@@ -173,6 +174,7 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 
 {% block extra_js %}
 <script>

@@ -19,8 +19,10 @@
 </head>
 <body>
     <div class="grid-container">
+        <div class="mobile-topbar">
+            <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
+        </div>
 
-    <!-- toggle button -->
         <nav class="sidebar" id="sidebar">
             {% if user.is_authenticated %}
                 {% load url_tags %}
@@ -33,7 +35,7 @@
 
                     <li>
                         <p>Groups:</p>
-                        <ul>
+                        <ul class="org-list">
                             {% for membership in memberships %}
                                 {% with org=membership.user.organizations.first %}
                                     {% if org %}
@@ -80,10 +82,7 @@
             {% endif %}
         </nav>
 
-<!--    main -->
         <main class="main">
-
-            <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
             <div class="main-content">
                 {% if messages %}
                 <div style="margin-bottom: 1rem;">
@@ -119,20 +118,22 @@
     <script>
         function toggleMenu(){
             const container = document.querySelector(".grid-container");
-            {#const sidebar = document.querySelector(".sidebar");#}
+            const button = document.querySelector(".mobile-toggle");
 
             if (window.innerWidth < 769) {
-                container.classList.toggle("menu-visible");
+                const isOpen = container.classList.toggle("menu-visible");
+                button.textContent = isOpen ? "✕" : "☰";
             }
         }
 
         window.addEventListener("resize", function() {
             const container = document.querySelector(".grid-container");
+            const button = document.querySelector(".mobile-toggle");
             if (window.innerWidth > 768) {
                 container.classList.remove("menu-visible");
+                button.textContent = "☰";
             }
-        })
-        ;
+        });
     </script>
 
     <script>

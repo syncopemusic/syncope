@@ -1,8 +1,10 @@
 
 * {
-    margin: 2px;
-    padding: 2px;
     box-sizing: border-box;
+}
+
+body {
+    margin: 0;
 }
 
 .grid-container {
@@ -25,10 +27,18 @@
 
 .main {
     min-width: 0;
+    grid-area: main;
+}
+
+.menu-links,
+.menu-links ul,
+.org-list,
+.org-submenu {
+    list-style: none;
 }
 
 .menu-links {
-    list-style: none;
+    padding-left: 0;
 }
 
 .menu-links li {
@@ -42,18 +52,21 @@
     border-radius: 4px;
 }
 
-.menu-links a.active {
-    font-weight: bold;
-    background-color: rgba(255, 255, 255, 0.2);
-}
-
+.menu-links a.active,
 .org-submenu a.active {
     font-weight: bold;
     background-color: rgba(255, 255, 255, 0.2);
 }
 
+.org-list {
+    padding-left: 0.5rem;
+}
+
+.org-submenu {
+    padding-left: 1rem;
+}
+
 .main-content {
-    grid-area: main;
     padding: 2rem;
     overflow-y: auto;
     display: flex;
@@ -68,11 +81,36 @@
     flex: 1;
 }
 
+.table-container {
+    overflow-x: auto;
+}
+
+.sticky-col {
+    position: sticky;
+    left: 0;
+    background-color: #f8f9fa;
+    z-index: 1;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.col-num {
+    text-align: right;
+}
+
+.btn-full {
+    display: inline;
+}
+
+.btn-short {
+    display: none;
+}
 
 .mobile-toggle {
     display: none;
     border: none;
-    color: gray;
     width: fit-content;
 }
 
@@ -83,7 +121,18 @@
 @media (max-width: 768px) {
     .grid-container {
         grid-template-columns: 1fr;
-        grid-template-areas: "main";
+        grid-template-rows: auto 1fr;
+        grid-template-areas: "topbar" "main";
+    }
+
+    .mobile-topbar {
+        display: flex;
+        align-items: center;
+        grid-area: topbar;
+        position: sticky;
+        top: 0;
+        z-index: 1001;
+        padding: 0.5rem 1rem;
     }
 
     .sidebar {
@@ -103,17 +152,19 @@
 
     .mobile-toggle {
         display: block;
+        background: none;
+        padding: 0;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: white;
     }
 
-    .main-content {
-        padding: 1rem;
+    .btn-full {
+        display: none;
     }
-}
 
-@media (max-width: 600px) {
-    .table {
-        width: 100%;
-        overflow-x: auto;
+    .btn-short {
+        display: inline;
     }
 
     th, td {
@@ -130,6 +181,10 @@
 
     td {
         font-size: 14px;
+    }
+
+    .main-content {
+        padding: 1rem;
     }
 }
 
@@ -188,5 +243,6 @@
     color: white;
     border: none;
     border-radius: 4px;
+    padding: 0.5rem 1rem;
     cursor: pointer;
 }

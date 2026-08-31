@@ -18,17 +18,18 @@
 <div style="display:none;">{% csrf_token %}</div>
 
 {% if songs %}
+<div class="table-container">
 <table>
     <thead>
         <tr>
-            <th>
+            <th class="col-num">
                 <a href="?q={{ q }}&sort=id{% if current_sort == 'id' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                     ID {% if current_sort == 'id' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
             <th title="Concerts / Performances">Con/Per</th>
             <th></th>
-            <th>
+            <th class="sticky-col">
                 <a href="?q={{ q }}&sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
                     Title {% if current_sort == 'title' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
@@ -66,7 +67,7 @@
     <tbody>
     {% for song in songs %}
         <tr>
-            <td>{{ song.internal_id|default:"-" }}</td>
+            <td class="col-num">{{ song.internal_id|default:"-" }}</td>
             <td><span title="Number of concerts / number of performances">{% if song.concert_count or song.performance_count %}{{ song.concert_count }}/{{ song.performance_count }}{% else %}-{% endif %}</span></td>
 
             <td style="position: relative;">
@@ -76,7 +77,7 @@
                 </button>
                 <span class="share-song-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
             </td>
-            <td>
+            <td class="sticky-col">
                 <a href="{%  url 'syncope:song_detail' url_username song.pk %}">{{ song.title }}</a> {% if song.has_direct_resources or song.has_event_resources %}<span title="Song/Event Resources">{{ song.has_direct_resources }}/{{ song.has_event_resources }}</span>{% endif %}
                 {% if song.keywords %}
                     <small>{{ song.keywords|default:"|" }}</small>
@@ -100,6 +101,7 @@
     {% endfor %}
     </tbody>
 </table>
+</div>
 {% elif q %}
     <p>No songs found matching "{{ q }}".</p>
 {% else %}

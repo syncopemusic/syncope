@@ -107,7 +107,7 @@ class OrganizationForm(forms.ModelForm):
 
 
 class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
-    VALID_PRESETS = {'composer', 'poet', 'translator', 'arranger'}
+    VALID_PRESETS = {'composer', 'poet', 'translator', 'arranger', 'member'}
     # Person
     first_name = forms.CharField(max_length=100)
     last_name = forms.CharField(max_length=100)
@@ -175,32 +175,23 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
 
         # Apply presets
         if preset == 'composer':
-            external_role = Role.objects.filter(title__iexact='external').first()
-            composer_skill = Skill.objects.filter(title__iexact="composer").first()
-            if external_role and composer_skill:
-                self.initial['roles'] = [external_role.id]
-                self.initial["skills"] = [composer_skill.id]
+            self.initial['roles'] = [Role.EXTERNAL]
+            self.initial["skills"] = [Skill.COMPOSER]
 
         elif preset == 'poet':
-            poet_skill = Skill.objects.filter(title__iexact="poet").first()
-            external_role = Role.objects.filter(title__iexact="external").first()
-            if poet_skill and external_role:
-                self.initial['roles'] = [external_role.id]
-                self.initial["skills"] = [poet_skill.id]
+            self.initial['roles'] = [Role.EXTERNAL]
+            self.initial["skills"] = [Skill.POET]
 
         elif preset == 'translator':
-            translator_skill = Skill.objects.filter(title__iexact="translator").first()
-            external_role = Role.objects.filter(title__iexact="external").first()
-            if translator_skill and external_role:
-                self.initial['roles'] = [external_role.id]
-                self.initial["skills"] = [translator_skill.id]
+            self.initial['roles'] = [Role.EXTERNAL]
+            self.initial["skills"] = [Skill.TRANSLATOR]
 
         elif preset == 'arranger':
-            arranger_skill = Skill.objects.filter(title__iexact="arranger").first()
-            external_role = Role.objects.filter(title__iexact="external").first()
-            if arranger_skill and external_role:
-                self.initial['roles'] = [external_role.id]
-                self.initial["skills"] = [arranger_skill.id]
+            self.initial['roles'] = [Role.EXTERNAL]
+            self.initial["skills"] = [Skill.ARRANGER]
+
+        elif preset == 'member':
+            self.initial['roles'] = [Role.MEMBER]
 
 
 

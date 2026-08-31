@@ -4,6 +4,9 @@
 <style>
 .event-col {
     width: 20px;
+    height: 70px;
+    padding: 5px;
+    font-weight: normal;
 }
 
 .attendance-cell {
@@ -33,6 +36,13 @@
 .grayed-out {
     background-color: #ffffff !important;
     color: #333333;
+    pointer-events: none;
+    cursor: default;
+}
+
+.cell-ineligible {
+    background-color: #f5f5f5;
+    color: #ccc;
     pointer-events: none;
     cursor: default;
 }
@@ -87,11 +97,10 @@
             <table class="attendance-table">
                 <thead>
                     <tr>
-                        <th>#</th>
+                        <th class="col-num">#</th>
                         <th class="sticky-col">Member</th>
                         {% for event in events %}
-                            <th class="event-col "
-                                style="height: 50px; padding: 5px; font-weight: normal;">
+                            <th class="event-col">
                                 <div style="transform: rotate(-90deg); width: 10px; white-space: nowrap;">
                                     <a href="{%  url 'syncope:event_update' url_username event.id %}"
                                         style="
@@ -111,17 +120,21 @@
                     {% for group in grouped_dashboard_data %}
                         {% for row in group.items %}
                         <tr {% if forloop.first and not forloop.parentloop.first %}style="border-top: 3px solid #333;"{% endif %}>
-                            <td>{{ forloop.counter }}</td>
+                            <td class="col-num">{{ row.index }}</td>
                             <td class="sticky-col member-name">{{ row.member }}</td>
                             {% for cell in row.attendance_cells %}
-                                <td class="attendance-cell att-type-{{ cell.attendance_type_id|default:5 }} {% if cell.is_grayed_out %}grayed-out{% endif %}"
-                                    data-type-id="{{ cell.attendance_type_id|default:5 }}"
-                                    {% if not cell.is_grayed_out %}onclick="cycleAttendance(this)"{% endif %}>
-                                    <input type="hidden"
-                                           name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
-                                           value="{{ cell.attendance_type_id|default:5 }}">
-                                    <span class="att-icon"></span>
-                                </td>
+                                {% if cell.is_ineligible %}
+                                    <td class="cell-ineligible"></td>
+                                {% else %}
+                                    <td class="attendance-cell att-type-{{ cell.attendance_type_id|default:5 }} {% if cell.is_grayed_out %}grayed-out{% endif %}"
+                                        data-type-id="{{ cell.attendance_type_id|default:5 }}"
+                                        {% if not cell.is_grayed_out %}onclick="cycleAttendance(this)"{% endif %}>
+                                        <input type="hidden"
+                                               name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
+                                               value="{{ cell.attendance_type_id|default:5 }}">
+                                        <span class="att-icon"></span>
+                                    </td>
+                                {% endif %}
                             {% endfor %}
                             <td>{{ row.total_present }}/{{ row.total_events }}</td>
                             <td>{{ row.percentage|floatformat:0 }}%</td>
@@ -129,7 +142,8 @@
                         {% endfor %}
                     {% endfor %}
                     <tr class="totals-row" style="border-top: 3px solid #333;">
-                        <td class="sticky-col"><strong>Event Total</strong></td>
+                        <td class="col-num"><strong>Total</strong></td>
+                        <td class="sticky-col">{{ members|length }}</td>
                         {% for total in event_totals %}
                             <td>{{ total.present }}/{{ total.total }}</td>
                         {% endfor %}
