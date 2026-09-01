@@ -11,8 +11,11 @@ from django.views.generic import TemplateView
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
-from syncope.models import MembershipPeriod, PersonRole, EventSongResource, ProjectResource, ShareVisit
-from syncope.models import CustomUser, Organization, Person, Membership, Role, Resource, Song, Event, Project, Poll, Share
+from syncope.models import (
+    MembershipPeriod, PersonRole, EventSongResource, ProjectResource, ShareVisit,
+    PersonSkill, Singer, Instrumentalist, PersonResource,
+    CustomUser, Organization, Person, Membership, Role, Song, Event, Project, Poll, Share
+)
 from syncope.forms import OrganizationForm
 from syncope.permissions import AccessControl
 from syncope.views.drafts import DraftMixin
@@ -97,13 +100,38 @@ class OrganizationCreateView(DraftMixin, CreateView):
             organization.save()
 
             # create admin person of the org
+            transfer_fields = [
+                "first_name", "last_name", "email", "address", "phone",
+                "birth_date", "birth_approximate", "death_date", "death_approximate",
+            ]
             person_admin = Person.objects.create(
-                # user=organization.user,    # this Person belongs to the organization
-                owner=the_admin,    #  this person is claimed by the creator of the organization
-                email=the_admin.email,
-                first_name=the_admin.first_name,
-                last_name=the_admin.last_name,
+                owner=the_admin,
+                **{field: getattr(the_admin, field) for field in transfer_fields}
             )
+
+            # copy skills, voices, instruments
+            skill_ids = PersonSkill.objects.filter(person=the_admin).values_list("skill_id", flat=True)
+            voice_ids = Singer.objects.filter(person=the_admin).values_list("voice_id", flat=True)
+            instrument_ids = Instrumentalist.objects.filter(person=the_admin).values_list("instrument_id", flat=True)
+
+            PersonSkill.objects.bulk_create([
+                PersonSkill(person=person_admin, skill_id=sid) for sid in skill_ids
+            ], ignore_conflicts=True)
+            Singer.objects.bulk_create([
+                Singer(person=person_admin, voice_id=vid) for vid in voice_ids
+            ], ignore_conflicts=True)
+            Instrumentalist.objects.bulk_create([
+                Instrumentalist(person=person_admin, instrument_id=iid) for iid in instrument_ids
+            ], ignore_conflicts=True)
+
+            # copy person resources (portfolio)
+            human_resources = PersonResource.objects.filter(person=the_admin).values_list('resource_id', 'order')
+            org_resource_ids = set(PersonResource.objects.filter(person=person_admin).values_list('resource_id', flat=True))
+            PersonResource.objects.bulk_create([
+                PersonResource(person=person_admin, resource_id=resource_id, order=order)
+                for resource_id, order in human_resources
+                if resource_id not in org_resource_ids
+            ], ignore_conflicts=True)
 
             # make an admin role into membership
             membership = Membership.objects.create(

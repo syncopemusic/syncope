@@ -1136,3 +1136,125 @@ def resource_icon_list(resource_qs):
     ]
 
 
+def get_section_label(person):
+    singers = list(person.singer_set.all())
+    if singers:
+        if len(singers) > 1:
+            voices = [s.voice.name for s in singers]
+            voices.sort(key=_voice_sort_key)
+            return voices[0]
+        return singers[0].voice.name
+    instrumentalists = list(person.instrumentalist_set.all())
+    if instrumentalists:
+        return instrumentalists[0].instrument.name
+    person_skills = list(person.person_skill.all())
+    if person_skills:
+        return person_skills[0].skill.title
+    return 'Other'
+
+
+def _voice_sort_key(voice_name):
+    voice_base = voice_name.split()[0].lower()
+    voice_order = {
+        'soprano': 0,
+        'mezzo': 1,
+        'alto': 2,
+        'tenor': 3,
+        'baritone': 4,
+        'bass': 5,
+    }
+    base_order = voice_order.get(voice_base, 999)
+    number = 0
+    if '1' in voice_name:
+        number = 0
+    elif '2' in voice_name:
+        number = 1
+    return (base_order, number, voice_name)
+
+
+def group_by_section(items, person_getter):
+    groups = {}
+    for item in items:
+        label = get_section_label(person_getter(item))
+        groups.setdefault(label, []).append(item)
+
+    sorted_labels = []
+    voice_labels = []
+    other_labels = []
+
+    for label in groups:
+        if label == 'Other':
+            continue
+        first_word = label.split()[0].lower()
+        if first_word in ('soprano', 'mezzo', 'alto', 'tenor', 'baritone', 'bass', 'solo'):
+            voice_labels.append(label)
+        else:
+            other_labels.append(label)
+
+    voice_labels.sort(key=_voice_sort_key)
+    other_labels.sort()
+    sorted_labels = voice_labels + other_labels
+
+    if 'Other' in groups:
+        sorted_labels.append('Other')
+
+    return [{'label': label, 'items': groups[label]} for label in sorted_labels]
+
+
+def bulk_copy_m2m_relations(source_obj, dest_obj, relation_model, id_field='id', **filters):
+    """Copy M2M relations from source to dest, skipping duplicates.
+
+    Args:
+        source_obj: Source person/object
+        dest_obj: Destination person/object
+        relation_model: The intermediate M2M model (PersonSkill, Singer, Instrumentalist, etc)
+        id_field: The field on relation_model to fetch (e.g., 'skill_id', 'voice_id')
+        **filters: Additional filter criteria (e.g., person='person')
+
+    Example:
+        bulk_copy_m2m_relations(human, org_person, PersonSkill, id_field='skill_id', person='person')
+    """
+    source_ids = set(
+        relation_model.objects.filter(person=source_obj, **filters)
+        .values_list(id_field, flat=True)
+    )
+    dest_ids = set(
+        relation_model.objects.filter(person=dest_obj, **filters)
+        .values_list(id_field, flat=True)
+    )
+    new_ids = source_ids - dest_ids
+    if not new_ids:
+        return
+
+    objs_to_create = [
+        relation_model(person=dest_obj, **{id_field: new_id})
+        for new_id in new_ids
+    ]
+    relation_model.objects.bulk_create(objs_to_create, ignore_conflicts=True)
+
+
+def merge_consecutive_membership_periods(person, org_user):
+    """Merge same-role periods where A.ended_at == B.started_at.
+
+    This consolidates adjacent periods for the same role to avoid fragmentation.
+    """
+    periods = list(
+        MembershipPeriod.objects.filter(person=person, user=org_user)
+        .order_by('role_id', 'started_at')
+    )
+    by_role = {}
+    for p in periods:
+        by_role.setdefault(p.role_id, []).append(p)
+    for role_periods in by_role.values():
+        i = 0
+        while i < len(role_periods) - 1:
+            a, b = role_periods[i], role_periods[i + 1]
+            if a.ended_at is not None and a.ended_at == b.started_at:
+                a.ended_at = b.ended_at
+                a.save(update_fields=['ended_at'])
+                b.delete()
+                role_periods.pop(i + 1)
+            else:
+                i += 1
+
+

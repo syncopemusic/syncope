@@ -23,12 +23,13 @@
     <!-- toggle button -->
         <nav class="sidebar" id="sidebar">
             {% if user.is_authenticated %}
+                {% load url_tags %}
                 <p>{{ user.username }}</p>
                 <ul class="menu-links">
-                    <li><a href="{%  url 'syncope:person_update' user.username %}">Update profile</a></li>
-                    <li><a href="{%  url 'syncope:home' %}">Home</a></li>
-                    <li><a href="{%  url 'syncope:song_list' user.username %}">Songs</a></li>
-                    <li><a href="{%  url 'syncope:invitation_list' user.username %}">Invitations{% if pending_invitations %} ({{ pending_invitations }}){% endif %}</a></li>
+                    <li><a href="{%  url 'syncope:person_update' user.username %}" {% if request.resolver_match.url_name == 'person_update' %}class="active"{% endif %}>Update profile</a></li>
+                    <li><a href="{%  url 'syncope:home' %}" {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>Home</a></li>
+                    <li><a href="{%  url 'syncope:song_list' user.username %}" {% if request.resolver_match.url_name|url_in:'song_list,song_detail,song_new,song_update,song_delete,song_quotes' and url_username == user.username %}class="active"{% endif %}>Songs</a></li>
+                    <li><a href="{%  url 'syncope:invitation_list' user.username %}" {% if request.resolver_match.url_name|url_in:'invitation_list,invitation_new,invitation_detail' and url_username == user.username %}class="active"{% endif %}>Invitations{% if pending_invitations %} ({{ pending_invitations }}){% endif %}</a></li>
 
                     <li>
                         <p>Groups:</p>
@@ -37,42 +38,24 @@
                                 {% with org=membership.user.organizations.first %}
                                     {% if org %}
                                         <li class="org-item {% if url_username == org.user.username %}active{% endif %}">
-                                            <a href="{%  url 'syncope:org_dashboard' org.user.username %}">
+                                            <a href="{%  url 'syncope:org_dashboard' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'org_dashboard,org_edit,org_delete' %}class="active"{% endif %}>
                                                 {{ org.name }} ({{ membership.person.first_name }} - {{ membership.person.roles.all|join:", " }})
                                             </a>
                                             <ul class="org-submenu">
                                                 <!-- Songs visible to ADMIN and MEMBER -->
                                                 {% if ADMIN_ROLE in membership.person.roles.all or MEMBER_ROLE in membership.person.roles.all %}
-                                                    <li>
-                                                        <a href="{%  url 'syncope:song_list' org.user.username %}">Songs</a>
-                                                        {% if '/songs/' in request.path or '/composers/' in request.path or '/poets/' in request.path or '/arrangers/' in request.path or '/translators/' in request.path %}
-                                                        <ul>
-                                                            <li><a href="{%  url 'syncope:org_composers_list' org.user.username %}">Composers</a></li>
-                                                            <li><a href="{%  url 'syncope:org_poets_list' org.user.username %}">Poets</a></li>
-                                                            <li><a href="{%  url 'syncope:org_arrangers_list' org.user.username %}">Arrangers</a></li>
-                                                            <li><a href="{%  url 'syncope:org_translators_list' org.user.username %}">Translators</a></li>
-                                                        </ul>
-                                                        {% endif %}
-                                                    </li>
-                                                    <li>
-                                                        <a href="{%  url 'syncope:org_member_list' org.user.username %}">Members</a>
-                                                        {% if '/members/' in request.path %}
-                                                        <ul>
-                                                            <li><a href="{%  url 'syncope:org_member_list' org.user.username %}">Active</a></li>
-                                                            <li><a href="{%  url 'syncope:org_member_list_inactive' org.user.username %}">Inactive</a></li>
-                                                        </ul>
-                                                        {% endif %}
-                                                    </li>
-                                                    <li><a href="{%  url 'syncope:event_list' org.user.username %}">Events</a></li>
-                                                    <li><a href="{%  url 'syncope:project_list' org.user.username %}">Projects</a></li>
-                                                    <li><a href="{%  url 'syncope:attendance' org.user.username %}">Attendance</a></li>
-                                                    <li><a href="{%  url 'syncope:poll_list' org.user.username %}">Polls</a></li>
+                                                    <li><a href="{%  url 'syncope:song_list' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'song_list,song_detail,song_new,song_update,song_delete,song_quotes' %}class="active"{% endif %}>Songs</a></li>
+                                                    <li><a href="{%  url 'syncope:org_member_list' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'org_member_list,org_member_detail,org_member_new,org_member_edit,org_member_delete' %}class="active"{% endif %}>Members</a></li>
+                                                    <li><a href="{%  url 'syncope:event_list' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'event_list,event_detail,event_new,event_update,event_delete,event_new_attendance,self_attendance_update,event_new_song' %}class="active"{% endif %}>Events</a></li>
+                                                    <li><a href="{%  url 'syncope:project_list' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'project_list,project_detail,project_new,project_update,project_delete' %}class="active"{% endif %}>Projects</a></li>
+                                                    <li><a href="{%  url 'syncope:attendance' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'attendance,attendance_delete,quick_new_rehearsal' %}class="active"{% endif %}>Attendance</a></li>
+                                                    <li><a href="{%  url 'syncope:poll_list' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'poll_list,poll_detail,poll_new,poll_update,poll_delete,poll_persons,poll_events,poll_attendance' %}class="active"{% endif %}>Polls</a></li>
 
                                                 {% endif %}
                                                 {% if ADMIN_ROLE in membership.person.roles.all %}
 
-                                                    <li><a href="{%  url 'syncope:import_hub' username=org.user.username %}">Import Data</a></li>
-                                                    <li><a href="{%  url 'syncope:invitation_list' org.user.username %}">Invitations{% if membership.pending_invitations %} ({{ membership.pending_invitations }}){% endif %}</a></li>
+                                                    <li><a href="{%  url 'syncope:import_hub' username=org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'import_hub,import_dashboard,import_combine' %}class="active"{% endif %}>Import Data</a></li>
+                                                    <li><a href="{%  url 'syncope:invitation_list' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'invitation_list,invitation_new,invitation_detail' %}class="active"{% endif %}>Invitations{% if membership.pending_invitations %} ({{ membership.pending_invitations }}){% endif %}</a></li>
                                                 {% endif %}
                                             </ul>
                                         </li>

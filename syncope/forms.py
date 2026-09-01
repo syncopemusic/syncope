@@ -5,7 +5,8 @@ from django.utils import timezone
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
     PollAttendance, Invitation
 from .models import Event, EventSong, Attendance, AttendanceType,  Voice, Instrument, EventType, EventResource, EventSongResource
-from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource, ProjectResource
+from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource, ProjectResource, \
+    MembershipPeriod, PersonRole
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q
 
@@ -63,14 +64,23 @@ class PersonForm(forms.ModelForm):
             "address",
             "phone",
             "birth_date",
+            "birth_approximate",
+            "death_date",
+            "death_approximate",
         ]
         widgets = {
             "birth_date": forms.DateInput(attrs={'type': 'date'}),
+            "death_date": forms.DateInput(attrs={'type': 'date'}),
         }
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user", None)
+        own_profile = kwargs.pop("own_profile", False)
         super().__init__(*args, **kwargs)
+
+        if own_profile:
+            for field in ("death_date", "birth_approximate", "death_approximate"):
+                self.fields.pop(field, None)
 
         if self.instance.pk:
             # editing current user
@@ -80,6 +90,8 @@ class PersonForm(forms.ModelForm):
             self.fields["email"].initial = user.email
 
 class OrganizationForm(forms.ModelForm):
+    email = forms.EmailField(required=True)
+
     class Meta:
         model = Organization
         fields = ["name", "email", "address"]
@@ -195,15 +207,23 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
 class QuoteForm(forms.ModelForm):
     class Meta:
         model = Quote
-        fields = ['word', 'bar_number']
+        fields = ['word', 'bar_number', 'date', 'person']
         labels = {
             'word': 'Quote',
             'bar_number': 'Bar Number',
+            'date': 'Date',
+            'person': 'Person',
         }
         widgets = {
             'word': forms.TextInput(attrs={'placeholder': 'Quote text'}),
             'bar_number': forms.TextInput(attrs={'placeholder': '43'}),
+            'date': forms.DateInput(attrs={'type': 'date'}),
         }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['person'].queryset = Person.objects.in_org_user(user)
 
 
 class SongForm(forms.ModelForm):
@@ -229,6 +249,9 @@ class SongForm(forms.ModelForm):
         ]
         widgets = {
             "lyrics": forms.Textarea(attrs={'rows': 12}),
+        }
+        labels = {
+            "languagecode": "Language",
         }
 
     def __init__(self, *args, user=None, **kwargs):
@@ -552,10 +575,23 @@ AttendanceFormSet = inlineformset_factory(
     can_delete=True,
 )
 
+
+class BaseQuoteFormSet(BaseInlineFormSet):
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs['user'] = self.user
+        return kwargs
+
+
 QuoteFormSet = inlineformset_factory(
     Song,
     Quote,
     form=QuoteForm,
+    formset=BaseQuoteFormSet,
     extra=1,
     can_delete=True,
 )
@@ -683,6 +719,76 @@ ProjectResourceForm = make_resource_form(ProjectResource)
 ProjectResourceFormSet = inlineformset_factory(
     Project, ProjectResource, form=ProjectResourceForm,
     formset=BaseResourceFormSet, extra=1, can_delete=True,
+)
+
+
+class MembershipPeriodForm(forms.ModelForm):
+    class Meta:
+        model = MembershipPeriod
+        fields = ['role', 'started_at', 'ended_at']
+        widgets = {
+            'started_at': forms.DateInput(attrs={'type': 'date'}),
+            'ended_at': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def __init__(self, *args, user=None, person=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['ended_at'].help_text = "Leave blank if still active"
+
+    def clean(self):
+        cleaned = super().clean()
+        start = cleaned.get('started_at')
+        end = cleaned.get('ended_at')
+        if start and end and end < start:
+            raise forms.ValidationError("End date must be after start date.")
+        return cleaned
+
+
+class BaseMembershipPeriodFormSet(BaseInlineFormSet):
+    def __init__(self, *args, user=None, person=None, **kwargs):
+        self.user = user
+        self.person = person
+        super().__init__(*args, **kwargs)
+
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs['user'] = self.user
+        kwargs['person'] = self.person
+        return kwargs
+
+    def save_new(self, form, commit=True):
+        obj = super().save_new(form, commit=False)
+        obj.user = self.user
+        if commit:
+            obj.save()
+        return obj
+
+    def clean(self):
+        if any(self.errors):
+            return
+        from collections import defaultdict
+        by_role = defaultdict(list)
+        for form in self.forms:
+            if not form.cleaned_data or form.cleaned_data.get('DELETE'):
+                continue
+            role = form.cleaned_data.get('role')
+            start = form.cleaned_data.get('started_at')
+            end = form.cleaned_data.get('ended_at')
+            if role and start:
+                by_role[role.id].append((start, end))
+        for role_id, periods in by_role.items():
+            periods.sort(key=lambda p: p[0])
+            for i in range(len(periods) - 1):
+                _, end_a = periods[i]
+                start_b, _ = periods[i + 1]
+                if end_a is None or start_b <= end_a:
+                    raise forms.ValidationError("Periods for the same role must not overlap.")
+
+
+MembershipPeriodFormSet = inlineformset_factory(
+    Person, MembershipPeriod, fk_name='person',
+    form=MembershipPeriodForm, formset=BaseMembershipPeriodFormSet,
+    extra=1, can_delete=True,
 )
 
 

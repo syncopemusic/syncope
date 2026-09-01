@@ -203,7 +203,8 @@ class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Creat
         context['quote_formset'] = (
             quote_formset or self._get_formset_from_draft(
                 QuoteFormSet, 'quotes',
-                data=post_data
+                data=post_data,
+                user=self.owner_user
             )
         )
         context['translation_formset'] = (
@@ -229,7 +230,7 @@ class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Creat
             post_data = request.POST.copy()
             total = int(post_data.get('quotes-TOTAL_FORMS', 0))
             post_data['quotes-TOTAL_FORMS'] = total + 1
-            kf = QuoteFormSet(post_data, prefix='quotes')
+            kf = QuoteFormSet(post_data, prefix='quotes', user=self.owner_user)
             return self.render_to_response(self.get_context_data(form=form, quote_formset=kf))
         if request.POST.get('action') == 'add_translation_row':
             self.object = None
@@ -244,8 +245,11 @@ class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Creat
     def form_valid(self, form):
         clear_draft(self.request, self.get_draft_key())
         form.instance.user = self.owner_user
+        if form.instance.internal_id is None:
+            max_id = Song.objects.filter(user=self.owner_user).aggregate(Max("internal_id"))["internal_id__max"]
+            form.instance.internal_id = (max_id or 0) + 1
         self.object = form.save()
-        kf = QuoteFormSet(self.request.POST, instance=self.object, prefix='quotes')
+        kf = QuoteFormSet(self.request.POST, instance=self.object, prefix='quotes', user=self.object.user)
         if kf.is_valid():
             kf.save()
         tf = LyricsTranslationFormSet(
@@ -321,7 +325,8 @@ class SongUpdateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Updat
             quote_formset or self._get_formset_from_draft(
                 QuoteFormSet, 'quotes',
                 data=post_data,
-                instance=self.object
+                instance=self.object,
+                user=self.object.user
             )
         )
         context['translation_formset'] = (
@@ -349,7 +354,7 @@ class SongUpdateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Updat
             post_data = request.POST.copy()
             total = int(post_data.get('quotes-TOTAL_FORMS', 0))
             post_data['quotes-TOTAL_FORMS'] = total + 1
-            kf = QuoteFormSet(post_data, instance=self.object, prefix='quotes')
+            kf = QuoteFormSet(post_data, instance=self.object, prefix='quotes', user=self.object.user)
             return self.render_to_response(self.get_context_data(form=form, quote_formset=kf))
         if request.POST.get('action') == 'add_translation_row':
             self.object = self.get_object()
@@ -368,7 +373,7 @@ class SongUpdateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Updat
         clear_draft(self.request, self.get_draft_key())
         form.instance.user = self.owner_user
         self.object = form.save()
-        kf = QuoteFormSet(self.request.POST, instance=self.object, prefix='quotes')
+        kf = QuoteFormSet(self.request.POST, instance=self.object, prefix='quotes', user=self.object.user)
         if kf.is_valid():
             kf.save()
         tf = LyricsTranslationFormSet(
@@ -443,7 +448,7 @@ class SongQuoteView(SongOwnerMixin, View):
 
     def get(self, request, username, pk):
         song = self._get_song(pk)
-        formset = QuoteFormSet(instance=song, prefix='quotes')
+        formset = QuoteFormSet(instance=song, prefix='quotes', user=song.user)
         return render(request, self.template_name, {
             'song': song,
             'formset': formset,
@@ -458,14 +463,14 @@ class SongQuoteView(SongOwnerMixin, View):
             post_data = request.POST.copy()
             total = int(post_data.get('quotes-TOTAL_FORMS', 0))
             post_data['quotes-TOTAL_FORMS'] = total + 1
-            formset = QuoteFormSet(post_data, instance=song, prefix='quotes')
+            formset = QuoteFormSet(post_data, instance=song, prefix='quotes', user=song.user)
             return render(request, self.template_name, {
                 'song': song,
                 'formset': formset,
                 'url_username': username,
                 'next': request.POST.get('next', ''),
             })
-        formset = QuoteFormSet(request.POST, instance=song, prefix='quotes')
+        formset = QuoteFormSet(request.POST, instance=song, prefix='quotes', user=song.user)
         if formset.is_valid():
             formset.save()
             return redirect(self._next_url(request, username, pk))

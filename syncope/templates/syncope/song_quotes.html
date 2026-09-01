@@ -22,6 +22,8 @@
             <tr>
                 <th>Quote</th>
                 <th>Bar Number</th>
+                <th>Date</th>
+                <th>Person</th>
                 <th>Remove</th>
             </tr>
         </thead>
@@ -36,6 +38,8 @@
                     {% endif %}
                 </td>
                 <td>{{ form.bar_number }}</td>
+                <td>{{ form.date }}</td>
+                <td>{{ form.person }}</td>
                 <td>{% if can_manage %}{{ form.DELETE }}{% endif %}</td>
             </tr>
         {% endfor %}

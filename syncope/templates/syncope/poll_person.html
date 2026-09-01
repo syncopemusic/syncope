@@ -51,8 +51,9 @@
             </tr>
         </thead>
         <tbody>
-            {% for pp in poll_persons %}
-            <tr>
+            {% for group in grouped_poll_persons %}
+            {% for pp in group.items %}
+            <tr {% if forloop.first and not forloop.parentloop.first %}style="border-top: 3px solid #333;"{% endif %}>
                 <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{{ forloop.counter }}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">{{ pp.person.first_name }} {{ pp.person.last_name }}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">
@@ -67,6 +68,7 @@
                     {% endif %}
                 </td>
             </tr>
+            {% endfor %}
             {% endfor %}
         </tbody>
     </table>

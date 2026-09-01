@@ -6,8 +6,9 @@ from datetime import timedelta
 from django.utils import timezone
 from django.views.generic import View
 from django.views.generic.edit import DeleteView
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.shortcuts import redirect
+from syncope.utils import group_by_section
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -39,6 +40,27 @@ class AttendanceDashboardView(View):
     def _is_counted_attendance(self, attendance_type_id):
         """Check if attendance type should count toward statistics (not TBD)."""
         return attendance_type_id is not None and attendance_type_id != AttendanceType.TBD
+
+    def _get_members_for_events(self, events):
+        """Get members active during the displayed events' date range.
+
+        Returns all members whose MembershipPeriod overlaps with the date span
+        of the displayed events. This ensures historical members remain in rows
+        even after their membership ends, as long as events from their active
+        period are shown.
+        """
+        if events:
+            dates = [e.started_at.date() for e in events]
+            earliest, latest = min(dates), max(dates)
+        else:
+            today = timezone.now().date()
+            earliest = latest = today
+
+        return Person.objects.active_during_date_range(self.org_user, earliest, latest).prefetch_related(
+            'singer_set__voice',
+            'instrumentalist_set__instrument',
+            'person_skill__skill',
+        )
 
     def _fetch_events(self, event_limit, start_date, end_date, include_prefetch=True):
         """
@@ -125,11 +147,8 @@ class AttendanceDashboardView(View):
             event_limit, start_date, end_date, include_prefetch=True
         )
 
-        # Get all current members, ordered alphabetically for now
-        members = Person.objects.filter(
-            memberships__user=self.org_user,
-            memberships__person__roles__id=Role.MEMBER
-        ).distinct().order_by('last_name')
+        # Get members active during the displayed events' date range
+        members = self._get_members_for_events(events)
 
         # Get attendance types
         present_type = AttendanceType.objects.get(pk=AttendanceType.PRESENT)
@@ -137,12 +156,16 @@ class AttendanceDashboardView(View):
         # Build attendance matrix
         dashboard_data = self._build_attendance_matrix(members, events, present_type)
 
+        # Group by section
+        grouped_dashboard_data = group_by_section(dashboard_data, lambda row: row['member'])
+
         # Calculate totals per event
         event_totals = self._calculate_event_totals(events, members, present_type)
 
         context = {
             'org_user': self.org_user,
             'members': members,
+            'grouped_dashboard_data': grouped_dashboard_data,
             'events': events,
             'dashboard_data': dashboard_data,
             'event_totals': event_totals,
@@ -164,10 +187,7 @@ class AttendanceDashboardView(View):
                 event_limit, start_date, end_date, include_prefetch=False
             )
 
-            members = Person.objects.filter(
-                memberships__user=self.org_user,
-                memberships__person__roles__id=Role.MEMBER
-            ).distinct()
+            members = self._get_members_for_events(events)
 
             # Read submitted type IDs per cell
             VALID_TYPE_IDS = {
@@ -407,11 +427,8 @@ def quick_add_rehearsal(request, username):
             location="usual"
         )
 
-        # Get all current members
-        members = Person.objects.filter(
-            memberships__user=org_user,
-            memberships__person__roles__id=Role.MEMBER
-        ).distinct()
+        # Get all active members as of today
+        members = Person.objects.active_performers(org_user, timezone.now().date())
 
         # Get the "TBD" attendance type
         unknown_type = AttendanceType.objects.get(pk=AttendanceType.TBD)

@@ -114,7 +114,12 @@
 <h3>Quotes</h3>
 <ul>
     {% for quote in song.quotes.all %}
-        <li>{{ quote.word }}{% if quote.bar_number %} (Bar {{ quote.bar_number }}){% endif %}</li>
+        <li>
+            {{ quote.word }}
+            {% if quote.bar_number %} (Bar {{ quote.bar_number }}){% endif %}
+            {% if quote.date %} — {{ quote.date }}{% endif %}
+            {% if quote.person %} — {{ quote.person }}{% endif %}
+        </li>
     {% endfor %}
 </ul>
 {% endif %}

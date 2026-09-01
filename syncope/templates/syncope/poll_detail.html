@@ -107,8 +107,9 @@
             </tr>
         </thead>
         <tbody>
-            {% for row in table_rows %}
-            <tr>
+            {% for group in grouped_table_rows %}
+            {% for row in group.items %}
+            <tr {% if forloop.first and not forloop.parentloop.first %}style="border-top: 3px solid #333;"{% endif %}>
                 <td>{{ forloop.counter }}</td>
                 <td style="position: relative;">
 
@@ -127,6 +128,7 @@
                 </td>
                 {% endfor %}
             </tr>
+            {% endfor %}
             {% endfor %}
         </tbody>
     </table>

@@ -162,17 +162,16 @@
     </div>
 
     <div>
-        <label for="{{ form.additional_notes.id_for_label }}">{{ form.additional_notes.label }}</label>
-        {{ form.additional_notes }}
-        {# extra: add links/buttons for additional_notes here #}
-        {% if form.additional_notes.help_text %}<p class="helptext">{{ form.additional_notes.help_text }}</p>{% endif %}
-        {% if form.additional_notes.errors %}
+        <label for="{{ form.languagecode.id_for_label }}">{{ form.languagecode.label }}</label>
+        {{ form.languagecode }}
+        {# extra: add links/buttons for languagecode here #}
+        {% if form.languagecode.help_text %}<p class="helptext">{{ form.languagecode.help_text }}</p>{% endif %}
+        {% if form.languagecode.errors %}
             <ul class="errorlist">
-                {% for error in form.additional_notes.errors %}<li>{{ error }}</li>{% endfor %}
+                {% for error in form.languagecode.errors %}<li>{{ error }}</li>{% endfor %}
             </ul>
         {% endif %}
     </div>
-
     <div>
         <label for="{{ form.lyrics.id_for_label }}">{{ form.lyrics.label }}</label>
         {{ form.lyrics }}
@@ -185,14 +184,15 @@
         {% endif %}
     </div>
 
+
     <div>
-        <label for="{{ form.languagecode.id_for_label }}">{{ form.languagecode.label }}</label>
-        {{ form.languagecode }}
-        {# extra: add links/buttons for languagecode here #}
-        {% if form.languagecode.help_text %}<p class="helptext">{{ form.languagecode.help_text }}</p>{% endif %}
-        {% if form.languagecode.errors %}
+        <label for="{{ form.additional_notes.id_for_label }}">{{ form.additional_notes.label }}</label>
+        {{ form.additional_notes }}
+        {# extra: add links/buttons for additional_notes here #}
+        {% if form.additional_notes.help_text %}<p class="helptext">{{ form.additional_notes.help_text }}</p>{% endif %}
+        {% if form.additional_notes.errors %}
             <ul class="errorlist">
-                {% for error in form.languagecode.errors %}<li>{{ error }}</li>{% endfor %}
+                {% for error in form.additional_notes.errors %}<li>{{ error }}</li>{% endfor %}
             </ul>
         {% endif %}
     </div>
@@ -216,6 +216,8 @@
             <tr>
                 <th>Quote</th>
                 <th>Bar Number</th>
+                <th>Date</th>
+                <th>Person</th>
                 <th>Remove</th>
             </tr>
         </thead>
@@ -225,6 +227,8 @@
                 {% for hidden in kw_form.hidden_fields %}{{ hidden }}{% endfor %}
                 <td>{{ kw_form.word }}</td>
                 <td>{{ kw_form.bar_number }}</td>
+                <td>{{ kw_form.date }}</td>
+                <td>{{ kw_form.person }}</td>
                 <td>{% if can_manage %}{{ kw_form.DELETE }}{% endif %}</td>
             </tr>
         {% endfor %}

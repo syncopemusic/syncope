@@ -183,7 +183,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
 class Organization(models.Model):
     name = models.CharField(max_length=255)
-    email = models.EmailField(blank=True, null=True)
+    email = models.EmailField()
     address = models.TextField(blank=True, null=True)
 
     # auth account of the organization
@@ -230,6 +230,18 @@ class PersonQuerySet(models.QuerySet):
             Q(membership_period__ended_at__gte=at_date) |
             Q(membership_period__ended_at__isnull=True)
         ).distinct()
+
+    def active_during_date_range(self, org_user, start_date, end_date):
+        """Persons with active MEMBER periods overlapping the given date range.
+        Includes members whose membership was active at any point during the range."""
+        return self.filter(
+            membership_period__user=org_user,
+            membership_period__role_id=Role.MEMBER,
+            membership_period__started_at__lte=end_date,
+        ).filter(
+            Q(membership_period__ended_at__gte=start_date) |
+            Q(membership_period__ended_at__isnull=True)
+        ).distinct().order_by('last_name')
 
     def unlinked_in_org(self, org_user):
         """Filter unlinked persons in an organization (can be linked to invitations/requests)."""
@@ -499,6 +511,8 @@ class Quote(models.Model):
     word = models.CharField(max_length=100)
     bar_number = models.CharField(max_length=20, blank=True, null=True)
     song = models.ForeignKey(Song, on_delete=models.CASCADE, related_name='quotes')
+    date = models.DateField(blank=True, null=True)
+    person = models.ForeignKey(Person, on_delete=models.SET_NULL, related_name='quotes', blank=True, null=True)
 
     class Meta:
         ordering = ['word']
