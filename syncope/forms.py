@@ -317,7 +317,11 @@ class EventForm(forms.ModelForm):
         widgets = {
             'started_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
             'ended_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
-            'location': forms.Textarea(attrs={'rows': 3}),
+            'location': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Venue / address'}),
+            'description': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Description'}),
+            'details': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Details'}),
+            'producers': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Producers'}),
+            'additional_notes': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Additional notes'}),
         }
 
     def __init__(self, *args, user=None, **kwargs):
@@ -364,10 +368,9 @@ class SongChoiceField(forms.ModelChoiceField):
 
 
 class AddSongToEventForm(forms.Form):
-    encore = forms.BooleanField(required=False, label='Encore')
-
-    def __init__(self, *args, org_user=None, event=None, search_q='', **kwargs):
+    def __init__(self, *args, org_user=None, event=None, search_q='', limit_results=True, **kwargs):
         super().__init__(*args, **kwargs)
+        self.song_search_truncated = False
         if org_user and event is not None:
             already_added_ids = set(event.eventsong_set.values_list('song_id', flat=True))
             qs = Song.objects.filter(user=org_user).order_by('title')
@@ -380,6 +383,11 @@ class AddSongToEventForm(forms.Form):
                         Q(composer__last_name__icontains=search_q) |
                         Q(keywords__icontains=search_q)
                     ).distinct()
+            if limit_results:
+                total_matches = qs.count()
+                limited_ids = list(qs.values_list('pk', flat=True)[:50])
+                qs = qs.filter(pk__in=limited_ids)
+                self.song_search_truncated = total_matches > 50
             self.fields['song'] = SongChoiceField(
                 queryset=qs,
                 already_added_ids=already_added_ids,
@@ -519,10 +527,12 @@ class AddAttendanceForm(forms.Form):
         queryset=AttendanceType.objects.all(),
         widget=forms.RadioSelect(),
         label='Attendance Type',
+        initial=AttendanceType.TBD,
     )
 
-    def __init__(self, *args, org_user=None, event=None, search_q='', **kwargs):
+    def __init__(self, *args, org_user=None, event=None, search_q='', limit_results=True, **kwargs):
         super().__init__(*args, **kwargs)
+        self.person_search_truncated = False
         if org_user and event:
             from django.db.models import Exists, OuterRef, ExpressionWrapper, BooleanField
             from .models import Singer, Instrumentalist
@@ -546,6 +556,11 @@ class AddAttendanceForm(forms.Form):
                     output_field=BooleanField()
                 )
             ).order_by('-is_performer', 'last_name', 'first_name')
+            if limit_results:
+                total_matches = qs.count()
+                limited_ids = list(qs.values_list('pk', flat=True)[:50])
+                qs = qs.filter(pk__in=limited_ids)
+                self.person_search_truncated = total_matches > 50
             self.fields['person'].queryset = qs
 
 

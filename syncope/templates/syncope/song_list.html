@@ -5,11 +5,10 @@
 
 <h2>Song Archive</h2>
 
-<form method="get" style="display:flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
-    <input type="text" name="q" value="{{ q }}" placeholder="Search by ID, title, composer, arranger, poet, origin, keywords, language" style="flex: 1;">
-    <button type="submit">Search</button>
-    {% if q %}<a href="?">Clear</a>{% endif %}
-</form>
+<p style="display:flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
+    <input type="text" id="song-list-search-input" value="{{ q }}" placeholder="Search by ID, title, composer, arranger, poet, origin, keywords, language" style="flex: 1;">
+    <button type="button" id="song-list-search-clear">Clear</button>
+</p>
 
 <div style="margin-bottom: 1em;">
     <a href="{%  url 'syncope:song_new' url_username %}">+ Add New Song</a>
@@ -17,132 +16,73 @@
 
 <div style="display:none;">{% csrf_token %}</div>
 
-{% if songs %}
-<div class="table-container">
-<table>
-    <thead>
-        <tr>
-            <th class="col-num">
-                <a href="?q={{ q }}&sort=id{% if current_sort == 'id' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
-                    ID {% if current_sort == 'id' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
-                </a>
-            </th>
-            <th title="Concerts / Performances">Con/Per</th>
-            <th></th>
-            <th class="sticky-col">
-                <a href="?q={{ q }}&sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
-                    Title {% if current_sort == 'title' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
-                </a>
-            </th>
-            <th>
-                <a href="?q={{ q }}&sort=composer{% if current_sort == 'composer' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
-                    Composer {% if current_sort == 'composer' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
-                </a>
-            </th>
-            <th>
-                <a href="?q={{ q }}&sort=poet{% if current_sort == 'poet' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
-                    Poet {% if current_sort == 'poet' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
-                </a>
-            </th>
-            <th>
-                <a href="?q={{ q }}&sort=arranger{% if current_sort == 'arranger' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
-                    Arranger {% if current_sort == 'arranger' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
-                </a>
-            </th>
-            <th>
-                <a href="?q={{ q }}&sort=origin{% if current_sort == 'origin' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
-                    Origin {% if current_sort == 'origin' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
-                </a>
-            </th>
-            <th>
-                <a href="?q={{ q }}&sort=languagecode{% if current_sort == 'languagecode' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
-                    Lang {% if current_sort == 'languagecode' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
-                </a>
-            </th>
-<!--            <th>Keywords</th>-->
-            <th>Copies</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for song in songs %}
-        <tr>
-            <td class="col-num">{{ song.internal_id|default:"-" }}</td>
-            <td><span title="Number of concerts / number of performances">{% if song.concert_count or song.performance_count %}{{ song.concert_count }}/{{ song.performance_count }}{% else %}-{% endif %}</span></td>
-
-            <td style="position: relative;">
-                <button class="share-song-btn" data-song-pk="{{ song.pk }}"
-                        style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
-                    <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-                </button>
-                <span class="share-song-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
-            </td>
-            <td class="sticky-col">
-                <a href="{%  url 'syncope:song_detail' url_username song.pk %}">{{ song.title }}</a> {% if song.has_direct_resources or song.has_event_resources %}<span title="Song/Event Resources">{{ song.has_direct_resources }}/{{ song.has_event_resources }}</span>{% endif %}
-                {% if song.keywords %}
-                    <small>{{ song.keywords|default:"|" }}</small>
-                {% endif %}
-            </td>
-            <td>
-                {% include "syncope/person_link.html" with person=song.composer %}
-            </td>
-            <td>
-                {% include "syncope/person_link.html" with person=song.poet %}
-            </td>
-            <td>
-                {% include "syncope/person_link.html" with person=song.arranger %}
-            </td>
-            <td>{{ song.origin|default:"-" }}</td>
-            <td>{{ song.languagecode.language_code|default:"-" }}</td>
-<!--            <td>{{ song.keywords|default:"-" }}</td>-->
-            <td>{{ song.number_of_copies|default:"-" }}</td>
-            <td><a href="{%  url 'syncope:song_update' url_username song.pk %}">Edit</a></td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
+<div id="song-list-results">
+    {% include "syncope/song_list_results.html" %}
 </div>
-{% elif q %}
-    <p>No songs found matching "{{ q }}".</p>
-{% else %}
-    <p>No songs in the archive yet. <a href="{%  url 'syncope:song_new' url_username %}">Add the first one.</a></p>
-{% endif %}
 
 {% block extra_js %}
 <script>
-document.querySelectorAll('.share-song-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-        var songPk = this.dataset.songPk;
-        var resultSpan = this.nextElementSibling;
-        btn.disabled = true;
-        resultSpan.textContent = 'Copying...';
-        fetch('/share/create/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            },
-            body: JSON.stringify({ type: 'song', id: songPk }),
-        })
-        .then(function (response) {
-            if (!response.ok) throw new Error('Request failed');
-            return response.json();
-        })
-        .then(function (data) {
-            var shareUrl = window.location.origin + '/' + data.share_id + '/';
-            navigator.clipboard.writeText(shareUrl).then(function () {
-                resultSpan.textContent = 'Copied';
-                setTimeout(function () { resultSpan.textContent = ''; }, 3000);
-            }).catch(function () {
-                resultSpan.textContent = 'Copied';
-                setTimeout(function () { resultSpan.textContent = ''; }, 3000);
-            });
-        })
-        .catch(function () {
-            resultSpan.textContent = 'Failed';
-        })
-        .finally(function () { btn.disabled = false; });
+document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.share-song-btn');
+    if (!btn) return;
+    var songPk = btn.dataset.songPk;
+    var resultSpan = btn.nextElementSibling;
+    btn.disabled = true;
+    resultSpan.textContent = 'Copying...';
+    fetch('/share/create/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        body: JSON.stringify({ type: 'song', id: songPk }),
+    })
+    .then(function (response) {
+        if (!response.ok) throw new Error('Request failed');
+        return response.json();
+    })
+    .then(function (data) {
+        var shareUrl = window.location.origin + '/' + data.share_id + '/';
+        navigator.clipboard.writeText(shareUrl).then(function () {
+            resultSpan.textContent = 'Copied';
+            setTimeout(function () { resultSpan.textContent = ''; }, 3000);
+        }).catch(function () {
+            resultSpan.textContent = 'Copied';
+            setTimeout(function () { resultSpan.textContent = ''; }, 3000);
+        });
+    })
+    .catch(function () {
+        resultSpan.textContent = 'Failed';
+    })
+    .finally(function () { btn.disabled = false; });
+});
+
+var songListSearchInput = document.getElementById('song-list-search-input');
+var songListResults = document.getElementById('song-list-results');
+var songListSearchTimeout;
+
+function runSongListSearch(query) {
+    var url = '{% url "syncope:song_list_search" url_username %}?q=' + encodeURIComponent(query);
+    fetch(url)
+        .then(function (response) { return response.text(); })
+        .then(function (html) { songListResults.innerHTML = html; });
+}
+
+if (songListSearchInput) {
+    songListSearchInput.addEventListener('input', function () {
+        clearTimeout(songListSearchTimeout);
+        var value = this.value;
+        songListSearchTimeout = setTimeout(function () { runSongListSearch(value); }, 1000);
     });
+    songListSearchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') e.preventDefault();
+    });
+}
+
+document.getElementById('song-list-search-clear')?.addEventListener('click', function () {
+    clearTimeout(songListSearchTimeout);
+    songListSearchInput.value = '';
+    runSongListSearch('');
 });
 </script>
 {% endblock %}

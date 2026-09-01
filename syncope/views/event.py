@@ -1,5 +1,5 @@
 from django.http import HttpResponseForbidden
-from django.shortcuts import  get_object_or_404
+from django.shortcuts import  get_object_or_404, render
 from django.urls import reverse_lazy, reverse
 from django.contrib import messages
 from django.utils import timezone
@@ -601,13 +601,13 @@ def event_add_attendance(request, username, pk):
     org_user = get_object_or_404(CustomUser, username=username)
     event = get_object_or_404(Event, pk=pk, user=org_user)
 
-    is_admin = AccessControl.can_add_event(
+    is_admin = request.user == org_user or AccessControl.can_add_event(
         request.user, org_user
     ).filter(person__roles__id=Role.ADMIN).exists()
     if not is_admin:
         return HttpResponseForbidden("Only admins can add participants.")
 
-    form = AddAttendanceForm(request.POST, org_user=org_user, event=event)
+    form = AddAttendanceForm(request.POST, org_user=org_user, event=event, limit_results=False)
     if form.is_valid():
         Attendance.objects.get_or_create(
             event=event,
@@ -618,6 +618,27 @@ def event_add_attendance(request, username, pk):
     return redirect('syncope:event_update', username=username, pk=pk)
 
 
+@login_required
+def event_participant_search(request, username, pk):
+    org_user = get_object_or_404(CustomUser, username=username)
+    event = get_object_or_404(Event, pk=pk, user=org_user)
+
+    is_admin = request.user == org_user or AccessControl.can_add_event(
+        request.user, org_user
+    ).filter(person__roles__id=Role.ADMIN).exists()
+    if not is_admin:
+        return HttpResponseForbidden("Only admins can search participants.")
+
+    search_q = request.GET.get('q', '')
+    add_form = AddAttendanceForm(org_user=org_user, event=event, search_q=search_q)
+    return render(request, 'syncope/participant_search_results.html', {
+        'add_form': add_form,
+        'search_q': search_q,
+        'object': event,
+        'url_username': username,
+    })
+
+
 
 @require_POST
 @login_required
@@ -625,23 +646,43 @@ def event_add_song(request, username, pk):
     org_user = get_object_or_404(CustomUser, username=username)
     event = get_object_or_404(Event, pk=pk, user=org_user)
 
-    is_admin = AccessControl.can_add_event(
+    is_admin = request.user == org_user or AccessControl.can_add_event(
         request.user, org_user
     ).filter(person__roles__id=Role.ADMIN).exists()
     if not is_admin:
         return HttpResponseForbidden("Only admins can add songs to events.")
 
-    form = AddSongToEventForm(request.POST, org_user=org_user, event=event)
+    form = AddSongToEventForm(request.POST, org_user=org_user, event=event, limit_results=False)
     if form.is_valid():
         next_order = (event.eventsong_set.aggregate(Max('order'))['order__max'] or 0) + 1
         EventSong.objects.create(
             event=event,
             song=form.cleaned_data['song'],
             order=next_order,
-            encore=form.cleaned_data.get('encore', False),
         )
 
     return redirect('syncope:event_update', username=username, pk=pk)
+
+
+@login_required
+def event_song_search(request, username, pk):
+    org_user = get_object_or_404(CustomUser, username=username)
+    event = get_object_or_404(Event, pk=pk, user=org_user)
+
+    is_admin = request.user == org_user or AccessControl.can_add_event(
+        request.user, org_user
+    ).filter(person__roles__id=Role.ADMIN).exists()
+    if not is_admin:
+        return HttpResponseForbidden("Only admins can search songs.")
+
+    song_search_q = request.GET.get('song_q', '')
+    add_song_form = AddSongToEventForm(org_user=org_user, event=event, search_q=song_search_q)
+    return render(request, 'syncope/song_search_results.html', {
+        'add_song_form': add_song_form,
+        'song_search_q': song_search_q,
+        'object': event,
+        'url_username': username,
+    })
 
 
 @method_decorator(login_required, name="dispatch")

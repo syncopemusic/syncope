@@ -8,6 +8,8 @@
     {% csrf_token %}
     <input type="hidden" name="draft_key" value="{{ draft_key }}">
     {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
+    {% if request.GET.auto_add_event %}<input type="hidden" name="auto_add_event" value="{{ request.GET.auto_add_event }}">{% endif %}
+    {% if request.GET.auto_add_project %}<input type="hidden" name="auto_add_project" value="{{ request.GET.auto_add_project }}">{% endif %}
 
     <div>
         <label for="{{ form.internal_id.id_for_label }}">{{ form.internal_id.label }}</label>

@@ -3,12 +3,13 @@ from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from syncope.forms import PersonForm, PersonResourceFormSet, MembershipPeriodFormSet
 from syncope.utils import merge_consecutive_membership_periods
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy, reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from datetime import datetime
 from django.views.generic import ListView,  UpdateView,  DetailView, FormView
 from django.views.generic.edit import DeleteView
@@ -129,6 +130,25 @@ def _apply_person_sort(queryset, request):
     if reverse:
         fields = tuple(f'-{f}' for f in fields)
     return queryset.order_by(*fields)
+
+
+def _apply_person_list_type_filter(queryset, list_type, org_user):
+    """Apply the active/inactive/others/all/skill-based filter branch for a person list."""
+    if list_type in ('active', 'inactive'):
+        periods = _filter_membership_periods_by_status(org_user, list_type)
+        queryset = queryset.filter(person__membership_period__in=periods).distinct()
+    elif list_type == 'others':
+        ever_member_ids = MembershipPeriod.objects.filter(
+            user=org_user, role_id__in=NON_EXTERNAL_ROLES
+        ).values_list('person_id', flat=True)
+        queryset = queryset.exclude(person_id__in=ever_member_ids)
+        queryset = queryset.exclude(person__skills__id__in=SKILL_MAP.values()).distinct()
+    elif list_type == 'all':
+        pass
+    else:
+        skill_id = SKILL_MAP[list_type]
+        queryset = queryset.filter(person__skills__id=skill_id).distinct()
+    return queryset
 
 
 @method_decorator(login_required, name='dispatch')
@@ -319,21 +339,7 @@ class PersonListView(ListView):
 
         q = self.request.GET.get('q', '').strip()
         queryset = _build_person_queryset(visible_memberships, q)
-
-        if list_type in ('active', 'inactive'):
-            periods = _filter_membership_periods_by_status(org_user, list_type)
-            queryset = queryset.filter(person__membership_period__in=periods).distinct()
-        elif list_type == 'others':
-            ever_member_ids = MembershipPeriod.objects.filter(
-                user=org_user, role_id__in=NON_EXTERNAL_ROLES
-            ).values_list('person_id', flat=True)
-            queryset = queryset.exclude(person_id__in=ever_member_ids)
-            queryset = queryset.exclude(person__skills__id__in=SKILL_MAP.values()).distinct()
-        elif list_type == 'all':
-            pass
-        else:
-            skill_id = SKILL_MAP[list_type]
-            queryset = queryset.filter(person__skills__id=skill_id).distinct()
+        queryset = _apply_person_list_type_filter(queryset, list_type, org_user)
 
         return _apply_person_sort(_annotate_person_queryset(queryset), self.request)
 
@@ -354,6 +360,39 @@ class PersonListView(ListView):
             person.resource_icons = resource_icon_list(person.person.person_resource.all())
 
         return context
+
+
+@login_required
+def person_list_search(request, username, list_type):
+    valid_types = {'active', 'inactive', 'others', 'all'} | set(SKILL_MAP.keys())
+    if list_type not in valid_types:
+        raise Http404
+    if list_type in ('others', 'all'):
+        if not AccessControl.has_permission(request.user, 'delete', username):
+            return HttpResponseForbidden()
+
+    org_user = get_object_or_404(CustomUser, username=username)
+    visible_memberships = AccessControl.get_visible_members(request.user, username)
+
+    q = request.GET.get('q', '').strip()
+    queryset = _build_person_queryset(visible_memberships, q)
+    queryset = _apply_person_list_type_filter(queryset, list_type, org_user)
+    persons = _apply_person_sort(_annotate_person_queryset(queryset), request)
+
+    for person in persons:
+        person.resource_icons = resource_icon_list(person.person.person_resource.all())
+
+    return render(request, 'syncope/person_list_results.html', {
+        'persons': persons,
+        'list_type': list_type,
+        'url_username': username,
+        'q': request.GET.get('q', ''),
+        'current_sort': request.GET.get('sort', 'name'),
+        'reverse': request.GET.get('reverse', 'false') == 'true',
+        'person_detail_url_name': _DETAIL_URL_NAMES.get(list_type, 'syncope:org_member_detail'),
+        'person_edit_url_name': _EDIT_URL_NAMES.get(list_type, 'syncope:org_member_edit'),
+    })
+
 
 @method_decorator(login_required, name="dispatch")
 class OrgMemberDetailView(DetailView):
@@ -607,6 +646,23 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
 
             # 6. add date fields
             self._add_dates(person, form)
+
+        next_url = self.request.POST.get('next') or self.request.GET.get('next', '')
+        host = self.request.get_host()
+        safe_next = next_url if (next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={host})) else None
+        auto_add_event = self.request.POST.get('auto_add_event') or self.request.GET.get('auto_add_event')
+
+        if safe_next and auto_add_event:
+            event = Event.objects.filter(pk=auto_add_event, user=self.customuser).first()
+            if event:
+                Attendance.objects.get_or_create(
+                    event=event, person=person,
+                    defaults={'attendance_type': AttendanceType.objects.get(pk=AttendanceType.TBD)},
+                )
+            draft_key = self.request.POST.get('draft_key') or self.request.GET.get('draft_key')
+            if draft_key:
+                safe_next = add_query_param(safe_next, {'draft_key': draft_key})
+            return HttpResponseRedirect(safe_next)
 
         preset = self.kwargs.get('preset')
         list_name = PRESET_LIST_MAP.get(preset, 'org_member_list')

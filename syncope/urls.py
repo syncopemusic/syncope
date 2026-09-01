@@ -3,16 +3,16 @@ from django.views.generic import RedirectView
 
 from .views.attendance import AttendanceDashboardView, AttendanceDeleteView, quick_add_rehearsal, self_attendance_update
 from .views.event import EventCreateView, EventDetailView, EventUpdateView, EventListView, EventDeleteView
-from .views.event import event_add_song, event_add_attendance
+from .views.event import event_add_song, event_add_attendance, event_song_search, event_participant_search
 from .views.home import HomeView, SkillListAndCreateView
 from .views.importing import ImportHubView, ImportDashboardView, CombineProjectsView
 from .views.organization import OrganizationCreateView, OrganizationDashboard, OrganizationUpdateView, OrganizationDeleteView
-from .views.person import PersonUpdateView, OrgMemberAddView, OrgMemberEditView, PersonListView, OrgMemberDetailView, OrgMemberDeleteView, org_member_unlink
+from .views.person import PersonUpdateView, OrgMemberAddView, OrgMemberEditView, PersonListView, OrgMemberDetailView, OrgMemberDeleteView, org_member_unlink, person_list_search
 from .views.invitation import InvitationListView, InvitationCreateView, InvitationUpdateView
 from .views.organization import OrganizationCreateView, OrganizationDashboard
 from .views.project import ProjectDeleteView, ProjectCreateView, ProjectDetailView, ProjectUpdateView, ProjectListView
 from .views.project import project_add_guest, project_add_event, project_remove_event, project_remove_song, project_add_song, project_remove_guest
-from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongUpdateView, SongQuoteView
+from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongUpdateView, SongQuoteView, song_list_search
 from .views.user_login_register import SignUp, UserLoginView, UserLogoutView
 from .views.poll import PollListView, PollCreateUpdateView, PollDetailView, PollDeleteView, PollPersonView, PollEventView, PollEventUpdateView, PollEventAttendanceView, PollPersonAttendanceView, poll_person_remove, poll_event_remove
 from .views.share import create_share_link, visit_share
@@ -52,14 +52,17 @@ urlpatterns = [
     path("<str:username>/events/<int:pk>/delete/", EventDeleteView.as_view(), name="event_delete"),
     path("<str:username>/events/<int:event_pk>/attendance/update/", self_attendance_update, name="self_attendance_update"),
     path("<str:username>/events/<int:pk>/attendance/new/", event_add_attendance, name="event_new_attendance"),
+    path("<str:username>/events/<int:pk>/attendance/search/", event_participant_search, name="event_participant_search"),
     path("<str:username>/events/<int:event_pk>/attendance/<int:pk>/delete/", AttendanceDeleteView.as_view(), name="attendance_delete"),
     path("<str:username>/events/<int:pk>/songs/new/", event_add_song, name="event_new_song"),
+    path("<str:username>/events/<int:pk>/songs/search/", event_song_search, name="event_song_search"),
 
     path("<str:username>/members/", RedirectView.as_view(pattern_name="syncope:org_member_list", permanent=False)),
     path("<str:username>/members/active/", PersonListView.as_view(), {"list_type": "active"}, name="org_member_list"),
     path("<str:username>/members/inactive/", PersonListView.as_view(), {"list_type": "inactive"}, name="org_member_list_inactive"),
     path("<str:username>/members/others/", PersonListView.as_view(), {"list_type": "others"}, name="org_member_list_others"),
     path("<str:username>/members/all/", PersonListView.as_view(), {"list_type": "all"}, name="org_member_list_all"),
+    path("<str:username>/members/search/<str:list_type>/", person_list_search, name="person_list_search"),
     path("<str:username>/members/new/", OrgMemberAddView.as_view(), name="org_member_new"),
     path("<str:username>/members/new/member/", OrgMemberAddView.as_view(), {'preset': 'member'}, name="org_member_new_member"),
     path("<str:username>/members/<int:pk>/", OrgMemberDetailView.as_view(), name="org_member_detail"),
@@ -94,6 +97,7 @@ urlpatterns = [
     path("<str:username>/songs/persons/", RedirectView.as_view(pattern_name="syncope:org_composers_list", permanent=True)),
 
     path("<str:username>/songs/", SongListView.as_view(), name="song_list"),
+    path("<str:username>/songs/search/", song_list_search, name="song_list_search"),
     path("<str:username>/songs/new/", SongCreateView.as_view(), name="song_new"),
     path("<str:username>/songs/<int:pk>/", SongDetailView.as_view(), name="song_detail"),
     path("<str:username>/songs/<int:pk>/update/", SongUpdateView.as_view(), name="song_update"),

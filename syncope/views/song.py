@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
-from syncope.models import Song, EventType
+from syncope.models import Song, EventType, CustomUser
 from syncope.models import Event, SongResource, Resource, EventSongResource, EventSong, Project
 from syncope.forms import  SongForm
 from syncope.forms import  QuoteFormSet, LyricsTranslationFormSet, SongResourceFormSet
@@ -39,6 +39,70 @@ def save_song_resources(song, resource_formset, owner_user):
         SongResource.objects.create(song=song, resource=resource, order=idx + 1)
 
 
+def _build_song_queryset(qs, q):
+    """Apply the search filter shared by the song list page and its AJAX search."""
+    q = q.strip()
+    if q:
+        if q.isdigit():
+            qs = qs.filter(internal_id=int(q))
+        else:
+            qs = qs.filter(
+                Q(title__icontains=q) |
+                Q(composer__last_name__icontains=q) |
+                Q(poet__last_name__icontains=q) |
+                Q(arranger__last_name__icontains=q) |
+                Q(origin__icontains=q) |
+                Q(keywords__icontains=q) |
+                Q(languagecode__language_code__icontains=q)
+            ).distinct()
+    return qs
+
+
+def _annotate_song_queryset(qs, owner_user):
+    """Add resource/performance-count annotations shared by the song list page and its AJAX search."""
+    return qs.annotate(
+        has_direct_resources=Count('song_resource', distinct=True),
+        has_event_resources=Count('eventsong__event_song_resource', distinct=True),
+        concert_count=Count(
+            'eventsong__event',
+            filter=Q(
+                eventsong__event__event_type_id=EventType.CONCERT,
+                eventsong__event__user=owner_user,
+            ),
+            distinct=True,
+        ),
+        performance_count=Count(
+            'eventsong__event',
+            filter=Q(
+                eventsong__event__event_type_id=EventType.PERFORMANCE,
+                eventsong__event__user=owner_user,
+            ),
+            distinct=True,
+        ),
+    )
+
+
+def _apply_song_sort(qs, request):
+    """Apply column sorting shared by the song list page and its AJAX search."""
+    sort = request.GET.get('sort', 'id')
+    reverse = request.GET.get('reverse', 'false') == 'true'
+
+    sort_field_map = {
+        'id': 'internal_id',
+        'title': 'title',
+        'composer': 'composer__last_name',
+        'poet': 'poet__last_name',
+        'arranger': 'arranger__last_name',
+        'origin': 'origin',
+        'languagecode': 'languagecode__language_code',
+    }
+
+    sort_field = sort_field_map.get(sort, 'internal_id')
+    if reverse:
+        sort_field = f'-{sort_field}'
+    return qs.order_by(sort_field)
+
+
 @method_decorator(login_required, name='dispatch')
 class SongListView(SongOwnerMixin, ListView):
     model = Song
@@ -48,61 +112,10 @@ class SongListView(SongOwnerMixin, ListView):
 
     def get_queryset(self):
         qs = AccessControl.can_view_song_list(self.request.user, self.owner_user)
-        q = self.request.GET.get('q', '').strip()
-        if q:
-            if q.isdigit():
-                qs = qs.filter(internal_id=int(q))
-            else:
-                qs = qs.filter(
-                    Q(title__icontains=q) |
-                    Q(composer__last_name__icontains=q) |
-                    Q(poet__last_name__icontains=q) |
-                    Q(arranger__last_name__icontains=q) |
-                    Q(origin__icontains=q) |
-                    Q(keywords__icontains=q) |
-                    Q(languagecode__language_code__icontains=q)
-                ).distinct()
-
-        # Handle sorting
-        sort = self.request.GET.get('sort', 'id')
-        reverse = self.request.GET.get('reverse', 'false') == 'true'
-
-        sort_field_map = {
-            'id': 'internal_id',
-            'title': 'title',
-            'composer': 'composer__last_name',
-            'poet': 'poet__last_name',
-            'arranger': 'arranger__last_name',
-            'origin': 'origin',
-            'languagecode': 'languagecode__language_code',
-        }
-
-        sort_field = sort_field_map.get(sort, 'internal_id')
-        if reverse:
-            sort_field = f'-{sort_field}'
-
-        # Annotate with counts for both direct and event-based resources
-        qs = qs.annotate(
-            has_direct_resources=Count('song_resource', distinct=True),
-            has_event_resources=Count('eventsong__event_song_resource', distinct=True),
-            concert_count=Count(
-                'eventsong__event',
-                filter=Q(
-                    eventsong__event__event_type_id=EventType.CONCERT,
-                    eventsong__event__user=self.owner_user,
-                ),
-                distinct=True,
-            ),
-            performance_count=Count(
-                'eventsong__event',
-                filter=Q(
-                    eventsong__event__event_type_id=EventType.PERFORMANCE,
-                    eventsong__event__user=self.owner_user,
-                ),
-                distinct=True,
-            ),
-        )
-        return qs.order_by(sort_field).select_related('composer', 'poet', 'arranger', 'languagecode').prefetch_related('song_resource__resource')
+        qs = _build_song_queryset(qs, self.request.GET.get('q', ''))
+        qs = _annotate_song_queryset(qs, self.owner_user)
+        qs = _apply_song_sort(qs, self.request)
+        return qs.select_related('composer', 'poet', 'arranger', 'languagecode').prefetch_related('song_resource__resource')
 
 
     def get_context_data(self, **kwargs):
@@ -114,6 +127,26 @@ class SongListView(SongOwnerMixin, ListView):
         for song in context['songs']:
             song.resource_icons = resource_icon_list(song.song_resource.all())
         return context
+
+
+@login_required
+def song_list_search(request, username):
+    owner_user = get_object_or_404(CustomUser, username=username)
+    qs = AccessControl.can_view_song_list(request.user, owner_user)
+    q = request.GET.get('q', '')
+    qs = _build_song_queryset(qs, q)
+    qs = _annotate_song_queryset(qs, owner_user)
+    qs = _apply_song_sort(qs, request)
+    songs = qs.select_related('composer', 'poet', 'arranger', 'languagecode').prefetch_related('song_resource__resource')
+    for song in songs:
+        song.resource_icons = resource_icon_list(song.song_resource.all())
+    return render(request, 'syncope/song_list_results.html', {
+        'songs': songs,
+        'url_username': username,
+        'q': q,
+        'current_sort': request.GET.get('sort', 'id'),
+        'reverse': request.GET.get('reverse', 'false') == 'true',
+    })
 
 
 @method_decorator(login_required, name='dispatch')
@@ -268,10 +301,10 @@ class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Creat
         next_url = self.request.POST.get('next') or self.request.GET.get('next', '')
         host = self.request.get_host()
         safe_next = next_url if (next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={host})) else None
-        draft_key = self.request.GET.get('draft_key')
+        draft_key = self.request.POST.get('draft_key') or self.request.GET.get('draft_key')
 
-        auto_add_event = self.request.GET.get('auto_add_event')
-        auto_add_project = self.request.GET.get('auto_add_project')
+        auto_add_event = self.request.POST.get('auto_add_event') or self.request.GET.get('auto_add_event')
+        auto_add_project = self.request.POST.get('auto_add_project') or self.request.GET.get('auto_add_project')
 
         if safe_next and auto_add_event:
             event = Event.objects.filter(pk=auto_add_event, user=self.owner_user).first()

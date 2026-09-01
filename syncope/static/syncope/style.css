@@ -186,6 +186,28 @@ body {
     .main-content {
         padding: 1rem;
     }
+
+    textarea[name="location"],
+    textarea[name="description"],
+    textarea[name="details"],
+    textarea[name="producers"],
+    textarea[name="additional_notes"] {
+        height: 2.2em;
+        min-height: 2.2em;
+        max-height: 2.2em;
+        resize: vertical;
+        overflow-y: auto;
+    }
+
+    textarea[name="location"]:not(:placeholder-shown),
+    textarea[name="description"]:not(:placeholder-shown),
+    textarea[name="details"]:not(:placeholder-shown),
+    textarea[name="producers"]:not(:placeholder-shown),
+    textarea[name="additional_notes"]:not(:placeholder-shown) {
+        height: 4.4em;
+        min-height: 4.4em;
+        max-height: 4.4em;
+    }
 }
 
 .messages {

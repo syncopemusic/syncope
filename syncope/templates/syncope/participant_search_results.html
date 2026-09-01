@@ -1,0 +1,12 @@
+{% if add_form.fields.person.queryset.exists %}
+    <div>{{ add_form.person }}</div>
+    <div>{{ add_form.attendance_type }}</div>
+    <button type="submit" formnovalidate formaction="{% url 'syncope:event_new_attendance' url_username object.pk %}">Add participant</button>
+    {% if add_form.person_search_truncated %}
+        <p><small>Showing first 50 matches &mdash; refine your search to narrow results.</small></p>
+    {% endif %}
+{% elif search_q %}
+    <p>No matching persons found.</p>
+{% else %}
+    <p>All org members are already in this event's attendance.</p>
+{% endif %}

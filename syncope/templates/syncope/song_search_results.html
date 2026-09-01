@@ -1,0 +1,11 @@
+{% if add_song_form.fields.song.queryset.exists %}
+    <div>{{ add_song_form.song }}</div>
+    <button type="submit" formnovalidate formaction="{% url 'syncope:event_new_song' url_username object.pk %}">Save a song</button>
+    {% if add_song_form.song_search_truncated %}
+        <p><small>Showing first 50 matches &mdash; refine your search to narrow results.</small></p>
+    {% endif %}
+{% elif song_search_q %}
+    <p>No matching songs found.</p>
+{% else %}
+    <p>No songs in the archive yet.</p>
+{% endif %}
