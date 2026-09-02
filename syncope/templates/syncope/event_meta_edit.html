@@ -1,0 +1,96 @@
+{% extends "syncope/base.html" %}
+{% block title %}Details &mdash; {{ object.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .save-bar {
+        position: sticky;
+        bottom: 0;
+        background-color: #f5f5f5;
+        border-top: 1px solid #ccc;
+        padding: 0.75rem 1rem;
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .save-bar.dirty {
+        background-color: #fff3cd;
+        border-top-color: #ffc107;
+    }
+    .save-bar .dirty-note {
+        font-size: 0.85rem;
+        color: #856404;
+        display: none;
+    }
+    .save-bar.dirty .dirty-note {
+        display: inline;
+    }
+
+    @media (max-width: 768px) {
+        .save-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+        #event-meta-form {
+            padding-bottom: 4rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<p><a href="{% url 'syncope:event_detail' url_username object.pk %}">&larr; Back to {{ object.name }}</a></p>
+<h2>Event Details &mdash; {{ object.name }}</h2>
+
+<form method="post" id="event-meta-form">
+    {% csrf_token %}
+
+    {% for field in form %}
+        <div>
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+                <ul class="errorlist">
+                    {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    <h3>Resources</h3>
+    <p><small>This event's specific resources.</small></p>
+    {{ resource_formset.management_form }}
+    {% for rform in resource_formset %}
+        <div>
+            {{ rform.url }}
+            {{ rform.description }}
+            {% if rform.instance.pk %}{{ rform.DELETE }}{% endif %}
+            {{ rform.id }}
+        </div>
+    {% endfor %}
+
+    <div class="save-bar" id="save-bar">
+        <button type="submit">Save</button>
+        <span class="dirty-note">Unsaved changes</span>
+    </div>
+</form>
+
+<script>
+    const form = document.getElementById('event-meta-form');
+    const saveBar = document.getElementById('save-bar');
+    form.addEventListener('input', () => saveBar.classList.add('dirty'));
+    form.addEventListener('change', () => saveBar.classList.add('dirty'));
+</script>
+{% endblock %}

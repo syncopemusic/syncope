@@ -192,6 +192,11 @@ class AttendanceDashboardView(View):
         # Calculate totals per event
         event_totals = self._calculate_event_totals(events, members, present_type, windows)
 
+        # Grand totals across the whole table
+        grand_present = sum(t['present'] for t in event_totals)
+        grand_total = sum(t['total'] for t in event_totals)
+        grand_percentage = (grand_present / grand_total * 100) if grand_total > 0 else 0
+
         context = {
             'org_user': self.org_user,
             'members': members,
@@ -199,6 +204,9 @@ class AttendanceDashboardView(View):
             'events': events,
             'dashboard_data': dashboard_data,
             'event_totals': event_totals,
+            'grand_present': grand_present,
+            'grand_total': grand_total,
+            'grand_percentage': grand_percentage,
             'url_username': username,
         }
 

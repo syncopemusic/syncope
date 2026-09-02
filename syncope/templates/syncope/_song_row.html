@@ -1,0 +1,50 @@
+<tr data-eventsong-id="{{ eventsong.pk }}" id="song-{{ eventsong.pk }}"
+    data-remove-url="{% url 'syncope:event_song_remove' url_username eventsong.event_id eventsong.pk %}"
+    data-reorder-url="{% url 'syncope:event_song_reorder' url_username eventsong.event_id eventsong.pk %}"
+    data-encore-url="{% url 'syncope:event_song_encore_toggle' url_username eventsong.event_id eventsong.pk %}">
+    <td class="song-index" style="text-align: center; font-weight: bold;">{{ index }}</td>
+    <td>
+        <a href="{% url 'syncope:song_detail' url_username eventsong.song.pk %}">{{ eventsong.song.title }}</a>
+        {% if eventsong.song.composer %} &mdash; {{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }}{% endif %}
+    </td>
+    <td>
+        <details class="song-extra">
+            <summary title="More options">⋯</summary>
+            {% if is_admin %}
+                <div class="reorder-buttons">
+                    <button type="button" class="reorder-btn" data-direction="up_one" title="Move up">↑</button>
+                    <button type="button" class="reorder-btn" data-direction="down_one" title="Move down">↓</button>
+                </div>
+                <label>
+                    <input type="checkbox" class="encore-toggle" {% if eventsong.encore %}checked{% endif %}>
+                    Encore
+                </label>
+                <button type="button" class="remove-song-btn">Remove song</button>
+            {% endif %}
+            <div class="recordings-links">
+                <small><strong>Recordings &amp; links:</strong></small>
+                {% if is_admin %}
+                <form method="post" action="{% url 'syncope:event_song_resources_save' url_username eventsong.event_id eventsong.pk %}">
+                    {% csrf_token %}
+                    {{ resource_formset.management_form }}
+                    {% for rs_form in resource_formset %}
+                        <div>
+                            {{ rs_form.url }}
+                            {{ rs_form.description }}
+                            {% if rs_form.instance.pk %}{{ rs_form.DELETE }}{% endif %}
+                            {{ rs_form.id }}
+                        </div>
+                    {% endfor %}
+                    <button type="submit">Save links</button>
+                </form>
+                {% else %}
+                    {% for rs_form in resource_formset %}
+                        {% if rs_form.instance.pk %}
+                            <div><a href="{{ rs_form.instance.resource.url }}" target="_blank" rel="noopener noreferrer">{{ rs_form.instance.resource.url }}</a></div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </details>
+    </td>
+</tr>

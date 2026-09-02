@@ -96,6 +96,15 @@ body {
     white-space: nowrap;
 }
 
+/* Attendance status colors, keyed by the real AttendanceType pk (0=TBD, 1=Present,
+   2=Work/School, 3=Illness, 4=Private/Vacation). Shared by the per-event attendance
+   subpage's status chips. */
+.att-type-0 { background-color: #dfe6e9; }
+.att-type-1 { background-color: #c8f7c5; }
+.att-type-2 { background-color: #ffeaa7; }
+.att-type-3 { background-color: #fab1a0; }
+.att-type-4 { background-color: #a29bfe; }
+
 .col-num {
     text-align: right;
 }
@@ -156,6 +165,10 @@ body {
         padding: 0;
         font-size: 1.5rem;
         cursor: pointer;
+        color: gray;
+    }
+
+    .mobile-toggle.is-open {
         color: white;
     }
 

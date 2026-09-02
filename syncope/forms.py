@@ -336,6 +336,19 @@ class EventForm(forms.ModelForm):
         self.fields['event_type'].initial = rehearsal_event_type
         self.fields['event_type'].empty_label = None
 
+        # Name is optional — auto-generated from event type + date if left blank (see clean())
+        self.fields['name'].required = False
+        self.fields['name'].widget.attrs['placeholder'] = 'Auto-generated from date if left blank'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if not cleaned_data.get('name'):
+            event_type = cleaned_data.get('event_type')
+            started_at = cleaned_data.get('started_at') or timezone.now()
+            type_name = event_type.name if event_type else 'Event'
+            cleaned_data['name'] = f"{type_name} - {started_at.strftime('%d %b %Y')}"
+        return cleaned_data
+
 
 class EventSongForm(forms.ModelForm):
     class Meta:

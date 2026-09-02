@@ -16,11 +16,13 @@
     <p>{{ event.project.description }}</p>
 {% endif %}
 {% endif %}
-
+<p>Type: {{ event.event_type }}</p>
 
 {% if is_admin %}
     <p>
-        <a href="{%  url 'syncope:event_update' url_username event.pk %}">Edit event</a>
+        <a href="{% url 'syncope:event_meta_edit' url_username event.pk %}">Edit details</a>
+        &nbsp;|&nbsp;
+        <a href="{%  url 'syncope:event_update' url_username event.pk %}">Edit event (legacy)</a>
         &nbsp;|&nbsp;
         <a href="{% url 'syncope:event_delete' url_username event.pk %}" class="btn-danger" style="display: inline-block; text-decoration: none;">Delete Event</a>
     </p>
@@ -35,7 +37,9 @@
 <div style="display:none;">{% csrf_token %}</div>
 
 
-<h3>Songs</h3>
+<h3>Songs
+    {% if is_admin %}<a href="{% url 'syncope:event_songs_edit' url_username event.pk %}">Edit</a>{% endif %}
+</h3>
 {% if eventsongs %}
     <table>
         <thead>
@@ -56,6 +60,7 @@
                     <a href="{%  url 'syncope:song_detail' url_username eventsong.song.pk %}">{{ eventsong.song.title }}</a> -
                     <span title="{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} {{ eventsong.song.composer.birth_date|date:'Y' }}-{{ eventsong.song.composer.death_date|date:'Y' }}">
                         {% if eventsong.song.composer %}{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} {% endif %}</span>
+                    {% if eventsong.song.internal_id %}(#{{ eventsong.song.internal_id }}){% endif %}
 
                     {% if eventsong.song.keywords %}
                         <br><small>{{ eventsong.song.keywords }}</small>
@@ -70,7 +75,10 @@
     <p>No songs added yet.</p>
 {% endif %}
 
-<h3>Attendance</h3>
+{% if can_view_attendance %}
+<h3>Attendance
+    {% if is_admin %}<a href="{% url 'syncope:event_attendance_edit' url_username event.pk %}">Edit</a>{% endif %}
+</h3>
 {% if attendances %}
     <table>
         <thead>
@@ -86,7 +94,7 @@
         {% for attendance in attendances %}
             <tr>
                 <td>{{ forloop.counter }}</td>
-                <td>{{ attendance.person.first_name }} {{ attendance.person.last_name }}</td>
+                <td>{% include "syncope/person_link.html" with person=attendance.person %}</td>
                 {% comment %}
                 <td>
 
@@ -106,6 +114,7 @@
     </table>
 {% else %}
     <p>No attendance records yet.</p>
+{% endif %}
 {% endif %}
 {% if all_event_resources %}
 <h3>Event Resources</h3>
@@ -138,6 +147,16 @@
     </tbody>
 </table>
 {% endif %}
+
+<h3>Details
+    {% if is_admin %}<a href="{% url 'syncope:event_meta_edit' url_username event.pk %}">Edit</a>{% endif %}
+</h3>
+
+{% if event.description %}<p>{{ event.description }}</p>{% endif %}
+{% if event.details %}<p>{{ event.details }}</p>{% endif %}
+{% if event.num_visitors %}<p>Visitors: {{ event.num_visitors }}</p>{% endif %}
+{% if event.producers %}<p>Producers: {{ event.producers }}</p>{% endif %}
+{% if event.additional_notes %}<p>{{ event.additional_notes }}</p>{% endif %}
 
 {% block extra_js %}
 <script>

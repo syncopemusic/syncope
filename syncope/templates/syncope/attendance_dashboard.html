@@ -47,6 +47,42 @@
     cursor: default;
 }
 
+.save-bar {
+    position: sticky;
+    bottom: 0;
+    background-color: #f5f5f5;
+    border-top: 1px solid #ccc;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.save-bar.dirty {
+    background-color: #fff3cd;
+    border-top-color: #ffc107;
+}
+.save-bar .dirty-note {
+    font-size: 0.85rem;
+    color: #856404;
+    display: none;
+}
+.save-bar.dirty .dirty-note {
+    display: inline;
+}
+
+@media (max-width: 768px) {
+    .save-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+    }
+    .table-container {
+        padding-bottom: 4rem;
+    }
+}
+
 </style>
 <div class="attendance-dashboard">
     <h2>Attendance Dashboard - {{ org_user.username }}</h2>
@@ -102,7 +138,7 @@
                         {% for event in events %}
                             <th class="event-col">
                                 <div style="transform: rotate(-90deg); width: 10px; white-space: nowrap;">
-                                    <a href="{%  url 'syncope:event_update' url_username event.id %}"
+                                    <a href="{%  url 'syncope:event_detail' url_username event.id %}"
                                         style="
                                         {% if event.event_type.id != 1 %}font-weight: bold; {% endif %}
                                         color: inherit; text-decoration: underline; font-size: inherit;"
@@ -147,14 +183,16 @@
                         {% for total in event_totals %}
                             <td>{{ total.present }}/{{ total.total }}</td>
                         {% endfor %}
-                        <td colspan="2"></td>
+                        <td><strong>{{ grand_present }}/{{ grand_total }}</strong></td>
+                        <td><strong>{{ grand_percentage|floatformat:0 }}%</strong></td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <div >
+        <div class="save-bar" id="save-bar">
             <button type="submit" class="btn-primary">Save</button>
+            <span class="dirty-note">Unsaved changes</span>
         </div>
     </form>
 </div>
@@ -180,6 +218,7 @@ function cycleAttendance(cell) {
     cell.classList.add(TYPE_META[next].cls);
     cell.querySelector('.att-icon').textContent = TYPE_META[next].icon;
     cell.title = TYPE_META[next].label;
+    document.getElementById('save-bar').classList.add('dirty');
 }
 
 document.addEventListener('DOMContentLoaded', function () {

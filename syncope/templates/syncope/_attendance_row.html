@@ -1,0 +1,18 @@
+<tr data-attendance-id="{{ attendance.pk }}"
+    data-remove-url="{% url 'syncope:event_participant_remove' url_username attendance.event_id attendance.pk %}">
+    <td>{{ attendance.person.first_name }} {{ attendance.person.last_name }}</td>
+    <td>
+        <span class="attendance-chip"
+              data-attendance-id="{{ attendance.pk }}"
+              data-type-id="{{ attendance.attendance_type_id|default:0 }}"
+              data-toggle-url="{% url 'syncope:event_attendance_toggle' url_username attendance.event_id attendance.pk %}"
+              {% if is_admin %}onclick="cycleAttendance(this)"{% endif %}>
+            <span class="att-icon"></span> <span class="att-label"></span>
+        </span>
+    </td>
+    {% if is_admin %}
+    <td>
+        <button type="button" class="remove-attendance-btn" title="Remove from event">&times;</button>
+    </td>
+    {% endif %}
+</tr>

@@ -1,0 +1,217 @@
+{% extends "syncope/base.html" %}
+{% block title %}Songs &mdash; {{ event.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .reorder-buttons {
+        display: flex;
+        justify-content: space-between;
+        width: 3rem;
+    }
+
+    .reorder-buttons button {
+        padding: 0.2rem 0.25rem;
+        font-size: 0.8rem;
+        border: 1px solid #ccc;
+        background-color: #f5f5f5;
+        border-radius: 2px;
+        cursor: pointer;
+        min-width: 1rem;
+        height: 1rem;
+        line-height: 1;
+    }
+
+    .song-extra summary {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.8rem;
+        border: 1px solid #ccc;
+        background-color: #f5f5f5;
+        border-radius: 2px;
+        cursor: pointer;
+        list-style: none;
+        width: fit-content;
+    }
+
+    .song-extra summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .song-extra[open] summary {
+        margin-bottom: 0.5rem;
+    }
+
+    .song-extra label {
+        display: block;
+        margin: 0.3rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<p><a href="{% url 'syncope:event_detail' url_username event.pk %}">&larr; Back to {{ event.name }}</a></p>
+<h2>Songs &mdash; {{ event.name }}</h2>
+<p><small>Changes here save instantly &mdash; no Save button needed, except for recordings &amp; links.</small></p>
+
+<div style="display:none;">{% csrf_token %}</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Song</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody id="songs-tbody">
+        {% for index, eventsong, resource_formset in eventsongs_with_resources %}
+            {% include "syncope/_song_row.html" %}
+        {% empty %}
+        <tr id="no-songs-row"><td colspan="3">No songs added yet.{% if is_admin %} Use the section below to add songs.{% endif %}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if is_admin %}
+<p><strong>Select from existing songs</strong></p>
+<p>
+    <input type="text" id="song-search-input" value="{{ song_search_q }}" placeholder="Search by ID, title, composer, or keywords">
+    <button type="button" id="song-search-clear">Clear</button>
+</p>
+<div id="song-search-results">
+    {% include "syncope/song_search_results.html" %}
+</div>
+<p><a href="{% url 'syncope:song_list' url_username %}">Browse full song archive</a></p>
+<form method="post" action="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:song_new' url_username %}?auto_add_event={{ event.pk }}&next={% url 'syncope:event_songs_edit' url_username event.pk %}">
+    {% csrf_token %}
+    <button type="submit" title="Create new song">+ Add new song to archive</button>
+</form>
+{% endif %}
+
+<script>
+    const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const songsTbody = document.getElementById('songs-tbody');
+
+    function suppressEnterSubmit(input) {
+        if (!input) return;
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') e.preventDefault();
+        });
+    }
+
+    function renumberSongs() {
+        songsTbody.querySelectorAll('tr[data-eventsong-id] .song-index').forEach((cell, i) => {
+            cell.textContent = i + 1;
+        });
+        const rows = songsTbody.querySelectorAll('tr[data-eventsong-id]');
+        rows.forEach((row, i) => {
+            const upBtn = row.querySelector('.reorder-btn[data-direction="up_one"]');
+            const downBtn = row.querySelector('.reorder-btn[data-direction="down_one"]');
+            if (upBtn) upBtn.style.visibility = i === 0 ? 'hidden' : 'visible';
+            if (downBtn) downBtn.style.visibility = i === rows.length - 1 ? 'hidden' : 'visible';
+        });
+    }
+
+    function removeEmptyRow() {
+        document.getElementById('no-songs-row')?.remove();
+    }
+
+    // --- Search ---
+    const songSearchInput = document.getElementById('song-search-input');
+    const songSearchResults = document.getElementById('song-search-results');
+    let songSearchTimeout;
+
+    function runSongSearch(query) {
+        const url = `{% url 'syncope:event_songs_search' url_username event.pk %}?song_q=${encodeURIComponent(query)}`;
+        fetch(url).then(r => r.text()).then(html => { songSearchResults.innerHTML = html; });
+    }
+
+    if (songSearchInput) {
+        songSearchInput.addEventListener('input', function() {
+            clearTimeout(songSearchTimeout);
+            songSearchTimeout = setTimeout(() => runSongSearch(this.value), 1000);
+        });
+        suppressEnterSubmit(songSearchInput);
+    }
+
+    document.getElementById('song-search-clear')?.addEventListener('click', function() {
+        clearTimeout(songSearchTimeout);
+        songSearchInput.value = '';
+        runSongSearch('');
+    });
+
+    // Add song via search results (delegated — results div is replaced on every search)
+    songSearchResults?.addEventListener('click', function(e) {
+        const btn = e.target.closest('button[formaction]');
+        if (!btn) return;
+        e.preventDefault();
+        const select = songSearchResults.querySelector('select[name="song"]');
+        if (!select || !select.value) return;
+        const formData = new FormData();
+        formData.append('song', select.value);
+        formData.append('csrfmiddlewaretoken', CSRF_TOKEN);
+        fetch(btn.formAction, { method: 'POST', body: formData })
+            .then(r => r.ok ? r.text() : Promise.reject())
+            .then(html => {
+                removeEmptyRow();
+                songsTbody.insertAdjacentHTML('beforeend', html);
+                renumberSongs();
+                songSearchInput.value = '';
+                runSongSearch('');
+            })
+            .catch(() => alert('Could not add that song. It may already be on this event.'));
+    });
+
+    // --- Row actions (remove / reorder / encore) — delegated since rows can be added dynamically ---
+    songsTbody.addEventListener('click', function(e) {
+        const removeBtn = e.target.closest('.remove-song-btn');
+        if (removeBtn) {
+            if (!confirm('Remove this song from the event?')) return;
+            const row = removeBtn.closest('tr[data-eventsong-id]');
+            fetch(row.dataset.removeUrl, { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN } })
+                .then(r => { if (!r.ok) throw new Error(); row.remove(); renumberSongs(); })
+                .catch(() => alert('Could not remove song.'));
+            return;
+        }
+
+        const reorderBtn = e.target.closest('.reorder-btn');
+        if (reorderBtn) {
+            const row = reorderBtn.closest('tr[data-eventsong-id]');
+            const direction = reorderBtn.dataset.direction;
+            const sibling = direction === 'up_one' ? row.previousElementSibling : row.nextElementSibling;
+            if (!sibling) return;
+            fetch(row.dataset.reorderUrl, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF_TOKEN, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `direction=${direction}`,
+            }).then(r => {
+                if (!r.ok) throw new Error();
+                if (direction === 'up_one') row.parentNode.insertBefore(row, sibling);
+                else row.parentNode.insertBefore(sibling, row);
+                renumberSongs();
+            }).catch(() => alert('Could not reorder songs.'));
+        }
+    });
+
+    songsTbody.addEventListener('change', function(e) {
+        if (!e.target.classList.contains('encore-toggle')) return;
+        const row = e.target.closest('tr[data-eventsong-id]');
+        fetch(row.dataset.encoreUrl, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF_TOKEN, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `encore=${e.target.checked}`,
+        }).catch(() => alert('Could not save encore change.'));
+    });
+
+    renumberSongs();
+</script>
+{% endblock %}

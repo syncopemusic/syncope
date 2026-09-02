@@ -123,6 +123,7 @@
             if (window.innerWidth < 769) {
                 const isOpen = container.classList.toggle("menu-visible");
                 button.textContent = isOpen ? "✕" : "☰";
+                button.classList.toggle("is-open", isOpen);
             }
         }
 
@@ -132,6 +133,7 @@
             if (window.innerWidth > 768) {
                 container.classList.remove("menu-visible");
                 button.textContent = "☰";
+                button.classList.remove("is-open");
             }
         });
     </script>
