@@ -42,9 +42,10 @@
     </div>
 {% endif %}
 
-<p><a href="{% url 'syncope:event_detail' url_username event.pk %}">&larr; Back to {{ event.name }}</a></p>
+{% include "syncope/_breadcrumbs.html" %}
 <h2>Attendance &mdash; {{ event.name }}</h2>
 <p><small>Tap a status to cycle it. Changes save instantly.</small></p>
+<p><button type="button" onclick="window.location.href='{% url 'syncope:event_detail' url_username event.pk %}?origin={{ origin_key }}'">Return</button></p>
 
 <div style="display:none;">{% csrf_token %}</div>
 
@@ -78,7 +79,7 @@
 <div id="participant-search-results">
     {% include "syncope/participant_search_results.html" %}
 </div>
-<form method="post" action="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new' url_username %}?auto_add_event={{ event.pk }}&next={% url 'syncope:event_attendance_edit' url_username event.pk %}">
+<form method="post" action="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new' url_username %}?auto_add_event={{ event.pk }}&next={% url 'syncope:event_attendance_edit' url_username event.pk %}?origin={{ origin_key }}">
     {% csrf_token %}
     <button type="submit" title="Create new person">+ New Person</button>
 </form>

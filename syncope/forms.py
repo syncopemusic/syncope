@@ -4,7 +4,7 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.utils import timezone
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
     PollAttendance, Invitation
-from .models import Event, EventSong, Attendance, AttendanceType,  Voice, Instrument, EventType, EventResource, EventSongResource
+from .models import Event, EventSong, AttendanceType,  Voice, Instrument, EventType, EventResource, EventSongResource
 from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource, ProjectResource, \
     MembershipPeriod, PersonRole
 from django.forms import inlineformset_factory, BaseInlineFormSet
@@ -350,24 +350,6 @@ class EventForm(forms.ModelForm):
         return cleaned_data
 
 
-class EventSongForm(forms.ModelForm):
-    class Meta:
-        model = EventSong
-        fields = ['id', 'song', 'encore']
-        widgets = {
-            'id': forms.HiddenInput(),
-            'song': forms.HiddenInput(),
-            'encore': forms.CheckboxInput(),
-        }
-
-
-class EventSongFormSet(BaseInlineFormSet):
-    def clean(self):
-        if any(self.errors):
-            for form in self.forms:
-                form.errors.pop('__all__', None)
-
-
 class SongChoiceField(forms.ModelChoiceField):
     def __init__(self, *args, already_added_ids=None, **kwargs):
         self.already_added_ids = already_added_ids or set()
@@ -503,31 +485,6 @@ class AddGuestToProjectForm(forms.Form):
             )
 
 
-class AttendanceForm(forms.ModelForm):
-    class Meta:
-        model = Attendance
-        fields = ['id', 'person', 'attendance_type']
-        widgets = {
-            'id': forms.HiddenInput(),
-            'person': forms.HiddenInput(),
-            'attendance_type': forms.RadioSelect(),
-        }
-
-    def __init__(self, *args, **kwargs):
-        person_queryset = kwargs.pop('person_queryset', None)
-        kwargs.pop('user', None)
-        kwargs.pop('event', None)
-        super().__init__(*args, **kwargs)
-        if person_queryset is not None:
-            if self.instance and self.instance.person_id:
-                self.fields['person'].queryset = Person.objects.filter(
-                    Q(pk__in=person_queryset) | Q(pk=self.instance.person_id)
-                )
-            else:
-                self.fields['person'].queryset = person_queryset
-
-
-
 class AddAttendanceForm(forms.Form):
     """Admin-only form to add any org person to an event's attendance."""
     person = forms.ModelChoiceField(
@@ -575,24 +532,6 @@ class AddAttendanceForm(forms.Form):
                 qs = qs.filter(pk__in=limited_ids)
                 self.person_search_truncated = total_matches > 50
             self.fields['person'].queryset = qs
-
-
-EventSongFormSet = inlineformset_factory(
-    Event,
-    EventSong,
-    form=EventSongForm,
-    formset=EventSongFormSet,
-    extra=0,
-    can_delete=True,
-)
-
-AttendanceFormSet = inlineformset_factory(
-    Event,
-    Attendance,
-    form=AttendanceForm,
-    extra=0,
-    can_delete=True,
-)
 
 
 class BaseQuoteFormSet(BaseInlineFormSet):

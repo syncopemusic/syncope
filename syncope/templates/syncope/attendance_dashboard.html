@@ -138,7 +138,7 @@
                         {% for event in events %}
                             <th class="event-col">
                                 <div style="transform: rotate(-90deg); width: 10px; white-space: nowrap;">
-                                    <a href="{%  url 'syncope:event_detail' url_username event.id %}"
+                                    <a href="{%  url 'syncope:event_detail' url_username event.id %}?origin=attendance"
                                         style="
                                         {% if event.event_type.id != 1 %}font-weight: bold; {% endif %}
                                         color: inherit; text-decoration: underline; font-size: inherit;"

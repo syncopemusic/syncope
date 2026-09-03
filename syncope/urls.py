@@ -1,9 +1,8 @@
 from django.urls import path
 from django.views.generic import RedirectView
 
-from .views.attendance import AttendanceDashboardView, AttendanceDeleteView, quick_add_rehearsal, self_attendance_update
-from .views.event import EventCreateView, EventDetailView, EventUpdateView, EventListView, EventDeleteView
-from .views.event import event_add_song, event_add_attendance, event_song_search, event_participant_search
+from .views.attendance import AttendanceDashboardView, quick_add_rehearsal, self_attendance_update
+from .views.event import EventCreateView, EventDetailView, EventListView, EventDeleteView
 from .views.event import EventSongsEditView, EventAttendanceEditView, EventMetaEditView
 from .views.event import event_song_add, event_songs_search, event_song_remove, event_song_reorder
 from .views.event import event_song_encore_toggle, event_song_resources_save
@@ -52,14 +51,8 @@ urlpatterns = [
     path("<str:username>/events/", EventListView.as_view(), name="event_list"),
     path("<str:username>/events/new/", EventCreateView.as_view(), name="event_new"),
     path("<str:username>/events/<int:pk>/", EventDetailView.as_view(), name="event_detail"),
-    path("<str:username>/events/<int:pk>/edit/", EventUpdateView.as_view(), name="event_update"),
     path("<str:username>/events/<int:pk>/delete/", EventDeleteView.as_view(), name="event_delete"),
     path("<str:username>/events/<int:event_pk>/attendance/update/", self_attendance_update, name="self_attendance_update"),
-    path("<str:username>/events/<int:pk>/attendance/new/", event_add_attendance, name="event_new_attendance"),
-    path("<str:username>/events/<int:pk>/attendance/search/", event_participant_search, name="event_participant_search"),
-    path("<str:username>/events/<int:event_pk>/attendance/<int:pk>/delete/", AttendanceDeleteView.as_view(), name="attendance_delete"),
-    path("<str:username>/events/<int:pk>/songs/new/", event_add_song, name="event_new_song"),
-    path("<str:username>/events/<int:pk>/songs/search/", event_song_search, name="event_song_search"),
 
     path("<str:username>/events/<int:pk>/songs/edit/", EventSongsEditView.as_view(), name="event_songs_edit"),
     path("<str:username>/events/<int:pk>/songs/add/", event_song_add, name="event_song_add"),

@@ -4,7 +4,7 @@
     data-encore-url="{% url 'syncope:event_song_encore_toggle' url_username eventsong.event_id eventsong.pk %}">
     <td class="song-index" style="text-align: center; font-weight: bold;">{{ index }}</td>
     <td>
-        <a href="{% url 'syncope:song_detail' url_username eventsong.song.pk %}">{{ eventsong.song.title }}</a>
+        <a href="{% url 'syncope:song_detail' url_username eventsong.song.pk %}?from_event={{ eventsong.event_id }}&origin={{ origin_key }}">{{ eventsong.song.title }}</a>
         {% if eventsong.song.composer %} &mdash; {{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }}{% endif %}
     </td>
     <td>

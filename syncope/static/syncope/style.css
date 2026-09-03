@@ -281,3 +281,42 @@ body {
     padding: 0.5rem 1rem;
     cursor: pointer;
 }
+
+.breadcrumbs {
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.breadcrumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.breadcrumbs li {
+    display: flex;
+    align-items: center;
+}
+
+.breadcrumbs li + li::before {
+    content: "›";
+    margin: 0 0.4rem;
+    color: #adb5bd;
+}
+
+.breadcrumbs a {
+    color: #6c757d;
+    text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumbs [aria-current="page"] {
+    color: #212529;
+    font-weight: 500;
+}

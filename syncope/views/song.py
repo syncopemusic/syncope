@@ -16,7 +16,8 @@ from syncope.forms import  QuoteFormSet, LyricsTranslationFormSet, SongResourceF
 from syncope.mixins import  SongOwnerMixin
 from syncope.views.drafts import DraftMixin, clear_draft
 from syncope.permissions import AccessControl
-from syncope.utils import resource_icon_list, add_query_param
+from syncope.utils import resource_icon_list, add_query_param, safe_next_url
+from syncope.breadcrumbs import event_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
 
 
 def save_song_resources(song, resource_formset, owner_user):
@@ -164,6 +165,21 @@ class SongDetailView(SongOwnerMixin, DetailView):
         context['url_username'] = self.owner_user.username
 
         song = self.get_object()
+
+        from_event_pk = self.request.GET.get('from_event')
+        from_event = Event.objects.filter(pk=from_event_pk, user=self.owner_user).first() if from_event_pk else None
+        if from_event:
+            breadcrumbs, _ = event_breadcrumbs(
+                self.request, self.owner_user.username, from_event, current_label=song.title
+            )
+            context['breadcrumbs'] = breadcrumbs
+            context['return_url'] = breadcrumbs[-2]['url']
+            context['return_label'] = f"Return to {breadcrumbs[-2]['label']}"
+        else:
+            context['breadcrumbs'] = [
+                {'label': 'Songs', 'url': reverse('syncope:song_list', kwargs={'username': self.owner_user.username})},
+                {'label': song.title, 'url': None},
+            ]
         events = Event.objects.filter(
             eventsong__song=song
         ).order_by('-started_at').distinct()
@@ -231,6 +247,9 @@ class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Creat
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
         context['can_manage'] = True
+        context['cancel_url'] = safe_next_url(
+            self.request, reverse('syncope:song_list', kwargs={'username': self.owner_user.username})
+        )
         post_data = self.request.POST or None
 
         context['quote_formset'] = (
@@ -348,10 +367,33 @@ class SongUpdateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Updat
         kwargs["user"] = self.owner_user
         return kwargs
 
+    def _from_event_and_origin(self):
+        from_event_pk = self.request.GET.get('from_event') or self.request.POST.get('from_event')
+        origin_key = self.request.GET.get('origin') or self.request.POST.get('origin') or DEFAULT_EVENT_ORIGIN
+        return from_event_pk, origin_key
+
+    def _song_detail_url(self):
+        from_event_pk, origin_key = self._from_event_and_origin()
+        url = reverse('syncope:song_detail', kwargs={'username': self.owner_user.username, 'pk': self.object.pk})
+        if from_event_pk:
+            url = with_origin(add_query_param(url, {'from_event': from_event_pk}), origin_key)
+        return url
+
+    def _return_target(self):
+        from_event_pk, origin_key = self._from_event_and_origin()
+        if from_event_pk:
+            event = Event.objects.filter(pk=from_event_pk, user=self.owner_user).first()
+            if event:
+                event_url = reverse('syncope:event_detail', kwargs={'username': self.owner_user.username, 'pk': event.pk})
+                return with_origin(event_url, origin_key), f"Return to {event.name}"
+        return None, None
+
     def get_context_data(self, quote_formset=None, translation_formset=None, resource_formset=None, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
         context['can_manage'] = True
+        context['cancel_url'] = self._song_detail_url()
+        context['return_url'], context['return_label'] = self._return_target()
         post_data = self.request.POST or None
 
         context['quote_formset'] = (
@@ -422,10 +464,7 @@ class SongUpdateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Updat
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
-        return reverse_lazy("syncope:song_detail", kwargs={
-            "username": self.owner_user.username,
-            "pk": self.object.pk
-        })
+        return self._song_detail_url()
 
 
 @method_decorator(login_required, name='dispatch')
@@ -440,6 +479,11 @@ class SongDeleteView(SongOwnerMixin, DeleteView):
             return HttpResponseForbidden("Only admins can delete songs.")
         return super().dispatch(request, *args, **kwargs)
 
+    def _from_event_and_origin(self):
+        from_event_pk = self.request.GET.get('from_event') or self.request.POST.get('from_event')
+        origin_key = self.request.GET.get('origin') or self.request.POST.get('origin') or DEFAULT_EVENT_ORIGIN
+        return from_event_pk, origin_key
+
     def delete(self, request, *args, **kwargs):
         song = self.get_object()
         song_title = song.title
@@ -448,7 +492,15 @@ class SongDeleteView(SongOwnerMixin, DeleteView):
         return response
 
     def get_success_url(self):
-        return reverse_lazy("syncope:song_list", kwargs={
+        from_event_pk, origin_key = self._from_event_and_origin()
+        if from_event_pk:
+            event = Event.objects.filter(pk=from_event_pk, user=self.owner_user).first()
+            if event:
+                event_url = reverse("syncope:event_detail", kwargs={
+                    "username": self.owner_user.username, "pk": event.pk
+                })
+                return with_origin(event_url, origin_key)
+        return reverse("syncope:song_list", kwargs={
             "username": self.owner_user.username
         })
 
@@ -456,6 +508,11 @@ class SongDeleteView(SongOwnerMixin, DeleteView):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
         context['can_manage'] = True
+        from_event_pk, origin_key = self._from_event_and_origin()
+        cancel_url = reverse('syncope:song_detail', kwargs={'username': self.owner_user.username, 'pk': self.object.pk})
+        if from_event_pk:
+            cancel_url = with_origin(add_query_param(cancel_url, {'from_event': from_event_pk}), origin_key)
+        context['cancel_url'] = cancel_url
         return context
 
 

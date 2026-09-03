@@ -5,7 +5,6 @@ from django.contrib import messages
 from datetime import timedelta
 from django.utils import timezone
 from django.views.generic import View
-from django.views.generic.edit import DeleteView
 from django.db.models import Count, Q
 from django.shortcuts import redirect
 from syncope.utils import group_by_section
@@ -423,39 +422,6 @@ def self_attendance_update(request, username, event_pk):
     return redirect('syncope:event_detail', username=username, pk=event_pk)
 
 
-
-
-@method_decorator(login_required, name='dispatch')
-class AttendanceDeleteView(DeleteView):
-    model = Attendance
-    template_name = "syncope/attendance_confirm_delete.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        url_username = self.kwargs['username']
-        self.org_user = get_object_or_404(CustomUser, username=url_username)
-        is_admin = AccessControl.can_add_event(
-            request.user, self.org_user
-        ).filter(person__roles__id=Role.ADMIN).exists()
-        if not is_admin:
-            return HttpResponseForbidden("Only admins can delete participants.")
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_queryset(self):
-        event = get_object_or_404(Event, pk=self.kwargs['event_pk'], user=self.org_user)
-        return Attendance.objects.filter(event=event)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['url_username'] = self.kwargs['username']
-        context['event'] = self.object.event
-        context['is_admin'] = True
-        return context
-
-    def get_success_url(self):
-        return reverse_lazy('syncope:event_update', kwargs={
-            'username': self.kwargs['username'],
-            'pk': self.kwargs['event_pk'],
-        })
 
 
 @require_POST

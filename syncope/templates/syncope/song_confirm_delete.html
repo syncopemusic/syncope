@@ -23,19 +23,21 @@
         {% if can_manage %}
         <form method="POST">
             {% csrf_token %}
+            {% if request.GET.from_event %}<input type="hidden" name="from_event" value="{{ request.GET.from_event }}">{% endif %}
+            {% if request.GET.origin %}<input type="hidden" name="origin" value="{{ request.GET.origin }}">{% endif %}
             <div class="form-actions">
                 <div class="danger-action">
                     <button type="submit" class="delete-btn">Yes, delete</button>
                 </div>
                 <div class="safe-action">
-                    <a href="{%  url 'syncope:song_detail' url_username song.pk %}">
+                    <a href="{{ cancel_url }}">
                         <button type="button" class="cancel-btn">Cancel</button>
                     </a>
                 </div>
             </div>
         </form>
         {% else %}
-        <p><a href="{%  url 'syncope:song_detail' url_username song.pk %}">Back to Song</a></p>
+        <p><a href="{{ cancel_url }}">Back to Song</a></p>
         {% endif %}
     </div>
     <div class="additional-info">

@@ -5,6 +5,8 @@
 
 {% block content %}
 
+{% include "syncope/_breadcrumbs.html" %}
+
 <h2>{{ event.name }}</h2>
 <p>Location: {{ event.location }}</p>
 <p>Starts: <span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime">{{ event.started_at|date:"d M, Y, H:i" }}</span></p>
@@ -20,9 +22,7 @@
 
 {% if is_admin %}
     <p>
-        <a href="{% url 'syncope:event_meta_edit' url_username event.pk %}">Edit details</a>
-        &nbsp;|&nbsp;
-        <a href="{%  url 'syncope:event_update' url_username event.pk %}">Edit event (legacy)</a>
+        <a href="{% url 'syncope:event_meta_edit' url_username event.pk %}?origin={{ origin_key }}">Edit details</a>
         &nbsp;|&nbsp;
         <a href="{% url 'syncope:event_delete' url_username event.pk %}" class="btn-danger" style="display: inline-block; text-decoration: none;">Delete Event</a>
     </p>
@@ -38,7 +38,7 @@
 
 
 <h3>Songs
-    {% if is_admin %}<a href="{% url 'syncope:event_songs_edit' url_username event.pk %}">Edit</a>{% endif %}
+    {% if is_admin %}<a href="{% url 'syncope:event_songs_edit' url_username event.pk %}?origin={{ origin_key }}">Edit</a>{% endif %}
 </h3>
 {% if eventsongs %}
     <table>
@@ -57,7 +57,7 @@
                     {% if eventsong.resource_icons %}
                         <span title="Song has its own resources available">{{ eventsong.resource_icons.0.icon }}</span>
                     {% endif %}
-                    <a href="{%  url 'syncope:song_detail' url_username eventsong.song.pk %}">{{ eventsong.song.title }}</a> -
+                    <a href="{%  url 'syncope:song_detail' url_username eventsong.song.pk %}?from_event={{ event.pk }}&origin={{ origin_key }}">{{ eventsong.song.title }}</a> -
                     <span title="{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} {{ eventsong.song.composer.birth_date|date:'Y' }}-{{ eventsong.song.composer.death_date|date:'Y' }}">
                         {% if eventsong.song.composer %}{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} {% endif %}</span>
                     {% if eventsong.song.internal_id %}(#{{ eventsong.song.internal_id }}){% endif %}
@@ -77,7 +77,7 @@
 
 {% if can_view_attendance %}
 <h3>Attendance
-    {% if is_admin %}<a href="{% url 'syncope:event_attendance_edit' url_username event.pk %}">Edit</a>{% endif %}
+    {% if is_admin %}<a href="{% url 'syncope:event_attendance_edit' url_username event.pk %}?origin={{ origin_key }}">Edit</a>{% endif %}
 </h3>
 {% if attendances %}
     <table>
@@ -94,7 +94,7 @@
         {% for attendance in attendances %}
             <tr>
                 <td>{{ forloop.counter }}</td>
-                <td>{% include "syncope/person_link.html" with person=attendance.person %}</td>
+                <td>{% include "syncope/person_link.html" with person=attendance.person from_event=event.pk origin=origin_key %}</td>
                 {% comment %}
                 <td>
 
@@ -137,7 +137,7 @@
             <td>{{ res.desc }}</td>
             <td>
                 {% if res.song %}
-                    <a href="{% url 'syncope:song_detail' url_username res.song.pk %}">{{ res.song.title }} - {{ res.song.composer.first_name }} {{ res.song.composer.last_name }}</a>
+                    <a href="{% url 'syncope:song_detail' url_username res.song.pk %}?from_event={{ event.pk }}&origin={{ origin_key }}">{{ res.song.title }} - {{ res.song.composer.first_name }} {{ res.song.composer.last_name }}</a>
                 {% else %}
                 -
                 {% endif %}
@@ -149,7 +149,7 @@
 {% endif %}
 
 <h3>Details
-    {% if is_admin %}<a href="{% url 'syncope:event_meta_edit' url_username event.pk %}">Edit</a>{% endif %}
+    {% if is_admin %}<a href="{% url 'syncope:event_meta_edit' url_username event.pk %}?origin={{ origin_key }}">Edit</a>{% endif %}
 </h3>
 
 {% if event.description %}<p>{{ event.description }}</p>{% endif %}

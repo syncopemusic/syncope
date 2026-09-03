@@ -21,9 +21,10 @@ from django.http import HttpResponseRedirect
 from syncope.forms import OrgMemberForm
 from syncope.models import MembershipPeriod,  PersonSkill,  PersonRole
 from syncope.models import CustomUser, Organization, Person, Membership, Role, Skill, Singer, Instrumentalist
-from syncope.models import Attendance, AttendanceType, Event, EventType, Voice, Instrument,  Project, LyricsTranslation, PersonResource, Resource
+from syncope.models import Attendance, AttendanceType, Event, EventType, Voice, Instrument,  Project, LyricsTranslation, PersonResource, Resource, Song
 from syncope.permissions import AccessControl
-from syncope.utils import resource_icon_list, add_query_param
+from syncope.utils import resource_icon_list, add_query_param, safe_next_url
+from syncope.breadcrumbs import event_breadcrumbs, event_song_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
 from syncope.views.drafts import DraftMixin
 
 NON_EXTERNAL_ROLES = [Role.ADMIN, Role.MEMBER, Role.SUPPORTER]
@@ -433,15 +434,59 @@ class OrgMemberDetailView(DetailView):
         context["url_username"] = url_username
         context["is_admin"] = AccessControl.has_permission(self.request.user, 'delete', url_username)
 
+        person_name = f"{self.object.first_name} {self.object.last_name}".strip()
+        from_song_pk = self.request.GET.get('from_song')
+        from_event_pk = self.request.GET.get('from_event')
+        from_song = Song.objects.filter(pk=from_song_pk, user=self.customuser).first() if from_song_pk else None
+        from_event = Event.objects.filter(pk=from_event_pk, user=self.customuser).first() if from_event_pk else None
+        origin_key = None
+
+        if from_song and from_event:
+            breadcrumbs, origin_key = event_song_breadcrumbs(
+                self.request, url_username, from_event, from_song, current_label=person_name
+            )
+        elif from_song:
+            breadcrumbs = [
+                {'label': 'Songs', 'url': reverse('syncope:song_list', kwargs={'username': url_username})},
+                {'label': from_song.title, 'url': reverse('syncope:song_detail', kwargs={'username': url_username, 'pk': from_song.pk})},
+                {'label': person_name, 'url': None},
+            ]
+        elif from_event:
+            breadcrumbs, origin_key = event_breadcrumbs(
+                self.request, url_username, from_event, current_label=person_name
+            )
+        else:
+            breadcrumbs = [
+                {'label': 'Members', 'url': reverse('syncope:org_member_list', kwargs={'username': url_username})},
+                {'label': person_name, 'url': None},
+            ]
+
+        context['breadcrumbs'] = breadcrumbs
+        context['return_url'] = breadcrumbs[-2]['url']
+        context['return_label'] = f"Return to {breadcrumbs[-2]['label']}"
+
         context_type = self.kwargs.get('context_type', '')
-        context['person_edit_url'] = reverse(
+        extra_params = {}
+        if from_song:
+            extra_params['from_song'] = from_song.pk
+        if from_event:
+            extra_params['from_event'] = from_event.pk
+
+        def _with_trail(url):
+            if extra_params:
+                url = add_query_param(url, extra_params)
+                if origin_key:
+                    url = with_origin(url, origin_key)
+            return url
+
+        context['person_edit_url'] = _with_trail(reverse(
             _EDIT_URL_NAMES.get(context_type, 'syncope:org_member_edit'),
             kwargs={'username': url_username, 'pk': self.object.pk}
-        )
-        context['person_delete_url'] = reverse(
+        ))
+        context['person_delete_url'] = _with_trail(reverse(
             _DELETE_URL_NAMES.get(context_type, 'syncope:org_member_delete'),
             kwargs={'username': url_username, 'pk': self.object.pk}
-        )
+        ))
 
         context["person_data"] = AccessControl.filter_person_details(
             self.request.user,
@@ -625,15 +670,27 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
         context = super().get_context_data(**kwargs)
         context['preset'] = self.kwargs.get('preset')
         context['is_admin'] = True
+        list_name = PRESET_LIST_MAP.get(self.kwargs.get('preset'), 'org_member_list')
+        context['cancel_url'] = safe_next_url(
+            self.request, reverse(f"syncope:{list_name}", kwargs={'username': self.kwargs['username']})
+        )
         return context
 
     def form_valid(self, form):
+        auto_add_event = self.request.POST.get('auto_add_event') or self.request.GET.get('auto_add_event')
+        selected_roles = form.cleaned_data["roles"]
+        if not selected_roles and auto_add_event:
+            # Quick-added from an event's Attendance edit page: default to Member
+            # rather than _add_roles' own External fallback, so they show up as
+            # an active member.
+            selected_roles = [Role.objects.get(id=Role.MEMBER)]
+
         with transaction.atomic():
             # 1. create new person
             person = self._create_person(form)
 
             # 2. add roles into membership
-            self._add_roles(person, form.cleaned_data["roles"])
+            self._add_roles(person, selected_roles)
 
             # 3. add skills
             self._add_skills(person, form.cleaned_data["skills"])
@@ -650,7 +707,6 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
         next_url = self.request.POST.get('next') or self.request.GET.get('next', '')
         host = self.request.get_host()
         safe_next = next_url if (next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={host})) else None
-        auto_add_event = self.request.POST.get('auto_add_event') or self.request.GET.get('auto_add_event')
 
         if safe_next and auto_add_event:
             event = Event.objects.filter(pk=auto_add_event, user=self.customuser).first()
@@ -880,10 +936,48 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
 
         return form
 
+    def _from_song_event_and_origin(self):
+        from_song_pk = self.request.GET.get('from_song') or self.request.POST.get('from_song')
+        from_event_pk = self.request.GET.get('from_event') or self.request.POST.get('from_event')
+        origin_key = self.request.GET.get('origin') or self.request.POST.get('origin') or DEFAULT_EVENT_ORIGIN
+        return from_song_pk, from_event_pk, origin_key
+
+    def _person_detail_url(self):
+        from_song_pk, from_event_pk, origin_key = self._from_song_event_and_origin()
+        context_type = self.kwargs.get('context_type')
+        detail_url_name = _DETAIL_URL_NAMES.get(context_type, 'syncope:org_member_detail')
+        url = reverse(detail_url_name, kwargs={'username': self.kwargs['username'], 'pk': self.person.pk})
+        extra = {}
+        if from_song_pk:
+            extra['from_song'] = from_song_pk
+        if from_event_pk:
+            extra['from_event'] = from_event_pk
+        if extra:
+            url = with_origin(add_query_param(url, extra), origin_key)
+        return url
+
+    def _return_target(self):
+        from_song_pk, from_event_pk, origin_key = self._from_song_event_and_origin()
+        if from_song_pk:
+            song = Song.objects.filter(pk=from_song_pk, user=self.customuser).first()
+            if song:
+                song_url = reverse('syncope:song_detail', kwargs={'username': self.kwargs['username'], 'pk': song.pk})
+                if from_event_pk:
+                    song_url = with_origin(add_query_param(song_url, {'from_event': from_event_pk}), origin_key)
+                return song_url, f"Return to {song.title}"
+        if from_event_pk:
+            event = Event.objects.filter(pk=from_event_pk, user=self.customuser).first()
+            if event:
+                event_url = reverse('syncope:event_detail', kwargs={'username': self.kwargs['username'], 'pk': event.pk})
+                return with_origin(event_url, origin_key), f"Return to {event.name}"
+        return reverse('syncope:org_member_list', kwargs={'username': self.kwargs['username']}), "Return to Members"
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["organization"] = self.customuser
         context['is_admin'] = True
+        context['cancel_url'] = self._person_detail_url()
+        context['return_url'], context['return_label'] = self._return_target()
 
         period_qs = MembershipPeriod.objects.filter(
             person=self.person, user=self.customuser
@@ -945,9 +1039,7 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
             if rf.is_valid():
                 self._save_resources(rf)
 
-        context_type = self.kwargs.get('context_type')
-        list_name = CONTEXT_TYPE_LIST_MAP.get(context_type, 'org_member_list')
-        return redirect(f"syncope:{list_name}", username=self.kwargs["username"])
+        return redirect(self._person_detail_url())
 
     def _save_resources(self, resource_formset):
         self.person.person_resource.all().delete()
@@ -1111,10 +1203,30 @@ class OrgMemberDeleteView(LoginRequiredMixin, DeleteView):
         messages.success(request, f"Successfully deleted member '{name}'.")
         return response
 
+    def _from_song_event_and_origin(self):
+        from_song_pk = self.request.GET.get('from_song') or self.request.POST.get('from_song')
+        from_event_pk = self.request.GET.get('from_event') or self.request.POST.get('from_event')
+        origin_key = self.request.GET.get('origin') or self.request.POST.get('origin') or DEFAULT_EVENT_ORIGIN
+        return from_song_pk, from_event_pk, origin_key
+
     def get_success_url(self):
+        url_username = self.kwargs.get('username')
+        from_song_pk, from_event_pk, origin_key = self._from_song_event_and_origin()
+        if from_song_pk:
+            song = Song.objects.filter(pk=from_song_pk, user__username=url_username).first()
+            if song:
+                song_url = reverse('syncope:song_detail', kwargs={'username': url_username, 'pk': song.pk})
+                if from_event_pk:
+                    song_url = with_origin(add_query_param(song_url, {'from_event': from_event_pk}), origin_key)
+                return song_url
+        if from_event_pk:
+            event = Event.objects.filter(pk=from_event_pk, user__username=url_username).first()
+            if event:
+                event_url = reverse('syncope:event_detail', kwargs={'username': url_username, 'pk': event.pk})
+                return with_origin(event_url, origin_key)
         context_type = self.kwargs.get('context_type')
         list_name = CONTEXT_TYPE_LIST_MAP.get(context_type, 'org_member_list')
-        return reverse(f"syncope:{list_name}", kwargs={'username': self.kwargs.get('username')})
+        return reverse(f"syncope:{list_name}", kwargs={'username': url_username})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1123,7 +1235,16 @@ class OrgMemberDeleteView(LoginRequiredMixin, DeleteView):
         context['is_admin'] = True
         context_type = self.kwargs.get('context_type', '')
         detail_url_name = _DETAIL_URL_NAMES.get(context_type, 'syncope:org_member_detail')
-        context['person_detail_url'] = reverse(detail_url_name, kwargs={'username': url_username, 'pk': self.object.pk})
+        person_detail_url = reverse(detail_url_name, kwargs={'username': url_username, 'pk': self.object.pk})
+        from_song_pk, from_event_pk, origin_key = self._from_song_event_and_origin()
+        extra = {}
+        if from_song_pk:
+            extra['from_song'] = from_song_pk
+        if from_event_pk:
+            extra['from_event'] = from_event_pk
+        if extra:
+            person_detail_url = with_origin(add_query_param(person_detail_url, extra), origin_key)
+        context['person_detail_url'] = person_detail_url
         return context
 
 

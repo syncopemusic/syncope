@@ -51,7 +51,7 @@
     </div>
 {% endif %}
 
-<p><a href="{% url 'syncope:event_detail' url_username object.pk %}">&larr; Back to {{ object.name }}</a></p>
+{% include "syncope/_breadcrumbs.html" %}
 <h2>Event Details &mdash; {{ object.name }}</h2>
 
 <form method="post" id="event-meta-form">
@@ -83,6 +83,7 @@
 
     <div class="save-bar" id="save-bar">
         <button type="submit">Save</button>
+        <button type="button" onclick="window.location.href='{% url 'syncope:event_detail' url_username object.pk %}?origin={{ origin_key }}'">Cancel</button>
         <span class="dirty-note">Unsaved changes</span>
     </div>
 </form>

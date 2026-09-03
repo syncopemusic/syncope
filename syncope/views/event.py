@@ -17,11 +17,12 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.http import url_has_allowed_host_and_scheme
 from syncope.models import CustomUser, Person, Role
 from syncope.models import Event, EventSong, Attendance, AttendanceType, EventResource, EventSongResource, Resource, SongResource
-from syncope.forms import EventForm, EventSongFormSet, AttendanceFormSet, AddAttendanceForm
+from syncope.forms import EventForm, AddAttendanceForm
 from syncope.forms import AddSongToEventForm, EventResourceFormSet, EventSongResourceFormSet
-from syncope.views.drafts import DraftMixin, clear_draft
+from syncope.views.drafts import DraftMixin
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param
+from syncope.breadcrumbs import event_breadcrumbs, DEFAULT_EVENT_ORIGIN
 
 
 def is_event_admin(user, org_user):
@@ -145,25 +146,6 @@ def reorder_event_song(event, song_pk, direction):
     return True
 
 
-class SelectPersonInitialMixin:
-    person_preset_fields = []
-    person_preset_map = {}
-
-    def _get_initial_with_presets(self):
-        initial = {}
-        if self.person_preset_map:
-            for query_key, form_key in self.person_preset_map.items():
-                pk = self.request.GET.get(query_key)
-                if pk:
-                    initial[form_key] = pk
-        else:
-            for field in self.person_preset_fields:
-                pk = self.request.GET.get(f'select_{field}')
-                if pk:
-                    initial[field] = pk
-        return initial
-
-
 @method_decorator(login_required, name='dispatch')
 class EventCreateView(DraftMixin, CreateView):
     """Step 1: Create event with basic info only"""
@@ -246,273 +228,6 @@ class EventCreateView(DraftMixin, CreateView):
             "pk": self.object.pk
         })
 
-@method_decorator(login_required, name='dispatch')
-class EventUpdateView(DraftMixin, SelectPersonInitialMixin, UpdateView):
-    model = Event
-    form_class = EventForm
-    template_name = 'syncope/event_update.html'
-    person_preset_map = {'select_person': 'person', 'select_song': 'song'}
-
-    def dispatch(self, request, *args, **kwargs):
-        url_username = self.kwargs.get("username")
-        self.customuser = get_object_or_404(CustomUser, username=url_username) if url_username else request.user
-
-        if request.user != self.customuser:
-            self.is_admin = AccessControl.can_add_event(
-                request.user, self.customuser
-            ).filter(person__roles__id=Role.ADMIN).exists()
-
-            has_access = self.is_admin or AccessControl.can_edit_event(request.user, self.customuser).exists()
-            if not has_access:
-                return HttpResponseForbidden("You don't have permission to access this page.")
-
-            if request.method == 'POST' and not self.is_admin:
-                return HttpResponseForbidden("Only admins can save event changes.")
-        else:
-            self.is_admin = True
-
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.customuser
-        return kwargs
-
-    def post(self, request, *args, **kwargs):
-        """Handle reorder actions before form validation."""
-        if request.POST.get('reorder'):
-            self.object = self.get_object()
-            self._reorder_songs_db(self.object)
-            # Always redirect after reorder, don't process form
-            event_update_url = reverse('syncope:event_update', kwargs={
-                'username': self.kwargs['username'],
-                'pk': self.object.pk,
-            })
-            return redirect(event_update_url)
-        return super().post(request, *args, **kwargs)
-
-    def get_queryset(self):
-        """Return only events belonging to the organization/user from URL."""
-        return Event.objects.filter(
-            user=self.customuser
-        ).select_related('user', 'event_type').prefetch_related(
-            'eventsong_set__song',
-            'attendance_set__person'
-        )
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        event = self.object
-        event_date = event.started_at or timezone.now()
-
-        members = Person.objects.active_performers(
-            self.customuser, event_date
-        ).select_related('user').prefetch_related('roles')
-
-        if not hasattr(self, '_song_formset'):
-            attendance_qs = get_ordered_attendance_queryset(event)
-            song_qs = event.eventsong_set.all().order_by('order')
-            if self.request.POST:
-                self._song_formset = EventSongFormSet(
-                    self.request.POST,
-                    instance=event,
-                    queryset=song_qs,
-                )
-                self._attendance_formset = AttendanceFormSet(
-                    self.request.POST,
-                    instance=event,
-                    queryset=attendance_qs,
-                    form_kwargs={'person_queryset': members},
-                )
-                self._resource_formset = EventResourceFormSet(
-                    self.request.POST,
-                    instance=event,
-                    user=self.customuser,
-                )
-            else:
-                self._song_formset = EventSongFormSet(
-                    instance=event,
-                    queryset=song_qs,
-                )
-                self._attendance_formset = AttendanceFormSet(
-                    instance=event,
-                    queryset=attendance_qs,
-                    form_kwargs={'person_queryset': members},
-                )
-                self._resource_formset = EventResourceFormSet(
-                    instance=event,
-                    user=self.customuser,
-                )
-
-            # Build per-song resource formsets keyed by EventSong PK
-            self._song_resource_formsets_map = {}
-            for eventsong in song_qs:
-                if self.request.POST:
-                    formset = EventSongResourceFormSet(
-                        self.request.POST, instance=eventsong,
-                        user=self.customuser, prefix=f"esresource_{eventsong.pk}",
-                    )
-                else:
-                    formset = EventSongResourceFormSet(
-                        instance=eventsong,
-                        user=self.customuser, prefix=f"esresource_{eventsong.pk}",
-                    )
-                self._song_resource_formsets_map[eventsong.pk] = formset
-
-        search_q = self.request.GET.get('q', '')
-        song_search_q = self.request.GET.get('song_q', '')
-
-        context['song_formset'] = self._song_formset
-        context['song_formset_with_resources'] = [
-            (form, self._song_resource_formsets_map.get(form.instance.pk))
-            for form in self._song_formset.forms
-        ]
-        context['attendance_formset'] = self._attendance_formset
-        context['resource_formset'] = self._resource_formset
-        context['attendance_types'] = AttendanceType.objects.all()
-        context['url_username'] = self.kwargs.get('username')
-        context['is_admin'] = self.is_admin
-        context['admin_override'] = self.request.GET.get('admin_override') == 'true' and self.is_admin
-        context['search_q'] = search_q
-        context['song_search_q'] = song_search_q
-        context['add_song_url'] = reverse('syncope:event_new_song', kwargs={
-            'username': self.kwargs.get('username'), 'pk': event.pk,
-        })
-        context['add_participant_url'] = reverse('syncope:event_new_attendance', kwargs={
-            'username': self.kwargs.get('username'), 'pk': event.pk,
-        })
-        presets = self._get_initial_with_presets()
-        preset_initial = {k: presets[k] for k in ['person', 'song'] if k in presets}
-        context['add_form'] = AddAttendanceForm(
-            org_user=self.customuser,
-            event=event,
-            search_q=search_q,
-            initial={'person': preset_initial.get('person')} if 'person' in preset_initial else {},
-        ) if self.is_admin else None
-        context['add_song_form'] = AddSongToEventForm(
-            org_user=self.customuser,
-            event=event,
-            search_q=song_search_q,
-            initial={'song': preset_initial.get('song')} if 'song' in preset_initial else {},
-        ) if self.is_admin else None
-        return context
-
-
-
-    def _save_songs(self, event, song_formset):
-        valid_forms = [
-            f for f in song_formset.forms
-            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('song')
-        ]
-        valid_pks = {f.instance.pk for f in valid_forms if f.instance.pk}
-        existing_pks = set(event.eventsong_set.values_list('pk', flat=True))
-        pks_to_delete = existing_pks - valid_pks
-
-        # Clean up children before deleting EventSong rows (PROTECT constraint)
-        if pks_to_delete:
-            EventSongResource.objects.filter(event_song_id__in=pks_to_delete).delete()
-            EventSong.objects.filter(pk__in=pks_to_delete).delete()
-
-        # Two-pass order update (avoids unique_order_per_event constraint violations)
-        # Pass 1: temp negative orders
-        for idx, f in enumerate(valid_forms):
-            if f.instance.pk:
-                EventSong.objects.filter(pk=f.instance.pk).update(order=-(idx + 1))
-        # Pass 2: final positive orders + update fields
-        for idx, f in enumerate(valid_forms):
-            if f.instance.pk:
-                EventSong.objects.filter(pk=f.instance.pk).update(
-                    song=f.cleaned_data['song'],
-                    encore=f.cleaned_data.get('encore') or False,
-                    order=idx + 1,
-                )
-
-    def _save_resources(self, event, resource_formset):
-        save_event_resources(event, resource_formset, self.customuser)
-
-    def _save_song_resources(self, event_song, resource_formset):
-        save_event_song_resources(event_song, resource_formset, self.customuser)
-
-    def _reorder_songs_db(self, event):
-        """Reorder songs in the database based on reorder button click."""
-        reorder_value = self.request.POST.get('reorder', '').strip()
-        if not reorder_value or not reorder_value.startswith('song_'):
-            return
-        try:
-            parts = reorder_value.split('_')
-            song_pk = int(parts[1])
-            direction = '_'.join(parts[2:])  # handles "up_one", "up_all", "down_one", "down_all"
-        except (ValueError, IndexError):
-            return
-        reorder_event_song(event, song_pk, direction)
-
-    def form_valid(self, form):
-        self.get_context_data()  # ensures formsets are built and cached on self
-        admin_override = self.request.POST.get('admin_override') == 'true' and self.is_admin
-        clear_draft(self.request, self.get_draft_key())
-
-        if not self._song_formset.is_valid():
-            messages.error(self.request, "Please fix errors in the songs section.")
-            return self.form_invalid(form)
-
-        if not self._attendance_formset.is_valid():
-            messages.error(self.request, "Please fix errors in the attendance section.")
-            return self.form_invalid(form)
-
-        if not self._resource_formset.is_valid():
-            messages.error(self.request, "Please fix errors in the resources section.")
-            return self.form_invalid(form)
-
-        for rs_formset in self._song_resource_formsets_map.values():
-            if not rs_formset.is_valid():
-                messages.error(self.request, "Please fix errors in song resources.")
-                return self.form_invalid(form)
-
-        with transaction.atomic():
-            self.object = form.save()
-            self._save_songs(self.object, self._song_formset)
-            self._attendance_formset.instance = self.object
-            self._attendance_formset.save()
-            self._save_resources(self.object, self._resource_formset)
-            for eventsong_pk, rs_formset in self._song_resource_formsets_map.items():
-                try:
-                    eventsong = EventSong.objects.get(pk=eventsong_pk)
-                    self._save_song_resources(eventsong, rs_formset)
-                except EventSong.DoesNotExist:
-                    pass  # Song was deleted; its resources already cleaned up in _save_songs
-
-        action = self.request.POST.get('action', 'save')
-        event_update_url = reverse('syncope:event_update', kwargs={
-            'username': self.kwargs['username'],
-            'pk': self.object.pk,
-        })
-
-        if action == 'add_member':
-            add_url = reverse('syncope:org_member_new', kwargs={
-                'username': self.kwargs['username'],
-            })
-            return redirect(f'{add_url}?next={event_update_url}')
-
-        if admin_override:
-            messages.success(self.request, "Event updated successfully! (Admin override used)")
-        else:
-            messages.success(self.request, "Event updated successfully!")
-        return HttpResponseRedirect(self.get_success_url())
-
-    def form_invalid(self, form):
-        if form.errors:
-            messages.error(self.request, f"Event form errors: {form.errors}")
-        messages.error(self.request, "There was an error updating the event. Please check the form below.")
-        return super().form_invalid(form)
-
-    def get_success_url(self):
-        """Redirect to event detail page after successful update."""  # ADDED: Docstring
-        return reverse_lazy('syncope:event_detail', kwargs={
-            'username': self.kwargs.get('username'),
-            'pk': self.object.pk
-        })
-
-
 @method_decorator(login_required, name="dispatch")
 class EventListView(ListView):
     template_name = "syncope/event_list.html"
@@ -589,6 +304,9 @@ class EventDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.kwargs.get('username')
+        context['breadcrumbs'], context['origin_key'] = event_breadcrumbs(
+            self.request, self.kwargs.get('username'), self.object
+        )
         context['attendances'] = get_ordered_attendance_queryset(self.object)
         context['is_admin'] = is_event_admin(self.request.user, self.customuser)
         context['can_view_attendance'] = can_view_event_attendance(self.request.user, self.customuser)
@@ -650,76 +368,6 @@ def _add_song_from_post(event, org_user, post_data):
     return EventSong.objects.create(event=event, song=form.cleaned_data['song'], order=next_order)
 
 
-@require_POST
-@login_required
-def event_add_attendance(request, username, pk):
-    """Legacy add-participant endpoint used by event_update.html; redirects back to the monolithic edit page."""
-    org_user = get_object_or_404(CustomUser, username=username)
-    event = get_object_or_404(Event, pk=pk, user=org_user)
-
-    if not is_event_admin(request.user, org_user):
-        return HttpResponseForbidden("Only admins can add participants.")
-
-    _add_attendance_from_post(event, org_user, request.POST)
-
-    return redirect('syncope:event_update', username=username, pk=pk)
-
-
-@login_required
-def event_participant_search(request, username, pk):
-    """Legacy participant search used by event_update.html."""
-    org_user = get_object_or_404(CustomUser, username=username)
-    event = get_object_or_404(Event, pk=pk, user=org_user)
-
-    if not is_event_admin(request.user, org_user):
-        return HttpResponseForbidden("Only admins can search participants.")
-
-    search_q = request.GET.get('q', '')
-    add_form = AddAttendanceForm(org_user=org_user, event=event, search_q=search_q)
-    return render(request, 'syncope/participant_search_results.html', {
-        'add_form': add_form,
-        'search_q': search_q,
-        'object': event,
-        'url_username': username,
-        'add_participant_url': reverse('syncope:event_new_attendance', kwargs={'username': username, 'pk': pk}),
-    })
-
-
-@require_POST
-@login_required
-def event_add_song(request, username, pk):
-    """Legacy add-song endpoint used by event_update.html; redirects back to the monolithic edit page."""
-    org_user = get_object_or_404(CustomUser, username=username)
-    event = get_object_or_404(Event, pk=pk, user=org_user)
-
-    if not is_event_admin(request.user, org_user):
-        return HttpResponseForbidden("Only admins can add songs to events.")
-
-    _add_song_from_post(event, org_user, request.POST)
-
-    return redirect('syncope:event_update', username=username, pk=pk)
-
-
-@login_required
-def event_song_search(request, username, pk):
-    """Legacy song search used by event_update.html."""
-    org_user = get_object_or_404(CustomUser, username=username)
-    event = get_object_or_404(Event, pk=pk, user=org_user)
-
-    if not is_event_admin(request.user, org_user):
-        return HttpResponseForbidden("Only admins can search songs.")
-
-    song_search_q = request.GET.get('song_q', '')
-    add_song_form = AddSongToEventForm(org_user=org_user, event=event, search_q=song_search_q)
-    return render(request, 'syncope/song_search_results.html', {
-        'add_song_form': add_song_form,
-        'song_search_q': song_search_q,
-        'object': event,
-        'url_username': username,
-        'add_song_url': reverse('syncope:event_new_song', kwargs={'username': username, 'pk': pk}),
-    })
-
-
 # --- Songs subpage -----------------------------------------------------------------
 
 @method_decorator(login_required, name='dispatch')
@@ -756,6 +404,9 @@ class EventSongsEditView(View):
             for idx, es in enumerate(eventsongs)
         ]
         search_q = self.request.GET.get('song_q', '')
+        breadcrumbs, origin_key = event_breadcrumbs(
+            self.request, self.kwargs.get('username'), event, current_label='Songs'
+        )
         return {
             'object': event,
             'event': event,
@@ -764,10 +415,12 @@ class EventSongsEditView(View):
             'url_username': self.kwargs.get('username'),
             'is_admin': self.is_admin,
             'song_search_q': search_q,
+            'breadcrumbs': breadcrumbs,
+            'origin_key': origin_key,
             'add_song_form': AddSongToEventForm(
                 org_user=self.customuser, event=event, search_q=search_q
             ) if self.is_admin else None,
-            'add_song_url': reverse('syncope:event_song_add', kwargs=self.kwargs),
+            'add_song_url': f"{reverse('syncope:event_song_add', kwargs=self.kwargs)}?origin={origin_key}",
         }
 
 
@@ -787,6 +440,7 @@ def event_song_add(request, org_user, event):
         'total': song_count,
         'url_username': org_user.username,
         'is_admin': True,
+        'origin_key': request.GET.get('origin', DEFAULT_EVENT_ORIGIN),
         'resource_formset': EventSongResourceFormSet(
             instance=eventsong, user=org_user, prefix=f"esresource_{eventsong.pk}"
         ),
@@ -798,13 +452,14 @@ def event_song_add(request, org_user, event):
 def event_songs_search(request, org_user, event):
     """AJAX song search for the Songs subpage (points 'Add' at event_song_add, not the legacy endpoint)."""
     song_search_q = request.GET.get('song_q', '')
+    origin_key = request.GET.get('origin', DEFAULT_EVENT_ORIGIN)
     add_song_form = AddSongToEventForm(org_user=org_user, event=event, search_q=song_search_q)
     return render(request, 'syncope/song_search_results.html', {
         'add_song_form': add_song_form,
         'song_search_q': song_search_q,
         'object': event,
         'url_username': org_user.username,
-        'add_song_url': reverse('syncope:event_song_add', kwargs={'username': org_user.username, 'pk': event.pk}),
+        'add_song_url': f"{reverse('syncope:event_song_add', kwargs={'username': org_user.username, 'pk': event.pk})}?origin={origin_key}",
     })
 
 
@@ -876,6 +531,9 @@ class EventAttendanceEditView(View):
         event = self.event
         attendances = get_ordered_attendance_queryset(event)
         search_q = request.GET.get('q', '')
+        breadcrumbs, origin_key = event_breadcrumbs(
+            request, self.kwargs.get('username'), event, current_label='Attendance'
+        )
         context = {
             'object': event,
             'event': event,
@@ -884,6 +542,8 @@ class EventAttendanceEditView(View):
             'url_username': self.kwargs.get('username'),
             'is_admin': self.is_admin,
             'search_q': search_q,
+            'breadcrumbs': breadcrumbs,
+            'origin_key': origin_key,
             'add_form': AddAttendanceForm(
                 org_user=self.customuser, event=event, search_q=search_q
             ) if self.is_admin else None,
@@ -987,6 +647,9 @@ class EventMetaEditView(UpdateView):
             )
         context['url_username'] = self.kwargs.get('username')
         context['is_admin'] = self.is_admin
+        context['breadcrumbs'], context['origin_key'] = event_breadcrumbs(
+            self.request, self.kwargs.get('username'), event, current_label='Details'
+        )
         return context
 
     def form_valid(self, form):
@@ -1035,6 +698,14 @@ class EventDeleteView(LoginRequiredMixin, DeleteView):
         if not is_admin:
             return HttpResponseForbidden("Only admins can delete events.")
         return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.kwargs.get('username')
+        context['breadcrumbs'], context['origin_key'] = event_breadcrumbs(
+            self.request, self.kwargs.get('username'), self.object, current_label='Delete'
+        )
+        return context
 
     def delete(self, request, *args, **kwargs):
         event = self.get_object()

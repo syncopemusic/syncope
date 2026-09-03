@@ -32,7 +32,7 @@
               <span class="share-event-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
             </td>
 
-            <td> <a href="{%  url 'syncope:event_detail' url_username event.id %}">
+            <td> <a href="{%  url 'syncope:event_detail' url_username event.id %}?origin=events">
                 {% if event.started_at %}
                 <span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime">{{ event.started_at|date:"d M, Y, H:i" }}</span>
                 {% else %}

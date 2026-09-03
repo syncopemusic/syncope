@@ -58,9 +58,10 @@
     </div>
 {% endif %}
 
-<p><a href="{% url 'syncope:event_detail' url_username event.pk %}">&larr; Back to {{ event.name }}</a></p>
+{% include "syncope/_breadcrumbs.html" %}
 <h2>Songs &mdash; {{ event.name }}</h2>
 <p><small>Changes here save instantly &mdash; no Save button needed, except for recordings &amp; links.</small></p>
+<p><button type="button" onclick="window.location.href='{% url 'syncope:event_detail' url_username event.pk %}?origin={{ origin_key }}'">Return</button></p>
 
 <div style="display:none;">{% csrf_token %}</div>
 
@@ -91,7 +92,7 @@
     {% include "syncope/song_search_results.html" %}
 </div>
 <p><a href="{% url 'syncope:song_list' url_username %}">Browse full song archive</a></p>
-<form method="post" action="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:song_new' url_username %}?auto_add_event={{ event.pk }}&next={% url 'syncope:event_songs_edit' url_username event.pk %}">
+<form method="post" action="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:song_new' url_username %}?auto_add_event={{ event.pk }}&next={% url 'syncope:event_songs_edit' url_username event.pk %}?origin={{ origin_key }}">
     {% csrf_token %}
     <button type="submit" title="Create new song">+ Add new song to archive</button>
 </form>
@@ -131,7 +132,7 @@
     let songSearchTimeout;
 
     function runSongSearch(query) {
-        const url = `{% url 'syncope:event_songs_search' url_username event.pk %}?song_q=${encodeURIComponent(query)}`;
+        const url = `{% url 'syncope:event_songs_search' url_username event.pk %}?song_q=${encodeURIComponent(query)}&origin={{ origin_key }}`;
         fetch(url).then(r => r.text()).then(html => { songSearchResults.innerHTML = html; });
     }
 
