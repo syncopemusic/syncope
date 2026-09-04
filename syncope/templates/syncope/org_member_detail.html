@@ -2,6 +2,10 @@
 {% load static %}
 {% block title %}{{ person }}{% endblock %}
 {% block content %}
+{% include "syncope/_breadcrumbs.html" %}
+{% if return_url %}
+<p><button type="button" onclick="window.location.href='{{ return_url }}'">{{ return_label }}</button></p>
+{% endif %}
 {% if is_admin %}
 <p>
     <a href="{{ person_edit_url }}">EDIT person</a>

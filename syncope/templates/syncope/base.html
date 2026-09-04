@@ -19,8 +19,10 @@
 </head>
 <body>
     <div class="grid-container">
+        <div class="mobile-topbar">
+            <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
+        </div>
 
-    <!-- toggle button -->
         <nav class="sidebar" id="sidebar">
             {% if user.is_authenticated %}
                 {% load url_tags %}
@@ -33,7 +35,7 @@
 
                     <li>
                         <p>Groups:</p>
-                        <ul>
+                        <ul class="org-list">
                             {% for membership in memberships %}
                                 {% with org=membership.user.organizations.first %}
                                     {% if org %}
@@ -46,9 +48,9 @@
                                                 {% if ADMIN_ROLE in membership.person.roles.all or MEMBER_ROLE in membership.person.roles.all %}
                                                     <li><a href="{%  url 'syncope:song_list' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'song_list,song_detail,song_new,song_update,song_delete,song_quotes' %}class="active"{% endif %}>Songs</a></li>
                                                     <li><a href="{%  url 'syncope:org_member_list' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'org_member_list,org_member_detail,org_member_new,org_member_edit,org_member_delete' %}class="active"{% endif %}>Members</a></li>
-                                                    <li><a href="{%  url 'syncope:event_list' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'event_list,event_detail,event_new,event_update,event_delete,event_new_attendance,self_attendance_update,event_new_song' %}class="active"{% endif %}>Events</a></li>
+                                                    <li><a href="{%  url 'syncope:event_list' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'event_list,event_detail,event_new,event_delete,event_meta_edit,event_songs_edit,event_attendance_edit,self_attendance_update' %}class="active"{% endif %}>Events</a></li>
                                                     <li><a href="{%  url 'syncope:project_list' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'project_list,project_detail,project_new,project_update,project_delete' %}class="active"{% endif %}>Projects</a></li>
-                                                    <li><a href="{%  url 'syncope:attendance' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'attendance,attendance_delete,quick_new_rehearsal' %}class="active"{% endif %}>Attendance</a></li>
+                                                    <li><a href="{%  url 'syncope:attendance' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'attendance,quick_new_rehearsal' %}class="active"{% endif %}>Attendance</a></li>
                                                     <li><a href="{%  url 'syncope:poll_list' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'poll_list,poll_detail,poll_new,poll_update,poll_delete,poll_persons,poll_events,poll_attendance' %}class="active"{% endif %}>Polls</a></li>
 
                                                 {% endif %}
@@ -80,10 +82,7 @@
             {% endif %}
         </nav>
 
-<!--    main -->
         <main class="main">
-
-            <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
             <div class="main-content">
                 {% if messages %}
                 <div style="margin-bottom: 1rem;">
@@ -119,20 +118,24 @@
     <script>
         function toggleMenu(){
             const container = document.querySelector(".grid-container");
-            {#const sidebar = document.querySelector(".sidebar");#}
+            const button = document.querySelector(".mobile-toggle");
 
             if (window.innerWidth < 769) {
-                container.classList.toggle("menu-visible");
+                const isOpen = container.classList.toggle("menu-visible");
+                button.textContent = isOpen ? "✕" : "☰";
+                button.classList.toggle("is-open", isOpen);
             }
         }
 
         window.addEventListener("resize", function() {
             const container = document.querySelector(".grid-container");
+            const button = document.querySelector(".mobile-toggle");
             if (window.innerWidth > 768) {
                 container.classList.remove("menu-visible");
+                button.textContent = "☰";
+                button.classList.remove("is-open");
             }
-        })
-        ;
+        });
     </script>
 
     <script>

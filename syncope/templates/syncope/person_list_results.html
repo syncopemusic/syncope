@@ -1,0 +1,105 @@
+{% load static %}
+<div class="table-container">
+<table>
+    <thead>
+    <tr>
+        <th class="col-num">#</th>
+        <th></th>
+        <th class="sticky-col">
+            <a href="?q={{ q }}&sort=name{% if current_sort == 'name' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+                Name {% if current_sort == 'name' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+            </a>
+        </th>
+        <th>
+            <a href="?q={{ q }}&sort=email{% if current_sort == 'email' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+                Email {% if current_sort == 'email' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+            </a>
+        </th>
+        {% if list_type in 'active inactive all' %}
+        <th>
+            <a href="?q={{ q }}&sort=skill{% if current_sort == 'skill' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+                Skill {% if current_sort == 'skill' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+            </a>
+        </th>
+        <th>
+            <a href="?q={{ q }}&sort=voice_instrument{% if current_sort == 'voice_instrument' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+                Voice/Instrument {% if current_sort == 'voice_instrument' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+            </a>
+        </th>
+        <th>Roles</th>
+        {% endif %}
+        <th>Resources</th>
+        <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+        {% for person in persons %}
+        <tr>
+            <td class="col-num">{{ forloop.counter }}</td>
+            <td style="position: relative;">
+                <button class="share-member-btn" data-member-pk="{{ person.person.id }}"
+                        style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
+                    <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
+                </button>
+                <span class="share-member-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
+            </td>
+            <td class="sticky-col">
+                <a href="{% url person_detail_url_name url_username person.person.id %}">
+                {{ person.person.first_name }} {{ person.person.last_name }}
+                </a>
+            </td>
+            <td>{{ person.person.email }}</td>
+            {% if list_type in 'active inactive all' %}
+            <td>
+                {% for skill in person.person.skills.all %}
+                    {{ skill.title }}
+                {% empty %}
+                    No skills
+                {% endfor %}
+            </td>
+            <td>
+                {% for singer in person.person.singer_set.all %}
+                    {{ singer.voice.name }}
+                {% empty %}
+
+                {% endfor %}
+                {% for instrumentalist in person.person.instrumentalist_set.all %}
+                    {{ instrumentalist.instrument.name }}
+                {% empty %}
+                {% endfor %}
+            </td>
+            <td>{% for role in person.person.roles.all %}
+                    {{ role.title }}
+                {% empty %}
+                    No roles
+                {% endfor %}</td>
+            {% endif %}
+            <td>
+              {% for link in person.resource_icons %} {% if forloop.first %}
+                {{ link.icon }}
+                {% endif %} {% endfor %}
+            </td>
+            <td>
+                <a href="{% url person_edit_url_name url_username person.person.id %}">
+                    Edit
+                </a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td>
+            {% if list_type == 'active' %}No active members
+            {% elif list_type == 'inactive' %}No inactive members
+            {% elif list_type == 'others' %}No unspecified persons
+            {% elif list_type == 'all' %}No persons
+            {% elif list_type == 'composers' %}No composers yet
+            {% elif list_type == 'poets' %}No poets yet
+            {% elif list_type == 'arrangers' %}No arrangers yet
+            {% elif list_type == 'translators' %}No translators yet
+            {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>

@@ -13,6 +13,12 @@
 
 <form method="post">
     {% csrf_token %}
+    <input type="hidden" name="draft_key" value="{{ draft_key }}">
+    {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
+    {% if request.GET.auto_add_event %}<input type="hidden" name="auto_add_event" value="{{ request.GET.auto_add_event }}">{% endif %}
+    {% if request.GET.from_song %}<input type="hidden" name="from_song" value="{{ request.GET.from_song }}">{% endif %}
+    {% if request.GET.from_event %}<input type="hidden" name="from_event" value="{{ request.GET.from_event }}">{% endif %}
+    {% if request.GET.origin %}<input type="hidden" name="origin" value="{{ request.GET.origin }}">{% endif %}
     <!-- Existing fields -->
     <p>{{ form.first_name.label_tag }} {{ form.first_name }}</p>
     <p>{{ form.last_name.label_tag }} {{ form.last_name }}</p>
@@ -103,5 +109,12 @@
     <button type="submit">Save</button>
 </form>
 
+<p>
+    <a href="{{ cancel_url }}">Cancel</a>
+    {% if return_url %}
+        &nbsp;|&nbsp;
+        <button type="button" onclick="window.location.href='{{ return_url }}'">{{ return_label }}</button>
+    {% endif %}
+</p>
 
 {% endblock %}

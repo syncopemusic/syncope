@@ -59,15 +59,6 @@
     vertical-align: middle;
 }
 
-.sticky-col {
-    position: sticky;
-    left: 0;
-    background-color: #f8f9fa;
-    z-index: 1;
-    width: 100px;
-    white-space: nowrap;
-}
-
 table {
     border-collapse: collapse;
 }
@@ -141,7 +132,7 @@ tbody td {
 <form method="post" style="min-width: 0;">
     {% csrf_token %}
 
-    <div style="overflow-x: auto;">
+    <div class="table-container">
         <table>
             <thead>
                 {# Event Type Row #}

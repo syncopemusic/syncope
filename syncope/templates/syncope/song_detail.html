@@ -3,16 +3,22 @@
 {% block title %}{{ song.title }}{% endblock %}
 {% block content %}
 
+{% include "syncope/_breadcrumbs.html" %}
+
 <h2>{{ song.title }}</h2>
 
 <p>
     {% if can_manage %}
-        <a href="{%  url 'syncope:song_update' url_username song.pk %}">Edit Song</a>
+        <a href="{%  url 'syncope:song_update' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">Edit Song</a>
         &nbsp;|&nbsp;
-        <a href="{% url 'syncope:song_delete' url_username song.pk %}" class="btn-danger" style="display: inline-block; text-decoration: none;">Delete Song</a>
+        <a href="{% url 'syncope:song_delete' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn-danger" style="display: inline-block; text-decoration: none;">Delete Song</a>
         &nbsp;|&nbsp;
     {% endif %}
-    <a href="{%  url 'syncope:song_list' url_username %}">Back to List</a>
+    {% if return_url %}
+        <button type="button" onclick="window.location.href='{{ return_url }}'">{{ return_label }}</button>
+    {% else %}
+        <a href="{%  url 'syncope:song_list' url_username %}">Back to List</a>
+    {% endif %}
 </p>
 
 <p>
@@ -27,28 +33,28 @@
     <tr><th>Song ID</th><td>{{ song.internal_id|default:"-" }}</td></tr>
     <tr><th>Composer</th><td>
         {% if song.composer %}
-            <a href="{%  url 'syncope:org_member_detail' url_username song.composer.pk %}">{{ song.composer }}</a>
+            <a href="{%  url 'syncope:org_member_detail' url_username song.composer.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.composer }}</a>
         {% else %}
             -
         {% endif %}
     </td></tr>
     <tr><th>Poet</th><td>
         {% if song.poet %}
-            <a href="{%  url 'syncope:org_member_detail' url_username song.poet.pk %}">{{ song.poet }}</a>
+            <a href="{%  url 'syncope:org_member_detail' url_username song.poet.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.poet }}</a>
         {% else %}
             -
         {% endif %}
     </td></tr>
     <tr><th>Translator</th><td>
         {% if song.translator %}
-            <a href="{%  url 'syncope:org_member_detail' url_username song.translator.pk %}">{{ song.translator }}</a>
+            <a href="{%  url 'syncope:org_member_detail' url_username song.translator.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.translator }}</a>
         {% else %}
             -
         {% endif %}
     </td></tr>
     <tr><th>Arranger</th><td>
         {% if song.arranger %}
-            <a href="{%  url 'syncope:org_member_detail' url_username song.arranger.pk %}">{{ song.arranger }}</a>
+            <a href="{%  url 'syncope:org_member_detail' url_username song.arranger.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.arranger }}</a>
         {% else %}
             -
         {% endif %}

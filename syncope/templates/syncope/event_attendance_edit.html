@@ -1,0 +1,377 @@
+{% extends "syncope/base.html" %}
+{% block title %}Attendance &mdash; {{ event.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .attendance-table thead th {
+        position: sticky;
+        top: 0;
+        background-color: #fff;
+        z-index: 1;
+    }
+    .attendance-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.25rem 0.6rem;
+        border-radius: 4px;
+        cursor: pointer;
+        user-select: none;
+        font-size: 0.95rem;
+        min-width: 6.5rem;
+    }
+    .remove-attendance-btn {
+        border: none;
+        background: none;
+        color: #999;
+        font-size: 1.1rem;
+        cursor: pointer;
+        line-height: 1;
+        padding: 0.25rem 0.4rem;
+    }
+    .remove-attendance-btn:hover { color: #c0392b; }
+    tr.pending-remove td {
+        text-decoration: line-through;
+        opacity: 0.55;
+    }
+
+    .save-bar {
+        position: sticky;
+        bottom: 0;
+        background-color: #f5f5f5;
+        border-top: 1px solid #ccc;
+        padding: 0.75rem 1rem;
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .save-bar.dirty {
+        background-color: #fff3cd;
+        border-top-color: #ffc107;
+    }
+    .save-bar .dirty-note {
+        font-size: 0.85rem;
+        color: #856404;
+        display: none;
+    }
+    .save-bar.dirty .dirty-note {
+        display: inline;
+    }
+
+    @media (max-width: 768px) {
+        .save-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+        #attendance-content {
+            padding-bottom: 4rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{% include "syncope/_breadcrumbs.html" %}
+<h2>Attendance &mdash; {{ event.name }}</h2>
+
+<div id="attendance-content">
+    <form method="post" id="attendance-form">
+        {% csrf_token %}
+        <div class="table-container">
+            <table class="attendance-table">
+                <thead>
+                    <tr>
+                        <th>Person</th>
+                        <th>Attendance</th>
+                        {% if is_admin %}<th></th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody id="attendance-tbody">
+                    {% for attendance in attendances %}
+                        {% include "syncope/_attendance_row.html" %}
+                    {% empty %}
+                    <tr id="no-attendance-row"><td colspan="3">No attendance records yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
+
+    {% if is_admin %}
+    <p><strong>Add participants</strong></p>
+    <div style="display:flex; gap:1rem; align-items:flex-start; flex-wrap:nowrap; max-width:42rem;">
+        <div style="flex:1 1 0; min-width:0;">
+            <p>
+                <input type="text" id="participant-search-input" value="{{ search_q }}" placeholder="Search by name, voice, or instrument" style="max-width:100%;">
+                <button type="button" id="participant-search-clear">Clear</button>
+            </p>
+            <div id="selected-participants-chips"></div>
+            <div id="participant-search-results">
+                {% include "syncope/participant_search_results.html" %}
+            </div>
+        </div>
+        <div style="flex:0 0 auto; align-self:flex-start;">
+            <p><strong>Make their attendance:</strong></p>
+            <span class="attendance-chip" id="add-type-chip" data-type-id="1" onclick="cycleAddType(this)">
+                <span class="att-icon"></span> <span class="att-label"></span>
+            </span>
+            <input type="hidden" id="add-type-hidden" value="1">
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if is_admin %}
+<div class="save-bar" id="save-bar">
+    <button type="submit" form="attendance-form" id="save-submit-btn">Save</button>
+    <a href="{% url 'syncope:event_detail' url_username event.pk %}?origin={{ origin_key }}" class="btn-primary" style="text-decoration:none; display:inline-block;">Cancel</a>
+    <span class="dirty-note">Unsaved changes</span>
+</div>
+{% endif %}
+
+<script>
+    const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const attendanceTbody = document.getElementById('attendance-tbody');
+    const saveBar = document.getElementById('save-bar');
+    const saveSubmitBtn = document.getElementById('save-submit-btn');
+    const attendanceTypes = [
+        {% for at in attendance_types %}{ id: {{ at.pk }}, name: "{{ at.name|escapejs }}" },{% endfor %}
+    ];
+    const CYCLE_ORDER = attendanceTypes.map(t => t.id);
+    const ICONS = { 0: '', 1: '✓', 2: '💼', 3: '🤒', 4: '🏖' };
+
+    function markDirty() { saveBar?.classList.add('dirty'); }
+
+    // Cancel is a plain <a> tag (no per-click JS, so it navigates instantly) —
+    // the "discard changes?" prompt instead comes from the browser's native
+    // beforeunload dialog, skipped on an actual Save submit.
+    let formSubmitting = false;
+    document.getElementById('attendance-form')?.addEventListener('submit', () => {
+        stagePendingSelections();
+        formSubmitting = true;
+    });
+    window.addEventListener('beforeunload', function(e) {
+        if (formSubmitting || !saveBar?.classList.contains('dirty')) return;
+        e.preventDefault();
+        e.returnValue = '';
+    });
+
+    function typeMeta(id) {
+        const t = attendanceTypes.find(t => t.id === id);
+        return { label: t ? t.name : 'TBD', icon: ICONS[id] || '' };
+    }
+
+    function paintChip(chip) {
+        const id = parseInt(chip.dataset.typeId, 10);
+        const meta = typeMeta(id);
+        attendanceTypes.forEach(t => chip.classList.remove(`att-type-${t.id}`));
+        chip.classList.add(`att-type-${id}`);
+        chip.querySelector('.att-icon').textContent = meta.icon;
+        chip.querySelector('.att-label').textContent = meta.label;
+        chip.title = meta.label;
+    }
+
+    function initAllChips() {
+        attendanceTbody.querySelectorAll('.attendance-chip').forEach(paintChip);
+    }
+
+    function removeEmptyRow() {
+        document.getElementById('no-attendance-row')?.remove();
+    }
+
+    function cycleAttendance(chip) {
+        const cur = parseInt(chip.dataset.typeId, 10);
+        const next = CYCLE_ORDER[(CYCLE_ORDER.indexOf(cur) + 1) % CYCLE_ORDER.length];
+        chip.dataset.typeId = next;
+        paintChip(chip);
+        const row = chip.closest('tr');
+        const hidden = row.querySelector('input[type=hidden][data-role="add-type"]')
+            || row.querySelector(`input[type=hidden][name="type_${row.dataset.attendanceId}"]`);
+        if (hidden) hidden.value = next;
+        markDirty();
+    }
+
+    function cycleAddType(chip) {
+        const cur = parseInt(chip.dataset.typeId, 10);
+        const next = CYCLE_ORDER[(CYCLE_ORDER.indexOf(cur) + 1) % CYCLE_ORDER.length];
+        chip.dataset.typeId = next;
+        paintChip(chip);
+        document.getElementById('add-type-hidden').value = next;
+    }
+
+    function toggleRemove(row) {
+        const pk = row.dataset.attendanceId;
+        if (!pk) return;
+        const btn = row.querySelector('.remove-attendance-btn');
+        const pending = row.classList.toggle('pending-remove');
+        if (pending) {
+            row.insertAdjacentHTML('beforeend', `<input type="hidden" class="pending-remove-input" name="remove_${pk}" value="1">`);
+            btn.textContent = '↺';
+            btn.title = 'Undo removal';
+        } else {
+            row.querySelector('.pending-remove-input')?.remove();
+            btn.textContent = '×';
+            btn.title = 'Remove from event';
+        }
+        markDirty();
+    }
+
+    attendanceTbody.addEventListener('click', function(e) {
+        const removeBtn = e.target.closest('.remove-attendance-btn');
+        if (!removeBtn) return;
+        const row = removeBtn.closest('tr');
+        if (row.classList.contains('staged-add')) {
+            row.remove();
+            markDirty();
+            return;
+        }
+        toggleRemove(row);
+    });
+
+    function suppressEnterSubmit(input) {
+        if (!input) return;
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') e.preventDefault();
+        });
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function buildStagedRow(personId, personLabel, typeId) {
+        const tr = document.createElement('tr');
+        tr.className = 'staged-add';
+        tr.dataset.personId = personId;
+        tr.innerHTML = `
+            <td>${escapeHtml(personLabel)}</td>
+            <td>
+                <span class="attendance-chip" data-type-id="${typeId}" onclick="cycleAttendance(this)">
+                    <span class="att-icon"></span> <span class="att-label"></span>
+                </span>
+                <input type="hidden" name="add_person" value="${personId}">
+                <input type="hidden" data-role="add-type" name="add_type_${personId}" value="${typeId}">
+            </td>
+            <td><button type="button" class="remove-attendance-btn" title="Remove staged addition">&times;</button></td>
+        `;
+        return tr;
+    }
+
+    function currentPersonIds() {
+        return Array.from(attendanceTbody.querySelectorAll('tr[data-person-id]')).map(tr => tr.dataset.personId);
+    }
+
+    const participantSearchInput = document.getElementById('participant-search-input');
+    const participantSearchResults = document.getElementById('participant-search-results');
+    const selectedParticipantsChips = document.getElementById('selected-participants-chips');
+    let participantSearchTimeout;
+
+    // Selected-but-not-yet-staged picks, kept independent of whatever the
+    // search box currently renders so "Clear" / re-searching never loses them.
+    const selectedParticipants = new Map(); // personId -> label
+
+    function applyCheckboxSelection() {
+        participantSearchResults.querySelectorAll('input[type=checkbox][name="person"]').forEach(cb => {
+            cb.checked = selectedParticipants.has(cb.value);
+        });
+    }
+
+    function renderSelectedChips() {
+        if (saveSubmitBtn) saveSubmitBtn.textContent = selectedParticipants.size ? 'Add participants and Save' : 'Save';
+        if (!selectedParticipantsChips) return;
+        if (!selectedParticipants.size) {
+            selectedParticipantsChips.innerHTML = '';
+            return;
+        }
+        const chips = Array.from(selectedParticipants.entries()).map(([id, label]) => `
+            <span class="attendance-chip" style="cursor:default;">
+                ${escapeHtml(label)}
+                <button type="button" class="remove-attendance-btn" data-remove-selected="${id}" title="Remove from selection">&times;</button>
+            </span>
+        `).join('');
+        selectedParticipantsChips.innerHTML = `<p><strong>Selected (${selectedParticipants.size})</strong></p><div style="display:flex; gap:0.3rem; flex-wrap:wrap;">${chips}</div>`;
+    }
+
+    function stagePendingSelections() {
+        if (!selectedParticipants.size) return;
+        const typeId = document.getElementById('add-type-hidden').value;
+        removeEmptyRow();
+        selectedParticipants.forEach((label, personId) => {
+            attendanceTbody.appendChild(buildStagedRow(personId, label, typeId));
+        });
+        initAllChips();
+        markDirty();
+        selectedParticipants.clear();
+    }
+
+    function runParticipantSearch(query) {
+        const exclude = currentPersonIds().join(',');
+        const url = `{% url 'syncope:event_attendance_search' url_username event.pk %}?q=${encodeURIComponent(query)}&exclude=${encodeURIComponent(exclude)}`;
+        fetch(url).then(r => r.text()).then(html => {
+            participantSearchResults.innerHTML = html;
+            applyCheckboxSelection();
+        });
+    }
+
+    if (participantSearchInput) {
+        participantSearchInput.addEventListener('input', function() {
+            clearTimeout(participantSearchTimeout);
+            participantSearchTimeout = setTimeout(() => runParticipantSearch(this.value), 1000);
+        });
+        suppressEnterSubmit(participantSearchInput);
+    }
+
+    document.getElementById('participant-search-clear')?.addEventListener('click', function() {
+        clearTimeout(participantSearchTimeout);
+        participantSearchInput.value = '';
+        runParticipantSearch('');
+    });
+
+    participantSearchResults?.addEventListener('change', function(e) {
+        const cb = e.target.closest('input[type=checkbox][name="person"]');
+        if (!cb) return;
+        if (cb.checked) {
+            const label = cb.closest('label')?.textContent.trim() || cb.value;
+            selectedParticipants.set(cb.value, label);
+            markDirty();
+        } else {
+            selectedParticipants.delete(cb.value);
+        }
+        renderSelectedChips();
+    });
+
+    selectedParticipantsChips?.addEventListener('click', function(e) {
+        const btn = e.target.closest('[data-remove-selected]');
+        if (!btn) return;
+        selectedParticipants.delete(btn.dataset.removeSelected);
+        renderSelectedChips();
+        applyCheckboxSelection();
+    });
+
+    participantSearchResults?.addEventListener('click', function(e) {
+        if (!e.target.closest('#stage-add-participant-btn')) return;
+        if (!selectedParticipants.size) return;
+        stagePendingSelections();
+        renderSelectedChips();
+        participantSearchInput.value = '';
+        runParticipantSearch('');
+    });
+
+    paintChip(document.getElementById('add-type-chip'));
+    initAllChips();
+</script>
+{% endblock %}

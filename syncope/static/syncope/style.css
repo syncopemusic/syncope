@@ -1,8 +1,10 @@
 
 * {
-    margin: 2px;
-    padding: 2px;
     box-sizing: border-box;
+}
+
+body {
+    margin: 0;
 }
 
 .grid-container {
@@ -25,10 +27,18 @@
 
 .main {
     min-width: 0;
+    grid-area: main;
+}
+
+.menu-links,
+.menu-links ul,
+.org-list,
+.org-submenu {
+    list-style: none;
 }
 
 .menu-links {
-    list-style: none;
+    padding-left: 0;
 }
 
 .menu-links li {
@@ -42,18 +52,21 @@
     border-radius: 4px;
 }
 
-.menu-links a.active {
-    font-weight: bold;
-    background-color: rgba(255, 255, 255, 0.2);
-}
-
+.menu-links a.active,
 .org-submenu a.active {
     font-weight: bold;
     background-color: rgba(255, 255, 255, 0.2);
 }
 
+.org-list {
+    padding-left: 0.5rem;
+}
+
+.org-submenu {
+    padding-left: 1rem;
+}
+
 .main-content {
-    grid-area: main;
     padding: 2rem;
     overflow-y: auto;
     display: flex;
@@ -68,11 +81,45 @@
     flex: 1;
 }
 
+.table-container {
+    overflow-x: auto;
+}
+
+.sticky-col {
+    position: sticky;
+    left: 0;
+    background-color: #f8f9fa;
+    z-index: 1;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Attendance status colors, keyed by the real AttendanceType pk (0=TBD, 1=Present,
+   2=Work/School, 3=Illness, 4=Private/Vacation). Shared by the per-event attendance
+   subpage's status chips. */
+.att-type-0 { background-color: #dfe6e9; }
+.att-type-1 { background-color: #c8f7c5; }
+.att-type-2 { background-color: #ffeaa7; }
+.att-type-3 { background-color: #fab1a0; }
+.att-type-4 { background-color: #a29bfe; }
+
+.col-num {
+    text-align: right;
+}
+
+.btn-full {
+    display: inline;
+}
+
+.btn-short {
+    display: none;
+}
 
 .mobile-toggle {
     display: none;
     border: none;
-    color: gray;
     width: fit-content;
 }
 
@@ -83,7 +130,18 @@
 @media (max-width: 768px) {
     .grid-container {
         grid-template-columns: 1fr;
-        grid-template-areas: "main";
+        grid-template-rows: auto 1fr;
+        grid-template-areas: "topbar" "main";
+    }
+
+    .mobile-topbar {
+        display: flex;
+        align-items: center;
+        grid-area: topbar;
+        position: sticky;
+        top: 0;
+        z-index: 1001;
+        padding: 0.5rem 1rem;
     }
 
     .sidebar {
@@ -103,17 +161,23 @@
 
     .mobile-toggle {
         display: block;
+        background: none;
+        padding: 0;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: gray;
     }
 
-    .main-content {
-        padding: 1rem;
+    .mobile-toggle.is-open {
+        color: white;
     }
-}
 
-@media (max-width: 600px) {
-    .table {
-        width: 100%;
-        overflow-x: auto;
+    .btn-full {
+        display: none;
+    }
+
+    .btn-short {
+        display: inline;
     }
 
     th, td {
@@ -130,6 +194,32 @@
 
     td {
         font-size: 14px;
+    }
+
+    .main-content {
+        padding: 1rem;
+    }
+
+    textarea[name="location"],
+    textarea[name="description"],
+    textarea[name="details"],
+    textarea[name="producers"],
+    textarea[name="additional_notes"] {
+        height: 2.2em;
+        min-height: 2.2em;
+        max-height: 2.2em;
+        resize: vertical;
+        overflow-y: auto;
+    }
+
+    textarea[name="location"]:not(:placeholder-shown),
+    textarea[name="description"]:not(:placeholder-shown),
+    textarea[name="details"]:not(:placeholder-shown),
+    textarea[name="producers"]:not(:placeholder-shown),
+    textarea[name="additional_notes"]:not(:placeholder-shown) {
+        height: 4.4em;
+        min-height: 4.4em;
+        max-height: 4.4em;
     }
 }
 
@@ -188,5 +278,45 @@
     color: white;
     border: none;
     border-radius: 4px;
+    padding: 0.5rem 1rem;
     cursor: pointer;
+}
+
+.breadcrumbs {
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.breadcrumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.breadcrumbs li {
+    display: flex;
+    align-items: center;
+}
+
+.breadcrumbs li + li::before {
+    content: "›";
+    margin: 0 0.4rem;
+    color: #adb5bd;
+}
+
+.breadcrumbs a {
+    color: #6c757d;
+    text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumbs [aria-current="page"] {
+    color: #212529;
+    font-weight: 500;
 }

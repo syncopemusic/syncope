@@ -4,6 +4,9 @@
 <style>
 .event-col {
     width: 20px;
+    height: 70px;
+    padding: 5px;
+    font-weight: normal;
 }
 
 .attendance-cell {
@@ -35,6 +38,49 @@
     color: #333333;
     pointer-events: none;
     cursor: default;
+}
+
+.cell-ineligible {
+    background-color: #f5f5f5;
+    color: #ccc;
+    pointer-events: none;
+    cursor: default;
+}
+
+.save-bar {
+    position: sticky;
+    bottom: 0;
+    background-color: #f5f5f5;
+    border-top: 1px solid #ccc;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.save-bar.dirty {
+    background-color: #fff3cd;
+    border-top-color: #ffc107;
+}
+.save-bar .dirty-note {
+    font-size: 0.85rem;
+    color: #856404;
+    display: none;
+}
+.save-bar.dirty .dirty-note {
+    display: inline;
+}
+
+@media (max-width: 768px) {
+    .save-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+    }
+    .table-container {
+        padding-bottom: 4rem;
+    }
 }
 
 </style>
@@ -72,9 +118,9 @@
     <div style="margin-bottom: 0.5rem; font-size: 0.85rem; display: flex; gap: 1rem; flex-wrap: wrap;">
         <strong>Legend:</strong>
         <span class="att-type-1" style="padding: 2px 6px; border-radius: 3px;" title="present at the event">✓ Present</span>
-        <span class="att-type-2" style="padding: 2px 6px; border-radius: 3px;" title="missing due to professional activities">💼 Work/School</span>
+        <span class="att-type-2" style="padding: 2px 6px; border-radius: 3px;" title="missing due to professional activities">💼 Work</span>
         <span class="att-type-3" style="padding: 2px 6px; border-radius: 3px;" title="unplanned medical issues">🤒 Illness</span>
-        <span class="att-type-4" style="padding: 2px 6px; border-radius: 3px;" title="planned absence">🏖 Private/Vacation</span>
+        <span class="att-type-4" style="padding: 2px 6px; border-radius: 3px;" title="planned absence">🏖 Private</span>
         <span class="att-type-5" style="padding: 2px 6px; border-radius: 3px;" title="to be determined">TBD</span>
         <em>(Click a cell to cycle)</em>
     </div>
@@ -87,13 +133,12 @@
             <table class="attendance-table">
                 <thead>
                     <tr>
-                        <th>#</th>
+                        <th class="col-num">#</th>
                         <th class="sticky-col">Member</th>
                         {% for event in events %}
-                            <th class="event-col "
-                                style="height: 50px; padding: 5px; font-weight: normal;">
+                            <th class="event-col">
                                 <div style="transform: rotate(-90deg); width: 10px; white-space: nowrap;">
-                                    <a href="{%  url 'syncope:event_update' url_username event.id %}"
+                                    <a href="{%  url 'syncope:event_detail' url_username event.id %}?origin=attendance"
                                         style="
                                         {% if event.event_type.id != 1 %}font-weight: bold; {% endif %}
                                         color: inherit; text-decoration: underline; font-size: inherit;"
@@ -111,17 +156,21 @@
                     {% for group in grouped_dashboard_data %}
                         {% for row in group.items %}
                         <tr {% if forloop.first and not forloop.parentloop.first %}style="border-top: 3px solid #333;"{% endif %}>
-                            <td>{{ forloop.counter }}</td>
+                            <td class="col-num">{{ row.index }}</td>
                             <td class="sticky-col member-name">{{ row.member }}</td>
                             {% for cell in row.attendance_cells %}
-                                <td class="attendance-cell att-type-{{ cell.attendance_type_id|default:5 }} {% if cell.is_grayed_out %}grayed-out{% endif %}"
-                                    data-type-id="{{ cell.attendance_type_id|default:5 }}"
-                                    {% if not cell.is_grayed_out %}onclick="cycleAttendance(this)"{% endif %}>
-                                    <input type="hidden"
-                                           name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
-                                           value="{{ cell.attendance_type_id|default:5 }}">
-                                    <span class="att-icon"></span>
-                                </td>
+                                {% if cell.is_ineligible %}
+                                    <td class="cell-ineligible"></td>
+                                {% else %}
+                                    <td class="attendance-cell att-type-{{ cell.attendance_type_id|default:5 }} {% if cell.is_grayed_out %}grayed-out{% endif %}"
+                                        data-type-id="{{ cell.attendance_type_id|default:5 }}"
+                                        {% if not cell.is_grayed_out %}onclick="cycleAttendance(this)"{% endif %}>
+                                        <input type="hidden"
+                                               name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
+                                               value="{{ cell.attendance_type_id|default:5 }}">
+                                        <span class="att-icon"></span>
+                                    </td>
+                                {% endif %}
                             {% endfor %}
                             <td>{{ row.total_present }}/{{ row.total_events }}</td>
                             <td>{{ row.percentage|floatformat:0 }}%</td>
@@ -129,18 +178,21 @@
                         {% endfor %}
                     {% endfor %}
                     <tr class="totals-row" style="border-top: 3px solid #333;">
-                        <td class="sticky-col"><strong>Event Total</strong></td>
+                        <td class="col-num"><strong>Total</strong></td>
+                        <td class="sticky-col">{{ members|length }}</td>
                         {% for total in event_totals %}
                             <td>{{ total.present }}/{{ total.total }}</td>
                         {% endfor %}
-                        <td colspan="2"></td>
+                        <td><strong>{{ grand_present }}/{{ grand_total }}</strong></td>
+                        <td><strong>{{ grand_percentage|floatformat:0 }}%</strong></td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <div >
+        <div class="save-bar" id="save-bar">
             <button type="submit" class="btn-primary">Save</button>
+            <span class="dirty-note">Unsaved changes</span>
         </div>
     </form>
 </div>
@@ -151,9 +203,9 @@
 const CYCLE_ORDER = [5, 1, 2, 3, 4];
 const TYPE_META = {
     1: { label: 'Present',           icon: '✓',  cls: 'att-type-1' },
-    2: { label: 'Work/School',       icon: '💼', cls: 'att-type-2' },
+    2: { label: 'Work',              icon: '💼', cls: 'att-type-2' },
     3: { label: 'Illness',           icon: '🤒', cls: 'att-type-3' },
-    4: { label: 'Private/Vacation',  icon: '🏖', cls: 'att-type-4' },
+    4: { label: 'Private',           icon: '🏖', cls: 'att-type-4' },
     5: { label: 'TBD',               icon: '',   cls: 'att-type-5' },
 };
 
@@ -166,6 +218,7 @@ function cycleAttendance(cell) {
     cell.classList.add(TYPE_META[next].cls);
     cell.querySelector('.att-icon').textContent = TYPE_META[next].icon;
     cell.title = TYPE_META[next].label;
+    document.getElementById('save-bar').classList.add('dirty');
 }
 
 document.addEventListener('DOMContentLoaded', function () {

@@ -5,7 +5,6 @@ from django.contrib import messages
 from datetime import timedelta
 from django.utils import timezone
 from django.views.generic import View
-from django.views.generic.edit import DeleteView
 from django.db.models import Count, Q
 from django.shortcuts import redirect
 from syncope.utils import group_by_section
@@ -13,8 +12,9 @@ from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
+from collections import defaultdict
 from syncope.models import CustomUser, Person, Role
-from syncope.models import Event, Attendance, AttendanceType, EventType
+from syncope.models import Event, Attendance, AttendanceType, EventType, MembershipPeriod
 from syncope.permissions import AccessControl
 
 
@@ -40,6 +40,25 @@ class AttendanceDashboardView(View):
     def _is_counted_attendance(self, attendance_type_id):
         """Check if attendance type should count toward statistics (not TBD)."""
         return attendance_type_id is not None and attendance_type_id != AttendanceType.TBD
+
+    def _get_membership_windows(self, members):
+        """Get MEMBER-role periods for all members. Returns {person_id: [(start_date, end_date_or_None), ...]}."""
+        periods = MembershipPeriod.objects.filter(
+            user=self.org_user,
+            role_id=Role.MEMBER,
+            person_id__in=[m.id for m in members],
+        ).values('person_id', 'started_at', 'ended_at')
+        windows = defaultdict(list)
+        for p in periods:
+            windows[p['person_id']].append((p['started_at'], p['ended_at']))
+        return windows
+
+    def _is_member_active_on(self, windows, person_id, on_date):
+        """Check if a member has an active MEMBER-role period on the given date."""
+        return any(
+            start <= on_date and (end is None or end >= on_date)
+            for start, end in windows.get(person_id, [])
+        )
 
     def _get_members_for_events(self, events):
         """Get members active during the displayed events' date range.
@@ -150,17 +169,32 @@ class AttendanceDashboardView(View):
         # Get members active during the displayed events' date range
         members = self._get_members_for_events(events)
 
+        # Get membership windows for per-event eligibility checks
+        windows = self._get_membership_windows(members)
+
         # Get attendance types
         present_type = AttendanceType.objects.get(pk=AttendanceType.PRESENT)
 
         # Build attendance matrix
-        dashboard_data = self._build_attendance_matrix(members, events, present_type)
+        dashboard_data = self._build_attendance_matrix(members, events, present_type, windows)
 
         # Group by section
         grouped_dashboard_data = group_by_section(dashboard_data, lambda row: row['member'])
 
+        # Add display index to each row based on order within groups
+        row_number = 1
+        for group in grouped_dashboard_data:
+            for row in group['items']:
+                row['index'] = row_number
+                row_number += 1
+
         # Calculate totals per event
-        event_totals = self._calculate_event_totals(events, members, present_type)
+        event_totals = self._calculate_event_totals(events, members, present_type, windows)
+
+        # Grand totals across the whole table
+        grand_present = sum(t['present'] for t in event_totals)
+        grand_total = sum(t['total'] for t in event_totals)
+        grand_percentage = (grand_present / grand_total * 100) if grand_total > 0 else 0
 
         context = {
             'org_user': self.org_user,
@@ -169,6 +203,9 @@ class AttendanceDashboardView(View):
             'events': events,
             'dashboard_data': dashboard_data,
             'event_totals': event_totals,
+            'grand_present': grand_present,
+            'grand_total': grand_total,
+            'grand_percentage': grand_percentage,
             'url_username': username,
         }
 
@@ -188,6 +225,9 @@ class AttendanceDashboardView(View):
             )
 
             members = self._get_members_for_events(events)
+
+            # Get membership windows for per-event eligibility checks
+            windows = self._get_membership_windows(members)
 
             # Read submitted type IDs per cell
             VALID_TYPE_IDS = {
@@ -221,7 +261,13 @@ class AttendanceDashboardView(View):
                     skipped_count += members.count()
                     continue
 
+                event_date = event.started_at.date()
+
                 for member in members:
+                    # Skip if member is not eligible on this event's date
+                    if not self._is_member_active_on(windows, member.id, event_date):
+                        continue
+
                     type_id = submitted_types.get((event.id, member.id), AttendanceType.TBD)
                     if type_id not in VALID_TYPE_IDS:
                         type_id = AttendanceType.TBD
@@ -257,7 +303,7 @@ class AttendanceDashboardView(View):
             redirect_url += f'?{query_params}'
         return redirect(redirect_url)
 
-    def _build_attendance_matrix(self, members, events, present_type):
+    def _build_attendance_matrix(self, members, events, present_type, windows):
         """Build efficient attendance lookup matrix."""
         # Create lookup dict: {event_id: {person_id: attendance_type_id}}
         attendance_lookup = {}
@@ -281,55 +327,66 @@ class AttendanceDashboardView(View):
             }
 
             # Build list of attendance cells in same order as events
+            attendance_type_id = None
             for event in events:
-                att_data = attendance_lookup.get(event.id, {}).get(member.id, {})
-                attendance_type_id = att_data.get('type_id')
-
-                # Only count this event in the denominator if attendance is counted (not TBD)
-                if att_data and self._is_counted_attendance(attendance_type_id):
-                    row['total_events'] += 1
-
-                # Check if this event is grayed out
+                is_eligible = self._is_member_active_on(windows, member.id, event.started_at.date())
                 is_grayed_out = getattr(event, 'is_grayed_out', False)
+
+                if is_eligible:
+                    att_data = attendance_lookup.get(event.id, {}).get(member.id, {})
+                    attendance_type_id = att_data.get('type_id')
+
+                    # Only count this event in the denominator if attendance is counted (not TBD)
+                    if att_data and self._is_counted_attendance(attendance_type_id):
+                        row['total_events'] += 1
+
+                    if attendance_type_id == present_type.id:
+                        row['total_present'] += 1
 
                 row['attendance_cells'].append({
                     'event_id': event.id,
                     'attendance_type_id': attendance_type_id,
                     'is_grayed_out': is_grayed_out,
+                    'is_ineligible': not is_eligible,
                 })
-
-                if attendance_type_id == present_type.id:
-                    row['total_present'] += 1
 
             row['percentage'] = (row['total_present'] / row['total_events'] * 100) if row['total_events'] > 0 else 0
             dashboard_data.append(row)
 
         return dashboard_data
 
-    def _calculate_event_totals(self, events, members, present_type):
-        """Calculate attendance totals per event."""
-        # Build a dict of event_id -> present count using a single query
+    def _calculate_event_totals(self, events, members, present_type, windows):
+        """Calculate attendance totals per event, only counting eligible members."""
+        # Build set of eligible person_ids per event
+        eligible_per_event = {}
+        for event in events:
+            event_date = event.started_at.date()
+            eligible_per_event[event.id] = {
+                m.id for m in members
+                if self._is_member_active_on(windows, m.id, event_date)
+            }
+
         event_ids = [e.id for e in events]
+        if not event_ids:
+            return []
+
+        # Fetch all attendance records once and count in Python
+        all_attendance = Attendance.objects.filter(
+            event_id__in=event_ids
+        ).values('event_id', 'person_id', 'attendance_type_id')
+
         present_counts = {}
-
-        if event_ids:
-            results = Attendance.objects.filter(
-                event_id__in=event_ids,
-                attendance_type=present_type
-            ).values('event_id').annotate(count=Count('id'))
-
-            for result in results:
-                present_counts[result['event_id']] = result['count']
-
-        # Build a dict of event_id -> counted attendance per event
         non_tbd_counts = {}
-        if event_ids:
-            results = Attendance.objects.filter(
-                event_id__in=event_ids
-            ).counted().values('event_id').annotate(count=Count('id'))
+        for att in all_attendance:
+            event_id = att['event_id']
+            person_id = att['person_id']
 
-            for result in results:
-                non_tbd_counts[result['event_id']] = result['count']
+            # Only count if person is eligible on that event
+            if event_id in eligible_per_event and person_id in eligible_per_event[event_id]:
+                if att['attendance_type_id'] == present_type.id:
+                    present_counts[event_id] = present_counts.get(event_id, 0) + 1
+                if att['attendance_type_id'] is not None:  # Not TBD
+                    non_tbd_counts[event_id] = non_tbd_counts.get(event_id, 0) + 1
 
         # Return list in same order as events
         totals = []
@@ -365,39 +422,6 @@ def self_attendance_update(request, username, event_pk):
     return redirect('syncope:event_detail', username=username, pk=event_pk)
 
 
-
-
-@method_decorator(login_required, name='dispatch')
-class AttendanceDeleteView(DeleteView):
-    model = Attendance
-    template_name = "syncope/attendance_confirm_delete.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        url_username = self.kwargs['username']
-        self.org_user = get_object_or_404(CustomUser, username=url_username)
-        is_admin = AccessControl.can_add_event(
-            request.user, self.org_user
-        ).filter(person__roles__id=Role.ADMIN).exists()
-        if not is_admin:
-            return HttpResponseForbidden("Only admins can delete participants.")
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_queryset(self):
-        event = get_object_or_404(Event, pk=self.kwargs['event_pk'], user=self.org_user)
-        return Attendance.objects.filter(event=event)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['url_username'] = self.kwargs['username']
-        context['event'] = self.object.event
-        context['is_admin'] = True
-        return context
-
-    def get_success_url(self):
-        return reverse_lazy('syncope:event_update', kwargs={
-            'username': self.kwargs['username'],
-            'pk': self.kwargs['event_pk'],
-        })
 
 
 @require_POST

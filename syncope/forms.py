@@ -4,7 +4,7 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.utils import timezone
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
     PollAttendance, Invitation
-from .models import Event, EventSong, Attendance, AttendanceType,  Voice, Instrument, EventType, EventResource, EventSongResource
+from .models import Event, EventSong, AttendanceType,  Voice, Instrument, EventType, EventResource, EventSongResource
 from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource, ProjectResource, \
     MembershipPeriod, PersonRole
 from django.forms import inlineformset_factory, BaseInlineFormSet
@@ -107,7 +107,7 @@ class OrganizationForm(forms.ModelForm):
 
 
 class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
-    VALID_PRESETS = {'composer', 'poet', 'translator', 'arranger'}
+    VALID_PRESETS = {'composer', 'poet', 'translator', 'arranger', 'member'}
     # Person
     first_name = forms.CharField(max_length=100)
     last_name = forms.CharField(max_length=100)
@@ -175,32 +175,23 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
 
         # Apply presets
         if preset == 'composer':
-            external_role = Role.objects.filter(title__iexact='external').first()
-            composer_skill = Skill.objects.filter(title__iexact="composer").first()
-            if external_role and composer_skill:
-                self.initial['roles'] = [external_role.id]
-                self.initial["skills"] = [composer_skill.id]
+            self.initial['roles'] = [Role.EXTERNAL]
+            self.initial["skills"] = [Skill.COMPOSER]
 
         elif preset == 'poet':
-            poet_skill = Skill.objects.filter(title__iexact="poet").first()
-            external_role = Role.objects.filter(title__iexact="external").first()
-            if poet_skill and external_role:
-                self.initial['roles'] = [external_role.id]
-                self.initial["skills"] = [poet_skill.id]
+            self.initial['roles'] = [Role.EXTERNAL]
+            self.initial["skills"] = [Skill.POET]
 
         elif preset == 'translator':
-            translator_skill = Skill.objects.filter(title__iexact="translator").first()
-            external_role = Role.objects.filter(title__iexact="external").first()
-            if translator_skill and external_role:
-                self.initial['roles'] = [external_role.id]
-                self.initial["skills"] = [translator_skill.id]
+            self.initial['roles'] = [Role.EXTERNAL]
+            self.initial["skills"] = [Skill.TRANSLATOR]
 
         elif preset == 'arranger':
-            arranger_skill = Skill.objects.filter(title__iexact="arranger").first()
-            external_role = Role.objects.filter(title__iexact="external").first()
-            if arranger_skill and external_role:
-                self.initial['roles'] = [external_role.id]
-                self.initial["skills"] = [arranger_skill.id]
+            self.initial['roles'] = [Role.EXTERNAL]
+            self.initial["skills"] = [Skill.ARRANGER]
+
+        elif preset == 'member':
+            self.initial['roles'] = [Role.MEMBER]
 
 
 
@@ -317,16 +308,22 @@ class EventForm(forms.ModelForm):
                   'started_at',
                   'ended_at',
                   'event_type',
-                  'details',
                   'project',
                   'producers',
                   'additional_notes',
                   'num_visitors',
                   ]
+        labels = {
+            'producers': 'Organizers',
+            'additional_notes': 'Personal notes',
+        }
         widgets = {
             'started_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
             'ended_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
-            'location': forms.Textarea(attrs={'rows': 3}),
+            'location': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Venue / address'}),
+            'description': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Description'}),
+            'producers': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Organizers'}),
+            'additional_notes': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Personal notes'}),
         }
 
     def __init__(self, *args, user=None, **kwargs):
@@ -341,23 +338,18 @@ class EventForm(forms.ModelForm):
         self.fields['event_type'].initial = rehearsal_event_type
         self.fields['event_type'].empty_label = None
 
+        # Name is optional — auto-generated from event type + date if left blank (see clean())
+        self.fields['name'].required = False
+        self.fields['name'].widget.attrs['placeholder'] = 'Auto-generated from date if left blank'
 
-class EventSongForm(forms.ModelForm):
-    class Meta:
-        model = EventSong
-        fields = ['id', 'song', 'encore']
-        widgets = {
-            'id': forms.HiddenInput(),
-            'song': forms.HiddenInput(),
-            'encore': forms.CheckboxInput(),
-        }
-
-
-class EventSongFormSet(BaseInlineFormSet):
     def clean(self):
-        if any(self.errors):
-            for form in self.forms:
-                form.errors.pop('__all__', None)
+        cleaned_data = super().clean()
+        if not cleaned_data.get('name'):
+            event_type = cleaned_data.get('event_type')
+            started_at = cleaned_data.get('started_at') or timezone.now()
+            type_name = event_type.name if event_type else 'Event'
+            cleaned_data['name'] = f"{type_name} - {started_at.strftime('%d %b %Y')}"
+        return cleaned_data
 
 
 class SongChoiceField(forms.ModelChoiceField):
@@ -373,10 +365,9 @@ class SongChoiceField(forms.ModelChoiceField):
 
 
 class AddSongToEventForm(forms.Form):
-    encore = forms.BooleanField(required=False, label='Encore')
-
-    def __init__(self, *args, org_user=None, event=None, search_q='', **kwargs):
+    def __init__(self, *args, org_user=None, event=None, search_q='', limit_results=True, **kwargs):
         super().__init__(*args, **kwargs)
+        self.song_search_truncated = False
         if org_user and event is not None:
             already_added_ids = set(event.eventsong_set.values_list('song_id', flat=True))
             qs = Song.objects.filter(user=org_user).order_by('title')
@@ -389,6 +380,11 @@ class AddSongToEventForm(forms.Form):
                         Q(composer__last_name__icontains=search_q) |
                         Q(keywords__icontains=search_q)
                     ).distinct()
+            if limit_results:
+                total_matches = qs.count()
+                limited_ids = list(qs.values_list('pk', flat=True)[:50])
+                qs = qs.filter(pk__in=limited_ids)
+                self.song_search_truncated = total_matches > 50
             self.fields['song'] = SongChoiceField(
                 queryset=qs,
                 already_added_ids=already_added_ids,
@@ -491,55 +487,32 @@ class AddGuestToProjectForm(forms.Form):
             )
 
 
-class AttendanceForm(forms.ModelForm):
-    class Meta:
-        model = Attendance
-        fields = ['id', 'person', 'attendance_type']
-        widgets = {
-            'id': forms.HiddenInput(),
-            'person': forms.HiddenInput(),
-            'attendance_type': forms.RadioSelect(),
-        }
-
-    def __init__(self, *args, **kwargs):
-        person_queryset = kwargs.pop('person_queryset', None)
-        kwargs.pop('user', None)
-        kwargs.pop('event', None)
-        super().__init__(*args, **kwargs)
-        if person_queryset is not None:
-            if self.instance and self.instance.person_id:
-                self.fields['person'].queryset = Person.objects.filter(
-                    Q(pk__in=person_queryset) | Q(pk=self.instance.person_id)
-                )
-            else:
-                self.fields['person'].queryset = person_queryset
-
-
-
 class AddAttendanceForm(forms.Form):
     """Admin-only form to add any org person to an event's attendance."""
-    person = forms.ModelChoiceField(
+    person = forms.ModelMultipleChoiceField(
         queryset=Person.objects.none(),
-        widget=forms.Select(attrs={'size': '8'}),
-        empty_label=None,
+        widget=forms.CheckboxSelectMultiple(),
         label='Person',
     )
     attendance_type = forms.ModelChoiceField(
         queryset=AttendanceType.objects.all(),
         widget=forms.RadioSelect(),
         label='Attendance Type',
+        initial=AttendanceType.PRESENT,
     )
 
-    def __init__(self, *args, org_user=None, event=None, search_q='', **kwargs):
+    def __init__(self, *args, org_user=None, event=None, search_q='', limit_results=True, exclude_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.person_search_truncated = False
         if org_user and event:
             from django.db.models import Exists, OuterRef, ExpressionWrapper, BooleanField
             from .models import Singer, Instrumentalist
             already_attending = event.attendance_set.values_list('person_id', flat=True)
+            exclude_pks = set(already_attending) | set(exclude_ids or [])
             qs = Person.objects.filter(
                 membership_period__user=org_user,
             ).exclude(
-                id__in=already_attending
+                id__in=exclude_pks
             ).distinct()
             if search_q:
                 qs = qs.filter(
@@ -555,25 +528,12 @@ class AddAttendanceForm(forms.Form):
                     output_field=BooleanField()
                 )
             ).order_by('-is_performer', 'last_name', 'first_name')
+            if limit_results:
+                total_matches = qs.count()
+                limited_ids = list(qs.values_list('pk', flat=True)[:25])
+                qs = qs.filter(pk__in=limited_ids)
+                self.person_search_truncated = total_matches > 25
             self.fields['person'].queryset = qs
-
-
-EventSongFormSet = inlineformset_factory(
-    Event,
-    EventSong,
-    form=EventSongForm,
-    formset=EventSongFormSet,
-    extra=0,
-    can_delete=True,
-)
-
-AttendanceFormSet = inlineformset_factory(
-    Event,
-    Attendance,
-    form=AttendanceForm,
-    extra=0,
-    can_delete=True,
-)
 
 
 class BaseQuoteFormSet(BaseInlineFormSet):

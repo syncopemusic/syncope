@@ -1,0 +1,19 @@
+<tr data-attendance-id="{{ attendance.pk }}" data-person-id="{{ attendance.person_id }}">
+    <td>{{ attendance.person.first_name }} {{ attendance.person.last_name }}</td>
+    <td>
+        <span class="attendance-chip"
+              data-attendance-id="{{ attendance.pk }}"
+              data-type-id="{{ attendance.attendance_type_id|default:0 }}"
+              {% if is_admin %}onclick="cycleAttendance(this)"{% endif %}>
+            <span class="att-icon"></span> <span class="att-label"></span>
+        </span>
+        {% if is_admin %}
+        <input type="hidden" name="type_{{ attendance.pk }}" value="{{ attendance.attendance_type_id|default:0 }}">
+        {% endif %}
+    </td>
+    {% if is_admin %}
+    <td>
+        <button type="button" class="remove-attendance-btn" title="Remove from event">&times;</button>
+    </td>
+    {% endif %}
+</tr>
