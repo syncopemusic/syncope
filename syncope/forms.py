@@ -308,20 +308,22 @@ class EventForm(forms.ModelForm):
                   'started_at',
                   'ended_at',
                   'event_type',
-                  'details',
                   'project',
                   'producers',
                   'additional_notes',
                   'num_visitors',
                   ]
+        labels = {
+            'producers': 'Organizers',
+            'additional_notes': 'Personal notes',
+        }
         widgets = {
             'started_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
             'ended_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
             'location': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Venue / address'}),
             'description': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Description'}),
-            'details': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Details'}),
-            'producers': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Producers'}),
-            'additional_notes': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Additional notes'}),
+            'producers': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Organizers'}),
+            'additional_notes': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Personal notes'}),
         }
 
     def __init__(self, *args, user=None, **kwargs):
@@ -487,30 +489,30 @@ class AddGuestToProjectForm(forms.Form):
 
 class AddAttendanceForm(forms.Form):
     """Admin-only form to add any org person to an event's attendance."""
-    person = forms.ModelChoiceField(
+    person = forms.ModelMultipleChoiceField(
         queryset=Person.objects.none(),
-        widget=forms.Select(attrs={'size': '8'}),
-        empty_label=None,
+        widget=forms.CheckboxSelectMultiple(),
         label='Person',
     )
     attendance_type = forms.ModelChoiceField(
         queryset=AttendanceType.objects.all(),
         widget=forms.RadioSelect(),
         label='Attendance Type',
-        initial=AttendanceType.TBD,
+        initial=AttendanceType.PRESENT,
     )
 
-    def __init__(self, *args, org_user=None, event=None, search_q='', limit_results=True, **kwargs):
+    def __init__(self, *args, org_user=None, event=None, search_q='', limit_results=True, exclude_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.person_search_truncated = False
         if org_user and event:
             from django.db.models import Exists, OuterRef, ExpressionWrapper, BooleanField
             from .models import Singer, Instrumentalist
             already_attending = event.attendance_set.values_list('person_id', flat=True)
+            exclude_pks = set(already_attending) | set(exclude_ids or [])
             qs = Person.objects.filter(
                 membership_period__user=org_user,
             ).exclude(
-                id__in=already_attending
+                id__in=exclude_pks
             ).distinct()
             if search_q:
                 qs = qs.filter(
@@ -528,9 +530,9 @@ class AddAttendanceForm(forms.Form):
             ).order_by('-is_performer', 'last_name', 'first_name')
             if limit_results:
                 total_matches = qs.count()
-                limited_ids = list(qs.values_list('pk', flat=True)[:50])
+                limited_ids = list(qs.values_list('pk', flat=True)[:25])
                 qs = qs.filter(pk__in=limited_ids)
-                self.person_search_truncated = total_matches > 50
+                self.person_search_truncated = total_matches > 25
             self.fields['person'].queryset = qs
 
 

@@ -6,7 +6,7 @@ from .views.event import EventCreateView, EventDetailView, EventListView, EventD
 from .views.event import EventSongsEditView, EventAttendanceEditView, EventMetaEditView
 from .views.event import event_song_add, event_songs_search, event_song_remove, event_song_reorder
 from .views.event import event_song_encore_toggle, event_song_resources_save
-from .views.event import event_attendance_add, event_attendance_search, event_participant_remove, event_attendance_toggle
+from .views.event import event_attendance_search
 from .views.home import HomeView, SkillListAndCreateView
 from .views.importing import ImportHubView, ImportDashboardView, CombineProjectsView
 from .views.organization import OrganizationCreateView, OrganizationDashboard, OrganizationUpdateView, OrganizationDeleteView
@@ -63,10 +63,7 @@ urlpatterns = [
     path("<str:username>/events/<int:pk>/songs/<int:eventsong_pk>/resources/", event_song_resources_save, name="event_song_resources_save"),
 
     path("<str:username>/events/<int:pk>/attendance/edit/", EventAttendanceEditView.as_view(), name="event_attendance_edit"),
-    path("<str:username>/events/<int:pk>/attendance/add/", event_attendance_add, name="event_attendance_add"),
     path("<str:username>/events/<int:pk>/attendance/edit/search/", event_attendance_search, name="event_attendance_search"),
-    path("<str:username>/events/<int:pk>/attendance/<int:attendance_pk>/remove/", event_participant_remove, name="event_participant_remove"),
-    path("<str:username>/events/<int:pk>/attendance/<int:attendance_pk>/toggle/", event_attendance_toggle, name="event_attendance_toggle"),
 
     path("<str:username>/events/<int:pk>/meta/edit/", EventMetaEditView.as_view(), name="event_meta_edit"),
 

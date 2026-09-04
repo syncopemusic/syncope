@@ -569,7 +569,6 @@ class Event(models.Model):
     started_at = models.DateTimeField("start date hour", blank=True, null=True)
     ended_at = models.DateTimeField("end date hour", blank=True, null=True)
     event_type = models.ForeignKey(EventType, on_delete=models.CASCADE)
-    details = models.TextField(blank=True, null=True)
     num_visitors = models.PositiveIntegerField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     additional_notes = models.TextField(blank=True, null=True)
@@ -590,6 +589,12 @@ class Event(models.Model):
         blank=True,
         related_name='events'
     )
+
+    @property
+    def same_date(self):
+        if not self.started_at or not self.ended_at:
+            return True
+        return self.started_at.date() == self.ended_at.date()
 
 
 class EventSong(models.Model):

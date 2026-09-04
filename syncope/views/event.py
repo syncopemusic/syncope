@@ -348,18 +348,6 @@ class EventDetailView(DetailView):
 
 
 
-def _add_attendance_from_post(event, org_user, post_data):
-    form = AddAttendanceForm(post_data, org_user=org_user, event=event, limit_results=False)
-    if not form.is_valid():
-        return None
-    attendance, _ = Attendance.objects.get_or_create(
-        event=event,
-        person=form.cleaned_data['person'],
-        defaults={'attendance_type': form.cleaned_data['attendance_type']},
-    )
-    return attendance
-
-
 def _add_song_from_post(event, org_user, post_data):
     form = AddSongToEventForm(post_data, org_user=org_user, event=event, limit_results=False)
     if not form.is_valid():
@@ -524,6 +512,8 @@ class EventAttendanceEditView(View):
         if not can_view_event_attendance(request.user, self.customuser):
             return HttpResponseForbidden("You don't have permission to access this page.")
         self.is_admin = is_event_admin(request.user, self.customuser)
+        if request.method == 'POST' and not self.is_admin:
+            return HttpResponseForbidden("Only admins can save attendance changes.")
         self.event = get_object_or_404(Event, pk=self.kwargs['pk'], user=self.customuser)
         return super().dispatch(request, *args, **kwargs)
 
@@ -547,65 +537,83 @@ class EventAttendanceEditView(View):
             'add_form': AddAttendanceForm(
                 org_user=self.customuser, event=event, search_q=search_q
             ) if self.is_admin else None,
-            'add_participant_url': reverse('syncope:event_attendance_add', kwargs=self.kwargs),
         }
         return render(request, self.template_name, context)
 
+    def post(self, request, *args, **kwargs):
+        event = self.event
+        valid_type_ids = set(AttendanceType.objects.values_list('pk', flat=True))
 
-@require_POST
-@login_required
-@event_admin_required
-def event_attendance_add(request, org_user, event):
-    """AJAX add-participant endpoint for the Attendance subpage; returns the new row fragment."""
-    attendance = _add_attendance_from_post(event, org_user, request.POST)
-    if attendance is None:
-        return HttpResponseBadRequest("Invalid selection.")
+        with transaction.atomic():
+            attendances = {a.pk: a for a in event.attendance_set.all()}
 
-    return render(request, 'syncope/_attendance_row.html', {
-        'attendance': attendance,
-        'url_username': org_user.username,
-        'is_admin': True,
-    })
+            remove_pks = set()
+            for key in request.POST:
+                if key.startswith('remove_') and request.POST.get(key) == '1':
+                    try:
+                        pk = int(key[len('remove_'):])
+                    except ValueError:
+                        continue
+                    if pk in attendances:
+                        remove_pks.add(pk)
+            if remove_pks:
+                event.attendance_set.filter(pk__in=remove_pks).delete()
+
+            for pk, attendance in attendances.items():
+                if pk in remove_pks:
+                    continue
+                try:
+                    type_id = int(request.POST.get(f'type_{pk}'))
+                except (TypeError, ValueError):
+                    continue
+                if type_id in valid_type_ids and type_id != attendance.attendance_type_id:
+                    attendance.attendance_type_id = type_id
+                    attendance.save(update_fields=['attendance_type'])
+
+            already_attending = set(event.attendance_set.values_list('person_id', flat=True))
+            for raw_person_id in request.POST.getlist('add_person'):
+                try:
+                    person_id = int(raw_person_id)
+                except ValueError:
+                    continue
+                if person_id in already_attending:
+                    continue
+                if not Person.objects.filter(
+                    pk=person_id, membership_period__user=self.customuser
+                ).exists():
+                    continue
+                try:
+                    type_id = int(request.POST.get(f'add_type_{person_id}'))
+                except (TypeError, ValueError):
+                    type_id = AttendanceType.PRESENT
+                if type_id not in valid_type_ids:
+                    type_id = AttendanceType.PRESENT
+                Attendance.objects.create(event=event, person_id=person_id, attendance_type_id=type_id)
+                already_attending.add(person_id)
+
+        messages.success(request, "Attendance updated successfully!")
+        return HttpResponseRedirect(reverse('syncope:event_detail', kwargs={
+            'username': self.kwargs.get('username'),
+            'pk': event.pk,
+        }))
 
 
 @login_required
 @event_admin_required
 def event_attendance_search(request, org_user, event):
-    """AJAX participant search for the Attendance subpage (points 'Add' at event_attendance_add)."""
+    """AJAX participant search for the Attendance subpage's add-participant picker."""
     search_q = request.GET.get('q', '')
-    add_form = AddAttendanceForm(org_user=org_user, event=event, search_q=search_q)
+    exclude_raw = request.GET.get('exclude', '')
+    exclude_ids = [int(x) for x in exclude_raw.split(',') if x.strip().isdigit()]
+    add_form = AddAttendanceForm(org_user=org_user, event=event, search_q=search_q, exclude_ids=exclude_ids)
     return render(request, 'syncope/participant_search_results.html', {
         'add_form': add_form,
         'search_q': search_q,
         'object': event,
+        'event': event,
         'url_username': org_user.username,
-        'add_participant_url': reverse('syncope:event_attendance_add', kwargs={'username': org_user.username, 'pk': event.pk}),
+        'origin_key': request.GET.get('origin', DEFAULT_EVENT_ORIGIN),
     })
-
-
-@require_POST
-@login_required
-@event_admin_required
-def event_participant_remove(request, org_user, event, attendance_pk):
-    attendance = get_object_or_404(Attendance, pk=attendance_pk, event=event)
-    attendance.delete()
-    return HttpResponse(status=204)
-
-
-@require_POST
-@login_required
-@event_admin_required
-def event_attendance_toggle(request, org_user, event, attendance_pk):
-    attendance = get_object_or_404(Attendance, pk=attendance_pk, event=event)
-    try:
-        type_id = int(request.POST.get('attendance_type_id'))
-    except (TypeError, ValueError):
-        return HttpResponseBadRequest("Invalid attendance type.")
-    if not AttendanceType.objects.filter(pk=type_id).exists():
-        return HttpResponseBadRequest("Invalid attendance type.")
-    attendance.attendance_type_id = type_id
-    attendance.save(update_fields=['attendance_type'])
-    return HttpResponse(status=204)
 
 
 # --- Meta subpage --------------------------------------------------------------------

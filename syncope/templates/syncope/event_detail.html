@@ -3,37 +3,80 @@
 
 {% block title %}{{ event.name }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    .event-title { margin-bottom: 0.25em; }
+    .event-summary { margin-top: 0.25em; }
+    .resource-table-compact { border-collapse: collapse; font-size: 0.8rem; margin: 0.25rem 0; }
+    .resource-table-compact td { padding: 1px 4px; }
+
+    .bottom-bar {
+        position: sticky;
+        bottom: 0;
+        background-color: #f5f5f5;
+        border-top: 1px solid #ccc;
+        padding: 0.75rem 1rem;
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .bottom-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+        #event-detail-content {
+            padding-bottom: 4rem;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
+
+<div id="event-detail-content">
 
 {% include "syncope/_breadcrumbs.html" %}
 
-<h2>{{ event.name }}</h2>
-<p>Location: {{ event.location }}</p>
-<p>Starts: <span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime">{{ event.started_at|date:"d M, Y, H:i" }}</span></p>
-<p>Ends: <span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="datetime">{{ event.ended_at|date:"d M, Y, H:i" }}</span></p>
-
-{% if event.project %}
-<p>Project: <a href="{%  url 'syncope:project_detail' url_username event.project.pk %}">{{ event.project.title }}</a></p>
-{% if event.project.description %}
-    <p>{{ event.project.description }}</p>
-{% endif %}
-{% endif %}
-<p>Type: {{ event.event_type }}</p>
-
-{% if is_admin %}
-    <p>
-        <a href="{% url 'syncope:event_meta_edit' url_username event.pk %}?origin={{ origin_key }}">Edit details</a>
-        &nbsp;|&nbsp;
-        <a href="{% url 'syncope:event_delete' url_username event.pk %}" class="btn-danger" style="display: inline-block; text-decoration: none;">Delete Event</a>
-    </p>
-{% endif %}
-<p>
-
+<h2 class="event-title"> <span title="Title">{{ event.name }}</span> <small><span title="Type"> | {{ event.event_type }}</span></small>
     <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
         <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
     </button>
     <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
+</h2>
+<p class="event-summary">{% if event.location %}Location: {{ event.location }}<br>{% endif %}
+{% if event.same_date %}
+<span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime">{{ event.started_at|date:"d M, Y, H:i" }}</span>&ndash;<span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="time">{{ event.ended_at|date:"H:i" }}</span>
+{% else %}
+Date: <span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime">{{ event.started_at|date:"d M, Y, H:i" }}</span><br>
+Ends: <span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="datetime">{{ event.ended_at|date:"d M, Y, H:i" }}</span>
+{% endif %}
+{% if event.project %}<br><span title="Project"> Project:<a href="{% url 'syncope:project_detail' url_username event.project.pk %}">{{ event.project.title }}</a></span>{% endif %}
+{% if event.description %}<br>{{ event.description }}{% endif %}
+{% if event.producers %}<br>Organizers: {{ event.producers }}{% endif %}
+{% if event.num_visitors %}<br>Visitors: {{ event.num_visitors }}{% endif %}
+{% if is_admin and event.additional_notes %}<br>Personal notes: {{ event.additional_notes }}{% endif %}
 </p>
+
+{% if all_event_resources %}
+<table class="resource-table-compact">
+    <tbody>
+        {% for res in all_event_resources %}
+        <tr>
+            <td>{{ res.icon }} <a href="{{ res.share_url|default:res.url }}" target="_blank" rel="noopener noreferrer">{{ res.desc }}</a>{% if res.song %} <small>({{ res.song.title }})</small>{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+{% if is_admin %}
+<p><a href="{% url 'syncope:event_meta_edit' url_username event.pk %}?origin={{ origin_key }}">Edit meta data</a></p>
+{% endif %}
 <div style="display:none;">{% csrf_token %}</div>
 
 
@@ -107,7 +150,10 @@
 
                 </td>
                 {% endcomment %}
-                <td>{{ attendance.attendance_type }}</td>
+                <td>
+                    {% if attendance.attendance_type_id == 1 %}✓{% elif attendance.attendance_type_id == 2 %}💼{% elif attendance.attendance_type_id == 3 %}🤒{% elif attendance.attendance_type_id == 4 %}🏖{% endif %}
+                    {{ attendance.attendance_type }}
+                </td>
             </tr>
         {% endfor %}
         </tbody>
@@ -116,47 +162,12 @@
     <p>No attendance records yet.</p>
 {% endif %}
 {% endif %}
-{% if all_event_resources %}
-<h3>Event Resources</h3>
-<table>
-    <thead>
-        <tr>
-            <th></th>
-            <th></th>
-            <th>Resource</th>
-            <th></th>
-            <th>Song</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for res in all_event_resources %}
-        <tr>
-            <td>{{ forloop.counter }}</td>
-            <td>{{ res.icon }}</td>
-            <td><a href="{{ res.share_url|default:res.url }}" target="_blank" rel="noopener noreferrer">{{ res.url }}</a></td>
-            <td>{{ res.desc }}</td>
-            <td>
-                {% if res.song %}
-                    <a href="{% url 'syncope:song_detail' url_username res.song.pk %}?from_event={{ event.pk }}&origin={{ origin_key }}">{{ res.song.title }} - {{ res.song.composer.first_name }} {{ res.song.composer.last_name }}</a>
-                {% else %}
-                -
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% endif %}
 
-<h3>Details
-    {% if is_admin %}<a href="{% url 'syncope:event_meta_edit' url_username event.pk %}?origin={{ origin_key }}">Edit</a>{% endif %}
-</h3>
+</div>
 
-{% if event.description %}<p>{{ event.description }}</p>{% endif %}
-{% if event.details %}<p>{{ event.details }}</p>{% endif %}
-{% if event.num_visitors %}<p>Visitors: {{ event.num_visitors }}</p>{% endif %}
-{% if event.producers %}<p>Producers: {{ event.producers }}</p>{% endif %}
-{% if event.additional_notes %}<p>{{ event.additional_notes }}</p>{% endif %}
+<div class="bottom-bar">
+    <a href="{{ breadcrumbs.0.url }}" class="btn-primary" style="text-decoration:none; display:inline-block;">Return</a>
+</div>
 
 {% block extra_js %}
 <script>

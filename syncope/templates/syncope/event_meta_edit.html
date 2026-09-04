@@ -71,19 +71,24 @@
 
     <h3>Resources</h3>
     <p><small>This event's specific resources.</small></p>
-    {{ resource_formset.management_form }}
-    {% for rform in resource_formset %}
-        <div>
-            {{ rform.url }}
-            {{ rform.description }}
-            {% if rform.instance.pk %}{{ rform.DELETE }}{% endif %}
-            {{ rform.id }}
+    <div id="resource-formset">
+        {{ resource_formset.management_form }}
+        <div id="resource-rows">
+            {% for rform in resource_formset %}
+                <div class="resource-row">
+                    {{ rform.url }}
+                    {{ rform.description }}
+                    {% if rform.instance.pk %}{{ rform.DELETE }}{% endif %}
+                    {{ rform.id }}
+                </div>
+            {% endfor %}
         </div>
-    {% endfor %}
+    </div>
+    <p><a href="{% url 'syncope:event_delete' url_username event.pk %}" class="btn-danger" style="display: inline-block; text-decoration: none;">Delete Event</a></p>
 
     <div class="save-bar" id="save-bar">
         <button type="submit">Save</button>
-        <button type="button" onclick="window.location.href='{% url 'syncope:event_detail' url_username object.pk %}?origin={{ origin_key }}'">Cancel</button>
+        <a href="{% url 'syncope:event_detail' url_username object.pk %}?origin={{ origin_key }}" class="btn-primary" style="text-decoration:none; display:inline-block;">Cancel</a>
         <span class="dirty-note">Unsaved changes</span>
     </div>
 </form>
@@ -93,5 +98,63 @@
     const saveBar = document.getElementById('save-bar');
     form.addEventListener('input', () => saveBar.classList.add('dirty'));
     form.addEventListener('change', () => saveBar.classList.add('dirty'));
+
+    // Cancel/Delete/breadcrumb links are plain <a> tags (no per-click JS,
+    // so they navigate instantly) — the "discard changes?" prompt instead
+    // comes from the browser's native beforeunload dialog, skipped on an
+    // actual Save submit.
+    let formSubmitting = false;
+    form.addEventListener('submit', () => { formSubmitting = true; });
+    window.addEventListener('beforeunload', function(e) {
+        if (formSubmitting || !saveBar.classList.contains('dirty')) return;
+        e.preventDefault();
+        e.returnValue = '';
+    });
+
+    const resourceFormset = document.getElementById('resource-formset');
+    const resourceRows = document.getElementById('resource-rows');
+
+    function totalFormsInput() {
+        return resourceFormset.querySelector('input[name$="-TOTAL_FORMS"]');
+    }
+
+    function lastResourceRow() {
+        const rows = resourceRows.querySelectorAll('.resource-row');
+        return rows[rows.length - 1];
+    }
+
+    function addBlankResourceRow() {
+        const totalInput = totalFormsInput();
+        const prefix = totalInput.name.slice(0, -'-TOTAL_FORMS'.length);
+        const oldIndex = parseInt(totalInput.value, 10) - 1;
+        const newIndex = oldIndex + 1;
+        const clone = lastResourceRow().cloneNode(true);
+        clone.querySelectorAll('input, textarea, select').forEach(function(el) {
+            if (el.type === 'checkbox') { el.checked = false; }
+            else { el.value = ''; }
+            ['name', 'id'].forEach(function(attr) {
+                const value = el.getAttribute(attr);
+                if (value) el.setAttribute(attr, value.replace(`${prefix}-${oldIndex}-`, `${prefix}-${newIndex}-`));
+            });
+        });
+        clone.querySelectorAll('label').forEach(function(label) {
+            if (label.htmlFor) label.htmlFor = label.htmlFor.replace(`${prefix}-${oldIndex}-`, `${prefix}-${newIndex}-`);
+        });
+        resourceRows.appendChild(clone);
+        totalInput.value = newIndex + 1;
+    }
+
+    let resourceRowTimeout;
+    resourceRows.addEventListener('input', function(e) {
+        if (!e.target.matches('input, textarea')) return;
+        clearTimeout(resourceRowTimeout);
+        resourceRowTimeout = setTimeout(function() {
+            const last = lastResourceRow();
+            const url = last.querySelector('input[name$="-url"]');
+            if (last && e.target.closest('.resource-row') === last && url && url.value.trim()) {
+                addBlankResourceRow();
+            }
+        }, 1000);
+    });
 </script>
 {% endblock %}
