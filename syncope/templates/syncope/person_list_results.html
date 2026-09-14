@@ -1,28 +1,28 @@
 {% load static %}
 <div class="table-container">
-<table>
+<table class="table">
     <thead>
     <tr>
         <th class="col-num">#</th>
         <th></th>
         <th class="sticky-col">
-            <a href="?q={{ q }}&sort=name{% if current_sort == 'name' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+            <a href="?q={{ q }}&sort=name{% if current_sort == 'name' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
                 Name {% if current_sort == 'name' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
         <th>
-            <a href="?q={{ q }}&sort=email{% if current_sort == 'email' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+            <a href="?q={{ q }}&sort=email{% if current_sort == 'email' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
                 Email {% if current_sort == 'email' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
         {% if list_type in 'active inactive all' %}
         <th>
-            <a href="?q={{ q }}&sort=skill{% if current_sort == 'skill' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+            <a href="?q={{ q }}&sort=skill{% if current_sort == 'skill' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
                 Skill {% if current_sort == 'skill' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
         <th>
-            <a href="?q={{ q }}&sort=voice_instrument{% if current_sort == 'voice_instrument' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+            <a href="?q={{ q }}&sort=voice_instrument{% if current_sort == 'voice_instrument' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
                 Voice/Instrument {% if current_sort == 'voice_instrument' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
@@ -87,7 +87,7 @@
         </tr>
         {% empty %}
         <tr>
-            <td>
+            <td colspan="9">
             {% if list_type == 'active' %}No active members
             {% elif list_type == 'inactive' %}No inactive members
             {% elif list_type == 'others' %}No unspecified persons

@@ -16,7 +16,8 @@
     {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
 
     {{ formset.management_form }}
-    <table>
+    <div class="table-container">
+    <table class="table">
         <thead>
             <tr>
                 <th>Quote</th>
@@ -44,6 +45,7 @@
         {% endfor %}
         </tbody>
     </table>
+    </div>
 
     <div class="form-actions">
         <button type="submit" name="action" value="add_kw_row" class="btn btn-sm btn-secondary" title="Add another quote">+</button>

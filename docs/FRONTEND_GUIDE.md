@@ -87,9 +87,29 @@ Cyrillic/Greek/etc. glyphs, so those subsets were skipped to keep the files smal
 No template changes needed — every heading and body element already references the
 tokens, not a hardcoded font name.
 
-## 4. Component classes
+## 4. Cascade layers
 
-All defined in `style.css` under clearly labeled `/* --- Section --- */` comments, in this order top to bottom:
+`style.css` is organized into five `@layer`s, declared once near the top:
+
+```css
+@layer reset, base, layout, components, utilities;
+```
+
+In priority order (later wins ties regardless of selector specificity): `reset` → `base` → `layout` → `components` → `utilities`. `@font-face` and the `:root` token block stay **unlayered**, above the `@layer` statement, so custom properties remain available everywhere.
+
+| Layer | Holds |
+|---|---|
+| `reset` | `*` box-sizing, `body` margin reset |
+| `base` | `body`/heading/link typography defaults, the generic `:focus-visible` outline for native form elements |
+| `layout` | Sidebar, `.grid-container`, nav/org list, `.main-content`/`.footer`, mobile topbar/drawer shell |
+| `components` | Buttons, forms, cards, alerts, breadcrumbs, save-bar, section headers, and the entire **Tables** system (below) |
+| `utilities` | `.visually-hidden`, `.inline-form`, `.col-num`, `.sticky-col`, `.att-type-0..4`, `.table-container`, `.sortable-header`, `.empty-state`, responsive touch-target/label-swap helpers |
+
+**Why this matters if you add a rule:** a rule in `@layer utilities` always beats a same-element rule in `@layer components`, no matter how specific the components-layer selector is — layer order is checked before specificity. If you need one rule to override another for the *same CSS property* on the same element, put both in the same layer and let normal specificity/source-order decide (see the comment above `.table__cell--attendance--disabled` in `style.css` for a worked example). Most of the file was moved into layers with its existing selectors unchanged — only the Tables section below got a full rewrite.
+
+## 5. Component classes
+
+Defined in `style.css` under clearly labeled `/* --- Section --- */` comments inside `@layer components`:
 
 | Class | Lives under (`style.css` comment) | Use |
 |---|---|---|
@@ -97,10 +117,35 @@ All defined in `style.css` under clearly labeled `/* --- Section --- */` comment
 | `.form-actions` | same section, right after `.btn-sm` | Wraps a form's submit/cancel row — see **Forms** below for the layout rule |
 | `.form-group`, `.form-label`, `.form-help`, `ul.errorlist` styling | `/* --- Forms --- */` | Field wrapper + label + help text + Django's built-in error list |
 | `.card`, `.card-grid` | `/* --- Cards --- */` | Not yet used by any template this pass — ready for Phase 4/future list pages |
-| `.table`, `.table-detail`, `.table-grouped` | `/* --- Tables --- */` | Data tables; `.table-grouped tbody tr.group-start` replaces the old inline group-border pattern (see Phase 4) |
+| `.table`, `.table-detail`, `.table-grouped`, `.totals-row`, `.table-narrow`, `.empty-state` | `/* --- Tables --- */` | List/detail data tables — see **Tables** below |
+| `.table--matrix`, `.table__event-col`, `.table__event-header(--strong)`, `.table__cell--attendance`, `.table__row--total`, `.table__comment(-input)` | same section | The attendance/pivot grid variant — see **Tables** below |
 | `.alert`, `.alert-success/-error/-warning/-info` | defined earlier, alongside `.messages` (Phase 2) | Flash messages — `class="alert alert-{{ message.tags }}"` |
 
 **Recipe — change what a button looks like everywhere:** edit `.btn` (shared shape/spacing/font) or one of `.btn-primary`/`.btn-secondary`/`.btn-danger`/`.btn-link` (color only). Every button in the app uses these — there's no template with its own one-off button CSS left in the areas this pass covered.
+
+## 6. Tables
+
+All data tables share one component: `class="table"` on the `<table>` element, styled with CSS nesting (`.table { & thead th { ... } & tbody td { ... } ... }`) and a `@container` query on the sticky header/cell padding — compact by default (mobile-first), roomier once the table's `.table-container` wrapper (which declares `container-type: inline-size`) has at least `36rem` to work with. This replaced the old page-level `max-width: 768px` override that touched bare `th`/`td` selectors.
+
+**Modifiers (used with `.table`, unchanged names from before this pass):**
+- `.table-detail` — key/value definition table (see `song_detail.html`, `org_member_detail.html`)
+- `.table-grouped` (+ a `group-start` class on the first `<tr>` of each group) — draws a divider between groups
+- `.totals-row` (on a `<tr>`) — bold divider row for a running total
+- `.table-narrow` — caps the table's width (`poll_person.html`)
+- `.empty-state` (on a `<p>`, not a table modifier) — centered muted text for "nothing here yet" messages
+
+**`.table--matrix` — attendance/pivot grids:** one shared definition for the three attendance grids (`poll_detail.html`'s votes summary, `poll_attendance.html`'s single-person editor, `attendance_dashboard.html`'s full matrix), replacing what used to be three separate, diverging page-local `<style>` blocks with different pixel values for the same concept. Add `.table--matrix` alongside `.table` (and `.table-grouped` where rows are grouped). Elements:
+- `.table__event-col` on a `<th>`/`<td>` — fixed-width event column (`--table-matrix-col-w`)
+- `.table__event-header` wrapping a rotated date/label inside a `<th>` (rotate(-90deg), matches `syncope-compare`'s attendance dashboard look); add `--strong` for non-regular event types
+- `.table__cell--attendance` on the clickable/status chip (`--table-matrix-cell-size`); add `--disabled` for a non-interactive/grayed cell, or `--static` for a page where nothing is clickable at all (`poll_detail.html`)
+- `.table__event-col--ineligible` for an empty, non-interactive cell
+- `.table__row--total` on a totals `<tr>` (the matrix-specific equivalent of `.totals-row`)
+- `.table__comment` (read-only) / `.table__comment-input` (editable) for the small note under/in a cell
+- `.legend` wraps the small "legend" of example chips above a matrix table — `.table__cell--attendance` inside `.legend` auto-sizes and drops the hover/pointer affordance
+
+The attendance status colors themselves (`.att-type-0`…`-4`) are unchanged — see the `--color-attendance-*` token row above.
+
+**Not migrated in this pass:** the ~16 other list-table templates (song/person/event/project/poll/invitation lists and detail sub-tables) keep using `.table`/`.table-container`/`.sticky-col`/`.col-num`/`.sortable-header` exactly as before — no changes needed there, since none of those class names changed.
 
 **Button hierarchy rule (apply this, don't reinvent per page):** one `.btn-primary` per screen (the actual commit action — Save/Update/Send/etc.), everything secondary/navigational is `.btn-link` (plain, e.g. Cancel) or `.btn-secondary` (outlined, e.g. an alternate "Return to X" action), and `.btn-danger` is reserved for destructive actions only, kept on its own confirm-delete page or behind an existing `confirm()` dialog — never placed next to a primary Save button in the same `.form-actions` row.
 
@@ -163,26 +208,37 @@ already computed in the view context — only shown when non-zero.
 
 ## 8. Responsive behavior
 
-Everything lives in the one existing `@media (max-width: 768px)` block in `style.css` —
-there's no separate mobile stylesheet or JS-based breakpoint detection. Below 769px:
+Two mechanisms, no separate mobile stylesheet or JS-based breakpoint detection:
 
-- The sidebar becomes a fixed, off-canvas drawer (`transform: translateX(-100%)`),
-  toggled by `.grid-container.menu-visible` — driven by the `toggleMenu()` function in
-  `base.html`, unchanged by this pass.
-- `.form-actions` switches from clustering right (`justify-content: flex-end`) to
-  spreading full-width (`justify-content: space-between`) — cancel stays pinned to the
-  left edge, primary to the right, same as desktop, just spread out instead of clustered.
-- Text inputs and `.btn-primary`/`.btn-danger` get a `min-height: 44px` touch target.
-- The save-bar becomes `position: fixed` to the viewport bottom.
+- **`@media (max-width: 768px)`** — there are now several of these (one per `@layer`
+  section that needs a mobile override — layout/sidebar, forms, the filter panel, touch
+  targets in utilities — search for `768px` to find them all), instead of one giant block,
+  so each override sits next to the rule it's overriding. Below 769px:
+  - The sidebar becomes a fixed, off-canvas drawer (`transform: translateX(-100%)`),
+    toggled by `.grid-container.menu-visible` — driven by the `toggleMenu()` function in
+    `base.html`, unchanged by this pass.
+  - `.form-actions` switches from clustering right (`justify-content: flex-end`) to
+    spreading full-width (`justify-content: space-between`) — cancel stays pinned to the
+    left edge, primary to the right, same as desktop, just spread out instead of clustered.
+  - Text inputs and `.btn-primary`/`.btn-danger` get a `min-height: 44px` touch target.
+  - The save-bar becomes `position: fixed` to the viewport bottom.
+- **`@container` on `.table`** — tables no longer use the page breakpoint at all. Their
+  wrapper (`.table-container`) declares `container-type: inline-size`, and `.table` itself
+  is compact by default with a `@container (min-inline-size: 36rem)` query making cell
+  padding/font-size roomier once the table's own box (not the viewport) has the space —
+  see **Tables** above.
 
-**Recipe — change the breakpoint:** there's one number to edit —
-`@media (max-width: 768px)` near the bottom of `style.css`. Everything inside that block
-applies below whatever width you set.
+**Recipe — change the breakpoint:** `768px` is repeated across the several
+`@media (max-width: 768px)` blocks described above — search-and-replace it if you want a
+different breakpoint. The table `@container` width (`36rem`) is separate and lives with
+`.table` in the Tables section.
 
 **Accessibility, addressed once, globally:**
 - `:focus-visible` gets a visible `outline: 2px solid var(--color-primary)` on every
-  `.btn`, link, and form field (one rule, near the Buttons section of `style.css`) —
-  keyboard users always see where focus is, without adding a visible ring on mouse clicks.
+  link and form field (`@layer base`), `.btn` (nested `&:focus-visible` right in the
+  button's own rule, `@layer components`), and matrix attendance cells (same pattern,
+  next to `.table__cell--attendance`) — keyboard users always see where focus is, without
+  adding a visible ring on mouse clicks.
 - `@media (prefers-reduced-motion: reduce)` forces `--transition-fast` to `0s` — since
   every hover/transition in the app is built on that one token, this one override turns
   all of them off at once for users who've asked for reduced motion at the OS level.
@@ -195,11 +251,13 @@ applies below whatever width you set.
 - `syncope/templates/syncope/_breadcrumbs.html` — breadcrumb markup (unchanged by this restyle)
 - `syncope/templates/syncope/_save_bar.html` — shared draft/dirty-tracking save bar (used by `event_songs_edit.html`, `event_attendance_edit.html`)
 
-**Pages with their own bespoke `<style>` block** (page-specific table layouts — sticky
-columns, rotated date headers — that weren't worth generalizing into `style.css` this
-round): `poll_detail.html`, `poll_attendance.html`, `attendance_dashboard.html`,
-`event_meta_edit.html`. Each already reuses the global color/spacing tokens inside its
-local block rather than hardcoding new values.
+**Pages with their own bespoke `<style>` block:** `event_meta_edit.html`, plus a small
+one in `attendance_dashboard.html` for its page-only `.attendance-dashboard` flex wrapper
+and a mobile `.save-bar` tweak (not table CSS). `poll_detail.html`, `poll_attendance.html`
+and `attendance_dashboard.html` previously each had their own diverging table `<style>`
+block (sticky columns, rotated date headers, differing pixel sizes for the same concept)
+— these were consolidated into the shared `.table--matrix` system in `style.css` (see
+**Tables** above), so those three pages no longer carry table-specific CSS of their own.
 
 **Not covered in this pass** — inline `style="..."` attributes remain as they were,
 follow-up work if picked back up later:

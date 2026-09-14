@@ -2,6 +2,9 @@
    Design tokens & fonts
    To restyle the app (colors, fonts, spacing, buttons), edit
    the values below — see docs/FRONTEND_GUIDE.md for the guide.
+
+   Custom properties and @font-face stay unlayered (outside @layer) so they
+   remain universally available regardless of cascade layer order below.
    ===================================================== */
 @font-face {
     font-family: "EB Garamond";
@@ -55,7 +58,7 @@
 
     /* Attendance status colors, keyed by the real AttendanceType pk (0=TBD, 1=Present,
        2=Work/School, 3=Illness, 4=Private/Vacation). Shared by the per-event attendance
-       subpage's status chips. */
+       subpage's status chips and the poll/dashboard attendance matrices. */
     --color-attendance-0: #dfe6e9;
     --color-attendance-1: #c8f7c5;
     --color-attendance-2: #ffeaa7;
@@ -85,6 +88,18 @@
     --shadow-md: 0 2px 8px rgba(44, 42, 40, 0.1);
     --transition-fast: 0.2s ease;
     --sidebar-width: 250px;
+
+    /* Stacking */
+    --z-sticky: 1;
+    --z-mobile-topbar: 1001;
+    --z-mobile-drawer: 1000;
+
+    /* Matrix/pivot table sizing (attendance grids) — one shared dimension
+       replacing the three divergent hardcoded values that used to live in
+       poll_detail.html/poll_attendance.html/attendance_dashboard.html. Used
+       as a floor for event columns (poll_attendance.html's headers hold
+       multi-line text and need to grow past it) and as the fixed chip size. */
+    --table-matrix-size: 2.5rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -93,918 +108,1331 @@
     }
 }
 
-body {
-    font-family: var(--font-body);
-    color: var(--color-text);
-    background-color: var(--color-bg);
-    background-image: radial-gradient(rgba(44, 42, 40, 0.05) 1px, transparent 1px);
-    background-size: 6px 6px;
-}
+@layer reset, base, layout, components, utilities;
 
-h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading);
-}
-
-a {
-    color: var(--color-primary);
-    text-decoration: none;
-    transition: color var(--transition-fast);
-}
-
-a:hover {
-    color: var(--color-primary-hover);
-    text-decoration: underline;
-}
-
-* {
-    box-sizing: border-box;
-}
-
-body {
-    margin: 0;
-}
-
-.grid-container {
-    display: grid;
-    grid-template-columns: var(--sidebar-width) 1fr;
-    grid-template-areas: "sidebar main";
-    min-height: 100vh;
-    transition: grid-template-columns var(--transition-fast);
-
-}
-
-.sidebar {
-    grid-area: sidebar;
-    background-color: var(--color-ink);
-    color: rgba(255, 255, 255, 0.85);
-    padding: 0;
-    overflow-y: auto;
-    transition: transform var(--transition-fast);
-    display: flex;
-    flex-direction: column;
-}
-
-.sidebar-header {
-    padding: var(--space-5) var(--space-4) var(--space-4);
-    text-align: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    margin-bottom: var(--space-3);
-}
-
-.sidebar-logo {
-    width: 48px;
-    height: auto;
-}
-
-.sidebar-brand {
-    font-family: var(--font-heading);
-    font-size: var(--font-size-xl);
-    color: var(--color-text-on-accent);
-    margin: var(--space-1) 0 0;
-}
-
-.sidebar-user {
-    padding: 0 var(--space-4) var(--space-3);
-    font-size: var(--font-size-sm);
-    color: rgba(255, 255, 255, 0.6);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    margin: 0 0 var(--space-2);
-}
-
-.main {
-    min-width: 0;
-    grid-area: main;
-}
-
-.menu-links,
-.menu-links ul,
-.org-list,
-.org-submenu {
-    list-style: none;
-}
-
-.menu-links {
-    padding: 0 var(--space-3);
-    flex: 1;
-}
-
-.menu-links li {
-    margin-bottom: var(--space-1);
-}
-
-.menu-links a {
-    color: rgba(255, 255, 255, 0.8);
-    text-decoration: none;
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-sm);
-    display: block;
-    transition: background-color var(--transition-fast), color var(--transition-fast);
-}
-
-.menu-links a:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: var(--color-text-on-accent);
-}
-
-.menu-links a.active,
-.org-submenu a.active {
-    font-weight: 500;
-    background-color: rgba(255, 255, 255, 0.2);
-    color: var(--color-text-on-accent);
-}
-
-/* .nav-badge composes with .badge (defined further down) for the pill shape —
-   this just overrides color/size/spacing for the dark sidebar. */
-.nav-badge {
-    background-color: var(--color-primary);
-    color: var(--color-text-on-accent);
-    font-size: 0.72rem;
-    font-weight: 600;
-    padding: 1px 6px;
-    margin-left: var(--space-1);
-}
-
-.section-label {
-    margin: 0;
-    padding: var(--space-3) var(--space-3) var(--space-1);
-    font-size: 0.7rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: rgba(255, 255, 255, 0.4);
-}
-
-.org-list {
-    padding-left: 0;
-}
-
-.org-item {
-    margin-bottom: var(--space-1);
-}
-
-.org-item.active > a {
-    background-color: rgba(255, 255, 255, 0.2);
-    color: var(--color-text-on-accent);
-}
-
-.org-item.active > a::before {
-    content: "";
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    margin-right: var(--space-2);
-    border-radius: 50%;
-    background-color: var(--color-text-on-accent);
-}
-
-.org-meta {
-    display: block;
-    padding: 0 var(--space-3);
-    margin-bottom: var(--space-1);
-    color: rgba(255, 255, 255, 0.45);
-    font-size: 0.75rem;
-}
-
-.org-submenu {
-    padding-left: var(--space-4);
-    margin-top: 2px;
-}
-
-.org-submenu a {
-    font-size: 0.85rem;
-    padding: 0.35rem var(--space-3);
-    color: rgba(255, 255, 255, 0.65);
-}
-
-.org-empty {
-    padding: var(--space-2) var(--space-3);
-    color: rgba(255, 255, 255, 0.5);
-    font-size: var(--font-size-sm);
-}
-
-.sidebar-footer {
-    padding: var(--space-3) var(--space-4);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    margin-top: auto;
-}
-
-.sidebar-footer form {
-    display: inline;
-}
-
-/* .btn-secondary assumes a light surface (border/text colors made for that) —
-   override for the dark sidebar so Login/Logout stay visible. */
-.sidebar .btn-secondary {
-    border-color: rgba(255, 255, 255, 0.3);
-    color: rgba(255, 255, 255, 0.75);
-}
-
-.sidebar .btn-secondary:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: var(--color-text-on-accent);
-}
-
-.sidebar-guest-links {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-2);
-    border-top: none;
-    margin-top: 0;
-}
-
-.main-content {
-    padding: 2rem;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    min-width: 0;
-}
-
-
-
-.content {
-    flex: 1;
-}
-
-.footer {
-    padding: 1.5rem 2.5rem;
-    border-top: 1px solid var(--color-border);
-    position: relative;
-    font-size: 0.82rem;
-    color: var(--color-text-muted);
-}
-
-.footer::before {
-    content: "";
-    display: block;
-    width: 60px;
-    height: 1.5px;
-    background: var(--color-primary);
-    margin-bottom: 1rem;
-}
-
-.footer-info {
-    max-width: 1200px;
-}
-
-.table-container {
-    overflow-x: auto;
-}
-
-.sticky-col {
-    position: sticky;
-    left: 0;
-    background-color: var(--color-surface);
-    z-index: 1;
-    max-width: 140px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* See the --color-attendance-* token comment above for the pk mapping. */
-.att-type-0 { background-color: var(--color-attendance-0); }
-.att-type-1 { background-color: var(--color-attendance-1); }
-.att-type-2 { background-color: var(--color-attendance-2); }
-.att-type-3 { background-color: var(--color-attendance-3); }
-.att-type-4 { background-color: var(--color-attendance-4); }
-
-.col-num {
-    text-align: right;
-}
-
-.btn-full {
-    display: inline;
-}
-
-.btn-short {
-    display: none;
-}
-
-.mobile-toggle {
-    display: none;
-    border: none;
-    width: fit-content;
-}
-
-.mobile-topbar {
-    display: none;
-}
-.mobile-topbar:has(.breadcrumbs) {
-    display: block;
-    padding: 0.75rem 2rem 0;
-}
-.mobile-topbar .breadcrumbs {
-    margin: 0;
-}
-
-.save-bar {
-    position: sticky;
-    bottom: 0;
-    background-color: var(--color-bg-subtle);
-    border-top: 1px solid var(--color-border);
-    padding: 0.75rem 1rem;
-    margin-top: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.save-bar.dirty {
-    background-color: var(--color-warning-bg);
-    border-top-color: var(--color-warning-border);
-}
-
-.save-bar .dirty-note {
-    font-size: 0.85rem;
-    color: var(--color-warning-text);
-}
-
-
-@media (max-width: 768px) {
-    .grid-container {
-        grid-template-columns: 1fr;
-        grid-template-areas: "main";
+@layer reset {
+    * {
+        box-sizing: border-box;
     }
 
-    .mobile-topbar {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        position: sticky;
-        top: 0;
-        z-index: 1001;
-        padding: 0.5rem 1rem;
-        background-color: var(--color-surface);
-        border-bottom: 1px solid var(--color-border-subtle);
-    }
-
-    .mobile-topbar .breadcrumbs {
-        flex: 1;
-        min-width: 0;
+    body {
         margin: 0;
-        font-size: 0.78rem;
-        overflow-x: auto;
-        scrollbar-width: none;
+    }
+}
+
+@layer base {
+    body {
+        font-family: var(--font-body);
+        color: var(--color-text);
+        background-color: var(--color-bg);
+        background-image: radial-gradient(rgba(44, 42, 40, 0.05) 1px, transparent 1px);
+        background-size: 6px 6px;
     }
 
-    .mobile-topbar .breadcrumbs::-webkit-scrollbar {
-        display: none;
+    h1, h2, h3, h4, h5, h6 {
+        font-family: var(--font-heading);
     }
 
-    .mobile-topbar .breadcrumbs ol {
-        flex-wrap: nowrap;
-        width: max-content;
+    a {
+        color: var(--color-primary);
+        text-decoration: none;
+        transition: color var(--transition-fast);
     }
 
-    .main-content h2:first-of-type {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-size: 1.15rem;
-        margin: 0.5rem 0;
+    a:hover {
+        color: var(--color-primary-hover);
+        text-decoration: underline;
     }
 
-    input[type="date"],
-    input[type="number"],
-    input[type="text"],
-    input[type="email"],
-    input[type="password"],
-    button[type="submit"],
-    .btn-primary,
-    .btn-danger {
-        min-height: 44px;
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
     }
+}
 
-    .form-actions {
-        justify-content: space-between;
-    }
-
-    .section-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .save-bar {
-        position: fixed;
-        left: 0;
-        right: 0;
-        z-index: 1000;
-    }
-
-    #discard-btn {
-        margin-left: auto;
+@layer layout {
+    .grid-container {
+        display: grid;
+        grid-template-columns: var(--sidebar-width) 1fr;
+        grid-template-areas: "sidebar main";
+        min-height: 100vh;
+        transition: grid-template-columns var(--transition-fast);
     }
 
     .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        width: var(--sidebar-width);
-        transform: translateX(-100%);
-        z-index: 1000;
-        box-shadow: var(--shadow-md);
-    }
-
-    .grid-container.menu-visible .sidebar {
-        transform: translateX(0);
-    }
-
-    .mobile-toggle {
-        display: block;
-        background: none;
+        grid-area: sidebar;
+        background-color: var(--color-ink);
+        color: rgba(255, 255, 255, 0.85);
         padding: 0;
-        font-size: 1.5rem;
-        cursor: pointer;
-        color: var(--color-text-muted);
+        overflow-y: auto;
+        transition: transform var(--transition-fast);
+        display: flex;
+        flex-direction: column;
     }
 
-    .mobile-toggle.is-open {
+    .sidebar-header {
+        padding: var(--space-5) var(--space-4) var(--space-4);
+        text-align: center;
+        border-block-end: 1px solid rgba(255, 255, 255, 0.1);
+        margin-block-end: var(--space-3);
+    }
+
+    .sidebar-logo {
+        inline-size: 48px;
+        block-size: auto;
+    }
+
+    .sidebar-brand {
+        font-family: var(--font-heading);
+        font-size: var(--font-size-xl);
+        color: var(--color-text-on-accent);
+        margin: var(--space-1) 0 0;
+    }
+
+    .sidebar-user {
+        padding-inline: var(--space-4);
+        padding-block-end: var(--space-3);
+        font-size: var(--font-size-sm);
+        color: rgba(255, 255, 255, 0.6);
+        border-block-end: 1px solid rgba(255, 255, 255, 0.08);
+        margin: 0 0 var(--space-2);
+    }
+
+    .main {
+        min-width: 0;
+        grid-area: main;
+    }
+
+    .menu-links,
+    .menu-links ul,
+    .org-list,
+    .org-submenu {
+        list-style: none;
+    }
+
+    .menu-links {
+        padding-inline: var(--space-3);
+        flex: 1;
+    }
+
+    .menu-links li {
+        margin-block-end: var(--space-1);
+    }
+
+    .menu-links a {
+        color: rgba(255, 255, 255, 0.8);
+        text-decoration: none;
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-sm);
+        display: block;
+        transition: background-color var(--transition-fast), color var(--transition-fast);
+    }
+
+    .menu-links a:hover {
+        background-color: rgba(255, 255, 255, 0.1);
         color: var(--color-text-on-accent);
     }
 
-    .btn-full {
-        display: none;
+    .menu-links a.active,
+    .org-submenu a.active {
+        font-weight: 500;
+        background-color: rgba(255, 255, 255, 0.2);
+        color: var(--color-text-on-accent);
     }
 
-    .btn-short {
+    /* .nav-badge composes with .badge (@layer components) for the pill shape —
+       this just overrides color/size/spacing for the dark sidebar. */
+    .nav-badge {
+        background-color: var(--color-primary);
+        color: var(--color-text-on-accent);
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 1px 6px;
+        margin-inline-start: var(--space-1);
+    }
+
+    .section-label {
+        margin: 0;
+        padding: var(--space-3) var(--space-3) var(--space-1);
+        font-size: 0.7rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .org-list {
+        padding-inline-start: 0;
+    }
+
+    .org-item {
+        margin-block-end: var(--space-1);
+    }
+
+    .org-item.active > a {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: var(--color-text-on-accent);
+    }
+
+    .org-item.active > a::before {
+        content: "";
+        display: inline-block;
+        inline-size: 6px;
+        block-size: 6px;
+        margin-inline-end: var(--space-2);
+        border-radius: 50%;
+        background-color: var(--color-text-on-accent);
+    }
+
+    .org-meta {
+        display: block;
+        padding-inline: var(--space-3);
+        margin-block-end: var(--space-1);
+        color: rgba(255, 255, 255, 0.45);
+        font-size: 0.75rem;
+    }
+
+    .org-submenu {
+        padding-inline-start: var(--space-4);
+        margin-block-start: 2px;
+    }
+
+    .org-submenu a {
+        font-size: 0.85rem;
+        padding: 0.35rem var(--space-3);
+        color: rgba(255, 255, 255, 0.65);
+    }
+
+    .org-empty {
+        padding: var(--space-2) var(--space-3);
+        color: rgba(255, 255, 255, 0.5);
+        font-size: var(--font-size-sm);
+    }
+
+    .sidebar-footer {
+        padding: var(--space-3) var(--space-4);
+        border-block-start: 1px solid rgba(255, 255, 255, 0.08);
+        margin-block-start: auto;
+    }
+
+    .sidebar-footer form {
         display: inline;
     }
 
-    th, td {
-        white-space: normal;
-        word-wrap: break-word;
-        border-radius: 4px;
-        padding: 8px;
-    }
-
-    th {
-        font-size: 12px;
-        padding: 10px;
-    }
-
-    td {
-        font-size: 14px;
+    .sidebar-guest-links {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-2);
+        border-block-start: none;
+        margin-block-start: 0;
     }
 
     .main-content {
-        padding: 1rem;
+        padding: 2rem;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        min-width: 0;
+    }
+
+    .content {
+        flex: 1;
     }
 
     .footer {
-        padding: 1rem;
+        padding: 1.5rem 2.5rem;
+        border-block-start: 1px solid var(--color-border);
+        position: relative;
+        font-size: 0.82rem;
+        color: var(--color-text-muted);
     }
 
-    textarea[name="location"],
-    textarea[name="description"],
-    textarea[name="details"],
-    textarea[name="producers"],
-    textarea[name="additional_notes"] {
-        height: 2.2em;
-        min-height: 2.2em;
-        max-height: 2.2em;
+    .footer::before {
+        content: "";
+        display: block;
+        inline-size: 60px;
+        block-size: 1.5px;
+        background: var(--color-primary);
+        margin-block-end: 1rem;
+    }
+
+    .footer-info {
+        max-inline-size: 1200px;
+    }
+
+    .mobile-toggle {
+        display: none;
+        border: none;
+        inline-size: fit-content;
+    }
+
+    .mobile-topbar {
+        display: none;
+    }
+
+    .mobile-topbar:has(.breadcrumbs) {
+        display: block;
+        padding: 0.75rem 2rem 0;
+    }
+
+    .mobile-topbar .breadcrumbs {
+        margin: 0;
+    }
+
+    @media (max-width: 768px) {
+        .grid-container {
+            grid-template-columns: 1fr;
+            grid-template-areas: "main";
+        }
+
+        .mobile-topbar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: sticky;
+            top: 0;
+            z-index: var(--z-mobile-topbar);
+            padding: 0.5rem 1rem;
+            background-color: var(--color-surface);
+            border-block-end: 1px solid var(--color-border-subtle);
+        }
+
+        .mobile-topbar .breadcrumbs {
+            flex: 1;
+            min-width: 0;
+            margin: 0;
+            font-size: 0.78rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .mobile-topbar .breadcrumbs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .mobile-topbar .breadcrumbs ol {
+            flex-wrap: nowrap;
+            width: max-content;
+        }
+
+        .main-content h2:first-of-type {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 1.15rem;
+            margin: 0.5rem 0;
+        }
+
+        .main-content {
+            padding: 1rem;
+        }
+
+        .footer {
+            padding: 1rem;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: var(--sidebar-width);
+            transform: translateX(-100%);
+            z-index: var(--z-mobile-drawer);
+            box-shadow: var(--shadow-md);
+        }
+
+        .grid-container.menu-visible .sidebar {
+            transform: translateX(0);
+        }
+
+        .mobile-toggle {
+            display: block;
+            background: none;
+            padding: 0;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--color-text-muted);
+        }
+
+        .mobile-toggle.is-open {
+            color: var(--color-text-on-accent);
+        }
+    }
+}
+
+@layer components {
+    .save-bar {
+        position: sticky;
+        bottom: 0;
+        background-color: var(--color-bg-subtle);
+        border-block-start: 1px solid var(--color-border);
+        padding: 0.75rem 1rem;
+        margin-block-start: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .save-bar.dirty {
+        background-color: var(--color-warning-bg);
+        border-block-start-color: var(--color-warning-border);
+    }
+
+    .save-bar .dirty-note {
+        font-size: 0.85rem;
+        color: var(--color-warning-text);
+    }
+
+    /* Two known ID selectors (#dirty-actions / #discard-btn) live in
+       _save_bar.html and are driven by save-bar.js via getElementById —
+       left as IDs rather than converted to classes to avoid touching that
+       shared JS/partial pair, which is out of scope for this pass. */
+    #dirty-actions {
+        display: contents;
+    }
+
+    @media (max-width: 768px) {
+        .save-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            z-index: var(--z-mobile-drawer);
+        }
+
+        #discard-btn {
+            margin-inline-start: auto;
+        }
+    }
+
+    .messages {
+        margin-block-end: var(--space-4);
+    }
+
+    .alert {
+        padding: var(--space-3) var(--space-4);
+        margin-block-end: var(--space-2);
+        border: 1px solid;
+        border-radius: var(--radius-sm);
+    }
+
+    .alert-success {
+        background-color: var(--color-success-bg);
+        border-color: var(--color-success-border);
+        color: var(--color-success-text);
+    }
+
+    .alert-error,
+    .alert-danger {
+        background-color: var(--color-error-bg);
+        border-color: var(--color-error-border);
+        color: var(--color-error-text);
+    }
+
+    .alert-warning {
+        background-color: var(--color-warning-bg);
+        border-color: var(--color-warning-border);
+        color: var(--color-warning-text);
+    }
+
+    .alert-info {
+        background-color: var(--color-info-bg);
+        border-color: var(--color-info-border);
+        color: var(--color-info-text);
+    }
+
+    .breadcrumbs {
+        margin-block-end: var(--space-4);
+        font-size: var(--font-size-sm);
+        color: var(--color-text-muted);
+    }
+
+    .breadcrumbs ol {
+        display: flex;
+        flex-wrap: wrap;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .breadcrumbs li {
+        display: flex;
+        align-items: center;
+    }
+
+    .breadcrumbs li + li::before {
+        content: "›";
+        margin: 0 0.4rem;
+        color: var(--color-border);
+    }
+
+    .breadcrumbs a {
+        color: var(--color-text-muted);
+        text-decoration: none;
+    }
+
+    .breadcrumbs a:hover {
+        text-decoration: underline;
+    }
+
+    .breadcrumbs [aria-current="page"] {
+        color: var(--color-text);
+        font-weight: 500;
+    }
+
+    /* --- Buttons --- */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-sm);
+        border: 1.5px solid transparent;
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        font-weight: 500;
+        line-height: 1.4;
+        white-space: nowrap;
+        cursor: pointer;
+        text-decoration: none;
+        transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    .btn:hover {
+        text-decoration: none;
+    }
+
+    .btn:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+
+    .btn-primary {
+        background-color: var(--color-primary);
+        color: var(--color-text-on-accent);
+    }
+
+    .btn-primary:hover {
+        background-color: var(--color-primary-hover);
+        color: var(--color-text-on-accent);
+    }
+
+    .btn-secondary {
+        background-color: transparent;
+        border-color: var(--color-border);
+        color: var(--color-text);
+    }
+
+    .btn-secondary:hover {
+        background-color: var(--color-bg-subtle);
+    }
+
+    /* .btn-secondary assumes a light surface (border/text colors made for that) —
+       override for the dark sidebar so Login/Logout stay visible. */
+    .sidebar .btn-secondary {
+        border-color: rgba(255, 255, 255, 0.3);
+        color: rgba(255, 255, 255, 0.75);
+    }
+
+    .sidebar .btn-secondary:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: var(--color-text-on-accent);
+    }
+
+    .btn-danger {
+        background-color: transparent;
+        border-color: var(--color-danger);
+        color: var(--color-danger);
+    }
+
+    .btn-danger:hover {
+        background-color: var(--color-danger);
+        color: var(--color-text-on-accent);
+    }
+
+    .btn-link {
+        background: none;
+        border: none;
+        padding: 0;
+        color: var(--color-primary);
+        font-size: 0.9rem;
+    }
+
+    .btn-link:hover {
+        color: var(--color-primary-hover);
+        text-decoration: underline;
+    }
+
+    .btn-sm {
+        padding: 0.3rem 0.65rem;
+        font-size: 0.82rem;
+    }
+
+    .btn-block {
+        inline-size: 100%;
+        justify-content: center;
+    }
+
+    /* Feedback text next to a #share-btn (Copying.../Copied/Failed) — see FRONTEND_GUIDE.md. */
+    .share-result {
+        margin-inline-start: var(--space-1);
+        font-size: var(--font-size-sm);
+        color: var(--color-text-muted);
+    }
+
+    /* Button row for form submit/cancel pairs: secondary/cancel left, primary right
+       (DOM order drives this — put the cancel link/button before the primary one).
+       On mobile the row spreads to the full width (cancel far left, primary far
+       right) instead of clustering right like desktop — see the 768px media query. */
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: var(--space-3);
+        margin-block-start: var(--space-4);
+    }
+
+    @media (max-width: 768px) {
+        .form-actions {
+            justify-content: space-between;
+        }
+    }
+
+    /* --- Forms --- */
+    .form-group {
+        margin-block-end: var(--space-4);
+    }
+
+    .form-group label,
+    .form-label,
+    form p label {
+        display: block;
+        margin-block-end: var(--space-1);
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+        color: var(--color-text-muted);
+    }
+
+    .form-error,
+    .error {
+        color: var(--color-error-text);
+        font-size: 0.82rem;
+    }
+
+    .search-form {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin: var(--space-3) 0;
+        flex-wrap: wrap;
+    }
+
+    .search-form input[type="text"] {
+        padding: var(--space-2) var(--space-3);
+        border: 1.5px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="email"],
+    .form-group input[type="password"],
+    .form-group input[type="url"],
+    .form-group input[type="number"],
+    .form-group input[type="date"],
+    .form-group input[type="tel"],
+    .form-group input[type="search"],
+    .form-group select,
+    .form-group textarea,
+    form p input[type="text"],
+    form p input[type="email"],
+    form p input[type="password"],
+    form p input[type="url"],
+    form p input[type="number"],
+    form p input[type="date"],
+    form p input[type="tel"],
+    form p input[type="search"],
+    form p select,
+    form p textarea {
+        inline-size: 100%;
+        max-inline-size: 480px;
+        padding: var(--space-2) var(--space-3);
+        border: 1.5px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        color: var(--color-text);
+        background-color: var(--color-surface);
+        transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus,
+    form p input:focus,
+    form p select:focus,
+    form p textarea:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+    }
+
+    .form-group textarea {
         resize: vertical;
-        overflow-y: auto;
+        min-height: 80px;
     }
 
-    textarea[name="location"]:not(:placeholder-shown),
-    textarea[name="description"]:not(:placeholder-shown),
-    textarea[name="details"]:not(:placeholder-shown),
-    textarea[name="producers"]:not(:placeholder-shown),
-    textarea[name="additional_notes"]:not(:placeholder-shown) {
-        height: 4.4em;
-        min-height: 4.4em;
-        max-height: 4.4em;
+    .form-help,
+    .form-group .helptext,
+    form p .helptext {
+        margin: var(--space-1) 0 0;
+        font-size: 0.8rem;
+        color: var(--color-text-muted);
+    }
+
+    .form-group ul.errorlist,
+    form p ul.errorlist {
+        list-style: none;
+        margin: var(--space-1) 0 0;
+        padding: 0;
+    }
+
+    .form-group ul.errorlist li,
+    form p ul.errorlist li {
+        color: var(--color-error-text);
+        font-size: 0.82rem;
+    }
+
+    @media (max-width: 768px) {
+        textarea[name="location"],
+        textarea[name="description"],
+        textarea[name="details"],
+        textarea[name="producers"],
+        textarea[name="additional_notes"] {
+            height: 2.2em;
+            min-height: 2.2em;
+            max-height: 2.2em;
+            resize: vertical;
+            overflow-y: auto;
+        }
+
+        textarea[name="location"]:not(:placeholder-shown),
+        textarea[name="description"]:not(:placeholder-shown),
+        textarea[name="details"]:not(:placeholder-shown),
+        textarea[name="producers"]:not(:placeholder-shown),
+        textarea[name="additional_notes"]:not(:placeholder-shown) {
+            height: 4.4em;
+            min-height: 4.4em;
+            max-height: 4.4em;
+        }
+    }
+
+    /* --- Cards --- */
+    .card {
+        padding: var(--space-5);
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: var(--space-4);
+        margin-block-end: var(--space-5);
+    }
+
+    /* --- Tables ---
+       One component, reused by every data table in the app. `.table` is the
+       block; `.table-detail`/`.table-grouped`/`.totals-row`/`.table-narrow`
+       are its existing modifiers (kept as-is — used across 15+ templates);
+       `.table--matrix` + its `.table__*` elements below are the one shared
+       definition for the three attendance/pivot grids (poll_detail.html,
+       poll_attendance.html, attendance_dashboard.html), replacing what used
+       to be three separate, diverging page-local <style> blocks. */
+    .table {
+        width: 100%;
+        margin-block-end: var(--space-5);
+        border-collapse: collapse;
+        background-color: var(--color-surface);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+        font-size: 0.82rem;
+        overflow: hidden;
+
+        & thead th {
+            position: sticky;
+            inset-block-start: 0;
+            z-index: var(--z-sticky);
+            padding: var(--space-2);
+            background-color: var(--color-ink);
+            color: var(--color-text-on-accent);
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-align: start;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        & tbody td {
+            padding: var(--space-2);
+            border-block-end: 1px solid var(--color-border-subtle);
+            vertical-align: middle;
+        }
+
+        & tbody tr:last-child td {
+            border-block-end: none;
+        }
+
+        /* Matches syncope-compare's rgba(244, 241, 234, 0.4) exactly —
+           --color-bg is that same #f4f1ea, so this is the same color, not
+           just visually close. */
+        & tbody tr:nth-child(even) {
+            background-color: color-mix(in srgb, var(--color-bg) 40%, transparent);
+        }
+
+        & tbody tr:hover {
+            background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
+        }
+
+        & a {
+            font-weight: 500;
+        }
+
+        /* A link never overrides the header's own text color — it always
+           inherits it. Enforced once here so every header link (sortable or
+           not) is automatically legible against the dark header background,
+           instead of relying on each template remembering to opt in with
+           .sortable-header. */
+        & thead th a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        /* Mobile-first: compact by default, roomier once the table's own
+           wrapper (.table-container, container-type: inline-size below) has
+           space — replaces the old page-level max-width:768px th/td override. */
+        @container (min-inline-size: 36rem) {
+            font-size: 0.9rem;
+
+            & thead th {
+                padding: var(--space-3);
+                font-size: 0.8rem;
+            }
+
+            & tbody td {
+                padding: var(--space-3);
+            }
+        }
+    }
+
+    /* Replaces the hand-copied "first row of group" inline style
+       ({% if forloop.first and not forloop.parentloop.first %}style="border-top:3px solid #333"{% endif %}) */
+    .table-grouped tbody tr.group-start td {
+        border-block-start: 2px solid var(--color-border);
+    }
+
+    .totals-row td {
+        border-block-start: 2px solid var(--color-border);
+    }
+
+    .table-detail {
+        width: 100%;
+        max-inline-size: 640px;
+        margin-block-end: var(--space-5);
+        font-size: 0.92rem;
+    }
+
+    .table-detail tr td {
+        padding: var(--space-2) var(--space-1);
+        vertical-align: baseline;
+    }
+
+    .table-detail tr th {
+        inline-size: 120px;
+        padding: var(--space-2) var(--space-4) var(--space-2) 0;
+        font-weight: 500;
+        color: var(--color-text-muted);
+        font-size: 0.85rem;
+        text-align: start;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .table-narrow {
+        max-inline-size: 700px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--color-text-muted);
+        font-size: 0.95rem;
+    }
+
+    /* --- Matrix/pivot tables (attendance grids) --- */
+    .table--matrix {
+        /* .table sets overflow:hidden for its rounded corners, which clips
+           position:sticky on the frozen column/header — undo it here. */
+        overflow: visible;
+    }
+
+    .table--matrix thead th {
+        text-transform: none;
+        letter-spacing: normal;
+    }
+
+    /* Only the rotated-label headers (poll_detail.html, attendance_dashboard.html)
+       need extra height — poll_attendance.html's plain multi-line text headers
+       don't use .table__event-header, so :has() scopes this to just them.
+       Without it, the rotated text's height (its pre-rotation WIDTH — a
+       transform doesn't change layout size) exceeds the header row's normal
+       height and pokes out past the dark background.
+
+       vertical-align MUST be middle, not bottom: rotation happens around the
+       element's own center, so bottom-aligning it first (positioning by its
+       small pre-rotation height) leaves that center off the cell's true
+       middle — the rotated result then sits low and partly outside the
+       cell, clipping its leading character. Centering first keeps the
+       rotation symmetric within the cell. */
+    .table--matrix thead th:has(.table__event-header) {
+        block-size: 4.5rem;
+        vertical-align: middle;
+    }
+
+    .table--matrix .col-num {
+        inline-size: 1.5rem;
+        padding-inline: var(--space-1);
+    }
+
+    /* Fixed, not min: a CSS transform (used by .table__event-header's rotation
+       below) doesn't shrink an element's LAYOUT box, only its rendered
+       appearance — so a rotated date header's natural (unrotated) text width
+       still drives auto table-layout sizing unless every cell in the column
+       agrees on one fixed width. A min-inline-size here let each rotated
+       column size itself independently off its own unrotated text length,
+       producing uneven, misaligned columns between header and body. */
+    .table__event-col {
+        inline-size: var(--table-matrix-size);
+        text-align: center;
+    }
+
+    /* poll_attendance.html's headers hold multi-line plain text (event type,
+       date, time, location, details), not a rotated label — they need to
+       grow past the fixed size above. Add alongside .table__event-col on
+       every <th>/<td> in that template's columns (all agreeing on the same
+       width keeps header/body aligned, same principle as above). */
+    .table__event-col--text {
+        inline-size: auto;
+        min-inline-size: 5rem;
+    }
+
+    /* Wraps a rotated date/label inside a matrix <th> (poll_detail.html,
+       attendance_dashboard.html). poll_attendance.html's transposed header
+       rows use .table__event-col directly without this wrapper, since their
+       labels are stacked plain text, not rotated. */
+    .table__event-header {
+        display: inline-block;
+        transform: rotate(-90deg);
+        white-space: nowrap;
+        font-size: 0.75rem;
+    }
+
+    .table__event-header--strong {
+        font-weight: 700;
+    }
+
+    .table__cell--attendance {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        inline-size: var(--table-matrix-size);
+        block-size: var(--table-matrix-size);
+        margin-inline: auto;
+        border-radius: var(--radius-sm);
+        font-size: 1.1rem;
+        cursor: pointer;
+        user-select: none;
+        transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .table__cell--attendance:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .table__cell--attendance:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+
+    /* Read-only matrix cells (poll_detail.html's votes summary — nothing to
+       click there) drop the pointer/hover-lift affordance. */
+    .table__cell--attendance--static {
+        cursor: default;
+    }
+
+    .table__cell--attendance--static:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .table__event-col--ineligible {
+        background-color: var(--color-bg-subtle);
+        color: var(--color-border);
+        pointer-events: none;
+    }
+
+    /* Composes with .totals-row (which supplies the border) — add both
+       classes to the <tr>; this one only adds the extra bold weight the
+       matrix variant wants. */
+    .table__row--total td {
+        font-weight: 600;
+    }
+
+    .table__comment {
+        font-size: 0.65rem;
+        color: var(--color-text-muted);
+        overflow-wrap: anywhere;
+    }
+
+    .table__comment-input {
+        inline-size: 100%;
+        font-size: 0.8rem;
+        padding: var(--space-1);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+    }
+
+    .legend {
+        margin-block-end: var(--space-3);
+        font-size: 0.85rem;
+        display: flex;
+        gap: var(--space-3);
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    /* Sizing only — hover/cursor neutralizing is .table__cell--attendance--static's
+       job; legend chips carry both classes. */
+    .legend .table__cell--attendance {
+        inline-size: auto;
+        block-size: auto;
+        padding: 2px 6px;
+    }
+
+    /* Collapsible date-range / event-limit filter panel above
+       attendance_dashboard.html's matrix table. */
+    .filter-panel {
+        margin: 0;
+        padding: 0.4rem 0.75rem;
+        background-color: var(--color-bg-subtle);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+    }
+
+    .filter-panel summary {
+        cursor: pointer;
+        font-weight: 500;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        list-style: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .filter-panel summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .filter-panel[open] summary {
+        margin-block-end: var(--space-2);
+    }
+
+    .filter-toggle-icon {
+        transition: transform var(--transition-fast);
+        flex-shrink: 0;
+    }
+
+    .filter-panel[open] .filter-toggle-icon {
+        transform: rotate(90deg);
+    }
+
+    .filter-form {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        padding-block-end: var(--space-2);
+    }
+
+    .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        align-items: end;
+    }
+
+    .filter-dates {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+
+    .filter-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        font-size: 0.8rem;
+    }
+
+    .filter-label {
+        color: var(--color-text-muted);
+    }
+
+    .filter-field input {
+        padding: 0.45rem 0.5rem;
+        font-size: 0.95rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        box-sizing: border-box;
+    }
+
+    .filter-dates input {
+        inline-size: 150px;
+    }
+
+    .filter-field-limit input {
+        inline-size: 90px;
+    }
+
+    .filter-row-actions {
+        gap: var(--space-3);
+        align-items: stretch;
+    }
+
+    .filter-row-actions .btn-primary,
+    .filter-row-actions .filter-reset {
+        flex: 0 0 auto;
+        text-align: center;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .quick-add-form {
+        margin: 0;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    @media (min-width: 769px) {
+        .filter-panel summary {
+            justify-content: flex-start;
+        }
+
+        .filter-toggle-icon {
+            order: -1;
+            margin-inline-end: 0.4rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .filter-panel {
+            padding: 0.2rem 0.6rem;
+        }
+
+        .filter-dates {
+            flex: 1 1 auto;
+            gap: 0.4rem;
+        }
+
+        .filter-dates .filter-field {
+            flex: 1 1 45%;
+            min-width: 0;
+        }
+
+        .filter-dates input {
+            inline-size: auto;
+            min-width: 0;
+        }
+
+        .filter-field-limit {
+            margin-inline-start: auto;
+            text-align: end;
+        }
+
+        .filter-field-limit input {
+            inline-size: 80px;
+            text-align: end;
+        }
+
+        .filter-row-actions .btn-primary,
+        .filter-row-actions .filter-reset {
+            flex: 1 1 0;
+        }
+
+        .quick-add-form {
+            justify-content: center;
+        }
+
+        .table-container {
+            padding-block-end: 4rem;
+        }
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-2);
+        margin-block-end: var(--space-4);
+        flex-wrap: wrap;
+    }
+
+    .section-header h3,
+    .section-header h2 {
+        margin: 0;
+    }
+
+    @media (max-width: 768px) {
+        .section-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 1px 8px;
+        background-color: var(--color-bg-subtle);
+        color: var(--color-text-muted);
+        font-size: 0.8rem;
+        font-weight: 500;
+        border-radius: 999px;
     }
 }
 
-.messages {
-    margin-bottom: var(--space-4);
-}
+@layer utilities {
+    /* .visually-hidden here is a hard display:none (not the accessible-but-present
+       clip technique) — only used on CSRF-only wrapper divs with no meaningful content. */
+    .visually-hidden {
+        display: none;
+    }
 
-.alert {
-    padding: var(--space-3) var(--space-4);
-    margin-bottom: var(--space-2);
-    border: 1px solid;
-    border-radius: var(--radius-sm);
-}
+    .inline-form {
+        display: inline;
+    }
 
-.alert-success {
-    background-color: var(--color-success-bg);
-    border-color: var(--color-success-border);
-    color: var(--color-success-text);
-}
+    .btn-full {
+        display: inline;
+    }
 
-.alert-error,
-.alert-danger {
-    background-color: var(--color-error-bg);
-    border-color: var(--color-error-border);
-    color: var(--color-error-text);
-}
+    .btn-short {
+        display: none;
+    }
 
-.alert-warning {
-    background-color: var(--color-warning-bg);
-    border-color: var(--color-warning-border);
-    color: var(--color-warning-text);
-}
+    .table-container {
+        overflow-x: auto;
+        container-type: inline-size;
+    }
 
-.alert-info {
-    background-color: var(--color-info-bg);
-    border-color: var(--color-info-border);
-    color: var(--color-info-text);
-}
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        background-color: var(--color-surface);
+        z-index: var(--z-sticky);
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
-#dirty-actions {
-    display: contents;
-}
+    /* .sticky-col's own background-color (needed so scrolled-under content
+       doesn't show through the frozen column) would otherwise beat .table's
+       dark header background too — utilities always outranks components by
+       layer order regardless of specificity. Restore the dark header here,
+       in the same layer as .sticky-col, with enough specificity to win. */
+    .table thead th.sticky-col {
+        background-color: var(--color-ink);
+    }
 
-.breadcrumbs {
-    margin-bottom: var(--space-4);
-    font-size: var(--font-size-sm);
-    color: var(--color-text-muted);
-}
+    /* Same reasoning as above: .sticky-col's own opaque background (needed
+       to hide content scrolling underneath it) would otherwise always mask
+       the row's :hover tint, leaving the sticky name/title cell looking
+       "stuck" at the plain surface color while the rest of the row dims. */
+    .table tbody tr:hover td.sticky-col {
+        background-color: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+    }
 
-.breadcrumbs ol {
-    display: flex;
-    flex-wrap: wrap;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
+    /* See the --color-attendance-* token comment above for the pk mapping. */
+    .att-type-0 { background-color: var(--color-attendance-0); }
+    .att-type-1 { background-color: var(--color-attendance-1); }
+    .att-type-2 { background-color: var(--color-attendance-2); }
+    .att-type-3 { background-color: var(--color-attendance-3); }
+    .att-type-4 { background-color: var(--color-attendance-4); }
 
-.breadcrumbs li {
-    display: flex;
-    align-items: center;
-}
+    /* Suppresses the att-type-N status color for a disabled matrix cell.
+       Deliberately placed in @layer utilities (not components, where
+       .table__cell--attendance itself lives) so it shares a layer with
+       .att-type-N above and can win on source order/specificity — a rule in
+       @layer components can never outrank one in @layer utilities regardless
+       of specificity, since utilities is declared later in the layer order. */
+    .table__cell--attendance--disabled {
+        background-color: var(--color-surface);
+        color: var(--color-text);
+        pointer-events: none;
+        cursor: default;
+    }
 
-.breadcrumbs li + li::before {
-    content: "›";
-    margin: 0 0.4rem;
-    color: var(--color-border);
-}
+    .col-num {
+        text-align: right;
+    }
 
-.breadcrumbs a {
-    color: var(--color-text-muted);
-    text-decoration: none;
-}
+    .sortable-header {
+        color: inherit;
+        text-decoration: none;
+    }
 
-.breadcrumbs a:hover {
-    text-decoration: underline;
-}
+    .sortable-header:hover {
+        text-decoration: underline;
+    }
 
-.breadcrumbs [aria-current="page"] {
-    color: var(--color-text);
-    font-weight: 500;
-}
+    /* Generic selectors for Django's default CheckboxSelectMultiple/RadioSelect
+       output (no custom widget template this round — see FRONTEND_GUIDE.md). */
+    input[type="checkbox"],
+    input[type="radio"] {
+        margin-inline-end: var(--space-1);
+    }
 
-/* --- Buttons --- */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-sm);
-    border: 1.5px solid transparent;
-    font-family: var(--font-body);
-    font-size: 0.9rem;
-    font-weight: 500;
-    line-height: 1.4;
-    white-space: nowrap;
-    cursor: pointer;
-    text-decoration: none;
-    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
-}
+    @media (max-width: 768px) {
+        input[type="date"],
+        input[type="number"],
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        button[type="submit"],
+        .btn-primary,
+        .btn-danger {
+            min-height: 44px;
+        }
 
-.btn:hover {
-    text-decoration: none;
-}
+        .btn-full {
+            display: none;
+        }
 
-.btn:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-}
-
-.btn-primary {
-    background-color: var(--color-primary);
-    color: var(--color-text-on-accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--color-primary-hover);
-    color: var(--color-text-on-accent);
-}
-
-.btn-secondary {
-    background-color: transparent;
-    border-color: var(--color-border);
-    color: var(--color-text);
-}
-
-.btn-secondary:hover {
-    background-color: var(--color-bg-subtle);
-}
-
-.btn-danger {
-    background-color: transparent;
-    border-color: var(--color-danger);
-    color: var(--color-danger);
-}
-
-.btn-danger:hover {
-    background-color: var(--color-danger);
-    color: var(--color-text-on-accent);
-}
-
-.btn-link {
-    background: none;
-    border: none;
-    padding: 0;
-    color: var(--color-primary);
-    font-size: 0.9rem;
-}
-
-.btn-link:hover {
-    color: var(--color-primary-hover);
-    text-decoration: underline;
-}
-
-.btn-sm {
-    padding: 0.3rem 0.65rem;
-    font-size: 0.82rem;
-}
-
-.btn-block {
-    width: 100%;
-    justify-content: center;
-}
-
-/* Feedback text next to a #share-btn (Copying.../Copied/Failed) — see FRONTEND_GUIDE.md. */
-.share-result {
-    margin-left: var(--space-1);
-    font-size: var(--font-size-sm);
-    color: var(--color-text-muted);
-}
-
-/* Button row for form submit/cancel pairs: secondary/cancel left, primary right
-   (DOM order drives this — put the cancel link/button before the primary one).
-   On mobile the row spreads to the full width (cancel far left, primary far
-   right) instead of clustering right like desktop — see the 768px media query. */
-.form-actions {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: var(--space-3);
-    margin-top: var(--space-4);
-}
-
-/* --- Forms --- */
-.form-group {
-    margin-bottom: var(--space-4);
-}
-
-.form-group label,
-.form-label,
-form p label {
-    display: block;
-    margin-bottom: var(--space-1);
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    color: var(--color-text-muted);
-}
-
-/* Generic selectors for Django's default CheckboxSelectMultiple/RadioSelect
-   output (no custom widget template this round — see FRONTEND_GUIDE.md). */
-input[type="checkbox"],
-input[type="radio"] {
-    margin-right: var(--space-1);
-}
-
-.form-error,
-.error {
-    color: var(--color-error-text);
-    font-size: 0.82rem;
-}
-
-.search-form {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin: var(--space-3) 0;
-    flex-wrap: wrap;
-}
-
-.search-form input[type="text"] {
-    padding: var(--space-2) var(--space-3);
-    border: 1.5px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    font-family: var(--font-body);
-    font-size: 0.9rem;
-    flex: 1;
-    min-width: 200px;
-}
-
-.form-group input[type="text"],
-.form-group input[type="email"],
-.form-group input[type="password"],
-.form-group input[type="url"],
-.form-group input[type="number"],
-.form-group input[type="date"],
-.form-group input[type="tel"],
-.form-group input[type="search"],
-.form-group select,
-.form-group textarea,
-form p input[type="text"],
-form p input[type="email"],
-form p input[type="password"],
-form p input[type="url"],
-form p input[type="number"],
-form p input[type="date"],
-form p input[type="tel"],
-form p input[type="search"],
-form p select,
-form p textarea {
-    width: 100%;
-    max-width: 480px;
-    padding: var(--space-2) var(--space-3);
-    border: 1.5px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    font-family: var(--font-body);
-    font-size: 0.9rem;
-    color: var(--color-text);
-    background-color: var(--color-surface);
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus,
-form p input:focus,
-form p select:focus,
-form p textarea:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
-}
-
-.form-group textarea {
-    resize: vertical;
-    min-height: 80px;
-}
-
-.form-help,
-.form-group .helptext,
-form p .helptext {
-    margin: var(--space-1) 0 0;
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-}
-
-.form-group ul.errorlist,
-form p ul.errorlist {
-    list-style: none;
-    margin: var(--space-1) 0 0;
-    padding: 0;
-}
-
-.form-group ul.errorlist li,
-form p ul.errorlist li {
-    color: var(--color-error-text);
-    font-size: 0.82rem;
-}
-
-/* --- Cards --- */
-.card {
-    padding: var(--space-5);
-    background-color: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-}
-
-.card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: var(--space-4);
-    margin-bottom: var(--space-5);
-}
-
-/* --- Tables --- */
-.table {
-    width: 100%;
-    margin-bottom: var(--space-5);
-    border-collapse: collapse;
-    background-color: var(--color-surface);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-    font-size: 0.9rem;
-    overflow: hidden;
-}
-
-.table thead th {
-    padding: var(--space-3);
-    background-color: var(--color-ink);
-    color: var(--color-text-on-accent);
-    font-size: 0.8rem;
-    font-weight: 500;
-    text-align: left;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-.table tbody td {
-    padding: var(--space-3);
-    border-bottom: 1px solid var(--color-border-subtle);
-    vertical-align: middle;
-}
-
-.table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.table tbody tr:nth-child(even) {
-    background-color: var(--color-bg-subtle);
-}
-
-/* Replaces the hand-copied "first row of group" inline style
-   ({% if forloop.first and not forloop.parentloop.first %}style="border-top:3px solid #333"{% endif %}) */
-.table-grouped tbody tr.group-start td {
-    border-top: 2px solid var(--color-border);
-}
-
-.totals-row td {
-    border-top: 2px solid var(--color-border);
-}
-
-.table-detail {
-    width: 100%;
-    max-width: 640px;
-    margin-bottom: var(--space-5);
-    font-size: 0.92rem;
-}
-
-.table-detail tr td {
-    padding: var(--space-2) var(--space-1);
-    vertical-align: baseline;
-}
-
-.table-detail tr th {
-    width: 120px;
-    padding: var(--space-2) var(--space-4) var(--space-2) 0;
-    font-weight: 500;
-    color: var(--color-text-muted);
-    font-size: 0.85rem;
-    text-align: left;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
-/* --- Utilities ---
-   .visually-hidden here is a hard display:none (not the accessible-but-present
-   clip technique) — only used on CSRF-only wrapper divs with no meaningful content. */
-.visually-hidden {
-    display: none;
-}
-
-.inline-form {
-    display: inline;
-}
-
-.sortable-header {
-    color: inherit;
-    text-decoration: none;
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--space-2);
-    margin-bottom: var(--space-4);
-    flex-wrap: wrap;
-}
-
-.section-header h3,
-.section-header h2 {
-    margin: 0;
-}
-
-.badge {
-    display: inline-block;
-    padding: 1px 8px;
-    background-color: var(--color-bg-subtle);
-    color: var(--color-text-muted);
-    font-size: 0.8rem;
-    font-weight: 500;
-    border-radius: 999px;
-}
-
-.table-narrow {
-    max-width: 700px;
+        .btn-short {
+            display: inline;
+        }
+    }
 }

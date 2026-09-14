@@ -10,117 +10,8 @@
 }
 .attendance-dashboard h2 { margin: 0; }
 
-.event-col { width: 20px; height: 70px; padding: 5px; font-weight: normal; }
-
-/* header look comes from the shared .table thead th rule; .sticky-col needs
-   overflow visible on this table since .table sets overflow:hidden for its
-   rounded corners, which would otherwise break position:sticky below. */
-.attendance-table {
-    overflow: visible;
-}
-
-.attendance-table .col-num {
-    width: 1.5rem;
-    padding-left: 0.4rem;
-    padding-right: 0.4rem;
-}
-
-.attendance-cell {
-    width: 40px;
-    text-align: center;
-    cursor: pointer;
-    user-select: none;
-    border-radius: 4px;
-    font-size: 1.1rem;
-    line-height: 1.6rem;
-    transition: background-color 0.15s ease;
-}
-
-.attendance-cell:hover { opacity: 0.8; }
-.attendance-cell.grayed-out:hover { opacity: 1; }
-
-/* .att-type-0..4 come from the global tokens in style.css */
-
-.grayed-out {
-    background-color: var(--color-surface) !important;
-    color: var(--color-text);
-    pointer-events: none;
-    cursor: default;
-}
-
-.cell-ineligible {
-    background-color: var(--color-bg-subtle);
-    color: var(--color-border);
-    pointer-events: none;
-    cursor: default;
-}
-
-/* Filter panel */
-.filter-panel {
-    margin: 0;
-    padding: 0.4rem 0.75rem;
-    background-color: var(--color-bg-subtle);
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
-}
-.filter-panel summary {
-    cursor: pointer;
-    font-weight: 500;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    list-style: none;
-    -webkit-tap-highlight-color: transparent;
-}
-.filter-panel summary::-webkit-details-marker { display: none; }
-.filter-panel[open] summary { margin-bottom: 0.5rem; }
-.filter-toggle-icon { transition: transform 0.15s ease; flex-shrink: 0; }
-.filter-panel[open] .filter-toggle-icon { transform: rotate(90deg); }
-@media (min-width: 769px) {
-    .filter-panel summary { justify-content: flex-start; }
-    .filter-toggle-icon { order: -1; margin-right: 0.4rem; }
-}
-.filter-form { display: flex; flex-direction: column; gap: 0.5rem; padding-bottom: 0.5rem; }
-.filter-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: end; }
-.filter-dates { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.filter-field { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.8rem; }
-.filter-label { color: var(--color-text-muted); }
-.filter-field input {
-    padding: 0.45rem 0.5rem;
-    font-size: 0.95rem;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    box-sizing: border-box;
-}
-.filter-dates input { width: 150px; }
-.filter-field-limit input { width: 90px; }
-.filter-row-actions { gap: 0.75rem; align-items: stretch; }
-.filter-row-actions .btn-primary,
-.filter-row-actions .filter-reset {
-    flex: 0 0 auto;
-    text-align: center;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-.quick-add-form { margin: 0; display: flex; justify-content: flex-end; }
-
 @media (max-width: 768px) {
     .save-bar { flex-wrap: wrap; gap: 0.5rem; }
-    .table-container { padding-bottom: 4rem; }
-
-    .filter-panel { padding: 0.2rem 0.6rem; }
-    .filter-dates { flex: 1 1 auto; gap: 0.4rem; }
-    .filter-dates .filter-field { flex: 1 1 45%; min-width: 0; }
-    .filter-dates input { width: auto; min-width: 0; }
-    .filter-field-limit { margin-left: auto; text-align: right; }
-    .filter-field-limit input { width: 80px; text-align: right; }
-    .filter-row-actions .btn-primary,
-    .filter-row-actions .filter-reset { flex: 1 1 0; }
-
-    .quick-add-form { justify-content: center; }
 }
 </style>
 
@@ -173,18 +64,15 @@
         {% csrf_token %}
 
         <div class="table-container">
-            <table class="table table-grouped attendance-table">
+            <table class="table table--matrix table-grouped">
                 <thead>
                     <tr>
                         <th class="col-num"></th>
                         <th class="sticky-col">Member</th>
                         {% for event in events %}
-                            <th class="event-col">
-                                <div style="transform: rotate(-90deg); width: 10px; white-space: nowrap;">
+                            <th class="table__event-col">
+                                <div class="table__event-header {% if event.event_type.id != 1 %}table__event-header--strong{% endif %}">
                                     <a href="{%  url 'syncope:event_detail' url_username event.id %}?origin=attendance"
-                                        style="
-                                        {% if event.event_type.id != 1 %}font-weight: bold; {% endif %}
-                                        color: inherit; text-decoration: underline; font-size: inherit;"
                                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
                                         <span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="date">{{ event.started_at|date:"d M" }}</span>
                                     </a>
@@ -203,15 +91,17 @@
                             <td class="sticky-col member-name">{{ row.member }}</td>
                             {% for cell in row.attendance_cells %}
                                 {% if cell.is_ineligible %}
-                                    <td class="cell-ineligible"></td>
+                                    <td class="table__event-col--ineligible"></td>
                                 {% else %}
-                                    <td class="attendance-cell att-type-{{ cell.attendance_type_id|default:0 }} {% if cell.is_grayed_out %}grayed-out{% endif %}"
-                                        data-type-id="{{ cell.attendance_type_id|default:0 }}"
-                                        {% if not cell.is_grayed_out %}onclick="cycleAttendance(this)"{% endif %}>
-                                        <input type="hidden"
-                                               name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
-                                               value="{{ cell.attendance_type_id|default:0 }}">
-                                        <span class="att-icon"></span>
+                                    <td class="table__event-col">
+                                        <div class="table__cell--attendance att-type-{{ cell.attendance_type_id|default:0 }} {% if cell.is_grayed_out %}table__cell--attendance--disabled{% endif %}"
+                                            data-type-id="{{ cell.attendance_type_id|default:0 }}"
+                                            {% if not cell.is_grayed_out %}onclick="cycleAttendance(this)"{% endif %}>
+                                            <input type="hidden"
+                                                   name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
+                                                   value="{{ cell.attendance_type_id|default:0 }}">
+                                            <span class="att-icon"></span>
+                                        </div>
                                     </td>
                                 {% endif %}
                             {% endfor %}
@@ -220,7 +110,7 @@
                         </tr>
                         {% endfor %}
                     {% endfor %}
-                    <tr class="totals-row">
+                    <tr class="totals-row table__row--total">
                         <td class="col-num"></td>
                         <td class="sticky-col"></td>
                         {% for total in event_totals %}
@@ -265,7 +155,7 @@ function paintCell(cell, typeId) {
 
 function countUnsavedChanges() {
     let count = 0;
-    document.querySelectorAll('.attendance-cell[data-type-id]').forEach(cell => {
+    document.querySelectorAll('.table__cell--attendance[data-type-id]').forEach(cell => {
         if (cell.dataset.typeId !== cell.dataset.originalTypeId) count++;
     });
     return count;
@@ -275,7 +165,7 @@ const saveBarCtl = initSaveBar({
     formId: 'attendance-form',
     countUnsavedChanges,
     onDiscard: () => {
-        document.querySelectorAll('.attendance-cell[data-type-id]').forEach(cell => {
+        document.querySelectorAll('.table__cell--attendance[data-type-id]').forEach(cell => {
             if (cell.dataset.originalTypeId !== undefined) {
                 paintCell(cell, parseInt(cell.dataset.originalTypeId, 10));
             }
@@ -291,7 +181,7 @@ function cycleAttendance(cell) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.attendance-cell[data-type-id]').forEach(cell => {
+    document.querySelectorAll('.table__cell--attendance[data-type-id]').forEach(cell => {
         cell.dataset.originalTypeId = cell.dataset.typeId;
         const meta = TYPE_META[parseInt(cell.dataset.typeId, 10)] || TYPE_META[0];
         cell.querySelector('.att-icon').textContent = meta.icon;

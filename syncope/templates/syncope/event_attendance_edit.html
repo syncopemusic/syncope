@@ -4,12 +4,6 @@
 
 {% block extra_css %}
 <style>
-    .attendance-table thead th {
-        position: sticky;
-        top: 0;
-        background-color: var(--color-surface);
-        z-index: 1;
-    }
     .attendance-chip {
         display: inline-flex;
         align-items: center;
@@ -91,7 +85,7 @@
     <form method="post" id="attendance-form">
         {% csrf_token %}
         <div class="table-container">
-            <table class="attendance-table">
+            <table class="table attendance-table">
                 <thead>
                     <tr>
                         <th>Person</th>

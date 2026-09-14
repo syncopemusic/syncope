@@ -122,7 +122,8 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
     {% if is_admin %}<a href="{% url 'syncope:event_songs_edit' url_username event.pk %}?origin={{ origin_key }}">Edit</a>{% endif %}
 </h3>
 {% if eventsongs %}
-    <table class="event-songs-table">
+    <div class="table-container">
+    <table class="table event-songs-table">
         <thead>
             <tr>
                 <th></th>
@@ -157,6 +158,7 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
             {% endfor %}
         </tbody>
     </table>
+    </div>
 {% else %}
     <p>No songs added yet.</p>
 {% endif %}
@@ -166,10 +168,11 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
     {% if is_admin %}<a href="{% url 'syncope:event_attendance_edit' url_username event.pk %}?origin={{ origin_key }}">Edit</a>{% endif %}
 </h3>
 {% if attendances %}
-    <table>
+    <div class="table-container">
+    <table class="table">
         <thead>
             <tr>
-                <th>#</th>
+                <th class="col-num">#</th>
 
                 <th>Person</th>
 
@@ -179,7 +182,7 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
         <tbody>
         {% for attendance in attendances %}
             <tr>
-                <td>{{ forloop.counter }}</td>
+                <td class="col-num">{{ forloop.counter }}</td>
                 <td>{% include "syncope/person_link.html" with person=attendance.person from_event=event.pk origin=origin_key %}</td>
                 {% comment %}
                 <td>
@@ -201,6 +204,7 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
         {% endfor %}
         </tbody>
     </table>
+    </div>
 {% else %}
     <p>No attendance records yet.</p>
 {% endif %}

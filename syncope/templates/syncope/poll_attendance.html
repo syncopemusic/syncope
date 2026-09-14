@@ -4,89 +4,6 @@
 {% block title %}{{ poll.title }} - Attendance{% endblock %}
 
 {% block content %}
-<style>
-.event-col {
-    width: 60px;
-    text-align: center;
-}
-
-.attendance-cell {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    user-select: none;
-    border-radius: 5px;
-    font-size: 0.9rem;
-    font-weight: bold;
-    line-height: 1;
-    transition: all 0.15s ease;
-    margin: 0 auto;
-    border: 2px solid rgba(0, 0, 0, 0.15);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.attendance-cell:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    border-color: rgba(0, 0, 0, 0.25);
-}
-
-.attendance-cell:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-/* .att-type-0..3 (TBD/YES/MAYBE/NO) come from the global tokens in style.css */
-
-.comment-input {
-    font-size: 0.8rem;
-    padding: 4px;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    box-sizing: border-box;
-    width: 100%;
-}
-
-.event-header-cell {
-    padding: 8px 4px;
-    font-size: 0.85rem;
-    line-height: 1.3;
-    vertical-align: middle;
-}
-
-th.bold-event-header {
-    font-weight: 700 !important;
-}
-
-tbody td {
-    text-align: center;
-}
-
-/* .table sets overflow:hidden for rounded corners, which breaks
-   position:sticky on .sticky-col below — undo it here. */
-.attendance-table {
-    overflow: visible;
-}
-
-@media (max-width: 768px) {
-    .attendance-cell {
-        width: 32px;
-        height: 32px;
-        font-size: 0.8rem;
-        border: 1.5px solid rgba(0, 0, 0, 0.15);
-    }
-    .attendance-cell:hover {
-        transform: translateY(-1px);
-    }
-    .comment-input {
-        width: 100%;
-        font-size: 0.7rem;
-    }
-}
-</style>
 
 <h2>{{ poll.title }} - Attendance</h2>
 
@@ -110,12 +27,12 @@ tbody td {
 <p>{{ poll.description }}</p>
 {% endif %}
 
-<div style="margin-bottom: 1rem; font-size: 0.85rem; display: flex; gap: 0.75rem; flex-wrap: wrap; width: fit-content;">
+<div class="legend">
     <strong>Legend:</strong>
-    <span class="attendance-cell att-type-0" style="width: auto; height: auto; padding: 2px 6px;">⚑</span>
-    <span class="attendance-cell att-type-1" style="width: auto; height: auto; padding: 2px 6px;">✓</span>
-    <span class="attendance-cell att-type-2" style="width: auto; height: auto; padding: 2px 6px;">(✓)</span>
-    <span class="attendance-cell att-type-3" style="width: auto; height: auto; padding: 2px 6px;">✗</span>
+    <span class="table__cell--attendance table__cell--attendance--static att-type-0">⚑</span>
+    <span class="table__cell--attendance table__cell--attendance--static att-type-1">✓</span>
+    <span class="table__cell--attendance table__cell--attendance--static att-type-2">(✓)</span>
+    <span class="table__cell--attendance table__cell--attendance--static att-type-3">✗</span>
     <em>(Click to cycle)</em>
 </div>
 
@@ -123,13 +40,13 @@ tbody td {
     {% csrf_token %}
 
     <div class="table-container">
-        <table class="table attendance-table">
+        <table class="table table--matrix">
             <thead>
                 {# Event Type Row #}
                 <tr>
                     <th class="sticky-col">Event</th>
                     {% for event in poll_events %}
-                    <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %} [{{ event.event_type.id }}]"
+                    <th class="table__event-col table__event-col--text {% if event.event_type.id != 1 %}table__event-header--strong{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
                         {{ event.event_type.name }}
                     </th>
@@ -140,7 +57,7 @@ tbody td {
                 <tr>
                     <th class="sticky-col">Date</th>
                     {% for event in poll_events %}
-                    <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
+                    <th class="table__event-col table__event-col--text {% if event.event_type.id != 1 %}table__event-header--strong{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
                         {% if event.same_date %}<span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="date-dow">{{ event.started_at|date:"D d M" }}</span>{% else %}<span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="date-dow">{{ event.started_at|date:"D d M" }}</span> <br> <span data-dt="{{ event.ended_at|date:"c" }}" data-dt-fmt="date-dow">{{ event.ended_at|date:"D d M" }}</span>{% endif %}
                     </th>
@@ -151,7 +68,7 @@ tbody td {
                 <tr>
                     <th class="sticky-col">Time</th>
                     {% for event in poll_events %}
-                    <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
+                    <th class="table__event-col table__event-col--text {% if event.event_type.id != 1 %}table__event-header--strong{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
                         <span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="time">{{ event.started_at|date:"H:i" }}</span> <br> <span data-dt="{{ event.ended_at|date:"c" }}" data-dt-fmt="time">{{ event.ended_at|date:"H:i" }}</span>
                     </th>
@@ -162,7 +79,7 @@ tbody td {
                 <tr>
                     <th class="sticky-col">Location</th>
                     {% for event in poll_events %}
-                    <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
+                    <th class="table__event-col table__event-col--text {% if event.event_type.id != 1 %}table__event-header--strong{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
                         {% if event.location %}{{ event.location }}{% else %}<em>—</em>{% endif %}
                     </th>
@@ -174,7 +91,7 @@ tbody td {
                 <tr>
                     <th class="sticky-col">Details</th>
                     {% for event in poll_events %}
-                    <th class="event-col event-header-cell {% if event.event_type.id != 1 %}bold-event-header{% endif %}"
+                    <th class="table__event-col table__event-col--text {% if event.event_type.id != 1 %}table__event-header--strong{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
                         {% if event.details %}{{ event.details }}{% else %}<em>—</em>{% endif %}
                     </th>
@@ -188,8 +105,8 @@ tbody td {
                 <tr>
                     <td class="sticky-col"><strong>Attendance</strong></td>
                     {% for cell in table_rows.0.event_cells %}
-                    <td class="event-col">
-                        <div class="attendance-cell att-type-{{ cell.attendance_type_id }}"
+                    <td class="table__event-col table__event-col--text">
+                        <div class="table__cell--attendance att-type-{{ cell.attendance_type_id }}"
                              data-type-id="{{ cell.attendance_type_id }}"
                              data-event-id="{{ cell.event.id }}"
                              data-person-id="{{ cell.person.id }}"
@@ -208,10 +125,10 @@ tbody td {
                 <tr>
                     <td class="sticky-col"><strong>Note</strong></td>
                     {% for cell in table_rows.0.event_cells %}
-                    <td class="event-col">
+                    <td class="table__event-col table__event-col--text">
                         <input type="text"
                                name="comment_{{ cell.event.id }}_{{ cell.person.id }}"
-                               class="comment-input"
+                               class="table__comment-input"
                                placeholder="note"
                                value="{{ cell.comment|default:'' }}">
                     </td>
@@ -247,7 +164,7 @@ function cycleAttendance(cell) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.attendance-cell[data-type-id]').forEach(cell => {
+    document.querySelectorAll('.table__cell--attendance[data-type-id]').forEach(cell => {
         const meta = TYPE_META[parseInt(cell.dataset.typeId, 10)] || TYPE_META[0];
         cell.querySelector('.att-icon').textContent = meta.icon;
         cell.title = meta.label;

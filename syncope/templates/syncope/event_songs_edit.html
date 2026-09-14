@@ -4,13 +4,7 @@
 
 {% block extra_css %}
 <style>
-    .songs-table { table-layout: fixed; width: 100%; }
-    .songs-table thead th {
-        position: sticky;
-        top: 0;
-        background-color: var(--color-surface);
-        z-index: 1;
-    }
+    .songs-table { table-layout: fixed; }
     .songs-table td, .songs-table th { padding: 0.3rem 0.25rem; }
     .drag-handle-cell { width: 2.2rem; text-align: center; padding-left: 0; padding-right: 0; }
     .drag-handle {
@@ -126,7 +120,7 @@
         {% csrf_token %}
         <input type="hidden" id="song-order-input" name="song_order" value="">
         <div class="table-container" style="max-width:42rem;">
-            <table class="songs-table">
+            <table class="table songs-table">
                 <thead>
                     <tr>
                         <th class="drag-handle-cell"></th>

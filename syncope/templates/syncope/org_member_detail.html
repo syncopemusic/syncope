@@ -50,96 +50,126 @@
 
 {% if person_resources %}
 <h3>Resources</h3>
+<div class="table-container">
 <table class="table">
+  <thead>
   <tr>
-    <th></th>
+    <th class="col-num"></th>
     <th></th>
     <th>Description</th>
     <th>URL</th>
   </tr>
+  </thead>
+  <tbody>
   {% for link in person_resources %}
   <tr>
-    <td>{{ forloop.counter }}</td>
+    <td class="col-num">{{ forloop.counter }}</td>
     <td>{{ link.icon }}</td>
     <td>{{ link.desc }}</td>
     <td><a href="{{ link.share_url|default:link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a></td>
   </tr>
   {% endfor %}
+  </tbody>
 </table>
+</div>
 {% endif %}
 
 <!-- Composers -->
 {% if composed_songs %}
 <h3>Composed Songs</h3>
-<table class="table">
+<div class="table-container">
+<table class="table table-narrow">
+  <thead>
   <tr>
-    <th></th>
+    <th class="col-num"></th>
     <th>Title</th>
   </tr>
+  </thead>
+  <tbody>
   {% for song in composed_songs %}
 
   <tr>
-    <td>{{ forloop.counter }}</td>
+    <td class="col-num">{{ forloop.counter }}</td>
     <td><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
   </tr>
 
   {% endfor %}
+  </tbody>
 </table>
+</div>
 {% endif %}
 
 <!-- Poets -->
 {% if written_songs %}
 <h3>Written Songs</h3>
-<table class="table">
+<div class="table-container">
+<table class="table table-narrow">
+  <thead>
   <tr>
-    <th></th>
+    <th class="col-num"></th>
     <th>Title</th>
   </tr>
+  </thead>
+  <tbody>
   {% for song in written_songs %}
   <tr>
-    <td>{{ forloop.counter }}</td>
+    <td class="col-num">{{ forloop.counter }}</td>
     <td><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
   </tr>
   {% endfor %}
+  </tbody>
 </table>
+</div>
 {% endif %}
 
 <!-- Arrangers -->
 {% if arranged_songs %}
 <h3>Arranged Songs</h3>
-<table class="table">
+<div class="table-container">
+<table class="table table-narrow">
+  <thead>
   <tr>
-    <th></th>
+    <th class="col-num"></th>
     <th>Title</th>
   </tr>
+  </thead>
+  <tbody>
   {% for song in arranged_songs %}
   <tr>
-    <td>{{ forloop.counter }}</td>
+    <td class="col-num">{{ forloop.counter }}</td>
     <td><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
   </tr>
   {% endfor %}
+  </tbody>
 </table>
+</div>
 {% endif %}
 
 <!-- Translators -->
 {% if translation_pairs %}
 <h3>Translations</h3>
-<table class="table">
+<div class="table-container">
+<table class="table table-narrow">
+  <thead>
   <tr>
-    <th></th>
+    <th class="col-num"></th>
     <th>Original Language</th>
     <th>Translation Language</th>
     <th>Songs</th>
   </tr>
+  </thead>
+  <tbody>
   {% for pair in translation_pairs %}
   <tr>
-    <td>{{ forloop.counter }}</td>
+    <td class="col-num">{{ forloop.counter }}</td>
     <td>{{ pair.original_lang }}</td>
     <td>{{ pair.translation_lang }}</td>
     <td>{{ pair.count }}</td>
   </tr>
   {% endfor %}
+  </tbody>
 </table>
+</div>
 {% endif %}
 
 <!-- Singer Projects -->
@@ -148,21 +178,27 @@
 {% if singer_voices %}
 <p>Voices: {% for voice in singer_voices %}{{ voice.voice.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
 {% endif %}
-<table class="table">
+<div class="table-container">
+<table class="table table-narrow">
+  <thead>
   <tr>
-    <th></th>
+    <th class="col-num"></th>
     <th>Project</th>
 
   </tr>
+  </thead>
+  <tbody>
   {% for entry in singer_projects %}
   <tr>
-    <td>{{ forloop.counter }}</td>
+    <td class="col-num">{{ forloop.counter }}</td>
     <td><a href="{%  url 'syncope:project_detail' url_username entry.project.pk %}">{{ entry.project.title }}</a>
     <span title="Performances">{{ entry.performances_attended }}</span>
     <span title="Rehearsals">{{ entry.rehearsals_present }}/{{ entry.rehearsals_total }}</span></td>
   </tr>
   {% endfor %}
+  </tbody>
 </table>
+</div>
 
 {% endif %}
 
@@ -172,21 +208,27 @@
 {% if instrumentalist_instruments %}
 <p>Instruments: {% for inst in instrumentalist_instruments %}{{ inst.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
 {% endif %}
-<table class="table">
+<div class="table-container">
+<table class="table table-narrow">
+  <thead>
   <tr>
-    <th></th>
+    <th class="col-num"></th>
     <th>Project</th>
 
   </tr>
+  </thead>
+  <tbody>
   {% for entry in instrumentalist_projects %}
   <tr>
-    <td>{{ forloop.counter }}</td>
+    <td class="col-num">{{ forloop.counter }}</td>
     <td><a href="{%  url 'syncope:project_detail' url_username entry.project.pk %}">{{ entry.project.title }}</a>
       <span title="Performances">{{ entry.performances_attended }}</span>
  <span title="Rehearsals">{{ entry.rehearsals_present }}/{{ entry.rehearsals_total }}</span></td>
   </tr>
   {% endfor %}
+  </tbody>
 </table>
+</div>
 
 {% endif %}
 
