@@ -38,6 +38,12 @@
     --color-danger: #c0392b;
     --color-danger-hover: #a3301f;
 
+    /* Shared outline used by the outline-based focus idiom (links, buttons,
+       interactive table cells). Text form fields intentionally use a
+       different idiom — see the comment above a:focus-visible below. */
+    --focus-ring: 2px solid var(--color-primary);
+    --focus-ring-offset: 2px;
+
     /* Dedicated dark-surface color for the sidebar and other dark UI chrome
        (table headers) — kept separate from --color-text so a "text" token
        never doubles as a background. */
@@ -144,12 +150,16 @@
         text-decoration: underline;
     }
 
+    /* Two focus idioms by design: outline+:focus-visible here for click-to-activate
+       controls (keyboard-only ring), box-shadow ring+:focus for text fields (ring on
+       any focus, since users are about to type) — see .form-group input:focus etc.
+       in the Forms section. Don't merge them. */
     a:focus-visible,
     input:focus-visible,
     select:focus-visible,
     textarea:focus-visible {
-        outline: 2px solid var(--color-primary);
-        outline-offset: 2px;
+        outline: var(--focus-ring);
+        outline-offset: var(--focus-ring-offset);
     }
 }
 
@@ -608,8 +618,8 @@
     }
 
     .btn:focus-visible {
-        outline: 2px solid var(--color-primary);
-        outline-offset: 2px;
+        outline: var(--focus-ring);
+        outline-offset: var(--focus-ring-offset);
     }
 
     .btn-primary {
@@ -683,6 +693,20 @@
         margin-inline-start: var(--space-1);
         font-size: var(--font-size-sm);
         color: var(--color-text-muted);
+    }
+
+    /* Floating variant of .share-result, positioned relative to a share button
+       inside a table cell instead of inline after it. */
+    .share-result--floating {
+        position: absolute;
+        top: 50%;
+        left: 100%;
+        transform: translateY(-50%);
+        white-space: nowrap;
+        font-size: var(--font-size-sm);
+        z-index: 10;
+        background: var(--color-surface);
+        padding: 2px 4px;
     }
 
     /* Button row for form submit/cancel pairs: secondary/cancel left, primary right
@@ -867,12 +891,16 @@
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-sm);
         font-size: 0.82rem;
-        overflow: hidden;
+        overflow: visible;
 
         & thead th {
             position: sticky;
             inset-block-start: 0;
-            z-index: var(--z-sticky);
+            /* One tier above .sticky-col's z-index (--z-sticky) — both are
+               position:sticky, and tbody comes after thead in the DOM, so at
+               equal z-index a scrolled-under row's sticky name/title column
+               would paint over the header instead of staying beneath it. */
+            z-index: calc(var(--z-sticky) + 1);
             padding: var(--space-2);
             background-color: var(--color-ink);
             color: var(--color-text-on-accent);
@@ -979,13 +1007,123 @@
         font-size: 0.95rem;
     }
 
-    /* --- Matrix/pivot tables (attendance grids) --- */
-    .table--matrix {
-        /* .table sets overflow:hidden for its rounded corners, which clips
-           position:sticky on the frozen column/header — undo it here. */
-        overflow: visible;
+    /* --- Editable list rows (search / staged / pending-remove) ---
+       The one shared definition for the "search-result row + spinner +
+       staged/pending-remove table row" pattern, reusable anywhere a page
+       needs a debounced-search-to-add-a-row list (currently
+       event_attendance_edit.html and event_songs_edit.html). Replaces what
+       used to be two page-local <style> blocks that had drifted into
+       near-duplicates of each other. Add/remove button styling stays
+       page-local for now. */
+    .search-result-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.6rem;
+        padding: 0.4rem 0;
+    }
+    .search-result-info { flex: 1; min-width: 0; }
+
+    .search-spinner {
+        position: absolute;
+        top: 50%;
+        right: 0.6rem;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid var(--color-border);
+        border-top-color: var(--color-text-muted);
+        animation: spin 0.7s linear infinite;
+        opacity: 0;
+        pointer-events: none;
+    }
+    .search-spinner.is-active { opacity: 1; }
+    @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+    @media (min-width: 769px) {
+        .search-spinner {
+            right: auto;
+            left: -1.75rem;
+        }
     }
 
+    tr.staged-add,
+    tr.pending-remove {
+        background-color: var(--color-warning-bg);
+    }
+    tr.pending-remove td {
+        text-decoration: line-through;
+        opacity: 0.55;
+    }
+
+    /* --- Event detail page --- */
+    .event-title { margin-block-end: 0.25em; }
+    .event-summary { margin-block-start: 0.25em; }
+    .resource-table-compact { border-collapse: collapse; font-size: 0.8rem; margin-block: 0.25rem; }
+    .resource-table-compact td { padding: 1px 4px; }
+
+    .bottom-bar {
+        position: sticky;
+        bottom: 0;
+        background-color: var(--color-bg-subtle);
+        border-top: 1px solid var(--color-border);
+        padding: 0.75rem 1rem;
+        margin-block-start: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .dt-short { display: none; }
+
+    .event-songs-table .song-index { text-align: center; font-weight: bold; vertical-align: middle; width: 1.5rem; }
+    .event-songs-table .song-title { font-weight: 500; }
+    .event-songs-table .song-subline {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        color: var(--color-text-muted);
+    }
+    .event-songs-table .song-meta { white-space: nowrap; color: var(--color-text-muted); }
+    .event-songs-table .song-encore { text-align: center; }
+
+    @media (max-width: 768px) {
+        .bottom-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+        #event-detail-content {
+            padding-bottom: 4rem;
+        }
+        .dt-full { display: none; }
+        .dt-short { display: inline; }
+
+        .main-content h2.event-title {
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            display: flex;
+            align-items: baseline;
+            flex-wrap: nowrap;
+            justify-content: space-between;
+        }
+        .event-title-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
+        }
+        .share-controls {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+    }
+
+    /* --- Matrix/pivot tables (attendance grids) --- */
     .table--matrix thead th {
         text-transform: none;
         letter-spacing: normal;
@@ -1012,6 +1150,14 @@
     .table--matrix .col-num {
         inline-size: 1.5rem;
         padding-inline: var(--space-1);
+    }
+
+    /* Rows should only be as tall as the attendance button itself — .table's
+       generic tbody td padding otherwise pads every matrix row well past the
+       button's fixed size. Scoped with :has() so it only touches cells that
+       actually hold the button (not the comment/note row or label columns). */
+    .table--matrix tbody td:has(.table__cell--attendance) {
+        padding-block: 0;
     }
 
     /* Fixed, not min: a CSS transform (used by .table__event-header's rotation
@@ -1071,8 +1217,8 @@
     }
 
     .table__cell--attendance:focus-visible {
-        outline: 2px solid var(--color-primary);
-        outline-offset: 2px;
+        outline: var(--focus-ring);
+        outline-offset: var(--focus-ring-offset);
     }
 
     /* Read-only matrix cells (poll_detail.html's votes summary — nothing to
@@ -1285,10 +1431,6 @@
         .quick-add-form {
             justify-content: center;
         }
-
-        .table-container {
-            padding-block-end: 4rem;
-        }
     }
 
     .section-header {
@@ -1334,6 +1476,10 @@
         display: inline;
     }
 
+    .text-muted {
+        color: var(--color-text-muted);
+    }
+
     .btn-full {
         display: inline;
     }
@@ -1342,9 +1488,21 @@
         display: none;
     }
 
+    /* overflow-y: auto + max-height make this the table's real vertical
+       scroll container, the same way overflow-x already makes it the real
+       horizontal one for .sticky-col. Without a bounded height here, the
+       page scrolls instead of this box, and .table's sticky thead has no
+       actual scrolling ancestor to pin against — it never visibly sticks. */
     .table-container {
-        overflow-x: auto;
+        overflow: auto;
+        max-height: calc(100vh - 4rem);
         container-type: inline-size;
+    }
+
+    @media (max-width: 768px) {
+        .table-container {
+            padding-block-end: 4rem;
+        }
     }
 
     .sticky-col {
@@ -1362,9 +1520,15 @@
        doesn't show through the frozen column) would otherwise beat .table's
        dark header background too — utilities always outranks components by
        layer order regardless of specificity. Restore the dark header here,
-       in the same layer as .sticky-col, with enough specificity to win. */
+       in the same layer as .sticky-col, with enough specificity to win.
+
+       z-index needs the same override: this corner cell is both the sticky
+       header AND the sticky column, so it must outrank plain header cells
+       (stuck to top only) and plain .sticky-col body cells (stuck to left
+       only) alike, or a scrolled row's name/title cell paints over it. */
     .table thead th.sticky-col {
         background-color: var(--color-ink);
+        z-index: calc(var(--z-sticky) + 2);
     }
 
     /* Same reasoning as above: .sticky-col's own opaque background (needed

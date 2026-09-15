@@ -27,29 +27,6 @@
         padding: 0.25rem 0.4rem;
     }
     .remove-attendance-btn:hover { color: var(--color-danger); }
-    .search-result-row { padding: 0.4rem 0; }
-    .search-spinner {
-        position: absolute;
-        top: 50%;
-        right: 0.6rem;
-        transform: translateY(-50%);
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        border: 2px solid var(--color-border);
-        border-top-color: var(--color-text-muted);
-        animation: spin 0.7s linear infinite;
-        opacity: 0;
-        pointer-events: none;
-    }
-    .search-spinner.is-active { opacity: 1; }
-    @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
-    @media (min-width: 769px) {
-        .search-spinner {
-            right: auto;
-            left: -1.75rem;
-        }
-    }
     .add-item-btn {
         border: 1px solid var(--color-border);
         background-color: var(--color-bg-subtle);
@@ -59,14 +36,8 @@
         line-height: 1;
         padding: 0.25rem 0.6rem;
     }
-    tr.staged-add,
-    tr.type-changed,
-    tr.pending-remove {
+    tr.type-changed {
         background-color: var(--color-warning-bg);
-    }
-    tr.pending-remove td {
-        text-decoration: line-through;
-        opacity: 0.55;
     }
 
     @media (max-width: 768px) {

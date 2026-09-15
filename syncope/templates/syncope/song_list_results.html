@@ -1,4 +1,3 @@
-{% load static %}
 {% if songs %}
 <div class="table-container">
 <table class="table">
@@ -10,7 +9,6 @@
                 </a>
             </th>
             <th title="Concerts / Performances">Con/Per</th>
-            <th></th>
             <th class="sticky-col">
                 <a href="?q={{ q }}&sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
                     Title {% if current_sort == 'title' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
@@ -42,7 +40,6 @@
                 </a>
             </th>
             <th>Copies</th>
-            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -51,13 +48,6 @@
             <td class="col-num">{{ song.internal_id|default:"-" }}</td>
             <td><span title="Number of concerts / number of performances">{% if song.concert_count or song.performance_count %}{{ song.concert_count }}/{{ song.performance_count }}{% else %}-{% endif %}</span></td>
 
-            <td style="position: relative;">
-                <button class="share-song-btn" data-song-pk="{{ song.pk }}"
-                        style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
-                    <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-                </button>
-                <span class="share-song-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
-            </td>
             <td class="sticky-col">
                 <a href="{%  url 'syncope:song_detail' url_username song.pk %}">{{ song.title }}</a> {% if song.has_direct_resources or song.has_event_resources %}<span title="Song/Event Resources">{{ song.has_direct_resources }}/{{ song.has_event_resources }}</span>{% endif %}
                 {% if song.keywords %}
@@ -76,7 +66,6 @@
             <td>{{ song.origin|default:"-" }}</td>
             <td>{{ song.languagecode.language_code|default:"-" }}</td>
             <td>{{ song.number_of_copies|default:"-" }}</td>
-            <td><a href="{%  url 'syncope:song_update' url_username song.pk %}" class="btn btn-sm btn-link">Edit</a></td>
         </tr>
     {% endfor %}
     </tbody>

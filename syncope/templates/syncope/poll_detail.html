@@ -27,7 +27,7 @@
 {% endif %}
 <div class="legend">
     <strong>Legend:</strong>
-    <span class="table__cell--attendance table__cell--attendance--static att-type-0">⚑</span>
+    <span class="table__cell--attendance table__cell--attendance--static att-type-0">?</span>
     <span class="table__cell--attendance table__cell--attendance--static att-type-1">✓</span>
     <span class="table__cell--attendance table__cell--attendance--static att-type-2">(✓)</span>
     <span class="table__cell--attendance table__cell--attendance--static att-type-3">✗</span>
@@ -60,7 +60,7 @@
                 <td style="position: relative;">
 
                     <button class="share-person-btn" data-type="poll_person" data-person-pk="{{ row.person.pk }}" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link"><img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy"></button>
-                    <span class="share-person-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
+                    <span class="share-person-result share-result--floating"></span>
 
                 </td>
                 <td class="sticky-col">
@@ -70,7 +70,7 @@
                 <td class="table__event-col">
                     <span class="table__cell--attendance table__cell--attendance--static att-type-{{ cell.attendance_type_id }}"
                         title="{{ cell.attendance_label }}">
-                        {% if cell.attendance_type_id == 1 %}✓{% elif cell.attendance_type_id == 2 %}(✓){% elif cell.attendance_type_id == 3 %}✗{% elif cell.attendance_type_id == 0 %}⚑{% endif %}
+                        {% if cell.attendance_type_id == 1 %}✓{% elif cell.attendance_type_id == 2 %}(✓){% elif cell.attendance_type_id == 3 %}✗{% elif cell.attendance_type_id == 0 %}?{% endif %}
                     </span>
                     {% if cell.comment %}<div class="table__comment">{{ cell.comment }}</div>{% endif %}
                 </td>

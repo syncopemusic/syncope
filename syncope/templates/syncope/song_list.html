@@ -1,5 +1,4 @@
 {% extends "syncope/base.html" %}
-{% load static %}
 {% block title %}Songs{% endblock %}
 {% block content %}
 
@@ -13,49 +12,12 @@
     <button type="button" id="song-list-search-clear">Clear</button>
 </p>
 
-<div style="display:none;">{% csrf_token %}</div>
-
 <div id="song-list-results">
     {% include "syncope/song_list_results.html" %}
 </div>
 
 {% block extra_js %}
 <script>
-document.addEventListener('click', function (e) {
-    var btn = e.target.closest('.share-song-btn');
-    if (!btn) return;
-    var songPk = btn.dataset.songPk;
-    var resultSpan = btn.nextElementSibling;
-    btn.disabled = true;
-    resultSpan.textContent = 'Copying...';
-    fetch('/share/create/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-        },
-        body: JSON.stringify({ type: 'song', id: songPk }),
-    })
-    .then(function (response) {
-        if (!response.ok) throw new Error('Request failed');
-        return response.json();
-    })
-    .then(function (data) {
-        var shareUrl = window.location.origin + '/' + data.share_id + '/';
-        navigator.clipboard.writeText(shareUrl).then(function () {
-            resultSpan.textContent = 'Copied';
-            setTimeout(function () { resultSpan.textContent = ''; }, 3000);
-        }).catch(function () {
-            resultSpan.textContent = 'Copied';
-            setTimeout(function () { resultSpan.textContent = ''; }, 3000);
-        });
-    })
-    .catch(function () {
-        resultSpan.textContent = 'Failed';
-    })
-    .finally(function () { btn.disabled = false; });
-});
-
 var songListSearchInput = document.getElementById('song-list-search-input');
 var songListResults = document.getElementById('song-list-results');
 var songListSearchTimeout;

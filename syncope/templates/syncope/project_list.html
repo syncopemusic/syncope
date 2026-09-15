@@ -1,5 +1,4 @@
 {% extends "syncope/base.html" %}
-{% load static %}
 
 {% block title %}Projects{% endblock %}
 
@@ -12,15 +11,12 @@
 </div>
 {% if projects %}
 
-<div style="display:none;">{% csrf_token %}</div>
-
 <div class="table-container">
 <table class="table">
     <thead>
     <tr>
 
         <th class="col-num">#</th>
-        <th>🔗</th>
         <th><a href="?sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Title{% if current_sort == 'title' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th><a href="?sort=start_date{% if current_sort == 'start_date' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Start Date{% if current_sort == 'start_date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th><a href="?sort=end_date{% if current_sort == 'end_date' and not reverse %}&reverse=true{% endif %}" class="sortable-header">End Date{% if current_sort == 'end_date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
@@ -32,11 +28,6 @@
     {% for project in projects %}
         <tr>
             <td class="col-num">{{ forloop.counter }}</td>
-
-            <td style="position: relative;">
-              <button class="share-project-btn" data-type="project" data-project-pk="{{ project.id }}" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link"><img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy"></button>
-              <span class="share-project-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
-            </td>
 
             <td>
                 <a href="{%  url 'syncope:project_detail' url_username project.id %}">
@@ -53,74 +44,6 @@
     </tbody>
 </table>
 </div>
-
-{% if user.is_authenticated %}
-{% block extra_js %}
-<script>
-function createShareHandler(btn, resultSpan, shareData) {
-    return function () {
-        btn.disabled = true;
-        if (resultSpan) resultSpan.textContent = 'Copying...';
-
-        fetch('/share/create/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            },
-            body: JSON.stringify(shareData),
-        })
-        .then(function(response) {
-            if (!response.ok) throw new Error('Request failed');
-            return response.json();
-        })
-        .then(function(data) {
-            const shareUrl = window.location.origin + '/' + data.share_id + '/';
-
-            // Copy to clipboard
-            navigator.clipboard.writeText(shareUrl).then(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link copied:\n' + shareUrl);
-                }
-            }).catch(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link:\n' + shareUrl);
-                }
-            });
-        })
-        .catch(function() {
-            if (resultSpan) {
-                resultSpan.textContent = 'Failed';
-            } else {
-                alert('Failed to generate share link');
-            }
-        })
-        .finally(function() {
-            btn.disabled = false;
-        });
-    };
-}
-
-document.querySelectorAll('.share-project-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        const projectPk = this.dataset.projectPk;
-        const resultSpan = this.nextElementSibling;
-        createShareHandler(
-            this,
-            resultSpan,
-            { type: 'project', id: projectPk }
-        )();
-    });
-});
-</script>
-{% endblock %}
-{% endif %}
 
 {% else %}
 <p>No projects yet.</p>

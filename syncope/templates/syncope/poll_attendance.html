@@ -18,7 +18,7 @@
 </div>
 
 {% if viewing_as %}
-<p style="font-size: 0.9rem; color: #636e72; margin-bottom: 1rem;">
+<p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1rem;">
     Filling in for: <strong>{{ viewing_as.person.first_name }} {{ viewing_as.person.last_name }}</strong>
 </p>
 {% endif %}
@@ -29,7 +29,7 @@
 
 <div class="legend">
     <strong>Legend:</strong>
-    <span class="table__cell--attendance table__cell--attendance--static att-type-0">⚑</span>
+    <span class="table__cell--attendance table__cell--attendance--static att-type-0">?</span>
     <span class="table__cell--attendance table__cell--attendance--static att-type-1">✓</span>
     <span class="table__cell--attendance table__cell--attendance--static att-type-2">(✓)</span>
     <span class="table__cell--attendance table__cell--attendance--static att-type-3">✗</span>
@@ -146,7 +146,7 @@
 <script>
 const CYCLE_ORDER = [0, 1, 2, 3];  // TBD, YES, MAYBE, NO
 const TYPE_META = {
-    0: { label: 'TBD',    icon: '⚑',  cls: 'att-type-0' },
+    0: { label: 'TBD',    icon: '?',  cls: 'att-type-0' },
     1: { label: 'YES',    icon: '✓',  cls: 'att-type-1' },
     2: { label: 'MAYBE',  icon: '(✓)',  cls: 'att-type-2' },
     3: { label: 'NO',     icon: '✗',  cls: 'att-type-3' },

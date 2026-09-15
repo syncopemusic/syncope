@@ -59,39 +59,7 @@
         padding: 0.25rem 0.2rem;
     }
     .remove-song-btn:hover { color: var(--color-danger); }
-    tr.staged-add,
-    tr.pending-remove {
-        background-color: var(--color-warning-bg);
-    }
     tr.row-moved { background-color: var(--color-info-bg); }
-    tr.pending-remove td {
-        text-decoration: line-through;
-        opacity: 0.55;
-    }
-    .search-result-row { padding: 0.4rem 0; display: flex; align-items: flex-start; gap: 0.6rem; }
-    .search-spinner {
-        position: absolute;
-        top: 50%;
-        right: 0.6rem;
-        transform: translateY(-50%);
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        border: 2px solid var(--color-border);
-        border-top-color: var(--color-text-muted);
-        animation: spin 0.7s linear infinite;
-        opacity: 0;
-        pointer-events: none;
-    }
-    .search-spinner.is-active { opacity: 1; }
-    @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
-    @media (min-width: 769px) {
-        .search-spinner {
-            right: auto;
-            left: -1.75rem;
-        }
-    }
-    .search-result-info { flex: 1; min-width: 0; }
     .add-item-btn {
         border: 1px solid var(--color-border);
         background-color: var(--color-bg-subtle);
@@ -270,6 +238,9 @@
         dragRow = row;
         dragPointerId = e.pointerId;
         row.classList.add('dragging');
+        window.addEventListener('pointerup', endDrag);
+        window.addEventListener('pointercancel', endDrag);
+        window.addEventListener('blur', endDrag);
     });
 
     songsTbody.addEventListener('pointermove', function(e) {
@@ -286,10 +257,20 @@
     });
 
     function endDrag(e) {
-        if (!dragRow || e.pointerId !== dragPointerId) return;
+        if (!dragRow) return;
+        if (e && typeof e.pointerId === 'number' && e.pointerId !== dragPointerId) return;
+        const handle = dragRow.querySelector('.drag-handle');
+        try {
+            if (handle && dragPointerId !== null && handle.hasPointerCapture(dragPointerId)) {
+                handle.releasePointerCapture(dragPointerId);
+            }
+        } catch (err) { /* pointer already invalid/released — ignore */ }
         dragRow.classList.remove('dragging');
         dragRow = null;
         dragPointerId = null;
+        window.removeEventListener('pointerup', endDrag);
+        window.removeEventListener('pointercancel', endDrag);
+        window.removeEventListener('blur', endDrag);
         saveBarCtl.sync();
     }
     songsTbody.addEventListener('pointerup', endDrag);
