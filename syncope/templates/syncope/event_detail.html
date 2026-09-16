@@ -42,14 +42,15 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
 {% endif %}
 
 {% if is_admin %}
-<p><a href="{% url 'syncope:event_meta_edit' url_username event.pk %}?origin={{ origin_key }}">Edit meta data</a></p>
+<p><a href="{% url 'syncope:event_meta_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary btn-sm">Edit meta data</a></p>
 {% endif %}
 <div style="display:none;">{% csrf_token %}</div>
 
 
-<h3>Songs
-    {% if is_admin %}<a href="{% url 'syncope:event_songs_edit' url_username event.pk %}?origin={{ origin_key }}">Edit</a>{% endif %}
-</h3>
+<div class="section-header">
+    <h3>Songs</h3>
+    {% if is_admin %}<a href="{% url 'syncope:event_songs_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary btn-sm">Edit</a>{% endif %}
+</div>
 {% if eventsongs %}
     <div class="table-container">
     <table class="table event-songs-table">
@@ -93,9 +94,10 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
 {% endif %}
 
 {% if can_view_attendance %}
-<h3>Attendance
-    {% if is_admin %}<a href="{% url 'syncope:event_attendance_edit' url_username event.pk %}?origin={{ origin_key }}">Edit</a>{% endif %}
-</h3>
+<div class="section-header">
+    <h3>Attendance</h3>
+    {% if is_admin %}<a href="{% url 'syncope:event_attendance_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary btn-sm">Edit</a>{% endif %}
+</div>
 {% if attendances %}
     <div class="table-container">
     <table class="table">
@@ -141,9 +143,7 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
 
 </div>
 
-<div class="bottom-bar">
-    <a href="{{ breadcrumbs.0.url }}" class="btn btn-primary">Return</a>
-</div>
+{% include "syncope/_save_bar.html" with url=breadcrumbs.0.url %}
 
 {% block extra_js %}
 <script>

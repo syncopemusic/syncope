@@ -36,7 +36,6 @@
     {{ bulk_import_form.skill_criteria }}
     <button type="submit" class="btn btn-sm btn-secondary">Import</button>
 </form>
-<a href="{% url 'syncope:poll_detail' url_username poll.pk %}" class="btn btn-link">Back</a>
 
 <div class="section-header">
     <h3>Added Persons</h3>
@@ -79,11 +78,12 @@
 {% else %}
 <p>No persons added yet.</p>
 {% endif %}
-<div>
-    <p>Admin links:
-        <a href="{% url 'syncope:poll_update' url_username poll.pk %}">Edit title</a> |
-        <a href="{% url 'syncope:poll_events' url_username poll.pk %}">Add event slots</a> |
-        <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Back to poll - votes</a>
-    </p>
+<div class="link-row">
+    <strong>Admin links:</strong>
+    <a href="{% url 'syncope:poll_update' url_username poll.pk %}" class="btn btn-secondary btn-sm">Edit title</a>
+    <a href="{% url 'syncope:poll_events' url_username poll.pk %}" class="btn btn-secondary btn-sm">Add event slots</a>
 </div>
+
+{% url 'syncope:poll_detail' url_username poll.pk as return_target %}
+{% include "syncope/_save_bar.html" with url=return_target %}
 {% endblock %}

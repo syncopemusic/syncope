@@ -7,8 +7,7 @@
 <p><small>Quotes are specific phrases or sections from the song with their bar numbers for reference.</small></p>
 
 <p>
-    <a href="{% url 'syncope:song_detail' url_username song.pk %}" class="btn btn-link">Back</a>
-    <a href="{% url 'syncope:song_update' url_username song.pk %}" class="btn btn-link">Edit</a>
+    <a href="{% url 'syncope:song_update' url_username song.pk %}" class="btn btn-secondary btn-sm">Edit</a>
 </p>
 
 <form method="post">
@@ -52,5 +51,8 @@
         <button type="submit" name="action" value="" class="btn btn-primary">Save</button>
     </div>
 </form>
+
+{% url 'syncope:song_detail' url_username song.pk as return_target %}
+{% include "syncope/_save_bar.html" with url=return_target %}
 
 {% endblock %}

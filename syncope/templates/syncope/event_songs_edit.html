@@ -35,46 +35,13 @@
     }
     .song-meta { white-space: nowrap; color: var(--color-text-muted); }
     .song-resources { text-align: center; width: 1.4rem; padding-left: 0; padding-right: 0; }
-    .song-actions { white-space: nowrap; text-align: right; width: 3.4rem; padding-left: 0; }
-    .btn-edit {
-        display: inline-block;
-        width: 1.4rem;
-        text-align: center;
-        padding: 0.2rem 0;
-        font-size: 0.9rem;
-        border: 1px solid var(--color-border);
-        background-color: var(--color-bg-subtle);
-        border-radius: 2px;
-        text-decoration: none;
-        color: inherit;
-        margin-right: 0.2rem;
-    }
-    .remove-song-btn {
-        border: none;
-        background: none;
-        color: var(--color-text-muted);
-        font-size: 1.1rem;
-        cursor: pointer;
-        line-height: 1;
-        padding: 0.25rem 0.2rem;
-    }
-    .remove-song-btn:hover { color: var(--color-danger); }
+    .song-actions { white-space: nowrap; text-align: center; width: 1.6rem; padding-left: 0; }
     tr.row-moved { background-color: var(--color-info-bg); }
-    .add-item-btn {
-        border: 1px solid var(--color-border);
-        background-color: var(--color-bg-subtle);
-        border-radius: 2px;
-        cursor: pointer;
-        min-width: 1.4rem;
-        line-height: 1;
-        padding: 0.25rem 0.6rem;
-    }
 
     @media (max-width: 768px) {
         #songs-content {
             padding-bottom: 4rem;
         }
-        .btn-edit { padding: 0.2rem 0.35rem; font-size: 0.75rem; }
     }
 </style>
 {% endblock %}
@@ -127,7 +94,10 @@
     {% endif %}
 </div>
 
-{% include "syncope/_save_bar.html" with form_id="songs-form" %}
+{% if is_admin %}
+{% url 'syncope:event_detail' url_username event.pk as event_detail_url %}
+{% include "syncope/_save_bar.html" with form_id="songs-form" url=event_detail_url|add:"?origin="|add:origin_key %}
+{% endif %}
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script>
@@ -210,7 +180,7 @@
             songsTbody.querySelectorAll('tr.pending-remove').forEach(row => {
                 row.classList.remove('pending-remove');
                 row.querySelector('.pending-remove-input')?.remove();
-                const btn = row.querySelector('.remove-song-btn');
+                const btn = row.querySelector('.btn-remove');
                 if (btn) { btn.textContent = '×'; btn.title = 'Remove from event'; }
             });
             originalOrderList.forEach(pk => {
@@ -280,7 +250,7 @@
     function toggleRemove(row) {
         const pk = row.dataset.eventsongId;
         if (!pk) return;
-        const btn = row.querySelector('.remove-song-btn');
+        const btn = row.querySelector('.btn-remove');
         const pending = row.classList.toggle('pending-remove');
         if (pending) {
             row.insertAdjacentHTML('beforeend', `<input type="hidden" class="pending-remove-input" name="remove_${pk}" value="1">`);
@@ -295,7 +265,7 @@
     }
 
     songsTbody.addEventListener('click', function(e) {
-        const removeBtn = e.target.closest('.remove-song-btn');
+        const removeBtn = e.target.closest('.btn-remove');
         if (!removeBtn) return;
         const row = removeBtn.closest('tr');
         if (row.classList.contains('staged-add')) {
@@ -322,7 +292,7 @@
                 <div class="song-subline"><span>${subline}</span>${meta}</div>
             </td>
             <td class="song-resources" title="Event resources for song">${escapeHtml(resources || '0')}</td>
-            <td class="song-actions"><button type="button" class="remove-song-btn" title="Remove staged addition">&times;</button></td>
+            <td class="song-actions"><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>
         `;
         return tr;
     }
@@ -373,7 +343,7 @@
     });
 
     songSearchResults?.addEventListener('click', function(e) {
-        const btn = e.target.closest('.add-item-btn');
+        const btn = e.target.closest('.btn-secondary');
         if (!btn) return;
         const row = btn.closest('.search-result-row');
         removeEmptyRow();

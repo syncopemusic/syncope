@@ -20,19 +20,19 @@
         {% if field.name == 'composer' %}
             <button type="submit" class="btn btn-sm btn-secondary"
                     formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_composer' url_username %}&next={{ request.get_full_path|urlencode }}"
-                    title="Add new Composer">+</button>
+                    title="Add new Composer">New</button>
         {% elif field.name == 'arranger' %}
             <button type="submit" class="btn btn-sm btn-secondary"
                     formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_arranger' url_username %}&next={{ request.get_full_path|urlencode }}"
-                    title="Add new Arranger">+</button>
+                    title="Add new Arranger">New</button>
         {% elif field.name == 'poet' %}
             <button type="submit" class="btn btn-sm btn-secondary"
                     formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_poet' url_username %}&next={{ request.get_full_path|urlencode }}"
-                    title="Add new Poet">+</button>
+                    title="Add new Poet">New</button>
         {% elif field.name == 'translator' %}
             <button type="submit" class="btn btn-sm btn-secondary"
                     formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_translator' url_username %}&next={{ request.get_full_path|urlencode }}"
-                    title="Add new Translator">+</button>
+                    title="Add new Translator">New</button>
         {% endif %}
         {% if field.help_text %}<p class="form-help">{{ field.help_text }}</p>{% endif %}
         {{ field.errors }}
@@ -64,7 +64,7 @@
         {% endfor %}
         </tbody>
     </table>
-    <button type="submit" name="action" value="add_kw_row" class="btn btn-sm btn-secondary">Add</button>
+    <button type="submit" name="action" value="add_kw_row" class="btn btn-sm btn-secondary">+</button>
 
     <h3>Lyrics Translations</h3>
     {{ translation_formset.management_form }}
@@ -92,7 +92,7 @@
         {% endfor %}
         </tbody>
     </table>
-    <button type="submit" name="action" value="add_translation_row" class="btn btn-sm btn-secondary">Add</button>
+    <button type="submit" name="action" value="add_translation_row" class="btn btn-sm btn-secondary">+</button>
 
     {{ resource_formset.management_form }}
     {% for r_form in resource_formset %}
@@ -105,11 +105,9 @@
     {% endfor %}
 
     <div class="form-actions">
-        <a href="{{ cancel_url }}" class="btn btn-link">Cancel</a>
-        {% if return_url %}
-            <a href="{{ return_url }}" class="btn btn-secondary">{{ return_label }}</a>
-        {% endif %}
         <button type="submit" name="action" value="" class="btn btn-primary">Save</button>
     </div>
 </form>
+
+{% include "syncope/_save_bar.html" with url=return_url|default:cancel_url %}
 {% endblock %}

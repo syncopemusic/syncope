@@ -2,39 +2,19 @@
 {% load static %}
 {% block title %}{{ person }}{% endblock %}
 {% block content %}
-{% if return_url %}
-<p><a href="{{ return_url }}" class="btn btn-secondary">{{ return_label }}</a></p>
-{% endif %}
-{% if is_admin %}
-<p>
-    <a href="{{ person_edit_url }}" class="btn btn-link">Edit</a>
-    {% if is_linked and can_unlink %}
-    <form method="post" action="{% url 'syncope:org_member_unlink' url_username person.pk %}" class="inline-form" onclick="return confirm('Unlink this member from their account? They will lose access associated with this connection.')">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Unlink</button>
-    </form>
-    {% endif %}
-</p>
-{% else %}
-<p>
-    <a href="{{ person_edit_url }}" class="btn btn-link">Edit</a>
-    {% if is_linked and can_unlink %}
-    <form method="post" action="{% url 'syncope:org_member_unlink' url_username person.pk %}" class="inline-form" onclick="return confirm('Unlink your account from this organization member record?')">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Unlink</button>
-    </form>
-    {% endif %}
-</p>
-{% endif %}
-
-<h2>{{ person }}</h2>
-<p>
-    <button id="share-btn" class="btn btn-link btn-sm" title="Copy link">
-        <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-    </button>
-    <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
-</p>
+<h2>{{ person }}
+    <span class="share-controls">
+        <button id="share-btn" class="btn btn-link btn-sm" title="Copy link">
+            <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
+        </button>
+        <span id="share-result" class="share-result"></span>
+    </span>
+</h2>
 <div class="visually-hidden">{% csrf_token %}</div>
+
+<p>
+    <a href="{{ person_edit_url }}" class="btn btn-secondary btn-sm">Edit</a>
+</p>
 
 {% if person_data %}
 <table class="table-detail">
@@ -231,6 +211,9 @@
 </div>
 
 {% endif %}
+
+{% url 'syncope:org_member_list' url_username as member_list_url %}
+{% include "syncope/_save_bar.html" with url=return_url|default:member_list_url %}
 
 {% block extra_js %}
 <script>

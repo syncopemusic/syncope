@@ -984,6 +984,10 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
         context['is_admin'] = True
         context['cancel_url'] = self._person_detail_url()
         context['return_url'], context['return_label'] = self._return_target()
+        context["is_linked"] = self.person.owner_id is not None
+        context["can_unlink"] = self.is_admin or AccessControl.is_person_owner(
+            self.request.user, self.person
+        )
 
         period_qs = MembershipPeriod.objects.filter(
             person=self.person, user=self.customuser

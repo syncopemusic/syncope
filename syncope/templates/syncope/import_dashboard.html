@@ -9,24 +9,24 @@
 
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <div class="mb-3">
+        <div class="form-group">
             <label for="file">Select File:</label>
-            <input type="file" class="form-control" id="file" name="file" required>
+            <input type="file" id="file" name="file" required>
         </div>
 
-        <div class="mb-3">
+        <div class="form-group">
             <label for="delimiter">CSV Delimiter:</label>
-            <input type="text" class="form-control" id="delimiter" name="delimiter"
+            <input type="text" id="delimiter" name="delimiter"
                    value=";" maxlength="1" placeholder=";" required>
-            <small class="form-text text-muted">
+            <small class="form-help">
                 Enter the delimiter used in your CSV file (e.g., ; , | or tab)
             </small>
         </div>
 
         {% if import_method == 'members' %}
-        <div class="mb-3">
+        <div class="form-group">
             <label for="person_mode">Person Skill:</label>
-            <select class="form-control" id="person_mode" name="person_mode" required>
+            <select id="person_mode" name="person_mode" required>
                 {% for skill in skills %}
                 <option value="{{ skill.id }}">{{ skill.title }}</option>
                 {% endfor %}
@@ -79,11 +79,6 @@
     {% endif %}
 
 </div>
-<div>
-    <button title="Back to Import Hub">
-        <a href="{%  url 'syncope:import_hub' username=url_username %}" class="btn btn-outline-secondary mb-3">
-            Back
-        </a>
-    </button>
-</div>
+{% url 'syncope:import_hub' username=url_username as return_target %}
+{% include "syncope/_save_bar.html" with url=return_target %}
 {% endblock %}

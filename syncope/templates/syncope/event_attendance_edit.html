@@ -17,25 +17,6 @@
         line-height: 1;
         width: 7.5rem;
     }
-    .remove-attendance-btn {
-        border: none;
-        background: none;
-        color: var(--color-text-muted);
-        font-size: 1.1rem;
-        cursor: pointer;
-        line-height: 1;
-        padding: 0.25rem 0.4rem;
-    }
-    .remove-attendance-btn:hover { color: var(--color-danger); }
-    .add-item-btn {
-        border: 1px solid var(--color-border);
-        background-color: var(--color-bg-subtle);
-        border-radius: 2px;
-        cursor: pointer;
-        min-width: 1.4rem;
-        line-height: 1;
-        padding: 0.25rem 0.6rem;
-    }
     tr.type-changed {
         background-color: var(--color-warning-bg);
     }
@@ -101,7 +82,10 @@
     {% endif %}
 </div>
 
-{% include "syncope/_save_bar.html" with form_id="attendance-form" %}
+{% if is_admin %}
+{% url 'syncope:event_detail' url_username event.pk as event_detail_url %}
+{% include "syncope/_save_bar.html" with form_id="attendance-form" url=event_detail_url|add:"?origin="|add:origin_key %}
+{% endif %}
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script>
@@ -133,7 +117,7 @@
             attendanceTbody.querySelectorAll('tr[data-attendance-id]').forEach(row => {
                 row.classList.remove('pending-remove', 'type-changed');
                 row.querySelector('.pending-remove-input')?.remove();
-                const removeBtn = row.querySelector('.remove-attendance-btn');
+                const removeBtn = row.querySelector('.btn-remove');
                 if (removeBtn) { removeBtn.textContent = '×'; removeBtn.title = 'Remove from event'; }
                 const chip = row.querySelector('.attendance-chip');
                 const originalTypeId = row.dataset.originalTypeId;
@@ -206,7 +190,7 @@
     function toggleRemove(row) {
         const pk = row.dataset.attendanceId;
         if (!pk) return;
-        const btn = row.querySelector('.remove-attendance-btn');
+        const btn = row.querySelector('.btn-remove');
         const pending = row.classList.toggle('pending-remove');
         if (pending) {
             row.insertAdjacentHTML('beforeend', `<input type="hidden" class="pending-remove-input" name="remove_${pk}" value="1">`);
@@ -221,7 +205,7 @@
     }
 
     attendanceTbody.addEventListener('click', function(e) {
-        const removeBtn = e.target.closest('.remove-attendance-btn');
+        const removeBtn = e.target.closest('.btn-remove');
         if (!removeBtn) return;
         const row = removeBtn.closest('tr');
         if (row.classList.contains('staged-add')) {
@@ -259,7 +243,7 @@
                 <input type="hidden" name="add_person" value="${personId}">
                 <input type="hidden" data-role="add-type" name="add_type_${personId}" value="${typeId}">
             </td>
-            <td><button type="button" class="remove-attendance-btn" title="Remove staged addition">&times;</button></td>
+            <td><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>
         `;
         return tr;
     }
@@ -323,7 +307,7 @@
     });
 
     participantSearchResults?.addEventListener('click', function(e) {
-        const btn = e.target.closest('.add-item-btn');
+        const btn = e.target.closest('.btn-secondary');
         if (!btn) return;
         const row = btn.closest('.search-result-row');
         const personId = btn.dataset.id;

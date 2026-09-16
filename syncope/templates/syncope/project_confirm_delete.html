@@ -11,12 +11,12 @@
 <form method="post">
     {% csrf_token %}
     <div class="form-actions">
-        <a href="{% url 'syncope:project_detail' url_username project.pk %}" class="btn btn-link">Cancel</a>
         <button type="submit" class="btn btn-danger">Delete</button>
     </div>
 </form>
-{% else %}
-<p><a href="{%  url 'syncope:project_detail' url_username project.pk %}">Back to Project</a></p>
 {% endif %}
+
+{% url 'syncope:project_detail' url_username project.pk as return_target %}
+{% include "syncope/_save_bar.html" with url=return_target %}
 
 {% endblock %}

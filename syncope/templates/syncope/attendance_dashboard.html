@@ -9,10 +9,6 @@
     gap: 0.75rem;
 }
 .attendance-dashboard h2 { margin: 0; }
-
-@media (max-width: 768px) {
-    .save-bar { flex-wrap: wrap; gap: 0.5rem; }
-}
 </style>
 
 <div class="attendance-dashboard">
@@ -123,15 +119,11 @@
             </table>
         </div>
 
-        <div class="save-bar" id="save-bar">
-            <button type="submit" class="btn btn-primary">Save</button>
-            <span class="dirty-note"></span>
-            <span id="dirty-actions" style="display:none;">
-                <button type="button" id="discard-btn" class="btn btn-secondary">Discard</button>
-            </span>
-        </div>
     </form>
 </div>
+
+{% url 'syncope:attendance' url_username as attendance_url %}
+{% include "syncope/_save_bar.html" with form_id="attendance-form" url=attendance_url %}
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script>

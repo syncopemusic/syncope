@@ -1,12 +1,14 @@
-{% if is_admin %}
 <div class="save-bar" id="save-bar">
+    {% if form_id %}
     <span id="clean-actions">
-        <a href="{% url 'syncope:event_detail' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-link">Return</a>
+        <a href="{{ url }}" class="btn btn-primary">Return</a>
     </span>
     <span id="dirty-actions" style="display:none;">
         <button type="submit" form="{{ form_id }}" id="save-submit-btn" class="btn btn-primary">Save</button>
         <span class="dirty-note"></span>
         <button type="button" id="discard-btn" class="btn btn-secondary">Discard</button>
     </span>
+    {% else %}
+    <a href="{{ url }}" class="btn btn-primary">Return</a>
+    {% endif %}
 </div>
-{% endif %}

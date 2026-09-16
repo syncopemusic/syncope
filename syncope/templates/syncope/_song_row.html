@@ -15,8 +15,7 @@
     <td class="song-resources" title="Event resources for song">{{ eventsong.resources_count }}</td>
     {% if is_admin %}
     <td class="song-actions">
-        <a class="btn-edit" title="Edit song" href="{% url 'syncope:song_update' url_username eventsong.song.pk %}?next={{ songs_url|urlencode }}"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></a>
-        <button type="button" class="remove-song-btn" title="Remove from event">&times;</button>
+        <button type="button" class="btn btn-remove" title="Remove from event">&times;</button>
     </td>
     {% endif %}
 </tr>

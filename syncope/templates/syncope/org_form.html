@@ -9,14 +9,16 @@
   {% csrf_token %}
   {{ form.as_p }}
   <div class="form-actions">
-    {% if object %}
-    <a href="{% url 'syncope:org_dashboard' object.user.username %}" class="btn btn-link">Cancel</a>
-    {% endif %}
     <button type="submit" class="btn btn-primary">{% if object %}Save{% else %}Create{% endif %}</button>
   </div>
   {% if object %}
-  <p><a href="{% url 'syncope:org_delete' object.user.username %}" class="btn btn-danger">Delete</a></p>
+  <p class="danger-zone"><a href="{% url 'syncope:org_delete' object.user.username %}" class="btn btn-danger">Delete</a></p>
   {% endif %}
 </form>
+
+{% if object %}
+{% url 'syncope:org_dashboard' object.user.username as return_target %}
+{% include "syncope/_save_bar.html" with url=return_target %}
+{% endif %}
 
 {% endblock %}

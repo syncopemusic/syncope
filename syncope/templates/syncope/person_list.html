@@ -48,9 +48,9 @@
     <p>This is organization: {{ url_username }}</p>
 {% endif %}
 
-<p style="display:flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
-    <input type="text" id="person-search-input" value="{{ q }}" placeholder="Filter by skill, voice or instrument" style="flex: 1;">
-    <button type="button" id="person-search-clear">Clear</button>
+<p class="search-form">
+    <input type="text" id="person-search-input" value="{{ q }}" placeholder="Filter by skill, voice or instrument">
+    <button type="button" id="person-search-clear" class="btn btn-secondary btn-sm">Clear</button>
 </p>
 
 <div id="person-list-results">

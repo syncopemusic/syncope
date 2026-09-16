@@ -50,18 +50,20 @@
         </div>
     {% endfor %}
 
-    {% if is_admin %}
-    <button type="submit" class="btn btn-sm btn-secondary" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:event_new' url_username %}?project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23add-event-section" title="Create new event">New</button>
-    <button type="submit" class="btn btn-sm btn-secondary" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:song_new' url_username %}?auto_add_project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23songs-section" title="Create new song">New</button>
-    <button type="submit" class="btn btn-sm btn-secondary" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new' url_username %}?auto_add_project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23guests-section" title="Create new person">New</button>
-    {% endif %}
     <div class="form-actions">
-        <a href="{%  url 'syncope:project_detail' url_username project.id %}" class="btn btn-link">Cancel</a>
         <button type="submit" class="btn btn-primary">Save</button>
     </div>
 </form>
 
-<h3 id="add-event-section">Project Events</h3>
+{% url 'syncope:project_detail' url_username project.id as return_target %}
+{% include "syncope/_save_bar.html" with url=return_target %}
+
+<div class="section-header">
+    <h3 id="add-event-section">Project Events</h3>
+    {% if is_admin %}
+    <button type="submit" class="btn btn-sm btn-secondary" form="project-form" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:event_new' url_username %}?project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23add-event-section" title="Create new event">New</button>
+    {% endif %}
+</div>
 
 {% if form.instance.events.all %}
 <div>
@@ -95,10 +97,6 @@
 </div>
 {% endif %}
 
-<p>
-    <button type="submit" class="btn btn-sm btn-secondary" form="project-form" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:event_new' url_username %}?project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23add-event-section" title="Create new event">New</button>
-</p>
-
 <form method="get" class="search-form">
     <input type="text" name="event_q" value="{{ event_search_q }}" placeholder="Search by event name">
     <button type="submit" class="btn btn-sm btn-secondary">Search</button>
@@ -117,7 +115,12 @@
     <p>No events available to add.</p>
 {% endif %}
 
-<h3 id="songs-section">Project Songs</h3>
+<div class="section-header">
+    <h3 id="songs-section">Project Songs</h3>
+    {% if is_admin %}
+    <button type="submit" class="btn btn-sm btn-secondary" form="project-form" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:song_new' url_username %}?auto_add_project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23songs-section" title="Create new song">New</button>
+    {% endif %}
+</div>
 
 {% if form.instance.songs.all %}
 <div>
@@ -152,10 +155,6 @@
 </div>
 {% endif %}
 
-<p>
-    <button type="submit" class="btn btn-sm btn-secondary" form="project-form" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:song_new' url_username %}?auto_add_project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23songs-section" title="Create new song">New</button>
-</p>
-
 <form method="get" class="search-form">
     <input type="text" name="song_q" value="{{ song_search_q }}" placeholder="Search by title, composer, or ID">
     <button type="submit" class="btn btn-sm btn-secondary">Search</button>
@@ -174,7 +173,12 @@
     <p>No songs available to add.</p>
 {% endif %}
 
-<h3 id="guests-section">Project Guests</h3>
+<div class="section-header">
+    <h3 id="guests-section">Project Guests</h3>
+    {% if is_admin %}
+    <button type="submit" class="btn btn-sm btn-secondary" form="project-form" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new' url_username %}?auto_add_project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23guests-section" title="Create new person">New</button>
+    {% endif %}
+</div>
 
 {% if form.instance.guests.all %}
 <div>
@@ -204,10 +208,6 @@
     </table>
 </div>
 {% endif %}
-
-<p>
-    <button type="submit" class="btn btn-sm btn-secondary" form="project-form" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new' url_username %}?auto_add_project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23guests-section" title="Create new person">New</button>
-</p>
 
 <form method="get" class="search-form">
     <input type="text" name="guest_q" value="{{ guest_search_q }}" placeholder="Search by name">

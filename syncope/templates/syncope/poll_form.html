@@ -28,12 +28,14 @@
     {% endif %}
 
     <div class="form-actions">
-        {% if form.instance.pk %}
-        <a href="{% url 'syncope:poll_detail' url_username poll.pk %}" class="btn btn-link">Back</a>
-        {% else %}
-        <a href="{% url 'syncope:poll_list' url_username %}" class="btn btn-link">Back</a>
-        {% endif %}
-        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="submit" class="btn btn-primary">{% if form.instance.pk %}Save{% else %}Create{% endif %}</button>
     </div>
 </form>
+
+{% if form.instance.pk %}
+{% url 'syncope:poll_detail' url_username poll.pk as return_target %}
+{% else %}
+{% url 'syncope:poll_list' url_username as return_target %}
+{% endif %}
+{% include "syncope/_save_bar.html" with url=return_target %}
 {% endblock %}

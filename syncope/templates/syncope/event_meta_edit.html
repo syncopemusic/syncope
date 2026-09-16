@@ -1,15 +1,9 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 {% block title %}Details &mdash; {{ object.name }}{% endblock %}
 
 {% block extra_css %}
 <style>
-    .save-bar .dirty-note {
-        display: none;
-    }
-    .save-bar.dirty .dirty-note {
-        display: inline;
-    }
-
     #resource-formset {
         margin-bottom: 2rem;
     }
@@ -79,34 +73,31 @@
         </div>
     </div>
 
-    <div class="save-bar" id="save-bar">
-        <button type="submit" class="btn btn-primary">Save</button>
-        <span class="dirty-note">Unsaved changes</span>
-        <a href="{% url 'syncope:event_detail' url_username object.pk %}?origin={{ origin_key }}" class="btn btn-secondary" id="discard-btn">Discard</a>
-    </div>
-
-    <div class="form-actions">
+    <div class="form-actions danger-zone">
         <a href="{% url 'syncope:event_delete' url_username event.pk %}" class="btn btn-danger">Delete</a>
     </div>
 </form>
 
+{% url 'syncope:event_detail' url_username object.pk as event_detail_url %}
+{% include "syncope/_save_bar.html" with form_id="event-meta-form" url=event_detail_url|add:"?origin="|add:origin_key %}
+
+<script src="{% static 'syncope/save-bar.js' %}"></script>
 <script>
     const form = document.getElementById('event-meta-form');
-    const saveBar = document.getElementById('save-bar');
-    form.addEventListener('input', () => saveBar.classList.add('dirty'));
-    form.addEventListener('change', () => saveBar.classList.add('dirty'));
+    let formDirty = false;
 
-    // Cancel/Delete/breadcrumb links are plain <a> tags (no per-click JS,
-    // so they navigate instantly) — the "discard changes?" prompt instead
-    // comes from the browser's native beforeunload dialog, skipped on an
-    // actual Save submit.
-    let formSubmitting = false;
-    form.addEventListener('submit', () => { formSubmitting = true; });
-    window.addEventListener('beforeunload', function(e) {
-        if (formSubmitting || !saveBar.classList.contains('dirty')) return;
-        e.preventDefault();
-        e.returnValue = '';
+    const saveBarCtl = initSaveBar({
+        formId: 'event-meta-form',
+        countUnsavedChanges: () => formDirty ? 1 : 0,
+        onDiscard: () => {
+            form.reset();
+            resourceRows.querySelectorAll('.resource-row.added-row').forEach(row => row.remove());
+            formDirty = false;
+        },
     });
+
+    form.addEventListener('input', () => { formDirty = true; saveBarCtl.sync(); });
+    form.addEventListener('change', () => { formDirty = true; saveBarCtl.sync(); });
 
     const resourceFormset = document.getElementById('resource-formset');
     const resourceRows = document.getElementById('resource-rows');
@@ -137,6 +128,7 @@
         clone.querySelectorAll('label').forEach(function(label) {
             if (label.htmlFor) label.htmlFor = label.htmlFor.replace(`${prefix}-${oldIndex}-`, `${prefix}-${newIndex}-`);
         });
+        clone.classList.add('added-row');
         resourceRows.appendChild(clone);
         totalInput.value = newIndex + 1;
     }

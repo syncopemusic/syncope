@@ -94,6 +94,7 @@ def _apply_song_sort(qs, request):
         'composer': 'composer__last_name',
         'poet': 'poet__last_name',
         'arranger': 'arranger__last_name',
+        # Origin/Lang columns are hidden from the table for now but kept sortable.
         'origin': 'origin',
         'languagecode': 'languagecode__language_code',
     }
@@ -116,7 +117,7 @@ class SongListView(SongOwnerMixin, ListView):
         qs = _build_song_queryset(qs, self.request.GET.get('q', ''))
         qs = _annotate_song_queryset(qs, self.owner_user)
         qs = _apply_song_sort(qs, self.request)
-        return qs.select_related('composer', 'poet', 'arranger', 'languagecode').prefetch_related('song_resource__resource')
+        return qs.select_related('composer', 'poet', 'arranger').prefetch_related('song_resource__resource')
 
 
     def get_context_data(self, **kwargs):
@@ -138,7 +139,7 @@ def song_list_search(request, username):
     qs = _build_song_queryset(qs, q)
     qs = _annotate_song_queryset(qs, owner_user)
     qs = _apply_song_sort(qs, request)
-    songs = qs.select_related('composer', 'poet', 'arranger', 'languagecode').prefetch_related('song_resource__resource')
+    songs = qs.select_related('composer', 'poet', 'arranger').prefetch_related('song_resource__resource')
     for song in songs:
         song.resource_icons = resource_icon_list(song.song_resource.all())
     return render(request, 'syncope/song_list_results.html', {

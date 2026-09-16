@@ -7,9 +7,9 @@
     <a href="{%  url 'syncope:song_new' url_username %}" class="btn btn-primary" title="Add new song into archive">+ Add</a>
 </div>
 
-<p style="display:flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
-    <input type="text" id="song-list-search-input" value="{{ q }}" placeholder="Search by ID, title, composer, arranger, poet, origin, keywords, language" style="flex: 1;">
-    <button type="button" id="song-list-search-clear">Clear</button>
+<p class="search-form">
+    <input type="text" id="song-list-search-input" value="{{ q }}" placeholder="Search by ID, title, composer, arranger, poet, origin, keywords, language">
+    <button type="button" id="song-list-search-clear" class="btn btn-secondary btn-sm">Clear</button>
 </p>
 
 <div id="song-list-results">

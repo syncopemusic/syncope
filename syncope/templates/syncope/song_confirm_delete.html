@@ -26,17 +26,16 @@
             {% if request.GET.from_event %}<input type="hidden" name="from_event" value="{{ request.GET.from_event }}">{% endif %}
             {% if request.GET.origin %}<input type="hidden" name="origin" value="{{ request.GET.origin }}">{% endif %}
             <div class="form-actions">
-                <a href="{{ cancel_url }}" class="btn btn-link">Cancel</a>
                 <button type="submit" class="btn btn-danger">Delete</button>
             </div>
         </form>
-        {% else %}
-        <p><a href="{{ cancel_url }}">Back to Song</a></p>
         {% endif %}
     </div>
     <div class="additional-info">
         <p>This will remove the song from all rehearsals where it was scheduled.</p>
     </div>
 </div>
+
+{% include "syncope/_save_bar.html" with url=cancel_url %}
 
 {% endblock %}

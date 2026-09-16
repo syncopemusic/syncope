@@ -3,27 +3,24 @@
 {% block title %}{{ song.title }}{% endblock %}
 {% block content %}
 
-<h2>{{ song.title }}</h2>
+<h2>{{ song.title }}
+    <span class="share-controls">
+        <button id="share-btn" class="btn btn-link btn-sm" title="Copy link">
+            <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
+        </button>
+        <span id="share-result" class="share-result"></span>
+    </span>
+</h2>
 
+{% if can_manage %}
 <p>
-    {% if can_manage %}
-        <a href="{%  url 'syncope:song_update' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-link">Edit</a>
-        <a href="{% url 'syncope:song_delete' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-danger">Delete</a>
-    {% endif %}
-    {% if return_url %}
-        <a href="{{ return_url }}" class="btn btn-secondary">{{ return_label }}</a>
-    {% else %}
-        <a href="{%  url 'syncope:song_list' url_username %}" class="btn btn-link">Back</a>
-    {% endif %}
+    <a href="{%  url 'syncope:song_update' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-secondary btn-sm">Edit</a>
+    <a href="{% url 'syncope:song_delete' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-danger">Delete</a>
 </p>
-
-<p>
-    <button id="share-btn" class="btn btn-link btn-sm" title="Copy link">
-        <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-    </button>
-    <span id="share-result" class="share-result"></span>
-</p>
+{% endif %}
 <div class="visually-hidden">{% csrf_token %}</div>
+
+{% url 'syncope:song_list' url_username as song_list_url %}
 
 <table class="table-detail">
     <tr><th>Song ID</th><td>{{ song.internal_id|default:"-" }}</td></tr>
@@ -172,6 +169,8 @@
     </tbody>
 </table>
 {% endif %}
+
+{% include "syncope/_save_bar.html" with url=return_url|default:song_list_url %}
 
 {% block extra_js %}
 <script>

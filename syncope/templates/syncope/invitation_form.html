@@ -19,6 +19,8 @@
     {% csrf_token %}
     <input type="hidden" name="draft_key" value="{{ draft_key }}">
     {{ form.as_p }}
-    <button type="submit" class="btn btn-primary">Send</button>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Send</button>
+    </div>
 </form>
 {% endblock %}

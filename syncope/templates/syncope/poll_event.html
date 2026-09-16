@@ -42,8 +42,7 @@
     </div>
 
     <div class="form-actions">
-        <a href="{% url 'syncope:poll_detail' url_username poll.pk %}" class="btn btn-link">Back</a>
-        <button type="submit" class="btn btn-primary">{% if editing %}Update{% else %}Add{% endif %}</button>
+        <button type="submit" class="btn btn-primary">{% if editing %}Save{% else %}Create{% endif %}</button>
     </div>
 </form>
 
@@ -75,7 +74,7 @@
                 <td>{% if pe.location %}{{ pe.location }}{% else %}<em>—</em>{% endif %}</td>
                 <td>{% if pe.details %}{{ pe.details }}{% else %}<em>—</em>{% endif %}</td>
                 <td class="col-num">
-                    <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}" class="btn btn-sm btn-link">Edit</a>
+                    <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}" class="btn btn-secondary btn-sm">Edit</a>
                     {% if is_admin %}
                     <form method="post" action="{% url 'syncope:poll_event_remove' url_username poll.pk pe.pk %}" class="remove-event-form inline-form" data-event-type="{{ pe.event_type.name }}">
                         {% csrf_token %}
@@ -91,13 +90,13 @@
 {% else %}
 <p>No event slots added yet.</p>
 {% endif %}
-<p>
+<div class="link-row">
+    <a href="{% url 'syncope:poll_update' url_username poll.pk %}" class="btn btn-secondary btn-sm">Edit title</a>
+    <a href="{% url 'syncope:poll_persons' url_username poll.pk %}" class="btn btn-secondary btn-sm">Add people</a>
+</div>
 
-    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Back to poll - votes</a> |
-    <a href="{% url 'syncope:poll_update' url_username poll.pk %}">Edit title</a> |
-    <a href="{% url 'syncope:poll_persons' url_username poll.pk %}">Add people</a>
-
-</p>
+{% url 'syncope:poll_detail' url_username poll.pk as return_target %}
+{% include "syncope/_save_bar.html" with url=return_target %}
 {% endblock %}
 
 {% block extra_js %}

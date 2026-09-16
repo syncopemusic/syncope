@@ -40,9 +40,11 @@
     </div>
 
     <div class="form-actions">
-        <a href="{% url 'syncope:project_list' url_username %}" class="btn btn-link">Cancel</a>
-        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="submit" class="btn btn-primary">Create</button>
     </div>
 </form>
+
+{% url 'syncope:project_list' url_username as return_target %}
+{% include "syncope/_save_bar.html" with url=return_target %}
 
 {% endblock %}

@@ -8,7 +8,6 @@
                     ID {% if current_sort == 'id' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
-            <th title="Concerts / Performances">Con/Per</th>
             <th class="sticky-col">
                 <a href="?q={{ q }}&sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
                     Title {% if current_sort == 'title' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
@@ -29,25 +28,14 @@
                     Arranger {% if current_sort == 'arranger' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
-            <th>
-                <a href="?q={{ q }}&sort=origin{% if current_sort == 'origin' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
-                    Origin {% if current_sort == 'origin' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
-                </a>
-            </th>
-            <th>
-                <a href="?q={{ q }}&sort=languagecode{% if current_sort == 'languagecode' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
-                    Lang {% if current_sort == 'languagecode' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
-                </a>
-            </th>
             <th>Copies</th>
+            <th title="Concerts / Performances">Con/Per</th>
         </tr>
     </thead>
     <tbody>
     {% for song in songs %}
         <tr>
             <td class="col-num">{{ song.internal_id|default:"-" }}</td>
-            <td><span title="Number of concerts / number of performances">{% if song.concert_count or song.performance_count %}{{ song.concert_count }}/{{ song.performance_count }}{% else %}-{% endif %}</span></td>
-
             <td class="sticky-col">
                 <a href="{%  url 'syncope:song_detail' url_username song.pk %}">{{ song.title }}</a> {% if song.has_direct_resources or song.has_event_resources %}<span title="Song/Event Resources">{{ song.has_direct_resources }}/{{ song.has_event_resources }}</span>{% endif %}
                 {% if song.keywords %}
@@ -63,9 +51,8 @@
             <td>
                 {% include "syncope/person_link.html" with person=song.arranger %}
             </td>
-            <td>{{ song.origin|default:"-" }}</td>
-            <td>{{ song.languagecode.language_code|default:"-" }}</td>
             <td>{{ song.number_of_copies|default:"-" }}</td>
+            <td><span title="Number of concerts / number of performances">{% if song.concert_count or song.performance_count %}{{ song.concert_count }}/{{ song.performance_count }}{% else %}-{% endif %}</span></td>
         </tr>
     {% endfor %}
     </tbody>
@@ -74,5 +61,5 @@
 {% elif q %}
     <p>No songs found matching "{{ q }}".</p>
 {% else %}
-    <p>No songs in the archive yet. <a href="{%  url 'syncope:song_new' url_username %}">Add the first one.</a></p>
+    <p>No songs in the archive yet.</p>
 {% endif %}

@@ -54,5 +54,6 @@
     {% endif %}
 {% endif %}
 
-<p><a href="{% url 'syncope:invitation_list' url_username %}">Back to Invitations</a></p>
+{% url 'syncope:invitation_list' url_username as return_target %}
+{% include "syncope/_save_bar.html" with url=return_target %}
 {% endblock %}

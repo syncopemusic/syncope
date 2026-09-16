@@ -102,12 +102,17 @@
 
 
     <div class="form-actions">
-        <a href="{{ cancel_url }}" class="btn btn-link">Cancel</a>
-        {% if return_url %}
-            <a href="{{ return_url }}" class="btn btn-secondary">{{ return_label }}</a>
-        {% endif %}
         <button type="submit" class="btn btn-primary">Save</button>
     </div>
 </form>
+
+{% if is_linked and can_unlink %}
+<form method="post" action="{% url 'syncope:org_member_unlink' url_username form.instance.pk %}" class="inline-form danger-zone" onclick="return confirm('Unlink this member from their account? They will lose access associated with this connection.')">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Unlink</button>
+</form>
+{% endif %}
+
+{% include "syncope/_save_bar.html" with url=return_url|default:cancel_url %}
 
 {% endblock %}
