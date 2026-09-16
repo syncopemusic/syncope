@@ -1,0 +1,11 @@
+{% if search_q %}
+    {% if add_form.fields.person.queryset.exists %}
+        <div id="participant-checkbox-list">
+            {% for person in add_form.fields.person.queryset %}
+                <div class="search-result-row"><button type="button" class="add-item-btn" data-id="{{ person.pk }}">+</button> <span class="result-label">{{ person }}</span></div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No matching persons found.</p>
+    {% endif %}
+{% endif %}

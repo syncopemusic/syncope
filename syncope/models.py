@@ -223,24 +223,22 @@ class PersonQuerySet(models.QuerySet):
         """Persons with an active MEMBER period at the given date.
         Used to determine who gets auto-populated into event attendance."""
         return self.filter(
-            membership_period__user=org_user,
-            membership_period__role_id=Role.MEMBER,
-            membership_period__started_at__lte=at_date,
-        ).filter(
-            Q(membership_period__ended_at__gte=at_date) |
-            Q(membership_period__ended_at__isnull=True)
+            Q(membership_period__user=org_user) &
+            Q(membership_period__role_id=Role.MEMBER) &
+            Q(membership_period__started_at__lte=at_date) &
+            (Q(membership_period__ended_at__gte=at_date) |
+             Q(membership_period__ended_at__isnull=True))
         ).distinct()
 
     def active_during_date_range(self, org_user, start_date, end_date):
         """Persons with active MEMBER periods overlapping the given date range.
         Includes members whose membership was active at any point during the range."""
         return self.filter(
-            membership_period__user=org_user,
-            membership_period__role_id=Role.MEMBER,
-            membership_period__started_at__lte=end_date,
-        ).filter(
-            Q(membership_period__ended_at__gte=start_date) |
-            Q(membership_period__ended_at__isnull=True)
+            Q(membership_period__user=org_user) &
+            Q(membership_period__role_id=Role.MEMBER) &
+            Q(membership_period__started_at__lte=end_date) &
+            (Q(membership_period__ended_at__gte=start_date) |
+             Q(membership_period__ended_at__isnull=True))
         ).distinct().order_by('last_name')
 
     def unlinked_in_org(self, org_user):
@@ -571,7 +569,6 @@ class Event(models.Model):
     started_at = models.DateTimeField("start date hour", blank=True, null=True)
     ended_at = models.DateTimeField("end date hour", blank=True, null=True)
     event_type = models.ForeignKey(EventType, on_delete=models.CASCADE)
-    details = models.TextField(blank=True, null=True)
     num_visitors = models.PositiveIntegerField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     additional_notes = models.TextField(blank=True, null=True)
@@ -592,6 +589,12 @@ class Event(models.Model):
         blank=True,
         related_name='events'
     )
+
+    @property
+    def same_date(self):
+        if not self.started_at or not self.ended_at:
+            return True
+        return self.started_at.date() == self.ended_at.date()
 
 
 class EventSong(models.Model):

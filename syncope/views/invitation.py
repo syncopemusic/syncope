@@ -342,7 +342,7 @@ class InvitationUpdateView(InvitationAccessMixin, DetailView):
             self._copy_skills_voices_instruments(human_person, org_person)
             self._copy_resources(human_person, org_person)
 
-        role = Role.objects.get(id=Role.EXTERNAL)
+        role = Role.objects.get(id=Role.MEMBER)
         PersonRole.objects.create(person=org_person, role=role)
         MembershipPeriod.objects.create(
             user=org_user,
@@ -355,6 +355,15 @@ class InvitationUpdateView(InvitationAccessMixin, DetailView):
         bulk_copy_m2m_relations(human_person, org_person, PersonSkill, id_field='skill_id')
         bulk_copy_m2m_relations(human_person, org_person, Singer, id_field='voice_id')
         bulk_copy_m2m_relations(human_person, org_person, Instrumentalist, id_field='instrument_id')
+
+    def _copy_resources(self, human_person, org_person):
+        human_resources = PersonResource.objects.filter(person=human_person).values_list('resource_id', 'order')
+        org_resource_ids = set(PersonResource.objects.filter(person=org_person).values_list('resource_id', flat=True))
+        PersonResource.objects.bulk_create([
+            PersonResource(person=org_person, resource_id=resource_id, order=order)
+            for resource_id, order in human_resources
+            if resource_id not in org_resource_ids
+        ], ignore_conflicts=True)
 
     def _expired(self, invitation):
         messages.error(self.request, "This invitation has expired and can no longer be accepted.")

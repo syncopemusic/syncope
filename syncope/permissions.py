@@ -397,11 +397,11 @@ class AccessControl:
         return roles.filter(id=Role.ADMIN).exists()
 
     @classmethod
-    def can_add_event(cls, auth_user, url_username):
+    def _memberships_with_roles(cls, auth_user, url_username, role_ids):
         """
-        Return queryset of Memberships that auth_user can view:
-        - Personal memberships if owner_user is same as auth_user
-        - Or org memberships if auth_user is ADMIN or MEMBER of that org
+        Shared shape for the event-permission queryset methods below:
+        - Personal memberships if url_username is the viewer themselves
+        - Or org memberships if auth_user holds one of `role_ids` in that org
         """
         if not auth_user.is_authenticated:
             return Membership.objects.none()
@@ -413,12 +413,21 @@ class AccessControl:
         # org memberships - check if auth_user has proper role
         memberships = cls._user_memberships(auth_user).filter(
             user=url_username,  # Memberships under owner_user's "org"
-            person__roles__id__in=[Role.ADMIN] #, Role.MEMBER
+            person__roles__id__in=role_ids
         )
         if not memberships.exists():
             return Membership.objects.none()
 
         return Membership.objects.filter(user=url_username)
+
+    @classmethod
+    def can_add_event(cls, auth_user, url_username):
+        """
+        Return queryset of Memberships that auth_user can view:
+        - Personal memberships if owner_user is same as auth_user
+        - Or org memberships if auth_user is ADMIN of that org
+        """
+        return cls._memberships_with_roles(auth_user, url_username, [Role.ADMIN])  # , Role.MEMBER
 
     @classmethod
     def can_edit_event(cls, auth_user, url_username):
@@ -427,22 +436,16 @@ class AccessControl:
         - Personal memberships if owner_user is same as auth_user
         - Or org memberships if auth_user is ADMIN or MEMBER of that org
         """
-        if not auth_user.is_authenticated:
-            return Membership.objects.none()
+        return cls._memberships_with_roles(auth_user, url_username, [Role.ADMIN, Role.MEMBER])
 
-        # personal memberships
-        if url_username == auth_user:
-            return Membership.objects.filter(user=auth_user)
-
-        # org memberships - check if auth_user has proper role
-        memberships = cls._user_memberships(auth_user).filter(
-            user=url_username,  # Memberships under owner_user's "org"
-            person__roles__id__in=[Role.ADMIN, Role.MEMBER]
-        )
-        if not memberships.exists():
-            return Membership.objects.none()
-
-        return Membership.objects.filter(user=url_username)
+    @classmethod
+    def can_view_event_content(cls, auth_user, url_username):
+        """
+        Return queryset of Memberships that can view an event's songs/meta content
+        (not necessarily attendance). ADMIN, MEMBER, and SUPPORTER roles qualify;
+        EXTERNAL does not.
+        """
+        return cls._memberships_with_roles(auth_user, url_username, [Role.ADMIN, Role.MEMBER, Role.SUPPORTER])
 
     @classmethod
     def _is_admin_for_org(cls, auth_user, url_username):

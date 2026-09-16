@@ -1,0 +1,22 @@
+<tr class="song-row" data-eventsong-id="{{ eventsong.pk }}" data-song-id="{{ eventsong.song_id }}" id="song-{{ eventsong.pk }}">
+    <td class="drag-handle-cell">{% if is_admin %}<span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span>{% endif %}</td>
+    <td class="song-index">{{ eventsong.index }}</td>
+    <td class="song-cell">
+        <div class="song-title">{{ eventsong.song.title }}</div>
+        <div class="song-subline">
+            <span>
+                {% if eventsong.song.composer %}{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }}
+                {% elif eventsong.song.arranger %}{{ eventsong.song.arranger.first_name }} {{ eventsong.song.arranger.last_name }}
+                {% else %}<small>No composer</small>{% endif %}
+            </span>
+            {% if eventsong.song.internal_id %}<small class="song-meta">#{{ eventsong.song.internal_id }}</small>{% endif %}
+        </div>
+    </td>
+    <td class="song-resources" title="Event resources for song">{{ eventsong.resources_count }}</td>
+    {% if is_admin %}
+    <td class="song-actions">
+        <a class="btn-edit" title="Edit song" href="{% url 'syncope:song_update' url_username eventsong.song.pk %}?next={{ songs_url|urlencode }}"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></a>
+        <button type="button" class="remove-song-btn" title="Remove from event">&times;</button>
+    </td>
+    {% endif %}
+</tr>

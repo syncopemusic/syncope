@@ -11,6 +11,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q, Min, Max
 from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
+from django.utils.http import url_has_allowed_host_and_scheme
 
 
 def add_query_param(url, params):
@@ -20,6 +21,16 @@ def add_query_param(url, params):
     for key, value in params.items():
         qs[key] = [str(value)]
     return urlunparse(parsed._replace(query=urlencode(qs, doseq=True)))
+
+
+def safe_next_url(request, default):
+    """Return request's next= (GET or POST) if it's a safe same-host redirect target, else default."""
+    next_url = request.GET.get('next') or request.POST.get('next')
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return next_url
+    return default
 
 
 INTERNAL_ID_KEY = "internal_id"

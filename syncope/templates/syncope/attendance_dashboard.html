@@ -1,10 +1,16 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 {% block title %}Attendance{% endblock %}
 {% block content %}
 <style>
-.event-col {
-    width: 20px;
+.attendance-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
+.attendance-dashboard h2 { margin: 0; }
+
+.event-col { width: 20px; height: 70px; padding: 5px; font-weight: normal; }
 
 .attendance-cell {
     width: 40px;
@@ -13,22 +19,18 @@
     user-select: none;
     border-radius: 4px;
     font-size: 1.1rem;
+    line-height: 1.6rem;
     transition: background-color 0.15s ease;
 }
 
-.attendance-cell:hover {
-    opacity: 0.8;
-}
+.attendance-cell:hover { opacity: 0.8; }
+.attendance-cell.grayed-out:hover { opacity: 1; }
 
-.attendance-cell.grayed-out:hover {
-    opacity: 1;
-}
-
+.att-type-0 { background-color: #dfe6e9; }
 .att-type-1 { background-color: #c8f7c5; }
 .att-type-2 { background-color: #ffeaa7; }
 .att-type-3 { background-color: #fab1a0; }
 .att-type-4 { background-color: #a29bfe; }
-.att-type-5 { background-color: #dfe6e9; }
 
 .grayed-out {
     background-color: #ffffff !important;
@@ -37,63 +39,142 @@
     cursor: default;
 }
 
+.cell-ineligible {
+    background-color: #f5f5f5;
+    color: #ccc;
+    pointer-events: none;
+    cursor: default;
+}
+
+/* Filter panel */
+.filter-panel {
+    margin: 0;
+    padding: 0.4rem 0.75rem;
+    background-color: #f8f9fa;
+    border: 1px solid #e2e5e8;
+    border-radius: 6px;
+}
+.filter-panel summary {
+    cursor: pointer;
+    font-weight: 500;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    list-style: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.filter-panel summary::-webkit-details-marker { display: none; }
+.filter-panel[open] summary { margin-bottom: 0.5rem; }
+.filter-toggle-icon { transition: transform 0.15s ease; flex-shrink: 0; }
+.filter-panel[open] .filter-toggle-icon { transform: rotate(90deg); }
+@media (min-width: 769px) {
+    .filter-panel summary { justify-content: flex-start; }
+    .filter-toggle-icon { order: -1; margin-right: 0.4rem; }
+}
+.filter-form { display: flex; flex-direction: column; gap: 0.5rem; padding-bottom: 0.5rem; }
+.filter-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: end; }
+.filter-dates { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.filter-field { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.8rem; }
+.filter-label { color: #555; }
+.filter-field input {
+    padding: 0.45rem 0.5rem;
+    font-size: 0.95rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+.filter-dates input { width: 150px; }
+.filter-field-limit input { width: 90px; }
+.filter-row-actions { gap: 0.75rem; align-items: stretch; }
+.filter-row-actions .btn-primary,
+.filter-row-actions .filter-reset {
+    flex: 0 0 auto;
+    text-align: center;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.quick-add-form { margin: 0; }
+
+.total-label-short { display: none; }
+
+@media (max-width: 768px) {
+    .save-bar { flex-wrap: wrap; gap: 0.5rem; }
+    .table-container { padding-bottom: 4rem; }
+    .total-label-full { display: none; }
+    .total-label-short { display: inline; }
+
+    .filter-panel { padding: 0.2rem 0.6rem; }
+    .filter-dates { flex: 1 1 auto; gap: 0.4rem; }
+    .filter-dates .filter-field { flex: 1 1 45%; min-width: 0; }
+    .filter-dates input { width: auto; min-width: 0; }
+    .filter-field-limit { margin-left: auto; text-align: right; }
+    .filter-field-limit input { width: 80px; text-align: right; }
+    .filter-row-actions .btn-primary,
+    .filter-row-actions .filter-reset { flex: 1 1 0; }
+}
 </style>
+
 <div class="attendance-dashboard">
-    <h2>Attendance Dashboard - {{ org_user.username }}</h2>
+    <h2>Attendance</h2>
 
-
-        <form method="post" action="{%  url 'syncope:quick_new_rehearsal' username=url_username %}">
-            {% csrf_token %}
-            <button type="submit" class="btn-primary">+ Add Rehearsal Now</button>
-        </form>
-
-    {# Filters and Quick Add in same row #}
-    <div class="dashboard-controls" style="display: flex; gap: 2rem; margin-bottom: 1rem; align-items: end;">
-        <form method="get" class="filters" style="display: flex; gap: 1rem; align-items: end;">
-            <div><p>Filter:</p>
-                <label>Date Range:</label>
-                <input type="date" name="start_date" value="{{ request.GET.start_date }}"
-                       onchange="document.getElementById('event_limit_input').value='';">
-                to
-                <input type="date" name="end_date" value="{{ request.GET.end_date }}"
-                       onchange="document.getElementById('event_limit_input').value='';">
+    <details class="filter-panel" {% if request.GET.start_date or request.GET.end_date or request.GET.event_limit %}open{% endif %}>
+        <summary>
+            Filter
+            <svg class="filter-toggle-icon" viewBox="0 0 24 24" width="18" height="18" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </summary>
+        <form method="get" class="filter-form">
+            <div class="filter-row">
+                <div class="filter-dates">
+                    <label class="filter-field">
+                        <span class="filter-label">From</span>
+                        <input type="date" name="start_date" value="{{ request.GET.start_date }}"
+                               onchange="document.getElementById('event_limit_input').value='';">
+                    </label>
+                    <label class="filter-field">
+                        <span class="filter-label">To</span>
+                        <input type="date" name="end_date" value="{{ request.GET.end_date }}"
+                               onchange="document.getElementById('event_limit_input').value='';">
+                    </label>
+                </div>
+                <label class="filter-field filter-field-limit">
+                    <span class="filter-label">or event limit</span>
+                    <input type="number" id="event_limit_input" name="event_limit"
+                           value="{{ request.GET.event_limit|default:3 }}" min="1" max="50"
+                           onchange="this.form.start_date.value=''; this.form.end_date.value='';">
+                </label>
             </div>
-            <div>
-                <label>Event Limit:</label>
-                <input type="number" id="event_limit_input" name="event_limit" value="{{ request.GET.event_limit|default:8 }}" min="1" max="50" style="width: 60px;"
-                       onchange="this.form.start_date.value=''; this.form.end_date.value='';">
+            <div class="filter-row filter-row-actions">
+                <button type="submit" class="btn-primary">Filter</button>
+                <a href="?" class="btn-primary filter-reset">Reset</a>
             </div>
-            <button type="submit">Filter</button>
-            <a href="?" class="btn-primary" style="text-decoration: none; color: inherit;">Reset filter</a>
         </form>
+    </details>
 
-    </div>
-
-    <div style="margin-bottom: 0.5rem; font-size: 0.85rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-        <strong>Legend:</strong>
-        <span class="att-type-1" style="padding: 2px 6px; border-radius: 3px;" title="present at the event">✓ Present</span>
-        <span class="att-type-2" style="padding: 2px 6px; border-radius: 3px;" title="missing due to professional activities">💼 Work/School</span>
-        <span class="att-type-3" style="padding: 2px 6px; border-radius: 3px;" title="unplanned medical issues">🤒 Illness</span>
-        <span class="att-type-4" style="padding: 2px 6px; border-radius: 3px;" title="planned absence">🏖 Private/Vacation</span>
-        <span class="att-type-5" style="padding: 2px 6px; border-radius: 3px;" title="to be determined">TBD</span>
-        <em>(Click a cell to cycle)</em>
-    </div>
+    <form method="post" action="{%  url 'syncope:quick_new_rehearsal' username=url_username %}" class="quick-add-form">
+        {% csrf_token %}
+        <button type="submit" class="btn-primary">+ Add Rehearsal Now</button>
+    </form>
 
     {# Main Form with Attendance Table #}
-    <form method="post">
+    <form method="post" id="attendance-form">
         {% csrf_token %}
 
-        <div class="table-container" >
+        <div class="table-container">
             <table class="attendance-table">
                 <thead>
                     <tr>
-                        <th>#</th>
+                        <th class="col-num">#</th>
                         <th class="sticky-col">Member</th>
                         {% for event in events %}
-                            <th class="event-col "
-                                style="height: 50px; padding: 5px; font-weight: normal;">
+                            <th class="event-col">
                                 <div style="transform: rotate(-90deg); width: 10px; white-space: nowrap;">
-                                    <a href="{%  url 'syncope:event_update' url_username event.id %}"
+                                    <a href="{%  url 'syncope:event_detail' url_username event.id %}?origin=attendance"
                                         style="
                                         {% if event.event_type.id != 1 %}font-weight: bold; {% endif %}
                                         color: inherit; text-decoration: underline; font-size: inherit;"
@@ -111,17 +192,21 @@
                     {% for group in grouped_dashboard_data %}
                         {% for row in group.items %}
                         <tr {% if forloop.first and not forloop.parentloop.first %}style="border-top: 3px solid #333;"{% endif %}>
-                            <td>{{ forloop.counter }}</td>
+                            <td class="col-num">{{ row.index }}</td>
                             <td class="sticky-col member-name">{{ row.member }}</td>
                             {% for cell in row.attendance_cells %}
-                                <td class="attendance-cell att-type-{{ cell.attendance_type_id|default:5 }} {% if cell.is_grayed_out %}grayed-out{% endif %}"
-                                    data-type-id="{{ cell.attendance_type_id|default:5 }}"
-                                    {% if not cell.is_grayed_out %}onclick="cycleAttendance(this)"{% endif %}>
-                                    <input type="hidden"
-                                           name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
-                                           value="{{ cell.attendance_type_id|default:5 }}">
-                                    <span class="att-icon"></span>
-                                </td>
+                                {% if cell.is_ineligible %}
+                                    <td class="cell-ineligible"></td>
+                                {% else %}
+                                    <td class="attendance-cell att-type-{{ cell.attendance_type_id|default:0 }} {% if cell.is_grayed_out %}grayed-out{% endif %}"
+                                        data-type-id="{{ cell.attendance_type_id|default:0 }}"
+                                        {% if not cell.is_grayed_out %}onclick="cycleAttendance(this)"{% endif %}>
+                                        <input type="hidden"
+                                               name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
+                                               value="{{ cell.attendance_type_id|default:0 }}">
+                                        <span class="att-icon"></span>
+                                    </td>
+                                {% endif %}
                             {% endfor %}
                             <td>{{ row.total_present }}/{{ row.total_events }}</td>
                             <td>{{ row.percentage|floatformat:0 }}%</td>
@@ -129,48 +214,79 @@
                         {% endfor %}
                     {% endfor %}
                     <tr class="totals-row" style="border-top: 3px solid #333;">
-                        <td class="sticky-col"><strong>Event Total</strong></td>
+                        <td class="col-num"><strong class="total-label-full">Total</strong><strong class="total-label-short">=</strong></td>
+                        <td class="sticky-col">{{ members|length }}</td>
                         {% for total in event_totals %}
                             <td>{{ total.present }}/{{ total.total }}</td>
                         {% endfor %}
-                        <td colspan="2"></td>
+                        <td><strong>{{ grand_present }}/{{ grand_total }}</strong></td>
+                        <td><strong>{{ grand_percentage|floatformat:0 }}%</strong></td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <div >
+        <div class="save-bar" id="save-bar">
             <button type="submit" class="btn-primary">Save</button>
+            <span class="dirty-note"></span>
+            <span id="dirty-actions" style="display:none;">
+                <button type="button" id="discard-btn" class="btn-primary">Discard</button>
+            </span>
         </div>
     </form>
 </div>
 
-
-
+<script src="{% static 'syncope/save-bar.js' %}"></script>
 <script>
-const CYCLE_ORDER = [5, 1, 2, 3, 4];
+const CYCLE_ORDER = [0, 1, 2, 3, 4];
 const TYPE_META = {
+    0: { label: 'TBD',               icon: '?',  cls: 'att-type-0' },
     1: { label: 'Present',           icon: '✓',  cls: 'att-type-1' },
-    2: { label: 'Work/School',       icon: '💼', cls: 'att-type-2' },
+    2: { label: 'Work',              icon: '💼', cls: 'att-type-2' },
     3: { label: 'Illness',           icon: '🤒', cls: 'att-type-3' },
-    4: { label: 'Private/Vacation',  icon: '🏖', cls: 'att-type-4' },
-    5: { label: 'TBD',               icon: '',   cls: 'att-type-5' },
+    4: { label: 'Private',           icon: '🏖', cls: 'att-type-4' },
 };
+
+function paintCell(cell, typeId) {
+    cell.dataset.typeId = typeId;
+    cell.querySelector('input[type="hidden"]').value = typeId;
+    Object.values(TYPE_META).forEach(m => cell.classList.remove(m.cls));
+    cell.classList.add(TYPE_META[typeId].cls);
+    cell.querySelector('.att-icon').textContent = TYPE_META[typeId].icon;
+    cell.title = TYPE_META[typeId].label;
+}
+
+function countUnsavedChanges() {
+    let count = 0;
+    document.querySelectorAll('.attendance-cell[data-type-id]').forEach(cell => {
+        if (cell.dataset.typeId !== cell.dataset.originalTypeId) count++;
+    });
+    return count;
+}
+
+const saveBarCtl = initSaveBar({
+    formId: 'attendance-form',
+    countUnsavedChanges,
+    onDiscard: () => {
+        document.querySelectorAll('.attendance-cell[data-type-id]').forEach(cell => {
+            if (cell.dataset.originalTypeId !== undefined) {
+                paintCell(cell, parseInt(cell.dataset.originalTypeId, 10));
+            }
+        });
+    },
+});
 
 function cycleAttendance(cell) {
     const cur = parseInt(cell.dataset.typeId, 10);
     const next = CYCLE_ORDER[(CYCLE_ORDER.indexOf(cur) + 1) % CYCLE_ORDER.length];
-    cell.dataset.typeId = next;
-    cell.querySelector('input[type="hidden"]').value = next;
-    Object.values(TYPE_META).forEach(m => cell.classList.remove(m.cls));
-    cell.classList.add(TYPE_META[next].cls);
-    cell.querySelector('.att-icon').textContent = TYPE_META[next].icon;
-    cell.title = TYPE_META[next].label;
+    paintCell(cell, next);
+    saveBarCtl.sync();
 }
 
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.attendance-cell[data-type-id]').forEach(cell => {
-        const meta = TYPE_META[parseInt(cell.dataset.typeId, 10)] || TYPE_META[5];
+        cell.dataset.originalTypeId = cell.dataset.typeId;
+        const meta = TYPE_META[parseInt(cell.dataset.typeId, 10)] || TYPE_META[0];
         cell.querySelector('.att-icon').textContent = meta.icon;
         cell.title = meta.label;
     });

@@ -8,6 +8,10 @@
     {% csrf_token %}
     <input type="hidden" name="draft_key" value="{{ draft_key }}">
     {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
+    {% if request.GET.auto_add_event %}<input type="hidden" name="auto_add_event" value="{{ request.GET.auto_add_event }}">{% endif %}
+    {% if request.GET.auto_add_project %}<input type="hidden" name="auto_add_project" value="{{ request.GET.auto_add_project }}">{% endif %}
+    {% if request.GET.from_event %}<input type="hidden" name="from_event" value="{{ request.GET.from_event }}">{% endif %}
+    {% if request.GET.origin %}<input type="hidden" name="origin" value="{{ request.GET.origin }}">{% endif %}
 
     <div>
         <label for="{{ form.internal_id.id_for_label }}">{{ form.internal_id.label }}</label>
@@ -279,10 +283,10 @@
     <button type="submit" name="action" value="">Save</button>
 </form>
 <p>
-{% if object %}
-    <a href="{%  url 'syncope:song_detail' url_username object.pk %}">Cancel Edit</a>
-{% else %}
-    <a href="{%  url 'syncope:song_list' url_username %}">Cancel &amp; Return to List</a>
-{% endif %}
+    <a href="{{ cancel_url }}">{% if object %}Cancel Edit{% else %}Cancel{% endif %}</a>
+    {% if return_url %}
+        &nbsp;|&nbsp;
+        <button type="button" onclick="window.location.href='{{ return_url }}'">{{ return_label }}</button>
+    {% endif %}
 </p>
 {% endblock %}

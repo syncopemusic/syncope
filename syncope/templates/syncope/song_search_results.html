@@ -1,0 +1,30 @@
+{% if add_song_form.fields.song.queryset.exists %}
+    <div id="song-checkbox-list">
+        {% for song in add_song_form.fields.song.queryset %}
+            <div class="search-result-row">
+                <button type="button" class="add-item-btn"
+                        data-id="{{ song.pk }}"
+                        data-title="{{ song.title }}"
+                        data-composer="{% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}{% endif %}"
+                        data-arranger="{% if song.arranger %}{{ song.arranger.first_name }} {{ song.arranger.last_name }}{% endif %}"
+                        data-resources="{{ song.resource_count }}"
+                        data-internal-id="{{ song.internal_id|default:'' }}">+</button>
+                <div class="search-result-info">
+                    <div class="song-title">{{ song.title }}</div>
+                    <div class="song-subline">
+                        <span>
+                            {% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}
+                            {% elif song.arranger %}{{ song.arranger.first_name }} {{ song.arranger.last_name }}
+                            {% else %}<small>No composer</small>{% endif %}
+                        </span>
+                        {% if song.internal_id %}<small class="song-meta">#{{ song.internal_id }}</small>{% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% elif song_search_q %}
+    <p>No matching songs found.</p>
+{% else %}
+    <p>No songs in the archive yet.</p>
+{% endif %}

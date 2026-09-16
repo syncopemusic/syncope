@@ -21,6 +21,7 @@
     border-radius: 5px;
     font-size: 0.9rem;
     font-weight: bold;
+    line-height: 1;
     transition: all 0.15s ease;
     margin: 0 auto;
     border: 2px solid rgba(0, 0, 0, 0.15);
@@ -57,15 +58,6 @@
     font-size: 0.85rem;
     line-height: 1.3;
     vertical-align: middle;
-}
-
-.sticky-col {
-    position: sticky;
-    left: 0;
-    background-color: #f8f9fa;
-    z-index: 1;
-    width: 100px;
-    white-space: nowrap;
 }
 
 table {
@@ -141,7 +133,7 @@ tbody td {
 <form method="post" style="min-width: 0;">
     {% csrf_token %}
 
-    <div style="overflow-x: auto;">
+    <div class="table-container">
         <table>
             <thead>
                 {# Event Type Row #}
@@ -246,7 +238,7 @@ tbody td {
 <script>
 const CYCLE_ORDER = [0, 1, 2, 3];  // TBD, YES, MAYBE, NO
 const TYPE_META = {
-    0: { label: 'TBD',    icon: '',   cls: 'att-type-0' },
+    0: { label: 'TBD',    icon: '⚑',  cls: 'att-type-0' },
     1: { label: 'YES',    icon: '✓',  cls: 'att-type-1' },
     2: { label: 'MAYBE',  icon: '(✓)',  cls: 'att-type-2' },
     3: { label: 'NO',     icon: '✗',  cls: 'att-type-3' },

@@ -30,6 +30,7 @@
     text-align: center;
     border-radius: 4px;
     font-size: 1.1rem;
+    line-height: 1.5rem;
     padding: 2px;
     user-select: none;
 }
@@ -48,13 +49,6 @@
 
 .table-container {
     margin-top: 0.5rem;
-}
-
-.btn-full { display: inline; }
-.btn-short { display: none; }
-@media (max-width: 768px) {
-    .btn-full { display: none; }
-    .btn-short { display: inline; }
 }
 </style>
 
@@ -123,7 +117,7 @@
                 {% for cell in row.event_cells %}
                 <td class="attendance-cell att-type-{{ cell.attendance_type_id }}"
                     title="{{ cell.attendance_label }}">
-                    {% if cell.attendance_type_id == 1 %}✓{% elif cell.attendance_type_id == 2 %}(✓){% elif cell.attendance_type_id == 3 %}✗{% endif %}
+                    {% if cell.attendance_type_id == 1 %}✓{% elif cell.attendance_type_id == 2 %}(✓){% elif cell.attendance_type_id == 3 %}✗{% elif cell.attendance_type_id == 0 %}⚑{% endif %}
                     {% if cell.comment %}<div class="comment-display">{{ cell.comment }}</div>{% endif %}
                 </td>
                 {% endfor %}

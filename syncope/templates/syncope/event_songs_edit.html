@@ -1,0 +1,415 @@
+{% extends "syncope/base.html" %}
+{% load static %}
+{% block title %}Songs &mdash; {{ event.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .songs-table { table-layout: fixed; width: 100%; }
+    .songs-table thead th {
+        position: sticky;
+        top: 0;
+        background-color: #fff;
+        z-index: 1;
+    }
+    .songs-table td, .songs-table th { padding: 0.3rem 0.25rem; }
+    .drag-handle-cell { width: 2.2rem; text-align: center; padding-left: 0; padding-right: 0; }
+    .drag-handle {
+        cursor: grab;
+        touch-action: none;
+        color: #888;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        line-height: 0.7;
+        padding: 0.5rem 0.4rem;
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+    .drag-handle:active { cursor: grabbing; }
+    tr.song-row.dragging { opacity: 0.6; background-color: #eef; }
+    .song-index { text-align: center; font-weight: bold; width: 1.3rem; padding-left: 0; padding-right: 0; }
+    .song-cell { width: auto; }
+    .song-title { font-weight: 500; overflow-wrap: break-word; }
+    .song-subline {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        color: #666;
+        overflow-wrap: break-word;
+    }
+    .song-meta { white-space: nowrap; color: #888; }
+    .song-resources { text-align: center; width: 1.4rem; padding-left: 0; padding-right: 0; }
+    .song-actions { white-space: nowrap; text-align: right; width: 3.4rem; padding-left: 0; }
+    .btn-edit {
+        display: inline-block;
+        width: 1.4rem;
+        text-align: center;
+        padding: 0.2rem 0;
+        font-size: 0.9rem;
+        border: 1px solid #ccc;
+        background-color: #f5f5f5;
+        border-radius: 2px;
+        text-decoration: none;
+        color: inherit;
+        margin-right: 0.2rem;
+    }
+    .remove-song-btn {
+        border: none;
+        background: none;
+        color: #999;
+        font-size: 1.1rem;
+        cursor: pointer;
+        line-height: 1;
+        padding: 0.25rem 0.2rem;
+    }
+    .remove-song-btn:hover { color: #c0392b; }
+    tr.staged-add,
+    tr.pending-remove {
+        background-color: #fff3cd;
+    }
+    tr.row-moved { background-color: #eaf3ff; }
+    tr.pending-remove td {
+        text-decoration: line-through;
+        opacity: 0.55;
+    }
+    .search-result-row { padding: 0.4rem 0; display: flex; align-items: flex-start; gap: 0.6rem; }
+    .search-spinner {
+        position: absolute;
+        top: 50%;
+        right: 0.6rem;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid #ddd;
+        border-top-color: #888;
+        animation: spin 0.7s linear infinite;
+        opacity: 0;
+        pointer-events: none;
+    }
+    .search-spinner.is-active { opacity: 1; }
+    @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+    @media (min-width: 769px) {
+        .search-spinner {
+            right: auto;
+            left: -1.75rem;
+        }
+    }
+    .search-result-info { flex: 1; min-width: 0; }
+    .add-item-btn {
+        border: 1px solid #ccc;
+        background-color: #f5f5f5;
+        border-radius: 2px;
+        cursor: pointer;
+        min-width: 1.4rem;
+        line-height: 1;
+        padding: 0.25rem 0.6rem;
+    }
+
+    @media (max-width: 768px) {
+        #songs-content {
+            padding-bottom: 4rem;
+        }
+        .btn-edit { padding: 0.2rem 0.35rem; font-size: 0.75rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<h2>Songs &mdash; {{ event.name }}</h2>
+
+<div id="songs-content">
+    <form method="post" id="songs-form">
+        {% csrf_token %}
+        <input type="hidden" id="song-order-input" name="song_order" value="">
+        <div class="table-container" style="max-width:42rem;">
+            <table class="songs-table">
+                <thead>
+                    <tr>
+                        <th class="drag-handle-cell"></th>
+                        <th class="song-index">#</th>
+                        <th>Song</th>
+                        <th class="song-resources" title="Resources">&#128206;</th>
+                        {% if is_admin %}<th class="song-actions"></th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody id="songs-tbody">
+                    {% for eventsong in eventsongs %}
+                        {% include "syncope/_song_row.html" %}
+                    {% empty %}
+                    <tr id="no-songs-row"><td colspan="{% if is_admin %}5{% else %}4{% endif %}">No songs added yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
+
+    {% if is_admin %}
+    <div id="add-songs" style="max-width:42rem;">
+        <p><strong>Add song</strong></p>
+        <p style="position:relative;">
+            <input type="text" id="song-search-input" value="{{ song_search_q }}" placeholder="Search by ID, title, composer, or keywords" style="max-width:100%; width:100%; box-sizing:border-box;">
+            <span class="search-spinner" id="song-search-spinner"></span>
+        </p>
+        <p style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button type="button" id="song-search-clear">Clear search</button>
+            <button type="submit" form="songs-form" name="action" value="new_song" title="Save current changes and create a new song">+ New Song</button>
+        </p>
+        <div id="song-search-results">
+            {% include "syncope/song_search_results.html" %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% include "syncope/_save_bar.html" with form_id="songs-form" %}
+
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>
+    const songsTbody = document.getElementById('songs-tbody');
+    const songOrderInput = document.getElementById('song-order-input');
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str == null ? '' : str;
+        return div.innerHTML;
+    }
+
+    function suppressEnterSubmit(input) {
+        if (!input) return;
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') e.preventDefault();
+        });
+    }
+
+    function removeEmptyRow() {
+        document.getElementById('no-songs-row')?.remove();
+    }
+
+    function renumberSongs() {
+        Array.from(songsTbody.querySelectorAll('tr.song-row')).forEach((row, i) => {
+            const cell = row.querySelector('.song-index');
+            if (cell) cell.textContent = i + 1;
+        });
+    }
+
+    function currentExistingOrder() {
+        return Array.from(songsTbody.querySelectorAll('tr.song-row[data-eventsong-id]'))
+            .filter(row => !row.classList.contains('pending-remove'))
+            .map(row => row.dataset.eventsongId);
+    }
+
+    let originalOrderList = [];
+    function snapshotOriginalOrder() {
+        originalOrderList = currentExistingOrder();
+    }
+
+    function orderChanged() {
+        const current = currentExistingOrder();
+        const currentSet = new Set(current);
+        const expected = originalOrderList.filter(pk => currentSet.has(pk));
+        return current.some((pk, i) => pk !== expected[i]);
+    }
+
+    function paintRowMoved() {
+        const current = currentExistingOrder();
+        const currentSet = new Set(current);
+        const expected = originalOrderList.filter(pk => currentSet.has(pk));
+        const expectedIndex = new Map(expected.map((pk, i) => [pk, i]));
+        current.forEach((pk, i) => {
+            const row = songsTbody.querySelector(`tr[data-eventsong-id="${pk}"]`);
+            if (row) row.classList.toggle('row-moved', expectedIndex.get(pk) !== i);
+        });
+    }
+
+    function updateSongOrderField() {
+        const tokens = Array.from(songsTbody.querySelectorAll('tr.song-row'))
+            .filter(row => !row.classList.contains('pending-remove'))
+            .map(row => row.classList.contains('staged-add') ? `new-${row.dataset.songId}` : `es-${row.dataset.eventsongId}`);
+        songOrderInput.value = tokens.join(',');
+    }
+
+    function countUnsavedChanges() {
+        let count = songsTbody.querySelectorAll('tr.staged-add').length;
+        count += songsTbody.querySelectorAll('tr.pending-remove').length;
+        if (orderChanged()) count += 1;
+        return count;
+    }
+
+    const saveBarCtl = initSaveBar({
+        formId: 'songs-form',
+        countUnsavedChanges,
+        beforeSync: () => { renumberSongs(); updateSongOrderField(); paintRowMoved(); },
+        onDiscard: () => {
+            songsTbody.querySelectorAll('tr.staged-add').forEach(row => row.remove());
+            songsTbody.querySelectorAll('tr.pending-remove').forEach(row => {
+                row.classList.remove('pending-remove');
+                row.querySelector('.pending-remove-input')?.remove();
+                const btn = row.querySelector('.remove-song-btn');
+                if (btn) { btn.textContent = '×'; btn.title = 'Remove from event'; }
+            });
+            originalOrderList.forEach(pk => {
+                const row = songsTbody.querySelector(`tr[data-eventsong-id="${pk}"]`);
+                if (row) songsTbody.appendChild(row);
+            });
+            if (!songsTbody.querySelector('tr.song-row') && !document.getElementById('no-songs-row')) {
+                songsTbody.insertAdjacentHTML('beforeend', `<tr id="no-songs-row"><td colspan="{% if is_admin %}5{% else %}4{% endif %}">No songs added yet.</td></tr>`);
+            }
+        },
+        afterDiscard: () => runSongSearch(songSearchInput ? songSearchInput.value : ''),
+    });
+
+    // --- Drag-and-drop reorder (Pointer Events: works for mouse and touch alike) ---
+    let dragRow = null;
+    let dragPointerId = null;
+
+    songsTbody.addEventListener('pointerdown', function(e) {
+        const handle = e.target.closest('.drag-handle');
+        if (!handle) return;
+        const row = handle.closest('tr.song-row');
+        if (!row) return;
+        e.preventDefault();
+        handle.setPointerCapture(e.pointerId);
+        dragRow = row;
+        dragPointerId = e.pointerId;
+        row.classList.add('dragging');
+    });
+
+    songsTbody.addEventListener('pointermove', function(e) {
+        if (!dragRow || e.pointerId !== dragPointerId) return;
+        const rows = Array.from(songsTbody.querySelectorAll('tr.song-row'));
+        let target = null;
+        for (const row of rows) {
+            if (row === dragRow) continue;
+            const rect = row.getBoundingClientRect();
+            if (e.clientY < rect.top + rect.height / 2) { target = row; break; }
+        }
+        if (target) songsTbody.insertBefore(dragRow, target);
+        else songsTbody.appendChild(dragRow);
+    });
+
+    function endDrag(e) {
+        if (!dragRow || e.pointerId !== dragPointerId) return;
+        dragRow.classList.remove('dragging');
+        dragRow = null;
+        dragPointerId = null;
+        saveBarCtl.sync();
+    }
+    songsTbody.addEventListener('pointerup', endDrag);
+    songsTbody.addEventListener('pointercancel', endDrag);
+
+    // --- Remove / undo ---
+    function toggleRemove(row) {
+        const pk = row.dataset.eventsongId;
+        if (!pk) return;
+        const btn = row.querySelector('.remove-song-btn');
+        const pending = row.classList.toggle('pending-remove');
+        if (pending) {
+            row.insertAdjacentHTML('beforeend', `<input type="hidden" class="pending-remove-input" name="remove_${pk}" value="1">`);
+            btn.textContent = '↺';
+            btn.title = 'Undo removal';
+        } else {
+            row.querySelector('.pending-remove-input')?.remove();
+            btn.textContent = '×';
+            btn.title = 'Remove from event';
+        }
+        saveBarCtl.sync();
+    }
+
+    songsTbody.addEventListener('click', function(e) {
+        const removeBtn = e.target.closest('.remove-song-btn');
+        if (!removeBtn) return;
+        const row = removeBtn.closest('tr');
+        if (row.classList.contains('staged-add')) {
+            row.remove();
+            saveBarCtl.sync();
+            runSongSearch(songSearchInput.value);
+            return;
+        }
+        toggleRemove(row);
+    });
+
+    // --- Search / staged add ---
+    function buildStagedSongRow(id, title, composer, arranger, resources, internalId) {
+        const tr = document.createElement('tr');
+        tr.className = 'song-row staged-add';
+        tr.dataset.songId = id;
+        const subline = composer ? escapeHtml(composer) : (arranger ? escapeHtml(arranger) : '<small>No composer</small>');
+        const meta = internalId ? `<small class="song-meta">#${escapeHtml(internalId)}</small>` : '';
+        tr.innerHTML = `
+            <td class="drag-handle-cell"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span></td>
+            <td class="song-index"></td>
+            <td class="song-cell">
+                <div class="song-title">${escapeHtml(title)}</div>
+                <div class="song-subline"><span>${subline}</span>${meta}</div>
+            </td>
+            <td class="song-resources" title="Event resources for song">${escapeHtml(resources || '0')}</td>
+            <td class="song-actions"><button type="button" class="remove-song-btn" title="Remove staged addition">&times;</button></td>
+        `;
+        return tr;
+    }
+
+    function currentSongIds() {
+        return Array.from(songsTbody.querySelectorAll('tr.song-row'))
+            .map(row => row.dataset.songId)
+            .filter(Boolean);
+    }
+
+    const songSearchInput = document.getElementById('song-search-input');
+    const songSearchResults = document.getElementById('song-search-results');
+    let songSearchTimeout;
+
+    const songSearchSpinner = document.getElementById('song-search-spinner');
+
+    function beginSongSpinner() {
+        songSearchSpinner.classList.add('is-active');
+    }
+
+    function endSongSpinner() {
+        songSearchSpinner.classList.remove('is-active');
+    }
+
+    function runSongSearch(query) {
+        const exclude = currentSongIds().join(',');
+        const url = `{% url 'syncope:event_songs_search' url_username event.pk %}?song_q=${encodeURIComponent(query)}&exclude=${encodeURIComponent(exclude)}`;
+        fetch(url).then(r => r.text()).then(html => {
+            endSongSpinner();
+            songSearchResults.innerHTML = html;
+        });
+    }
+
+    if (songSearchInput) {
+        songSearchInput.addEventListener('input', function() {
+            clearTimeout(songSearchTimeout);
+            beginSongSpinner();
+            songSearchTimeout = setTimeout(() => runSongSearch(this.value), 1000);
+        });
+        suppressEnterSubmit(songSearchInput);
+    }
+
+    document.getElementById('song-search-clear')?.addEventListener('click', function() {
+        clearTimeout(songSearchTimeout);
+        songSearchInput.value = '';
+        songSearchResults.innerHTML = '';
+        runSongSearch('');
+    });
+
+    songSearchResults?.addEventListener('click', function(e) {
+        const btn = e.target.closest('.add-item-btn');
+        if (!btn) return;
+        const row = btn.closest('.search-result-row');
+        removeEmptyRow();
+        songsTbody.appendChild(buildStagedSongRow(
+            btn.dataset.id, btn.dataset.title, btn.dataset.composer, btn.dataset.arranger, btn.dataset.resources, btn.dataset.internalId
+        ));
+        row?.remove();
+        saveBarCtl.sync();
+    });
+
+    snapshotOriginalOrder();
+    saveBarCtl.sync();
+</script>
+{% endblock %}
