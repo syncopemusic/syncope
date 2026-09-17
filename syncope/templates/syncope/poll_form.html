@@ -30,6 +30,9 @@
     <div class="form-actions">
         <button type="submit" class="btn btn-primary">{% if form.instance.pk %}Save{% else %}Create{% endif %}</button>
     </div>
+    {% if form.instance.pk %}
+    <p class="danger-zone"><a href="{% url 'syncope:poll_delete' url_username poll.pk %}" class="btn btn-danger">Delete</a></p>
+    {% endif %}
 </form>
 
 {% if form.instance.pk %}

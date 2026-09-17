@@ -64,7 +64,7 @@
                 <thead>
                     <tr>
                         <th class="col-num"></th>
-                        <th class="sticky-col">Member</th>
+                        <th class="sticky-col col-main">Member</th>
                         {% for event in events %}
                             <th class="table__event-col">
                                 <div class="table__event-header {% if event.event_type.id != 1 %}table__event-header--strong{% endif %}">
@@ -75,8 +75,8 @@
                                 </div>
                             </th>
                         {% endfor %}
-                        <th>Total</th>
-                        <th>%</th>
+                        <th class="col-main">Total</th>
+                        <th class="col-main">%</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -84,7 +84,7 @@
                         {% for row in group.items %}
                         <tr {% if forloop.first and not forloop.parentloop.first %}class="group-start"{% endif %}>
                             <td class="col-num">{{ row.index }}</td>
-                            <td class="sticky-col member-name">{{ row.member }}</td>
+                            <td class="sticky-col col-main member-name">{{ row.member }}</td>
                             {% for cell in row.attendance_cells %}
                                 {% if cell.is_ineligible %}
                                     <td class="table__event-col--ineligible"></td>
@@ -101,8 +101,8 @@
                                     </td>
                                 {% endif %}
                             {% endfor %}
-                            <td>{{ row.total_present }}/{{ row.total_events }}</td>
-                            <td>{{ row.percentage|floatformat:0 }}%</td>
+                            <td class="col-main">{{ row.total_present }}/{{ row.total_events }}</td>
+                            <td class="col-main">{{ row.percentage|floatformat:0 }}%</td>
                         </tr>
                         {% endfor %}
                     {% endfor %}
@@ -112,8 +112,8 @@
                         {% for total in event_totals %}
                             <td>{{ total.present }}/{{ total.total }}</td>
                         {% endfor %}
-                        <td><strong>{{ grand_present }}/{{ grand_total }}</strong></td>
-                        <td><strong>{{ grand_percentage|floatformat:0 }}%</strong></td>
+                        <td class="col-main"><strong>{{ grand_present }}/{{ grand_total }}</strong></td>
+                        <td class="col-main"><strong>{{ grand_percentage|floatformat:0 }}%</strong></td>
                     </tr>
                 </tbody>
             </table>

@@ -57,7 +57,7 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
         <thead>
             <tr>
                 <th></th>
-                <th>Song</th>
+                <th class="col-main">Song</th>
                 <th title="Encore">&#8635;</th>
             </tr>
         </thead>
@@ -65,7 +65,7 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
             {% for eventsong in eventsongs %}
             <tr>
                 <td class="song-index">{{ forloop.counter }}</td>
-                <td class="song-cell">
+                <td class="song-cell col-main">
                     <div class="song-title">
                         {% if eventsong.resource_icons %}
                             <span title="Song has its own resources available">{{ eventsong.resource_icons.0.icon }}</span>
@@ -105,7 +105,7 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
             <tr>
                 <th class="col-num">#</th>
 
-                <th>Person</th>
+                <th class="col-main">Person</th>
 
                 <th>Attendance</th>
             </tr>
@@ -114,7 +114,7 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
         {% for attendance in attendances %}
             <tr>
                 <td class="col-num">{{ forloop.counter }}</td>
-                <td>{% include "syncope/person_link.html" with person=attendance.person from_event=event.pk origin=origin_key %}</td>
+                <td class="col-main">{% include "syncope/person_link.html" with person=attendance.person from_event=event.pk origin=origin_key %}</td>
                 {% comment %}
                 <td>
 

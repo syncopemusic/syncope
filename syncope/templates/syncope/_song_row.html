@@ -1,7 +1,7 @@
 <tr class="song-row" data-eventsong-id="{{ eventsong.pk }}" data-song-id="{{ eventsong.song_id }}" id="song-{{ eventsong.pk }}">
     <td class="drag-handle-cell">{% if is_admin %}<span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span>{% endif %}</td>
     <td class="song-index">{{ eventsong.index }}</td>
-    <td class="song-cell">
+    <td class="song-cell col-main">
         <div class="song-title">{{ eventsong.song.title }}</div>
         <div class="song-subline">
             <span>

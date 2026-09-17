@@ -22,6 +22,7 @@ from syncope.forms import OrgMemberForm
 from syncope.models import MembershipPeriod,  PersonSkill,  PersonRole
 from syncope.models import CustomUser, Organization, Person, Membership, Role, Skill, Singer, Instrumentalist
 from syncope.models import Attendance, AttendanceType, Event, EventType, Voice, Instrument,  Project, LyricsTranslation, PersonResource, Resource, Song
+from syncope.models import Poll, PollPerson
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param, safe_next_url
 from syncope.breadcrumbs import event_breadcrumbs, event_song_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
@@ -678,8 +679,9 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
 
     def form_valid(self, form):
         auto_add_event = self.request.POST.get('auto_add_event') or self.request.GET.get('auto_add_event')
+        auto_add_poll = self.request.POST.get('auto_add_poll') or self.request.GET.get('auto_add_poll')
         selected_roles = form.cleaned_data["roles"]
-        if not selected_roles and auto_add_event:
+        if not selected_roles and (auto_add_event or auto_add_poll):
             # Quick-added from an event's Attendance edit page: default to Member
             # rather than _add_roles' own External fallback, so they show up as
             # an active member.
@@ -708,13 +710,18 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
         host = self.request.get_host()
         safe_next = next_url if (next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={host})) else None
 
-        if safe_next and auto_add_event:
-            event = Event.objects.filter(pk=auto_add_event, user=self.customuser).first()
-            if event:
-                Attendance.objects.get_or_create(
-                    event=event, person=person,
-                    defaults={'attendance_type': AttendanceType.objects.get(pk=AttendanceType.TBD)},
-                )
+        if safe_next and (auto_add_event or auto_add_poll):
+            if auto_add_event:
+                event = Event.objects.filter(pk=auto_add_event, user=self.customuser).first()
+                if event:
+                    Attendance.objects.get_or_create(
+                        event=event, person=person,
+                        defaults={'attendance_type': AttendanceType.objects.get(pk=AttendanceType.TBD)},
+                    )
+            if auto_add_poll:
+                poll = Poll.objects.filter(pk=auto_add_poll, user=self.customuser).first()
+                if poll:
+                    PollPerson.objects.get_or_create(poll=poll, person=person)
             draft_key = self.request.POST.get('draft_key') or self.request.GET.get('draft_key')
             if draft_key:
                 safe_next = add_query_param(safe_next, {'draft_key': draft_key})

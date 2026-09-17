@@ -17,7 +17,7 @@
     <tr>
 
         <th class="col-num">#</th>
-        <th><a href="?sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Title{% if current_sort == 'title' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th class="col-main"><a href="?sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Title{% if current_sort == 'title' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th><a href="?sort=start_date{% if current_sort == 'start_date' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Start Date{% if current_sort == 'start_date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th><a href="?sort=end_date{% if current_sort == 'end_date' and not reverse %}&reverse=true{% endif %}" class="sortable-header">End Date{% if current_sort == 'end_date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th><a href="?sort=events{% if current_sort == 'events' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Events{% if current_sort == 'events' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
@@ -29,7 +29,7 @@
         <tr>
             <td class="col-num">{{ forloop.counter }}</td>
 
-            <td>
+            <td class="col-main">
                 <a href="{%  url 'syncope:project_detail' url_username project.id %}">
                     {{ project.title }}
                 </a>

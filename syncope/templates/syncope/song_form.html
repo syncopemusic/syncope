@@ -41,6 +41,7 @@
 
     <h3>Quotes</h3>
     {{ quote_formset.management_form }}
+    <div class="table-container">
     <table class="table">
         <thead>
             <tr>
@@ -64,10 +65,12 @@
         {% endfor %}
         </tbody>
     </table>
+    </div>
     <button type="submit" name="action" value="add_kw_row" class="btn btn-sm btn-secondary">+</button>
 
     <h3>Lyrics Translations</h3>
     {{ translation_formset.management_form }}
+    <div class="table-container">
     <table class="table">
         <thead>
             <tr>
@@ -92,6 +95,7 @@
         {% endfor %}
         </tbody>
     </table>
+    </div>
     <button type="submit" name="action" value="add_translation_row" class="btn btn-sm btn-secondary">+</button>
 
     {{ resource_formset.management_form }}

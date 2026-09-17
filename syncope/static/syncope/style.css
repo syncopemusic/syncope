@@ -469,7 +469,7 @@
         }
 
         .mobile-toggle.is-open {
-            color: var(--color-text-on-accent);
+            color: var(--color-text-muted);
         }
 
         /* With the drawer open, the topbar's own bar must get out of the way instead of
@@ -1009,6 +1009,18 @@
         }
     }
 
+    /* Shrink every column to its content by default (the classic
+       width:1% + nowrap trick for auto-layout tables) so a table never
+       stretches its narrow columns (numbering, dates, single buttons) just
+       because there's leftover viewport width. Wrapped in :where() so this
+       has zero specificity — any existing sizing rule below (.table__event-col,
+       .song-index, etc.) or .col-main (utilities layer) wins automatically
+       without needing to out-specify this default. */
+    :where(.table) :where(thead th, tbody td) {
+        width: 1%;
+        white-space: nowrap;
+    }
+
     /* Replaces the hand-copied "first row of group" inline style
        ({% if forloop.first and not forloop.parentloop.first %}style="border-top:3px solid #333"{% endif %}) */
     .table-grouped tbody tr.group-start td {
@@ -1109,7 +1121,7 @@
 
     .dt-short { display: none; }
 
-    .event-songs-table .song-index { text-align: center; font-weight: bold; vertical-align: middle; width: 1.5rem; }
+    .event-songs-table .song-index { text-align: center; vertical-align: middle; width: 1.5rem; }
     .event-songs-table .song-title { font-weight: 500; }
     .event-songs-table .song-subline {
         display: flex;
@@ -1175,8 +1187,10 @@
         vertical-align: middle;
     }
 
+    /* Width no longer needed here — the base .table default (width:1%,
+       above) already shrinks this to content; only the tighter padding
+       for matrix density remains. */
     .table--matrix .col-num {
-        inline-size: 1.5rem;
         padding-inline: var(--space-1);
     }
 
@@ -1194,10 +1208,13 @@
        still drives auto table-layout sizing unless every cell in the column
        agrees on one fixed width. A min-inline-size here let each rotated
        column size itself independently off its own unrotated text length,
-       producing uneven, misaligned columns between header and body. */
+       producing uneven, misaligned columns between header and body.
+       position:relative anchors .table__event-header's absolute centering
+       below — harmless on cells that don't contain it. */
     .table__event-col {
         inline-size: var(--table-matrix-size);
         text-align: center;
+        position: relative;
     }
 
     /* poll_attendance.html's headers hold multi-line plain text (event type,
@@ -1214,9 +1231,19 @@
        attendance_dashboard.html). poll_attendance.html's transposed header
        rows use .table__event-col directly without this wrapper, since their
        labels are stacked plain text, not rotated. */
+    /* Absolutely positioned and centered on its own cell, then rotated in
+       place — this both perfectly centers the rotated label over the icon
+       column below it (centering via text-align/overflow on an inline box
+       drifted off-center in practice) and takes the label fully out of
+       normal flow, so its pre-rotation text width can never again push the
+       column wider than --table-matrix-size no matter how long a date
+       string gets. The header cell's own block-size:4.5rem still reserves
+       the vertical room the rotated text needs. */
     .table__event-header {
-        display: inline-block;
-        transform: rotate(-90deg);
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-90deg);
         white-space: nowrap;
         font-size: 0.75rem;
     }
@@ -1522,15 +1549,14 @@
         }
     }
 
+    /* Pinning only — no width cap/ellipsis truncation. Titles and names
+       must never be cut off; a sticky column just grows to fit its content
+       (still nowrap by default, from .table's base rule) instead. */
     .sticky-col {
         position: sticky;
         left: 0;
         background-color: var(--color-surface);
         z-index: var(--z-sticky);
-        max-width: 140px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
     }
 
     /* .sticky-col's own background-color (needed so scrolled-under content
@@ -1577,6 +1603,20 @@
     }
 
     .col-num {
+        text-align: right;
+    }
+
+    /* Opts a table's one "main content" column (title/name/description)
+       back into growing to fill the space every other column now shrinks
+       away from by default (see .table's width:1% rule). */
+    .col-main {
+        width: 100%;
+        white-space: normal;
+    }
+
+    /* Same alignment as .col-num, for non-numbering narrow columns
+       (e.g. a single action button) that shouldn't be labeled "num". */
+    .col-action {
         text-align: right;
     }
 

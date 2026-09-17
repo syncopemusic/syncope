@@ -18,7 +18,7 @@
     <thead>
     <tr>
         <th class="col-num"><a href="?sort=id{% if current_sort == 'id' and not reverse %}&reverse=true{% endif %}" class="sortable-header">#{% if current_sort == 'id' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Title{% if current_sort == 'title' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th class="col-main"><a href="?sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Title{% if current_sort == 'title' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th><a href="?sort=updated{% if current_sort == 'updated' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Updated{% if current_sort == 'updated' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th></th>
     </tr>
@@ -27,7 +27,7 @@
     {% for poll in polls %}
     <tr>
         <td class="col-num">{{ forloop.counter }}</td>
-        <td><a href="{% url 'syncope:poll_detail' url_username poll.pk %}">{{ poll.title }}</a></td>
+        <td class="col-main"><a href="{% url 'syncope:poll_detail' url_username poll.pk %}">{{ poll.title }}</a></td>
         <td><span data-dt="{{ poll.updated_at|date:"c" }}" data-dt-fmt="datetime">{{ poll.updated_at|date:"Y-m-d H:i" }}</span></td>
         <td>
             {% if is_admin %}

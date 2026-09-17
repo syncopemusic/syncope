@@ -8,17 +8,17 @@
                     ID {% if current_sort == 'id' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
-            <th class="sticky-col">
+            <th class="sticky-col col-main">
                 <a href="?q={{ q }}&sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
                     Title {% if current_sort == 'title' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
-            <th>
+            <th class="col-main">
                 <a href="?q={{ q }}&sort=composer{% if current_sort == 'composer' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
                     Composer {% if current_sort == 'composer' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
-            <th>
+            <th class="col-main">
                 <a href="?q={{ q }}&sort=poet{% if current_sort == 'poet' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
                     Poet {% if current_sort == 'poet' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
@@ -36,16 +36,16 @@
     {% for song in songs %}
         <tr>
             <td class="col-num">{{ song.internal_id|default:"-" }}</td>
-            <td class="sticky-col">
+            <td class="sticky-col col-main">
                 <a href="{%  url 'syncope:song_detail' url_username song.pk %}">{{ song.title }}</a> {% if song.has_direct_resources or song.has_event_resources %}<span title="Song/Event Resources">{{ song.has_direct_resources }}/{{ song.has_event_resources }}</span>{% endif %}
                 {% if song.keywords %}
                     <small>{{ song.keywords|default:"|" }}</small>
                 {% endif %}
             </td>
-            <td>
+            <td class="col-main">
                 {% include "syncope/person_link.html" with person=song.composer %}
             </td>
-            <td>
+            <td class="col-main">
                 {% include "syncope/person_link.html" with person=song.poet %}
             </td>
             <td>

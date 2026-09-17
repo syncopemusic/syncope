@@ -36,14 +36,14 @@
     <thead>
     <tr>
         <th class="col-num">#</th>
-        <th>Name</th>
+        <th class="col-main">Name</th>
     </tr>
     </thead>
     <tbody>
     {% for member in members %}
     <tr>
         <td class="col-num">{{ forloop.counter }}</td>
-        <td><a href="{% url 'syncope:org_member_detail' url_username member.pk %}">{{ member.first_name }} {{ member.last_name }}</a></td>
+        <td class="col-main"><a href="{% url 'syncope:org_member_detail' url_username member.pk %}">{{ member.first_name }} {{ member.last_name }}</a></td>
     </tr>
     {% endfor %}
     </tbody>
@@ -60,14 +60,14 @@
     <thead>
     <tr>
         <th class="col-num">#</th>
-        <th>Name</th>
+        <th class="col-main">Name</th>
     </tr>
     </thead>
     <tbody>
     {% for guest in guests %}
     <tr>
         <td class="col-num">{{ forloop.counter }}</td>
-        <td><a href="{% url 'syncope:org_member_detail' url_username guest.pk %}">{{ guest.first_name }} {{ guest.last_name }}</a></td>
+        <td class="col-main"><a href="{% url 'syncope:org_member_detail' url_username guest.pk %}">{{ guest.first_name }} {{ guest.last_name }}</a></td>
     </tr>
     {% endfor %}
     </tbody>
@@ -84,7 +84,7 @@
     <thead>
     <tr>
         <th class="col-num">#</th>
-        <th>Title</th>
+        <th class="col-main">Title</th>
         <th>Composer</th>
     </tr>
     </thead>
@@ -92,7 +92,7 @@
     {% for song in songs %}
     <tr>
         <td class="col-num">{{ forloop.counter }}</td>
-        <td><a href="{% url 'syncope:song_detail' url_username song.pk %}">{{ song.title }}</a></td>
+        <td class="col-main"><a href="{% url 'syncope:song_detail' url_username song.pk %}">{{ song.title }}</a></td>
         <td>{{ song.composer|default:"-" }}</td>
     </tr>
     {% endfor %}
@@ -110,7 +110,7 @@
     <thead>
     <tr>
         <th class="col-num">#</th>
-        <th>Name</th>
+        <th class="col-main">Name</th>
         <th>🔗</th>
         <th>Date</th>
         <th>Location</th>
@@ -122,7 +122,7 @@
     {% for event in events %}
         <tr>
             <td class="col-num">{{ forloop.counter }}</td>
-            <td>
+            <td class="col-main">
                 <a href="{%  url 'syncope:event_detail' url_username event.pk %}">
                     {{ event.name }}
                 </a>
@@ -166,15 +166,15 @@
 <div class="table-container">
 <table class="table">
     <thead>
-    <tr><th class="col-num"></th><th></th><th>Description</th><th>URL</th></tr>
+    <tr><th class="col-num"></th><th></th><th class="col-main">Description</th><th class="col-main">URL</th></tr>
     </thead>
     <tbody>
     {% for link in project_resources %}
     <tr>
         <td class="col-num">{{ forloop.counter }}</td>
         <td>{{ link.icon }}</td>
-        <td>{{ link.desc }}</td>
-        <td><a href="{{ link.share_url|default:link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a></td>
+        <td class="col-main">{{ link.desc }}</td>
+        <td class="col-main"><a href="{{ link.share_url|default:link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a></td>
     </tr>
     {% endfor %}
     </tbody>

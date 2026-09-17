@@ -70,21 +70,22 @@
 
 {% if all_song_resources %}
 <h3>Resources</h3>
+<div class="table-container">
 <table class="table">
     <thead>
         <tr>
+            <th class="col-num"></th>
             <th></th>
             <th></th>
-            <th></th>
-            <th>Resource</th>
-            <th>Description</th>
+            <th class="col-main">Resource</th>
+            <th class="col-main">Description</th>
             <th>Event</th>
         </tr>
     </thead>
     <tbody>
         {% for res in all_song_resources %}
         <tr>
-            <td>{{ forloop.counter }}</td>
+            <td class="col-num">{{ forloop.counter }}</td>
             <td>{{ res.icon }}</td>
             <td style="position: relative;">
                 <button class="copy-resource-btn btn btn-link btn-sm" data-url="{{ res.share_url|default:res.url }}" title="Copy link">
@@ -92,8 +93,8 @@
                 </button>
                 <span class="copy-resource-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: var(--color-surface); padding: 2px 4px; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm);"></span>
             </td>
-            <td><a href="{{ res.share_url|default:res.url }}" target="_blank" rel="noopener noreferrer">{{ res.url }}</a></td>
-            <td>{{ res.desc }}</td>
+            <td class="col-main"><a href="{{ res.share_url|default:res.url }}" target="_blank" rel="noopener noreferrer">{{ res.url }}</a></td>
+            <td class="col-main">{{ res.desc }}</td>
             <td>
                 {% if res.event %}
                     <a href="{% url 'syncope:event_detail' url_username res.event.pk %}">{{ res.event.name }} (<span data-dt="{{ res.event.started_at|date:'c' }}" data-dt-fmt="date-year">{{ res.event.started_at|date:"Y-m-d" }}</span>)</a>
@@ -106,6 +107,7 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% endif %}
 
 {% if song.quotes.all %}
@@ -142,11 +144,12 @@
 
 {% if events %}
 <h3>Events</h3>
+<div class="table-container">
 <table id="events-table" class="table">
     <thead>
         <tr>
-            <th>#</th>
-            <th>Name</th>
+            <th class="col-num">#</th>
+            <th class="col-main">Name</th>
             <th><a href="#" id="sort-type" class="sortable-header">Type <span id="sort-type-indicator"></span></a></th>
             <th><a href="#" id="sort-date" class="sortable-header">Date <span id="sort-date-indicator"></span></a></th>
         </tr>
@@ -154,8 +157,8 @@
     <tbody>
         {% for event in events %}
         <tr>
-            <td>{{ forloop.counter }}</td>
-            <td>
+            <td class="col-num">{{ forloop.counter }}</td>
+            <td class="col-main">
                 {% if event.event_type.id != 1 %}
                     <strong><a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a></strong>
                 {% else %}
@@ -168,6 +171,7 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% endif %}
 
 {% include "syncope/_save_bar.html" with url=return_url|default:song_list_url %}

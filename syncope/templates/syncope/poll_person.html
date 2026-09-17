@@ -1,33 +1,62 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 
 {% block title %}{{ poll.title }} - Persons{% endblock %}
 
 {% block content %}
 <h2>{{ poll.title }} — Persons</h2>
-<form method="post" class="inline-form">
-    {% csrf_token %}
-    <input type="hidden" name="draft_key" value="{{ draft_key }}">
-    <button type="submit"
-            class="btn btn-sm btn-secondary"
-            formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new' url_username %}&next={{ request.get_full_path|urlencode }}"
-            title="Create new person">New</button>
-</form>
-<form method="get" class="search-form">
-    <input type="text" name="q" value="{{ q }}" placeholder="Search by name, role, skill, voice, instrument">
-    <button type="submit" class="btn btn-sm btn-secondary">Search</button>
-    {% if q %}<a href="?" class="btn btn-sm btn-link">Clear</a>{% endif %}
-</form>
 
-<form method="post">
+<div class="section-header">
+    <h3>Added Persons</h3>
+    <span class="badge">{{ poll_persons|length }}</span>
+</div>
+
+<form method="post" id="persons-form">
     {% csrf_token %}
-    {{ form.poll }}
-    <div class="form-group">
-        {{ form.person }}
-        {% if form.person.errors %}<span class="error">{{ form.person.errors }}</span>{% endif %}
+    <div class="table-container">
+        <table class="table table-grouped table-narrow">
+            <thead>
+                <tr>
+                    <th class="col-num">#</th>
+                    <th class="col-main">Name</th>
+                    <th class="col-action">Action</th>
+                </tr>
+            </thead>
+            <tbody id="persons-tbody">
+                {% for group in grouped_poll_persons %}
+                {% for pp in group.items %}
+                <tr data-poll-person-id="{{ pp.pk }}" data-person-id="{{ pp.person_id }}" {% if forloop.first and not forloop.parentloop.first %}class="group-start"{% endif %}>
+                    <td class="col-num">{{ pp.index }}</td>
+                    <td class="col-main">{{ pp.person.first_name }} {{ pp.person.last_name }}</td>
+                    <td class="col-action">
+                        {% if is_admin %}<button type="button" class="btn btn-sm btn-remove" title="Remove from poll">×</button>{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr id="no-persons-row"><td colspan="3">No persons added yet.</td></tr>
+                {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-    <button type="submit" class="btn btn-primary">Add</button>
+
+    {% if is_admin %}
+    <div id="add-participants" style="max-width:42rem;">
+        <p><strong>Add participant</strong></p>
+        <p style="position:relative;">
+            <input type="text" id="participant-search-input" placeholder="Search by name, role, skill, voice, instrument" style="max-width:100%; width:100%; box-sizing:border-box;">
+            <span class="search-spinner" id="participant-search-spinner"></span>
+        </p>
+        <p style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button type="button" id="participant-search-clear" class="btn btn-sm btn-secondary">Clear</button>
+            <button type="submit" form="persons-form" name="action" value="new_person" class="btn btn-sm btn-secondary" title="Create new person">New</button>
+        </p>
+        <div id="participant-search-results"></div>
+    </div>
+    {% endif %}
 </form>
 
+{% if is_admin %}
 <p><small>Bulk importing option:</small></p>
 <form method="post" class="search-form">
     {% csrf_token %}
@@ -36,54 +65,145 @@
     {{ bulk_import_form.skill_criteria }}
     <button type="submit" class="btn btn-sm btn-secondary">Import</button>
 </form>
-
-<div class="section-header">
-    <h3>Added Persons</h3>
-    <span class="badge">{{ poll_persons|length }}</span>
-</div>
-{% if poll_persons %}
-<div class="table-container">
-    <table class="table table-grouped table-narrow">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Attendance Link</th>
-                <th class="col-num">Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for group in grouped_poll_persons %}
-            {% for pp in group.items %}
-            <tr {% if forloop.first and not forloop.parentloop.first %}class="group-start"{% endif %}>
-                <td class="col-num">{{ forloop.counter }}</td>
-                <td>{{ pp.person.first_name }} {{ pp.person.last_name }}</td>
-                <td>
-                    <a href="{% url 'syncope:poll_person_attendance' url_username poll.pk pp.pk %}" target="_blank">→ Link</a>
-                </td>
-                <td class="col-num">
-                    {% if is_admin %}
-                    <form method="post" action="{% url 'syncope:poll_person_remove' url_username poll.pk pp.pk %}" class="inline-form" onclick="return confirm('Remove {{ pp.person.first_name }} {{ pp.person.last_name }}?')">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-danger">Remove</button>
-                    </form>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% else %}
-<p>No persons added yet.</p>
 {% endif %}
-<div class="link-row">
-    <strong>Admin links:</strong>
-    <a href="{% url 'syncope:poll_update' url_username poll.pk %}" class="btn btn-secondary btn-sm">Edit title</a>
-    <a href="{% url 'syncope:poll_events' url_username poll.pk %}" class="btn btn-secondary btn-sm">Add event slots</a>
-</div>
 
 {% url 'syncope:poll_detail' url_username poll.pk as return_target %}
-{% include "syncope/_save_bar.html" with url=return_target %}
+{% include "syncope/_save_bar.html" with form_id="persons-form" url=return_target %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>
+    const personsTbody = document.getElementById('persons-tbody');
+
+    function countUnsavedChanges() {
+        let count = 0;
+        personsTbody.querySelectorAll('tr[data-poll-person-id]').forEach(row => {
+            if (row.classList.contains('pending-remove')) count++;
+        });
+        count += personsTbody.querySelectorAll('tr.staged-add').length;
+        return count;
+    }
+
+    function removeEmptyRow() {
+        document.getElementById('no-persons-row')?.remove();
+    }
+
+    const saveBarCtl = initSaveBar({
+        formId: 'persons-form',
+        countUnsavedChanges,
+        onDiscard: () => {
+            personsTbody.querySelectorAll('tr.staged-add').forEach(row => row.remove());
+            personsTbody.querySelectorAll('tr[data-poll-person-id]').forEach(row => {
+                row.classList.remove('pending-remove');
+                row.querySelector('.pending-remove-input')?.remove();
+                const btn = row.querySelector('.btn-remove');
+                if (btn) { btn.textContent = '×'; btn.title = 'Remove from poll'; }
+            });
+            if (!personsTbody.querySelector('tr[data-poll-person-id]') && !personsTbody.querySelector('tr.staged-add') && !document.getElementById('no-persons-row')) {
+                personsTbody.insertAdjacentHTML('beforeend', '<tr id="no-persons-row"><td colspan="3">No persons added yet.</td></tr>');
+            }
+        },
+        afterDiscard: () => runParticipantSearch(participantSearchInput ? participantSearchInput.value : ''),
+    });
+
+    function toggleRemove(row) {
+        const pk = row.dataset.pollPersonId;
+        if (!pk) return;
+        const btn = row.querySelector('.btn-remove');
+        const pending = row.classList.toggle('pending-remove');
+        if (pending) {
+            row.insertAdjacentHTML('beforeend', `<input type="hidden" class="pending-remove-input" name="remove_${pk}" value="1">`);
+            btn.textContent = '↺';
+            btn.title = 'Undo removal';
+        } else {
+            row.querySelector('.pending-remove-input')?.remove();
+            btn.textContent = '×';
+            btn.title = 'Remove from poll';
+        }
+        saveBarCtl.sync();
+    }
+
+    personsTbody.addEventListener('click', function (e) {
+        const btn = e.target.closest('.btn-remove');
+        if (!btn) return;
+        const row = btn.closest('tr');
+        if (row.classList.contains('staged-add')) {
+            row.remove();
+            saveBarCtl.sync();
+            runParticipantSearch(participantSearchInput.value);
+            return;
+        }
+        toggleRemove(row);
+    });
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function buildStagedPersonRow(personId, personLabel) {
+        const tr = document.createElement('tr');
+        tr.className = 'staged-add';
+        tr.dataset.personId = personId;
+        tr.innerHTML = `
+            <td></td>
+            <td>${escapeHtml(personLabel)}</td>
+            <td><input type="hidden" name="add_person" value="${personId}"><button type="button" class="btn btn-sm btn-remove" title="Remove staged addition">&times;</button></td>
+        `;
+        return tr;
+    }
+
+    function currentPersonIds() {
+        return Array.from(personsTbody.querySelectorAll('tr[data-person-id]')).map(tr => tr.dataset.personId);
+    }
+
+    const participantSearchInput = document.getElementById('participant-search-input');
+    const participantSearchResults = document.getElementById('participant-search-results');
+    const participantSearchSpinner = document.getElementById('participant-search-spinner');
+    let participantSearchTimeout;
+
+    function beginParticipantSpinner() { participantSearchSpinner.classList.add('is-active'); }
+    function endParticipantSpinner() { participantSearchSpinner.classList.remove('is-active'); }
+
+    function runParticipantSearch(query) {
+        const exclude = currentPersonIds().join(',');
+        const url = `{% url 'syncope:poll_persons_search' url_username poll.pk %}?q=${encodeURIComponent(query)}&exclude=${encodeURIComponent(exclude)}`;
+        fetch(url).then(r => r.text()).then(html => {
+            endParticipantSpinner();
+            participantSearchResults.innerHTML = html;
+        });
+    }
+
+    if (participantSearchInput) {
+        participantSearchInput.addEventListener('input', function () {
+            clearTimeout(participantSearchTimeout);
+            beginParticipantSpinner();
+            participantSearchTimeout = setTimeout(() => runParticipantSearch(this.value), 1000);
+        });
+        participantSearchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') e.preventDefault();
+        });
+    }
+
+    document.getElementById('participant-search-clear')?.addEventListener('click', function () {
+        clearTimeout(participantSearchTimeout);
+        participantSearchInput.value = '';
+        participantSearchResults.innerHTML = '';
+        runParticipantSearch('');
+    });
+
+    participantSearchResults?.addEventListener('click', function (e) {
+        const btn = e.target.closest('.btn-secondary');
+        if (!btn) return;
+        const row = btn.closest('.search-result-row');
+        const personId = btn.dataset.id;
+        const label = row?.querySelector('.result-label')?.textContent.trim() || personId;
+        removeEmptyRow();
+        personsTbody.appendChild(buildStagedPersonRow(personId, label));
+        row?.remove();
+        saveBarCtl.sync();
+    });
+</script>
 {% endblock %}

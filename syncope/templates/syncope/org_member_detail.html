@@ -36,8 +36,8 @@
   <tr>
     <th class="col-num"></th>
     <th></th>
-    <th>Description</th>
-    <th>URL</th>
+    <th class="col-main">Description</th>
+    <th class="col-main">URL</th>
   </tr>
   </thead>
   <tbody>
@@ -45,8 +45,8 @@
   <tr>
     <td class="col-num">{{ forloop.counter }}</td>
     <td>{{ link.icon }}</td>
-    <td>{{ link.desc }}</td>
-    <td><a href="{{ link.share_url|default:link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a></td>
+    <td class="col-main">{{ link.desc }}</td>
+    <td class="col-main"><a href="{{ link.share_url|default:link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a></td>
   </tr>
   {% endfor %}
   </tbody>
@@ -62,7 +62,7 @@
   <thead>
   <tr>
     <th class="col-num"></th>
-    <th>Title</th>
+    <th class="col-main">Title</th>
   </tr>
   </thead>
   <tbody>
@@ -70,7 +70,7 @@
 
   <tr>
     <td class="col-num">{{ forloop.counter }}</td>
-    <td><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
+    <td class="col-main"><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
   </tr>
 
   {% endfor %}
@@ -87,14 +87,14 @@
   <thead>
   <tr>
     <th class="col-num"></th>
-    <th>Title</th>
+    <th class="col-main">Title</th>
   </tr>
   </thead>
   <tbody>
   {% for song in written_songs %}
   <tr>
     <td class="col-num">{{ forloop.counter }}</td>
-    <td><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
+    <td class="col-main"><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
   </tr>
   {% endfor %}
   </tbody>
@@ -110,14 +110,14 @@
   <thead>
   <tr>
     <th class="col-num"></th>
-    <th>Title</th>
+    <th class="col-main">Title</th>
   </tr>
   </thead>
   <tbody>
   {% for song in arranged_songs %}
   <tr>
     <td class="col-num">{{ forloop.counter }}</td>
-    <td><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
+    <td class="col-main"><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
   </tr>
   {% endfor %}
   </tbody>
@@ -133,7 +133,7 @@
   <thead>
   <tr>
     <th class="col-num"></th>
-    <th>Original Language</th>
+    <th class="col-main">Original Language</th>
     <th>Translation Language</th>
     <th>Songs</th>
   </tr>
@@ -142,7 +142,7 @@
   {% for pair in translation_pairs %}
   <tr>
     <td class="col-num">{{ forloop.counter }}</td>
-    <td>{{ pair.original_lang }}</td>
+    <td class="col-main">{{ pair.original_lang }}</td>
     <td>{{ pair.translation_lang }}</td>
     <td>{{ pair.count }}</td>
   </tr>
@@ -163,7 +163,7 @@
   <thead>
   <tr>
     <th class="col-num"></th>
-    <th>Project</th>
+    <th class="col-main">Project</th>
 
   </tr>
   </thead>
@@ -171,7 +171,7 @@
   {% for entry in singer_projects %}
   <tr>
     <td class="col-num">{{ forloop.counter }}</td>
-    <td><a href="{%  url 'syncope:project_detail' url_username entry.project.pk %}">{{ entry.project.title }}</a>
+    <td class="col-main"><a href="{%  url 'syncope:project_detail' url_username entry.project.pk %}">{{ entry.project.title }}</a>
     <span title="Performances">{{ entry.performances_attended }}</span>
     <span title="Rehearsals">{{ entry.rehearsals_present }}/{{ entry.rehearsals_total }}</span></td>
   </tr>
@@ -193,7 +193,7 @@
   <thead>
   <tr>
     <th class="col-num"></th>
-    <th>Project</th>
+    <th class="col-main">Project</th>
 
   </tr>
   </thead>
@@ -201,7 +201,7 @@
   {% for entry in instrumentalist_projects %}
   <tr>
     <td class="col-num">{{ forloop.counter }}</td>
-    <td><a href="{%  url 'syncope:project_detail' url_username entry.project.pk %}">{{ entry.project.title }}</a>
+    <td class="col-main"><a href="{%  url 'syncope:project_detail' url_username entry.project.pk %}">{{ entry.project.title }}</a>
       <span title="Performances">{{ entry.performances_attended }}</span>
  <span title="Rehearsals">{{ entry.rehearsals_present }}/{{ entry.rehearsals_total }}</span></td>
   </tr>

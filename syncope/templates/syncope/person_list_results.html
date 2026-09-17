@@ -3,12 +3,12 @@
     <thead>
     <tr>
         <th class="col-num">#</th>
-        <th class="sticky-col">
+        <th class="sticky-col col-main">
             <a href="?q={{ q }}&sort=name{% if current_sort == 'name' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
                 Name {% if current_sort == 'name' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
-        <th>
+        <th class="col-main">
             <a href="?q={{ q }}&sort=email{% if current_sort == 'email' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
                 Email {% if current_sort == 'email' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
@@ -33,12 +33,12 @@
         {% for person in persons %}
         <tr>
             <td class="col-num">{{ forloop.counter }}</td>
-            <td class="sticky-col">
+            <td class="sticky-col col-main">
                 <a href="{% url person_detail_url_name url_username person.person.id %}">
                 {{ person.person.first_name }} {{ person.person.last_name }}
                 </a>
             </td>
-            <td>{{ person.person.email }}</td>
+            <td class="col-main">{{ person.person.email }}</td>
             {% if list_type in 'active inactive all' %}
             <td>
                 {% for skill in person.person.skills.all %}

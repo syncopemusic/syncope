@@ -1,9 +1,12 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 
-{% block title %}Poll Events — {{ poll.title }}{% endblock %}
+{% block title %}{% if editing %}Edit Date{% else %}Dates{% endif %} — {{ poll.title }}{% endblock %}
 
 {% block content %}
-<h2>{{ poll.title }} — {% if editing %}Edit Event Slot{% else %}Event Slots{% endif %}</h2>
+
+{% if editing %}
+<h2>{{ poll.title }} — Edit Date</h2>
 
 <form method="post">
     {% csrf_token %}
@@ -19,14 +22,11 @@
         <label for="{{ form.started_at.id_for_label }}">{{ form.started_at.label }}</label>
         {{ form.started_at }}
         {% if form.started_at.errors %}<span class="error">{{ form.started_at.errors }}</span>{% endif %}
-        <small>Autofill next day</small>
-
     </div>
     <div class="form-group">
         <label for="{{ form.ended_at.id_for_label }}">{{ form.ended_at.label }}</label>
         {{ form.ended_at }}
         {% if form.ended_at.errors %}<span class="error">{{ form.ended_at.errors }}</span>{% endif %}
-        <small>Autofill +3h</small>
     </div>
 
     <div class="form-group">
@@ -42,68 +42,98 @@
     </div>
 
     <div class="form-actions">
-        <button type="submit" class="btn btn-primary">{% if editing %}Save{% else %}Create{% endif %}</button>
+        <button type="submit" class="btn btn-primary">Save</button>
     </div>
 </form>
 
+{% url 'syncope:poll_events' url_username poll.pk as return_target %}
+{% include "syncope/_save_bar.html" with url=return_target %}
+
+{% else %}
+<h2>{{ poll.title }} — Dates</h2>
+
 <div class="section-header">
-    <h3>Added Event Slots</h3>
+    <h3>Added Dates</h3>
     <span class="badge">{{ poll_events|length }}</span>
 </div>
-{% if poll_events %}
-<div class="table-container">
-    <table class="table">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Event Type</th>
-                <th>Date</th>
-                <th>Start <br> End</th>
-                <th>Location</th>
-                <th>Detail</th>
-                <th class="col-num">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for pe in poll_events %}
-            <tr>
-                <td class="col-num">{{ forloop.counter }}</td>
-                <td>{{ pe.event_type.name }}</td>
-                <td>{% if pe.same_date %}<span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span>{% else %}<span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span> – <span data-dt="{{ pe.ended_at|date:"c" }}" data-dt-fmt="date">{{ pe.ended_at|date:"d M" }}</span>{% endif %}</td>
-                <td><span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="time">{{ pe.started_at|date:"H:i" }}</span> <br> <span data-dt="{{ pe.ended_at|date:"c" }}" data-dt-fmt="time">{{ pe.ended_at|date:"H:i" }}</span></td>
-                <td>{% if pe.location %}{{ pe.location }}{% else %}<em>—</em>{% endif %}</td>
-                <td>{% if pe.details %}{{ pe.details }}{% else %}<em>—</em>{% endif %}</td>
-                <td class="col-num">
-                    <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}" class="btn btn-secondary btn-sm">Edit</a>
-                    {% if is_admin %}
-                    <form method="post" action="{% url 'syncope:poll_event_remove' url_username poll.pk pe.pk %}" class="remove-event-form inline-form" data-event-type="{{ pe.event_type.name }}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-danger" title="Remove this event slot">Remove</button>
-                    </form>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% else %}
-<p>No event slots added yet.</p>
-{% endif %}
-<div class="link-row">
-    <a href="{% url 'syncope:poll_update' url_username poll.pk %}" class="btn btn-secondary btn-sm">Edit title</a>
-    <a href="{% url 'syncope:poll_persons' url_username poll.pk %}" class="btn btn-secondary btn-sm">Add people</a>
-</div>
+
+<form method="post" id="dates-form">
+    {% csrf_token %}
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th class="col-num">#</th>
+                    <th>Event Type</th>
+                    <th>Date</th>
+                    <th>Start <br> End</th>
+                    <th>Location</th>
+                    <th class="col-main">Detail</th>
+                    <th class="col-action">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="dates-tbody">
+                {% for pe in poll_events %}
+                <tr data-event-id="{{ pe.pk }}">
+                    <td class="col-num">{{ forloop.counter }}</td>
+                    <td>{{ pe.event_type.name }}</td>
+                    <td>{% if pe.same_date %}<span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span>{% else %}<span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span> – <span data-dt="{{ pe.ended_at|date:"c" }}" data-dt-fmt="date">{{ pe.ended_at|date:"d M" }}</span>{% endif %}</td>
+                    <td><span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="time">{{ pe.started_at|date:"H:i" }}</span> <br> <span data-dt="{{ pe.ended_at|date:"c" }}" data-dt-fmt="time">{{ pe.ended_at|date:"H:i" }}</span></td>
+                    <td>{% if pe.location %}{{ pe.location }}{% else %}<em>—</em>{% endif %}</td>
+                    <td class="col-main">{% if pe.details %}{{ pe.details }}{% else %}<em>—</em>{% endif %}</td>
+                    <td class="col-action">
+                        <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}" class="btn btn-secondary btn-sm">Edit</a>
+                        {% if is_admin %}<button type="button" class="btn btn-sm btn-remove" title="Remove this date">×</button>{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr id="no-dates-row"><td colspan="7">No dates added yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if is_admin %}
+    <div id="add-date" style="max-width:42rem;">
+        <p><strong>Add date</strong></p>
+        <div class="form-group">
+            <label for="{{ form.event_type.id_for_label }}">{{ form.event_type.label }}</label>
+            {{ form.event_type }}
+        </div>
+        <div class="form-group">
+            <label for="{{ form.started_at.id_for_label }}">{{ form.started_at.label }}</label>
+            {{ form.started_at }}
+
+        </div>
+        <div class="form-group">
+            <label for="{{ form.ended_at.id_for_label }}">{{ form.ended_at.label }}</label>
+            {{ form.ended_at }}
+
+        </div>
+        <div class="form-group">
+            <label for="{{ form.location.id_for_label }}">{{ form.location.label }}</label>
+            {{ form.location }}
+        </div>
+        <div class="form-group">
+            <label for="{{ form.details.id_for_label }}">{{ form.details.label }}</label>
+            {{ form.details }}
+        </div>
+        <p><button type="button" id="add-date-btn" class="btn btn-sm btn-secondary">Add</button></p>
+    </div>
+    {% endif %}
+</form>
 
 {% url 'syncope:poll_detail' url_username poll.pk as return_target %}
-{% include "syncope/_save_bar.html" with url=return_target %}
+{% include "syncope/_save_bar.html" with form_id="dates-form" url=return_target %}
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
 $(function () {
-    $('#id_started_at').on('change', function () {
-        if ($('#id_ended_at').val()) return;
+    $('#{{ form.started_at.id_for_label }}').on('change', function () {
+        if ($('#{{ form.ended_at.id_for_label }}').val()) return;
         var val = $(this).val();
         if (!val) return;
         var d = new Date(val);
@@ -114,8 +144,162 @@ $(function () {
                         pad(d.getDate()) + 'T' +
                         pad(d.getHours()) + ':' +
                         pad(d.getMinutes());
-        $('#id_ended_at').val(formatted);
+        $('#{{ form.ended_at.id_for_label }}').val(formatted);
     });
 });
 </script>
+{% if not editing %}
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>
+    const datesTbody = document.getElementById('dates-tbody');
+
+    function countUnsavedChanges() {
+        let count = 0;
+        datesTbody.querySelectorAll('tr[data-event-id]').forEach(row => {
+            if (row.classList.contains('pending-remove')) count++;
+        });
+        count += datesTbody.querySelectorAll('tr.staged-add').length;
+        return count;
+    }
+
+    function removeEmptyRow() {
+        document.getElementById('no-dates-row')?.remove();
+    }
+
+    const saveBarCtl = initSaveBar({
+        formId: 'dates-form',
+        countUnsavedChanges,
+        onDiscard: () => {
+            datesTbody.querySelectorAll('tr.staged-add').forEach(row => row.remove());
+            datesTbody.querySelectorAll('tr[data-event-id]').forEach(row => {
+                row.classList.remove('pending-remove');
+                row.querySelector('.pending-remove-input')?.remove();
+                const btn = row.querySelector('.btn-remove');
+                if (btn) { btn.textContent = '×'; btn.title = 'Remove this date'; }
+            });
+            if (!datesTbody.querySelector('tr[data-event-id]') && !datesTbody.querySelector('tr.staged-add') && !document.getElementById('no-dates-row')) {
+                datesTbody.insertAdjacentHTML('beforeend', '<tr id="no-dates-row"><td colspan="7">No dates added yet.</td></tr>');
+            }
+        },
+    });
+
+    function toggleRemove(row) {
+        const pk = row.dataset.eventId;
+        if (!pk) return;
+        const btn = row.querySelector('.btn-remove');
+        const pending = row.classList.toggle('pending-remove');
+        if (pending) {
+            row.insertAdjacentHTML('beforeend', `<input type="hidden" class="pending-remove-input" name="remove_${pk}" value="1">`);
+            btn.textContent = '↺';
+            btn.title = 'Undo removal';
+        } else {
+            row.querySelector('.pending-remove-input')?.remove();
+            btn.textContent = '×';
+            btn.title = 'Remove this date';
+        }
+        saveBarCtl.sync();
+    }
+
+    datesTbody.addEventListener('click', function (e) {
+        const btn = e.target.closest('.btn-remove');
+        if (!btn) return;
+        const row = btn.closest('tr');
+        if (row.classList.contains('staged-add')) {
+            row.remove();
+            saveBarCtl.sync();
+            return;
+        }
+        toggleRemove(row);
+    });
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function formatDateForDisplay(value) {
+        if (!value) return '—';
+        const d = new Date(value);
+        if (isNaN(d)) return escapeHtml(value);
+        return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
+    }
+
+    function formatTimeForDisplay(value) {
+        if (!value) return '';
+        const d = new Date(value);
+        if (isNaN(d)) return '';
+        return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+
+    function buildStagedDateRow(values) {
+        const tr = document.createElement('tr');
+        tr.className = 'staged-add';
+        tr.innerHTML = `
+            <td></td>
+            <td>${escapeHtml(values.typeLabel)}</td>
+            <td>${formatDateForDisplay(values.startedAt)}</td>
+            <td>${formatTimeForDisplay(values.startedAt)} <br> ${formatTimeForDisplay(values.endedAt)}</td>
+            <td>${values.location ? escapeHtml(values.location) : '<em>—</em>'}</td>
+            <td>${values.details ? escapeHtml(values.details) : '<em>—</em>'}</td>
+            <td></td>
+        `;
+        const actionsCell = tr.lastElementChild;
+        const fields = {
+            new_event_type: values.eventType,
+            new_started_at: values.startedAt,
+            new_ended_at: values.endedAt,
+            new_location: values.location,
+            new_details: values.details,
+        };
+        for (const [name, value] of Object.entries(fields)) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            actionsCell.appendChild(input);
+        }
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'btn btn-sm btn-remove';
+        removeBtn.title = 'Remove staged addition';
+        removeBtn.textContent = '×';
+        actionsCell.appendChild(removeBtn);
+        return tr;
+    }
+
+    const eventTypeSelect = document.getElementById('{{ form.event_type.id_for_label }}');
+    const startedAtInput = document.getElementById('{{ form.started_at.id_for_label }}');
+    const endedAtInput = document.getElementById('{{ form.ended_at.id_for_label }}');
+    const locationInput = document.getElementById('{{ form.location.id_for_label }}');
+    const detailsInput = document.getElementById('{{ form.details.id_for_label }}');
+
+    function suppressEnterSubmit(input) {
+        if (!input) return;
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') e.preventDefault();
+        });
+    }
+    [startedAtInput, endedAtInput].forEach(suppressEnterSubmit);
+
+    document.getElementById('add-date-btn')?.addEventListener('click', function () {
+        if (!eventTypeSelect.value || !startedAtInput.value) {
+            alert('Event type and start date are required.');
+            return;
+        }
+        removeEmptyRow();
+        datesTbody.appendChild(buildStagedDateRow({
+            eventType: eventTypeSelect.value,
+            typeLabel: eventTypeSelect.options[eventTypeSelect.selectedIndex].text,
+            startedAt: startedAtInput.value,
+            endedAt: endedAtInput.value,
+            location: locationInput.value,
+            details: detailsInput.value,
+        }));
+        locationInput.value = '';
+        detailsInput.value = '';
+        saveBarCtl.sync();
+    });
+</script>
+{% endif %}
 {% endblock %}

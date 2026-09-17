@@ -4,7 +4,6 @@
 
 {% block extra_css %}
 <style>
-    .songs-table { table-layout: fixed; }
     .songs-table td, .songs-table th { padding: 0.3rem 0.25rem; }
     .drag-handle-cell { width: 2.2rem; text-align: center; padding-left: 0; padding-right: 0; }
     .drag-handle {
@@ -21,8 +20,7 @@
     }
     .drag-handle:active { cursor: grabbing; }
     tr.song-row.dragging { opacity: 0.6; background-color: var(--color-info-bg); }
-    .song-index { text-align: center; font-weight: bold; width: 1.3rem; padding-left: 0; padding-right: 0; }
-    .song-cell { width: auto; }
+    .song-index { text-align: center; width: 1.3rem; padding-left: 0; padding-right: 0; }
     .song-title { font-weight: 500; overflow-wrap: break-word; }
     .song-subline {
         display: flex;
@@ -35,7 +33,7 @@
     }
     .song-meta { white-space: nowrap; color: var(--color-text-muted); }
     .song-resources { text-align: center; width: 1.4rem; padding-left: 0; padding-right: 0; }
-    .song-actions { white-space: nowrap; text-align: center; width: 1.6rem; padding-left: 0; }
+    .song-actions { white-space: nowrap; text-align: center; width: 2.2rem; padding-left: 0; }
     tr.row-moved { background-color: var(--color-info-bg); }
 
     @media (max-width: 768px) {
@@ -60,7 +58,7 @@
                     <tr>
                         <th class="drag-handle-cell"></th>
                         <th class="song-index">#</th>
-                        <th>Song</th>
+                        <th class="col-main">Song</th>
                         <th class="song-resources" title="Resources">&#128206;</th>
                         {% if is_admin %}<th class="song-actions"></th>{% endif %}
                     </tr>
@@ -287,7 +285,7 @@
         tr.innerHTML = `
             <td class="drag-handle-cell"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span></td>
             <td class="song-index"></td>
-            <td class="song-cell">
+            <td class="song-cell col-main">
                 <div class="song-title">${escapeHtml(title)}</div>
                 <div class="song-subline"><span>${subline}</span>${meta}</div>
             </td>

@@ -66,23 +66,22 @@
 </div>
 
 {% if form.instance.events.all %}
-<div>
-    <h4>Current Events</h4>
-    <table class="table">
+<div class="table-container">
+<table class="table">
         <thead>
             <tr>
-                <th>Event Name</th>
+                <th class="col-main">Event Name</th>
                 <th>Date & Time</th>
-                <th class="col-num">Action</th>
+                <th class="col-action">Action</th>
             </tr>
         </thead>
         <tbody>
             {% for event in events %}
             <tr>
-                <td>{{ event.name }}{% if event.resource_count > 0 %} - 🔗{% endif %}
+                <td class="col-main">{{ event.name }}{% if event.resource_count > 0 %} - 🔗{% endif %}
             {% if event.event_song_resource_count > 0 %}🎵{% endif %}</td>
                 <td>{% if event.started_at %}<span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="date-time">{{ event.started_at|date:"M d, Y H:i" }}</span>{% if event.ended_at %} - <span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="time">{{ event.ended_at|date:"H:i" }}</span>{% endif %}{% else %}-{% endif %}</td>
-                <td class="col-num">
+                <td class="col-action">
                     {% if is_admin %}
                     <form method="post" action="{%  url 'syncope:project_remove_event' url_username form.instance.pk event.pk %}" class="inline-form">
                         {% csrf_token %}
@@ -93,7 +92,7 @@
             </tr>
             {% endfor %}
         </tbody>
-    </table>
+</table>
 </div>
 {% endif %}
 
@@ -123,24 +122,23 @@
 </div>
 
 {% if form.instance.songs.all %}
-<div>
-    <h4>Current Songs</h4>
-    <table class="table">
+<div class="table-container">
+<table class="table">
         <thead>
             <tr>
-                <th>Song Title</th>
+                <th class="col-main">Song Title</th>
                 <th>Composer</th>
-                <th class="col-num">Action</th>
+                <th class="col-action">Action</th>
             </tr>
         </thead>
         <tbody>
             {% for song in form.instance.songs.all|dictsort:"title" %}
             <tr>
-                <td>
+                <td class="col-main">
                     <a href="{%  url 'syncope:song_detail' url_username song.pk %}">{{ song.title }}</a>
                 </td>
                 <td>{% if song.composer %}{{ song.composer.last_name }}{% endif %}</td>
-                <td class="col-num">
+                <td class="col-action">
                     {% if is_admin %}
                     <form method="post" action="{%  url 'syncope:project_remove_song' url_username form.instance.pk song.pk %}" class="inline-form">
                         {% csrf_token %}
@@ -151,7 +149,7 @@
             </tr>
             {% endfor %}
         </tbody>
-    </table>
+</table>
 </div>
 {% endif %}
 
@@ -181,20 +179,19 @@
 </div>
 
 {% if form.instance.guests.all %}
-<div>
-    <h4>Current Guests</h4>
-    <table class="table">
+<div class="table-container">
+<table class="table">
         <thead>
             <tr>
-                <th>Guest Name</th>
-                <th class="col-num">Action</th>
+                <th class="col-main">Guest Name</th>
+                <th class="col-action">Action</th>
             </tr>
         </thead>
         <tbody>
             {% for guest in form.instance.guests.all|dictsort:"last_name" %}
             <tr>
-                <td>{{ guest.first_name }} {{ guest.last_name }}</td>
-                <td class="col-num">
+                <td class="col-main">{{ guest.first_name }} {{ guest.last_name }}</td>
+                <td class="col-action">
                     {% if is_admin %}
                     <form method="post" action="{%  url 'syncope:project_remove_guest' url_username form.instance.pk guest.pk %}" class="inline-form">
                         {% csrf_token %}
@@ -205,7 +202,7 @@
             </tr>
             {% endfor %}
         </tbody>
-    </table>
+</table>
 </div>
 {% endif %}
 
