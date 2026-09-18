@@ -5,25 +5,30 @@
 
 {% block content %}
 
-<h2>{{ poll.title }} votes</h2>
+<h1 class="event-title">{{ poll.title }} votes
+    {% if is_admin %}
+    <span class="share-controls">
+        <button id="share-btn" class="btn btn-link" title="Copy link">
+            <img src="{% static 'syncope/images/link.svg' %}" width="16" height="16" alt="Link">
+        </button>
+        <span id="share-result" class="share-result"></span>
+    </span>
+    {% endif %}
+</h1>
 
 {% if poll.description %}
-<p>{{ poll.description }}</p>
+<p class="poll-summary">{{ poll.description }}</p>
 {% endif %}
 
 {% if is_admin %}
-<p><a href="{% url 'syncope:poll_update' url_username poll.pk %}" class="btn btn-secondary btn-sm">Edit title</a></p>
+<p><a href="{% url 'syncope:poll_update' url_username poll.pk %}" class="btn btn-secondary">Edit</a></p>
 {# Hidden CSRF token for the JS fetch call #}
 <div style="display:none;">{% csrf_token %}</div>
-<button id="share-btn" class="btn btn-link btn-sm" title="Copy link">
-    <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-</button>
-<span id="share-result" class="share-result"></span>
 {% endif %}
 
 <div class="section-header">
     <h3>Dates</h3>
-    {% if is_admin %}<a href="{% url 'syncope:poll_events' url_username poll.pk %}" class="btn btn-secondary btn-sm">Edit</a>{% endif %}
+    {% if is_admin %}<a href="{% url 'syncope:poll_events' url_username poll.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% if poll_events %}
 <div class="table-container">
@@ -45,8 +50,8 @@
                 <td>{{ pe.event_type.name }}</td>
                 <td>{% if pe.same_date %}<span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span>{% else %}<span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span> – <span data-dt="{{ pe.ended_at|date:"c" }}" data-dt-fmt="date">{{ pe.ended_at|date:"d M" }}</span>{% endif %}</td>
                 <td><span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="time">{{ pe.started_at|date:"H:i" }}</span> <br> <span data-dt="{{ pe.ended_at|date:"c" }}" data-dt-fmt="time">{{ pe.ended_at|date:"H:i" }}</span></td>
-                <td>{% if pe.location %}{{ pe.location }}{% else %}<em>—</em>{% endif %}</td>
-                <td class="col-main">{% if pe.details %}{{ pe.details }}{% else %}<em>—</em>{% endif %}</td>
+                <td>{% if pe.location %}{{ pe.location }}{% else %}<em>-</em>{% endif %}</td>
+                <td class="col-main">{% if pe.details %}{{ pe.details }}{% else %}<em>-</em>{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -58,7 +63,7 @@
 
 <div class="section-header">
     <h3>Invited persons</h3>
-    {% if is_admin %}<a href="{% url 'syncope:poll_persons' url_username poll.pk %}" class="btn btn-secondary btn-sm">Edit</a>{% endif %}
+    {% if is_admin %}<a href="{% url 'syncope:poll_persons' url_username poll.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% if table_rows %}
 <div class="table-container">
@@ -97,7 +102,7 @@
             <tr>
                 <th class="col-num">#</th>
                 <th class="sticky-col">Person</th>
-                <th class="col-main"></th>
+                <th></th>
                 {% for pe in poll_events %}
                 <th class="table__event-col"
                     title="{% if pe.event_type.id == 1 %}{{ pe.name }}{% else %}{{ pe.event_type }}&#10;{{ pe.name }}{% endif %}&#10;{{ pe.started_at|date:"H:i" }}{% if pe.location %}&#10;{{ pe.location }}{% endif %}">
@@ -106,7 +111,8 @@
                     </div>
                 </th>
                 {% endfor %}
-
+                <th class="col-main">Total</th>
+                <th class="col-main">%</th>
             </tr>
         </thead>
         <tbody>
@@ -118,8 +124,8 @@
                 <td class="sticky-col">
                     <strong>{{ row.person.person.first_name }} {{ row.person.person.last_name }}</strong>
                 </td>
-                <td class="col-main">
-                    <a href="{{ person_attendance_url }}" target="_blank" class="btn btn-sm btn-primary" title="Edit your poll results">Edit</a>
+                <td>
+                    <a href="{{ person_attendance_url }}" target="_blank" class="btn btn-secondary" title="Edit your poll results">Edit</a>
                 </td>
                 {% for cell in row.event_cells %}
                 <td class="table__event-col">
@@ -130,9 +136,21 @@
                     {% if cell.comment %}<div class="table__comment">{{ cell.comment }}</div>{% endif %}
                 </td>
                 {% endfor %}
+                <td class="col-main">{{ row.total_yes }}/{{ row.total_counted }}</td>
+                <td class="col-main">{{ row.percentage|floatformat:0 }}%</td>
             </tr>
             {% endfor %}
             {% endfor %}
+            <tr class="totals-row table__row--total">
+                <td class="col-num"></td>
+                <td class="sticky-col"></td>
+                <td></td>
+                {% for total in event_totals %}
+                <td>{{ total.yes }}/{{ total.counted }}</td>
+                {% endfor %}
+                <td class="col-main"><strong>{{ grand_yes }}/{{ grand_counted }}</strong></td>
+                <td class="col-main"><strong>{{ grand_percentage|floatformat:0 }}%</strong></td>
+            </tr>
         </tbody>
     </table>
 </div>

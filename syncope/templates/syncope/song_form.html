@@ -1,10 +1,11 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 {% block title %}{% if object %}Edit{% else %}New{% endif %} Song{% endblock %}
 {% block content %}
 
 <h1>{% if object %}Edit{% else %}New{% endif %} Song</h1>
 
-<form method="post">
+<form method="post" id="song-form">
     {% csrf_token %}
     <input type="hidden" name="draft_key" value="{{ draft_key }}">
     {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
@@ -18,21 +19,21 @@
         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
         {{ field }}
         {% if field.name == 'composer' %}
-            <button type="submit" class="btn btn-sm btn-secondary"
+            <button type="submit" class="btn btn-primary"
                     formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_composer' url_username %}&next={{ request.get_full_path|urlencode }}"
-                    title="Add new Composer">New</button>
+                    title="Add new Composer">+ Add</button>
         {% elif field.name == 'arranger' %}
-            <button type="submit" class="btn btn-sm btn-secondary"
+            <button type="submit" class="btn btn-primary"
                     formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_arranger' url_username %}&next={{ request.get_full_path|urlencode }}"
-                    title="Add new Arranger">New</button>
+                    title="Add new Arranger">+ Add</button>
         {% elif field.name == 'poet' %}
-            <button type="submit" class="btn btn-sm btn-secondary"
+            <button type="submit" class="btn btn-primary"
                     formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_poet' url_username %}&next={{ request.get_full_path|urlencode }}"
-                    title="Add new Poet">New</button>
+                    title="Add new Poet">+ Add</button>
         {% elif field.name == 'translator' %}
-            <button type="submit" class="btn btn-sm btn-secondary"
+            <button type="submit" class="btn btn-primary"
                     formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new_translator' url_username %}&next={{ request.get_full_path|urlencode }}"
-                    title="Add new Translator">New</button>
+                    title="Add new Translator">+ Add</button>
         {% endif %}
         {% if field.help_text %}<p class="form-help">{{ field.help_text }}</p>{% endif %}
         {{ field.errors }}
@@ -66,7 +67,7 @@
         </tbody>
     </table>
     </div>
-    <button type="submit" name="action" value="add_kw_row" class="btn btn-sm btn-secondary">+</button>
+    <button type="submit" name="action" value="add_kw_row" class="btn btn-primary" title="Add another quote">+ Add</button>
 
     <h3>Lyrics Translations</h3>
     {{ translation_formset.management_form }}
@@ -96,7 +97,7 @@
         </tbody>
     </table>
     </div>
-    <button type="submit" name="action" value="add_translation_row" class="btn btn-sm btn-secondary">+</button>
+    <button type="submit" name="action" value="add_translation_row" class="btn btn-primary" title="Add another translation">+ Add</button>
 
     {{ resource_formset.management_form }}
     {% for r_form in resource_formset %}
@@ -108,10 +109,28 @@
         </div>
     {% endfor %}
 
-    <div class="form-actions">
-        <button type="submit" name="action" value="" class="btn btn-primary">Save</button>
-    </div>
+    {% if object %}
+    <p class="danger-zone"><a href="{% url 'syncope:song_delete' url_username object.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-danger">Delete</a></p>
+    {% endif %}
 </form>
 
-{% include "syncope/_save_bar.html" with url=return_url|default:cancel_url %}
+{% include "syncope/_save_bar.html" with form_id="song-form" url=return_url|default:cancel_url %}
+
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>
+    const form = document.getElementById('song-form');
+    let formDirty = false;
+
+    const saveBarCtl = initSaveBar({
+        formId: 'song-form',
+        countUnsavedChanges: () => formDirty ? 1 : 0,
+        onDiscard: () => {
+            form.reset();
+            formDirty = false;
+        },
+    });
+
+    form.addEventListener('input', () => { formDirty = true; saveBarCtl.sync(); });
+    form.addEventListener('change', () => { formDirty = true; saveBarCtl.sync(); });
+</script>
 {% endblock %}

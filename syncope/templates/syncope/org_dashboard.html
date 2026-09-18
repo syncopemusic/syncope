@@ -4,11 +4,11 @@
 
 {% block content %}
 <div class="card">
-    <h2>{{ organization.name }}</h2>
+    <h1>{{ organization.name }}</h1>
     {% if organization.email %}<p>Email: {{ organization.email }}</p>{% endif %}
     {% if organization.address %}<p>Address: {{ organization.address|linebreaksbr }}</p>{% endif %}
     {% if is_admin %}
-    <p><a href="{% url 'syncope:org_edit' url_username %}" class="btn btn-secondary btn-sm">Edit</a></p>
+    <p><a href="{% url 'syncope:org_edit' url_username %}" class="btn btn-secondary">Edit</a></p>
     {% endif %}
 </div>
 
@@ -17,28 +17,28 @@
     <div class="card">
         <h3>Projects</h3>
         <p>Manage concerts, seasons, and productions.</p>
-        <a href="{% url 'syncope:project_list' url_username %}" class="btn btn-secondary btn-sm">View projects</a>
+        <a href="{% url 'syncope:project_list' url_username %}" class="btn btn-secondary">View projects</a>
     </div>
     <div class="card">
         <h3>Events</h3>
         <p>Rehearsals, performances, and readings.</p>
-        <a href="{% url 'syncope:event_list' url_username %}" class="btn btn-secondary btn-sm">View events</a>
+        <a href="{% url 'syncope:event_list' url_username %}" class="btn btn-secondary">View events</a>
     </div>
     <div class="card">
         <h3>Songs</h3>
         <p>Browse the song archive.</p>
-        <a href="{% url 'syncope:song_list' url_username %}" class="btn btn-secondary btn-sm">Browse songs</a>
+        <a href="{% url 'syncope:song_list' url_username %}" class="btn btn-secondary">Browse songs</a>
     </div>
     <div class="card">
         <h3>Members</h3>
         <p>View and manage ensemble members.</p>
-        <a href="{% url 'syncope:org_member_list' url_username %}" class="btn btn-secondary btn-sm">View members</a>
+        <a href="{% url 'syncope:org_member_list' url_username %}" class="btn btn-secondary">View members</a>
     </div>
     {% if is_admin %}
     <div class="card">
         <h3>Admin</h3>
         <p>View all persons across the organization.</p>
-        <a href="{% url 'syncope:org_member_list_all' url_username %}" class="btn btn-secondary btn-sm">All persons</a>
+        <a href="{% url 'syncope:org_member_list_all' url_username %}" class="btn btn-secondary">All persons</a>
     </div>
     {% endif %}
 </div>

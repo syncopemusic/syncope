@@ -9,7 +9,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from datetime import timedelta
-from syncope.models import CustomUser, PollAttendance, Poll, PollPerson, PollEvent, Person, Role
+from syncope.models import CustomUser, PollAttendance, Poll, PollPerson, PollEvent, PollAttendanceType, Person, Role
 from syncope.forms import PollCreateForm, PollPersonForm, PollAttendanceForm, PollEventForm, PollBulkImportForm
 from syncope.permissions import AccessControl
 from syncope.views.drafts import DraftMixin
@@ -301,7 +301,7 @@ class PollEventView(PollAdminMixin, View):
 
 @method_decorator(login_required, name="dispatch")
 class PollEventUpdateView(PollAdminMixin, UpdateView):
-    """Edit an existing date's fields directly — its own focused page, no dates table."""
+    """Edit an existing date's fields directly - its own focused page, no dates table."""
     model = PollEvent
     form_class = PollEventForm
     template_name = "syncope/poll_event.html"
@@ -334,7 +334,7 @@ class PollEventUpdateView(PollAdminMixin, UpdateView):
 
 
 class PollPersonAttendanceView(View):
-    """Public view — individual person fills in attendance via organization/poll/person pks."""
+    """Public view - individual person fills in attendance via organization/poll/person pks."""
     template_name = "syncope/poll_attendance.html"
 
     def _get_context(self, poll_person):
@@ -400,7 +400,7 @@ class PollPersonAttendanceView(View):
 
 
 class PollEventAttendanceView(View):
-    """Public view — all poll persons list attendance per event slot."""
+    """Public view - all poll persons list attendance per event slot."""
     template_name = "syncope/poll_attendance.html"
 
     def setup(self, request, *args, **kwargs):
@@ -496,18 +496,35 @@ class PollDetailView(DetailView):
         for pa in PollAttendance.objects.filter(poll_person__poll=poll).select_related('poll_attendance_type'):
             person_attendance.setdefault(pa.poll_person_id, {})[pa.poll_event_id] = pa
 
+        event_totals = {event.id: {'yes': 0, 'counted': 0} for event in poll_events}
+
         table_rows = []
         for pp in poll_persons:
             event_cells = []
+            total_yes = 0
+            total_counted = 0
             for event in poll_events:
                 pa = person_attendance.get(pp.id, {}).get(event.id)
+                attendance_type_id = pa.poll_attendance_type_id if pa else 0
+                if pa and attendance_type_id != PollAttendanceType.TBD:
+                    total_counted += 1
+                    event_totals[event.id]['counted'] += 1
+                    if attendance_type_id == PollAttendanceType.YES:
+                        total_yes += 1
+                        event_totals[event.id]['yes'] += 1
                 event_cells.append({
                     'event': event,
-                    'attendance_type_id': pa.poll_attendance_type_id if pa else 0,
+                    'attendance_type_id': attendance_type_id,
                     'attendance_label': pa.poll_attendance_type.name if pa else 'TBD',
                     'comment': pa.comment if pa else '',
                 })
-            table_rows.append({'person': pp, 'event_cells': event_cells})
+            table_rows.append({
+                'person': pp,
+                'event_cells': event_cells,
+                'total_yes': total_yes,
+                'total_counted': total_counted,
+                'percentage': (total_yes / total_counted * 100) if total_counted > 0 else 0,
+            })
 
         grouped_table_rows = group_by_section(table_rows, lambda row: row['person'].person)
         row_number = 1
@@ -516,10 +533,19 @@ class PollDetailView(DetailView):
                 row['index'] = row_number
                 row_number += 1
 
+        event_totals = [event_totals[event.id] for event in poll_events]
+        grand_yes = sum(t['yes'] for t in event_totals)
+        grand_counted = sum(t['counted'] for t in event_totals)
+        grand_percentage = (grand_yes / grand_counted * 100) if grand_counted > 0 else 0
+
         context['poll_events'] = poll_events
         context['poll_persons'] = poll_persons
         context['table_rows'] = table_rows
         context['grouped_table_rows'] = grouped_table_rows
+        context['event_totals'] = event_totals
+        context['grand_yes'] = grand_yes
+        context['grand_counted'] = grand_counted
+        context['grand_percentage'] = grand_percentage
         context['is_admin'] = (
             self.request.user.is_authenticated and
             AccessControl.has_permission(self.request.user, "create", self.kwargs.get('username'))

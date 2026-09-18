@@ -1,7 +1,7 @@
 /* =====================================================
    Design tokens & fonts
    To restyle the app (colors, fonts, spacing, buttons), edit
-   the values below — see docs/FRONTEND_GUIDE.md for the guide.
+   the values below - see docs/FRONTEND_GUIDE.md for the guide.
 
    Custom properties and @font-face stay unlayered (outside @layer) so they
    remain universally available regardless of cascade layer order below.
@@ -40,12 +40,12 @@
 
     /* Shared outline used by the outline-based focus idiom (links, buttons,
        interactive table cells). Text form fields intentionally use a
-       different idiom — see the comment above a:focus-visible below. */
+       different idiom - see the comment above a:focus-visible below. */
     --focus-ring: 2px solid var(--color-primary);
     --focus-ring-offset: 2px;
 
     /* Dedicated dark-surface color for the sidebar and other dark UI chrome
-       (table headers) — kept separate from --color-text so a "text" token
+       (table headers) - kept separate from --color-text so a "text" token
        never doubles as a background. */
     --color-ink: #3e3a34;
 
@@ -74,7 +74,10 @@
     /* Typography */
     --font-heading: "EB Garamond", Georgia, serif;
     --font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-size-2xs: 0.75rem;
+    --font-size-xs: 0.8rem;
     --font-size-sm: 0.85rem;
+    --font-size-md: 0.9rem;
     --font-size-xl: 1.5rem;
 
     /* Spacing */
@@ -98,7 +101,7 @@
     --z-mobile-topbar: 1001;
     --z-mobile-drawer: 1000;
 
-    /* Matrix/pivot table sizing (attendance grids) — one shared dimension
+    /* Matrix/pivot table sizing (attendance grids) - one shared dimension
        replacing the three divergent hardcoded values that used to live in
        poll_detail.html/poll_attendance.html/attendance_dashboard.html. Used
        as a floor for event columns (poll_attendance.html's headers hold
@@ -150,7 +153,7 @@
 
     /* Two focus idioms by design: outline+:focus-visible here for click-to-activate
        controls (keyboard-only ring), box-shadow ring+:focus for text fields (ring on
-       any focus, since users are about to type) — see .form-group input:focus etc.
+       any focus, since users are about to type) - see .form-group input:focus etc.
        in the Forms section. Don't merge them. */
     a:focus-visible,
     input:focus-visible,
@@ -251,12 +254,12 @@
         color: var(--color-text-on-accent);
     }
 
-    /* .nav-badge composes with .badge (@layer components) for the pill shape —
+    /* .nav-badge composes with .badge (@layer components) for the pill shape -
        this just overrides color/size/spacing for the dark sidebar. */
     .nav-badge {
         background-color: var(--color-primary);
         color: var(--color-text-on-accent);
-        font-size: 0.72rem;
+        font-size: var(--font-size-2xs);
         font-weight: 600;
         padding: 1px 6px;
         margin-inline-start: var(--space-1);
@@ -265,7 +268,7 @@
     .section-label {
         margin: 0;
         padding: var(--space-3) var(--space-3) var(--space-1);
-        font-size: 0.7rem;
+        font-size: var(--font-size-2xs);
         font-weight: 500;
         text-transform: uppercase;
         letter-spacing: 0.08em;
@@ -300,7 +303,7 @@
         padding-inline: var(--space-3);
         margin-block-end: var(--space-1);
         color: rgba(255, 255, 255, 0.45);
-        font-size: 0.75rem;
+        font-size: var(--font-size-2xs);
     }
 
     .org-submenu {
@@ -309,7 +312,7 @@
     }
 
     .org-submenu a {
-        font-size: 0.85rem;
+        font-size: var(--font-size-sm);
         padding: 0.35rem var(--space-3);
         color: rgba(255, 255, 255, 0.65);
     }
@@ -356,7 +359,7 @@
         padding: 1.5rem 2.5rem;
         border-block-start: 1px solid var(--color-border);
         position: relative;
-        font-size: 0.82rem;
+        font-size: var(--font-size-sm);
         color: var(--color-text-muted);
     }
 
@@ -414,7 +417,7 @@
             flex: 1;
             min-width: 0;
             margin: 0;
-            font-size: 0.78rem;
+            font-size: var(--font-size-2xs);
             overflow-x: auto;
             scrollbar-width: none;
         }
@@ -428,7 +431,7 @@
             width: max-content;
         }
 
-        .main-content h2:first-of-type {
+        .main-content h1:first-of-type {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -463,9 +466,14 @@
             display: block;
             background: none;
             padding: 0;
-            font-size: 1.5rem;
+            font-size: var(--font-size-xl);
             cursor: pointer;
             color: var(--color-text-muted);
+        }
+
+        .mobile-toggle:focus-visible {
+            outline: var(--focus-ring);
+            outline-offset: var(--focus-ring-offset);
         }
 
         .mobile-toggle.is-open {
@@ -474,7 +482,7 @@
 
         /* With the drawer open, the topbar's own bar must get out of the way instead of
            painting over the sidebar's logo/brand row (it has a higher z-index so it wins
-           the paint order otherwise) — hide its background/breadcrumbs and pull the toggle
+           the paint order otherwise) - hide its background/breadcrumbs and pull the toggle
            itself out to float above the drawer, on the right, clear of the sidebar's width. */
         .grid-container.menu-visible .mobile-topbar {
             background-color: transparent;
@@ -515,12 +523,12 @@
     }
 
     .save-bar .dirty-note {
-        font-size: 0.85rem;
+        font-size: var(--font-size-sm);
         color: var(--color-warning-text);
     }
 
     /* Two known ID selectors (#dirty-actions / #discard-btn) live in
-       _save_bar.html and are driven by save-bar.js via getElementById —
+       _save_bar.html and are driven by save-bar.js via getElementById -
        left as IDs rather than converted to classes to avoid touching that
        shared JS/partial pair, which is out of scope for this pass. */
     #dirty-actions {
@@ -623,7 +631,7 @@
         border-radius: var(--radius-sm);
         border: 1.5px solid transparent;
         font-family: var(--font-body);
-        font-size: 0.9rem;
+        font-size: var(--font-size-md);
         font-weight: 500;
         line-height: 1.4;
         white-space: nowrap;
@@ -661,7 +669,7 @@
         background-color: var(--color-bg-subtle);
     }
 
-    /* .btn-secondary assumes a light surface (border/text colors made for that) —
+    /* .btn-secondary assumes a light surface (border/text colors made for that) -
        override for the dark sidebar so Login/Logout stay visible. */
     .sidebar .btn-secondary {
         border-color: rgba(255, 255, 255, 0.3);
@@ -684,7 +692,7 @@
         color: var(--color-text-on-accent);
     }
 
-    /* Wraps a standalone, page-level destructive action (Delete, Unlink — not a
+    /* Wraps a standalone, page-level destructive action (Delete, Unlink - not a
        table-row Remove, which stays compact) that sits below a primary action
        like Save, so it reads as a separate "danger zone" instead of crowding it.
        Change the margin here to adjust the gap everywhere this class is used. */
@@ -694,20 +702,12 @@
 
     .btn-link {
         background: none;
-        border: none;
-        padding: 0;
         color: var(--color-primary);
-        font-size: 0.9rem;
     }
 
     .btn-link:hover {
         color: var(--color-primary-hover);
         text-decoration: underline;
-    }
-
-    .btn-sm {
-        padding: 0.3rem 0.65rem;
-        font-size: 0.82rem;
     }
 
     .btn-block {
@@ -726,7 +726,7 @@
     }
 
     /* Row of grouped secondary actions (e.g. a poll/event page's "Edit title | Edit people | ..."
-       admin links) — distinct from .form-actions, which is specifically for a form's submit/cancel pair. */
+       admin links) - distinct from .form-actions, which is specifically for a form's submit/cancel pair. */
     .link-row {
         display: flex;
         align-items: center;
@@ -734,7 +734,7 @@
         flex-wrap: wrap;
     }
 
-    /* Feedback text next to a #share-btn (Copying.../Copied/Failed) — see FRONTEND_GUIDE.md. */
+    /* Feedback text next to a #share-btn (Copying.../Copied/Failed) - see FRONTEND_GUIDE.md. */
     .share-result {
         margin-inline-start: var(--space-1);
         font-size: var(--font-size-sm);
@@ -756,20 +756,25 @@
     }
 
     /* Button row for form submit/cancel pairs: secondary/cancel left, primary right
-       (DOM order drives this — put the cancel link/button before the primary one).
-       On mobile the row spreads to the full width (cancel far left, primary far
-       right) instead of clustering right like desktop — see the 768px media query. */
+       (DOM order drives this - put the cancel link/button before the primary one).
+       Capped at the same 480px as the form fields above it (see
+       .form-group input etc.) so on desktop the buttons sit at the form's own
+       right edge, not stretched out to the full page width. On mobile the row
+       drops that cap and spreads to the full screen width (cancel far left,
+       primary far right) - see the 768px media query. */
     .form-actions {
         display: flex;
         justify-content: flex-end;
         align-items: center;
         gap: var(--space-3);
         margin-block-start: var(--space-4);
+        max-inline-size: 480px;
     }
 
     @media (max-width: 768px) {
         .form-actions {
             justify-content: space-between;
+            max-inline-size: none;
         }
     }
 
@@ -791,7 +796,7 @@
     .form-error,
     .error {
         color: var(--color-error-text);
-        font-size: 0.82rem;
+        font-size: var(--font-size-sm);
     }
 
     .search-form {
@@ -807,7 +812,7 @@
         border: 1.5px solid var(--color-border);
         border-radius: var(--radius-sm);
         font-family: var(--font-body);
-        font-size: 0.9rem;
+        font-size: var(--font-size-md);
         flex: 1;
         min-width: 200px;
     }
@@ -838,7 +843,7 @@
         border: 1.5px solid var(--color-border);
         border-radius: var(--radius-sm);
         font-family: var(--font-body);
-        font-size: 0.9rem;
+        font-size: var(--font-size-md);
         color: var(--color-text);
         background-color: var(--color-surface);
         transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
@@ -864,7 +869,7 @@
     .form-group .helptext,
     form p .helptext {
         margin: var(--space-1) 0 0;
-        font-size: 0.8rem;
+        font-size: var(--font-size-xs);
         color: var(--color-text-muted);
     }
 
@@ -878,7 +883,7 @@
     .form-group ul.errorlist li,
     form p ul.errorlist li {
         color: var(--color-error-text);
-        font-size: 0.82rem;
+        font-size: var(--font-size-sm);
     }
 
     @media (max-width: 768px) {
@@ -924,7 +929,7 @@
     /* --- Tables ---
        One component, reused by every data table in the app. `.table` is the
        block; `.table-detail`/`.table-grouped`/`.totals-row`/`.table-narrow`
-       are its existing modifiers (kept as-is — used across 15+ templates);
+       are its existing modifiers (kept as-is - used across 15+ templates);
        `.table--matrix` + its `.table__*` elements below are the one shared
        definition for the three attendance/pivot grids (poll_detail.html,
        poll_attendance.html, attendance_dashboard.html), replacing what used
@@ -932,17 +937,18 @@
     .table {
         width: 100%;
         margin-block-end: var(--space-5);
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
         background-color: var(--color-surface);
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-sm);
-        font-size: 0.82rem;
-        overflow: visible;
+        font-size: var(--font-size-sm);
+        overflow: hidden;
 
         & thead th {
             position: sticky;
             inset-block-start: 0;
-            /* One tier above .sticky-col's z-index (--z-sticky) — both are
+            /* One tier above .sticky-col's z-index (--z-sticky) - both are
                position:sticky, and tbody comes after thead in the DOM, so at
                equal z-index a scrolled-under row's sticky name/title column
                would paint over the header instead of staying beneath it. */
@@ -950,7 +956,7 @@
             padding: var(--space-2);
             background-color: var(--color-ink);
             color: var(--color-text-on-accent);
-            font-size: 0.75rem;
+            font-size: var(--font-size-2xs);
             font-weight: 500;
             text-align: start;
             text-transform: uppercase;
@@ -967,7 +973,7 @@
             border-block-end: none;
         }
 
-        /* Matches syncope-compare's rgba(244, 241, 234, 0.4) exactly —
+        /* Matches syncope-compare's rgba(244, 241, 234, 0.4) exactly -
            --color-bg is that same #f4f1ea, so this is the same color, not
            just visually close. */
         & tbody tr:nth-child(even) {
@@ -982,7 +988,7 @@
             font-weight: 500;
         }
 
-        /* A link never overrides the header's own text color — it always
+        /* A link never overrides the header's own text color - it always
            inherits it. Enforced once here so every header link (sortable or
            not) is automatically legible against the dark header background,
            instead of relying on each template remembering to opt in with
@@ -994,13 +1000,13 @@
 
         /* Mobile-first: compact by default, roomier once the table's own
            wrapper (.table-container, container-type: inline-size below) has
-           space — replaces the old page-level max-width:768px th/td override. */
+           space - replaces the old page-level max-width:768px th/td override. */
         @container (min-inline-size: 36rem) {
-            font-size: 0.9rem;
+            font-size: var(--font-size-md);
 
             & thead th {
                 padding: var(--space-3);
-                font-size: 0.8rem;
+                font-size: var(--font-size-xs);
             }
 
             & tbody td {
@@ -1013,7 +1019,7 @@
        width:1% + nowrap trick for auto-layout tables) so a table never
        stretches its narrow columns (numbering, dates, single buttons) just
        because there's leftover viewport width. Wrapped in :where() so this
-       has zero specificity — any existing sizing rule below (.table__event-col,
+       has zero specificity - any existing sizing rule below (.table__event-col,
        .song-index, etc.) or .col-main (utilities layer) wins automatically
        without needing to out-specify this default. */
     :where(.table) :where(thead th, tbody td) {
@@ -1023,10 +1029,7 @@
 
     /* Replaces the hand-copied "first row of group" inline style
        ({% if forloop.first and not forloop.parentloop.first %}style="border-top:3px solid #333"{% endif %}) */
-    .table-grouped tbody tr.group-start td {
-        border-block-start: 2px solid var(--color-border);
-    }
-
+    .table-grouped tbody tr.group-start td,
     .totals-row td {
         border-block-start: 2px solid var(--color-border);
     }
@@ -1035,7 +1038,7 @@
         width: 100%;
         max-inline-size: 640px;
         margin-block-end: var(--space-5);
-        font-size: 0.92rem;
+        font-size: var(--font-size-md);
     }
 
     .table-detail tr td {
@@ -1048,7 +1051,7 @@
         padding: var(--space-2) var(--space-4) var(--space-2) 0;
         font-weight: 500;
         color: var(--color-text-muted);
-        font-size: 0.85rem;
+        font-size: var(--font-size-sm);
         text-align: start;
         text-transform: uppercase;
         letter-spacing: 0.03em;
@@ -1062,7 +1065,7 @@
         text-align: center;
         padding: 3rem 1rem;
         color: var(--color-text-muted);
-        font-size: 0.95rem;
+        font-size: var(--font-size-md);
     }
 
     /* --- Editable list rows (search / staged / pending-remove) ---
@@ -1115,9 +1118,37 @@
 
     /* --- Event detail page --- */
     .event-title { margin-block-end: 0.25em; }
-    .event-summary { margin-block-start: 0.25em; }
-    .resource-table-compact { border-collapse: collapse; font-size: 0.8rem; margin-block: 0.25rem; }
-    .resource-table-compact td { padding: 1px 4px; }
+    /* Title + copy-link button stay same-row, button right beside the text,
+       at every width (desktop and mobile) - reused by event_detail.html,
+       poll_detail.html, project_detail.html, song_detail.html and
+       org_member_detail.html's h1. */
+    .main-content h1.event-title {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: var(--space-2);
+    }
+    .share-controls {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+    .event-summary,
+    .poll-summary {
+        margin-block: 0.25em;
+        font-size: var(--font-size-md);
+    }
+    .resource-table-compact {
+        border-collapse: separate;
+        border-spacing: 0;
+        overflow: hidden;
+        background-color: var(--color-surface);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-xs);
+        margin-block: 0.25rem;
+    }
+    .resource-table-compact td { padding: 1px var(--space-1); }
 
     .dt-short { display: none; }
 
@@ -1128,11 +1159,13 @@
         justify-content: space-between;
         align-items: baseline;
         gap: 0.5rem;
-        font-size: 0.85rem;
+        font-size: var(--font-size-sm);
         color: var(--color-text-muted);
     }
     .event-songs-table .song-meta { white-space: nowrap; color: var(--color-text-muted); }
     .event-songs-table .song-encore { text-align: center; }
+
+    .songs-table td, .songs-table th { padding: 0.3rem 0.25rem; }
 
     @media (max-width: 768px) {
         #event-detail-content {
@@ -1141,25 +1174,16 @@
         .dt-full { display: none; }
         .dt-short { display: inline; }
 
-        .main-content h2.event-title {
+        .main-content h1.event-title {
             white-space: normal;
             overflow: visible;
             text-overflow: clip;
-            display: flex;
-            align-items: baseline;
-            flex-wrap: nowrap;
-            justify-content: space-between;
         }
         .event-title-text {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             min-width: 0;
-        }
-        .share-controls {
-            display: flex;
-            align-items: center;
-            flex-shrink: 0;
         }
     }
 
@@ -1170,16 +1194,16 @@
     }
 
     /* Only the rotated-label headers (poll_detail.html, attendance_dashboard.html)
-       need extra height — poll_attendance.html's plain multi-line text headers
+       need extra height - poll_attendance.html's plain multi-line text headers
        don't use .table__event-header, so :has() scopes this to just them.
-       Without it, the rotated text's height (its pre-rotation WIDTH — a
+       Without it, the rotated text's height (its pre-rotation WIDTH - a
        transform doesn't change layout size) exceeds the header row's normal
        height and pokes out past the dark background.
 
        vertical-align MUST be middle, not bottom: rotation happens around the
        element's own center, so bottom-aligning it first (positioning by its
        small pre-rotation height) leaves that center off the cell's true
-       middle — the rotated result then sits low and partly outside the
+       middle - the rotated result then sits low and partly outside the
        cell, clipping its leading character. Centering first keeps the
        rotation symmetric within the cell. */
     .table--matrix thead th:has(.table__event-header) {
@@ -1187,14 +1211,14 @@
         vertical-align: middle;
     }
 
-    /* Width no longer needed here — the base .table default (width:1%,
+    /* Width no longer needed here - the base .table default (width:1%,
        above) already shrinks this to content; only the tighter padding
        for matrix density remains. */
     .table--matrix .col-num {
         padding-inline: var(--space-1);
     }
 
-    /* Rows should only be as tall as the attendance button itself — .table's
+    /* Rows should only be as tall as the attendance button itself - .table's
        generic tbody td padding otherwise pads every matrix row well past the
        button's fixed size. Scoped with :has() so it only touches cells that
        actually hold the button (not the comment/note row or label columns). */
@@ -1204,13 +1228,13 @@
 
     /* Fixed, not min: a CSS transform (used by .table__event-header's rotation
        below) doesn't shrink an element's LAYOUT box, only its rendered
-       appearance — so a rotated date header's natural (unrotated) text width
+       appearance - so a rotated date header's natural (unrotated) text width
        still drives auto table-layout sizing unless every cell in the column
        agrees on one fixed width. A min-inline-size here let each rotated
        column size itself independently off its own unrotated text length,
        producing uneven, misaligned columns between header and body.
        position:relative anchors .table__event-header's absolute centering
-       below — harmless on cells that don't contain it. */
+       below - harmless on cells that don't contain it. */
     .table__event-col {
         inline-size: var(--table-matrix-size);
         text-align: center;
@@ -1218,7 +1242,7 @@
     }
 
     /* poll_attendance.html's headers hold multi-line plain text (event type,
-       date, time, location, details), not a rotated label — they need to
+       date, time, location, details), not a rotated label - they need to
        grow past the fixed size above. Add alongside .table__event-col on
        every <th>/<td> in that template's columns (all agreeing on the same
        width keeps header/body aligned, same principle as above). */
@@ -1232,7 +1256,7 @@
        rows use .table__event-col directly without this wrapper, since their
        labels are stacked plain text, not rotated. */
     /* Absolutely positioned and centered on its own cell, then rotated in
-       place — this both perfectly centers the rotated label over the icon
+       place - this both perfectly centers the rotated label over the icon
        column below it (centering via text-align/overflow on an inline box
        drifted off-center in practice) and takes the label fully out of
        normal flow, so its pre-rotation text width can never again push the
@@ -1245,7 +1269,7 @@
         left: 50%;
         transform: translate(-50%, -50%) rotate(-90deg);
         white-space: nowrap;
-        font-size: 0.75rem;
+        font-size: var(--font-size-2xs);
     }
 
     .table__event-header--strong {
@@ -1276,7 +1300,7 @@
         outline-offset: var(--focus-ring-offset);
     }
 
-    /* Read-only matrix cells (poll_detail.html's votes summary — nothing to
+    /* Read-only matrix cells (poll_detail.html's votes summary - nothing to
        click there) drop the pointer/hover-lift affordance. */
     .table__cell--attendance--static {
         cursor: default;
@@ -1293,7 +1317,7 @@
         pointer-events: none;
     }
 
-    /* Composes with .totals-row (which supplies the border) — add both
+    /* Composes with .totals-row (which supplies the border) - add both
        classes to the <tr>; this one only adds the extra bold weight the
        matrix variant wants. */
     .table__row--total td {
@@ -1308,7 +1332,7 @@
 
     .table__comment-input {
         inline-size: 100%;
-        font-size: 0.8rem;
+        font-size: var(--font-size-xs);
         padding: var(--space-1);
         border: 1px solid var(--color-border);
         border-radius: var(--radius-sm);
@@ -1316,14 +1340,14 @@
 
     .legend {
         margin-block-end: var(--space-3);
-        font-size: 0.85rem;
+        font-size: var(--font-size-sm);
         display: flex;
         gap: var(--space-3);
         flex-wrap: wrap;
         align-items: center;
     }
 
-    /* Sizing only — hover/cursor neutralizing is .table__cell--attendance--static's
+    /* Sizing only - hover/cursor neutralizing is .table__cell--attendance--static's
        job; legend chips carry both classes. */
     .legend .table__cell--attendance {
         inline-size: auto;
@@ -1393,7 +1417,7 @@
         display: flex;
         flex-direction: column;
         gap: 0.2rem;
-        font-size: 0.8rem;
+        font-size: var(--font-size-xs);
     }
 
     .filter-label {
@@ -1402,7 +1426,7 @@
 
     .filter-field input {
         padding: 0.45rem 0.5rem;
-        font-size: 0.95rem;
+        font-size: var(--font-size-md);
         border: 1px solid var(--color-border);
         border-radius: var(--radius-sm);
         box-sizing: border-box;
@@ -1429,12 +1453,6 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-    }
-
-    .quick-add-form {
-        margin: 0;
-        display: flex;
-        justify-content: flex-start;
     }
 
     @media (min-width: 769px) {
@@ -1487,7 +1505,7 @@
 
     .section-header {
         display: flex;
-        justify-content: space-between;
+        justify-content: flex-start;
         align-items: center;
         gap: var(--space-2);
         margin-block-end: var(--space-4);
@@ -1495,15 +1513,8 @@
     }
 
     .section-header h3,
-    .section-header h2 {
+    .section-header h1 {
         margin: 0;
-    }
-
-    @media (max-width: 768px) {
-        .section-header {
-            flex-direction: column;
-            align-items: flex-start;
-        }
     }
 
     .badge {
@@ -1511,7 +1522,7 @@
         padding: 1px 8px;
         background-color: var(--color-bg-subtle);
         color: var(--color-text-muted);
-        font-size: 0.8rem;
+        font-size: var(--font-size-xs);
         font-weight: 500;
         border-radius: 999px;
     }
@@ -1519,7 +1530,7 @@
 
 @layer utilities {
     /* .visually-hidden here is a hard display:none (not the accessible-but-present
-       clip technique) — only used on CSRF-only wrapper divs with no meaningful content. */
+       clip technique) - only used on CSRF-only wrapper divs with no meaningful content. */
     .visually-hidden {
         display: none;
     }
@@ -1536,7 +1547,7 @@
        scroll container, the same way overflow-x already makes it the real
        horizontal one for .sticky-col. Without a bounded height here, the
        page scrolls instead of this box, and .table's sticky thead has no
-       actual scrolling ancestor to pin against — it never visibly sticks. */
+       actual scrolling ancestor to pin against - it never visibly sticks. */
     .table-container {
         overflow: auto;
         max-height: calc(100vh - 4rem);
@@ -1549,7 +1560,7 @@
         }
     }
 
-    /* Pinning only — no width cap/ellipsis truncation. Titles and names
+    /* Pinning only - no width cap/ellipsis truncation. Titles and names
        must never be cut off; a sticky column just grows to fit its content
        (still nowrap by default, from .table's base rule) instead. */
     .sticky-col {
@@ -1561,7 +1572,7 @@
 
     /* .sticky-col's own background-color (needed so scrolled-under content
        doesn't show through the frozen column) would otherwise beat .table's
-       dark header background too — utilities always outranks components by
+       dark header background too - utilities always outranks components by
        layer order regardless of specificity. Restore the dark header here,
        in the same layer as .sticky-col, with enough specificity to win.
 
@@ -1582,6 +1593,13 @@
         background-color: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
     }
 
+    /* Same reasoning again, for the zebra stripe: without this, even rows'
+       sticky name/title cell sits at the plain surface color while the rest
+       of that row shows the tinted stripe. */
+    .table tbody tr:nth-child(even) td.sticky-col {
+        background-color: color-mix(in srgb, var(--color-bg) 40%, var(--color-surface));
+    }
+
     /* See the --color-attendance-* token comment above for the pk mapping. */
     .att-type-0 { background-color: var(--color-attendance-0); }
     .att-type-1 { background-color: var(--color-attendance-1); }
@@ -1592,7 +1610,7 @@
     /* Suppresses the att-type-N status color for a disabled matrix cell.
        Deliberately placed in @layer utilities (not components, where
        .table__cell--attendance itself lives) so it shares a layer with
-       .att-type-N above and can win on source order/specificity — a rule in
+       .att-type-N above and can win on source order/specificity - a rule in
        @layer components can never outrank one in @layer utilities regardless
        of specificity, since utilities is declared later in the layer order. */
     .table__cell--attendance--disabled {
@@ -1630,7 +1648,7 @@
     }
 
     /* Generic selectors for Django's default CheckboxSelectMultiple/RadioSelect
-       output (no custom widget template this round — see FRONTEND_GUIDE.md). */
+       output (no custom widget template this round - see FRONTEND_GUIDE.md). */
     input[type="checkbox"],
     input[type="radio"] {
         margin-inline-end: var(--space-1);
@@ -1642,8 +1660,7 @@
         input[type="text"],
         input[type="email"],
         input[type="password"],
-        .btn-primary,
-        .btn-danger {
+        .btn {
             min-height: 44px;
         }
     }

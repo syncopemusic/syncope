@@ -2,16 +2,16 @@
 {% block title %}New Invitation{% endblock %}
 
 {% block content %}
-<h2>New Invitation</h2>
+<h1>New Invitation</h1>
 
 {% if is_org %}
 <form method="post" class="inline-form">
     {% csrf_token %}
     <input type="hidden" name="draft_key" value="{{ draft_key }}">
     <button type="submit"
-            class="btn btn-sm btn-secondary"
+            class="btn btn-primary"
             formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new' url_username %}&next={{ request.get_full_path|urlencode }}"
-            title="Create new person">New</button>
+            title="Create new person">+ Add</button>
 </form>
 {% endif %}
 

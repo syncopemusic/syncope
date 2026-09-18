@@ -50,7 +50,7 @@ Parameters:
             <td>{% if invitation.admin_involved %}{{ invitation.admin_involved }}{% else %}?{% endif %}</td>
             <td class="col-main">{{ invitation.recipient }}</td>
             <td>{{ invitation.status }}</td>
-            <td>{% if invitation.expires_at %}<span data-dt="{{ invitation.expires_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.expires_at|date:"d M, Y, H:i" }}</span>{% else %}—{% endif %}</td>
+            <td>{% if invitation.expires_at %}<span data-dt="{{ invitation.expires_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.expires_at|date:"d M, Y, H:i" }}</span>{% else %}-{% endif %}</td>
             <td><a href="{% url 'syncope:invitation_detail' url_username invitation.pk %}">View</a></td>
         </tr>
     {% empty %}

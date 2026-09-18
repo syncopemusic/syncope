@@ -1,10 +1,11 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 
 {% block title %}Update your personal{% endblock %}
 
 {% block content %}
-<h2>Update Your Profile</h2>
-<form method="post">
+<h1>Update Your Profile</h1>
+<form method="post" id="person-form">
     {% csrf_token %}
 
     <!-- Existing fields -->
@@ -56,11 +57,26 @@
     <p>{{ form.skills.label_tag }}
         {{ form.skills }}</p>
 
-    <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Save</button>
-    </div>
 </form>
 
 {% url 'syncope:home' as return_target %}
-{% include "syncope/_save_bar.html" with url=return_target %}
+{% include "syncope/_save_bar.html" with form_id="person-form" url=return_target %}
+
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>
+    const form = document.getElementById('person-form');
+    let formDirty = false;
+
+    const saveBarCtl = initSaveBar({
+        formId: 'person-form',
+        countUnsavedChanges: () => formDirty ? 1 : 0,
+        onDiscard: () => {
+            form.reset();
+            formDirty = false;
+        },
+    });
+
+    form.addEventListener('input', () => { formDirty = true; saveBarCtl.sync(); });
+    form.addEventListener('change', () => { formDirty = true; saveBarCtl.sync(); });
+</script>
 {% endblock %}

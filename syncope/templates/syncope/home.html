@@ -3,12 +3,12 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
-  <h2>Welcome, {{ user.username }}!</h2>
+  <h1>Welcome, {{ user.username }}!</h1>
 
   {% with person=user.persons.first %}
   {% if person %}
     <p>{{ person.first_name }} {{ person.last_name }}</p>
-    <p><a href="{%  url 'syncope:org_new' %}" class="btn btn-secondary">+ Create organization</a></p>
+    <p><a href="{%  url 'syncope:org_new' %}" class="btn btn-primary" title="Add new organization">+ Add</a></p>
 
     {% if org_memberships %}
       <h3>Your memberships</h3>

@@ -988,7 +988,7 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["organization"] = self.customuser
-        context['is_admin'] = True
+        context['is_admin'] = self.is_admin
         context['cancel_url'] = self._person_detail_url()
         context['return_url'], context['return_label'] = self._return_target()
         context["is_linked"] = self.person.owner_id is not None

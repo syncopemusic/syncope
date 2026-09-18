@@ -3,19 +3,18 @@
 {% block title %}{{ song.title }}{% endblock %}
 {% block content %}
 
-<h2>{{ song.title }}
+<h1 class="event-title">{{ song.title }}
     <span class="share-controls">
-        <button id="share-btn" class="btn btn-link btn-sm" title="Copy link">
+        <button id="share-btn" class="btn btn-link" title="Copy link">
             <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
         </button>
         <span id="share-result" class="share-result"></span>
     </span>
-</h2>
+</h1>
 
 {% if can_manage %}
 <p>
-    <a href="{%  url 'syncope:song_update' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-secondary btn-sm">Edit</a>
-    <a href="{% url 'syncope:song_delete' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-danger">Delete</a>
+    <a href="{%  url 'syncope:song_update' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-secondary">Edit</a>
 </p>
 {% endif %}
 <div class="visually-hidden">{% csrf_token %}</div>
@@ -88,10 +87,10 @@
             <td class="col-num">{{ forloop.counter }}</td>
             <td>{{ res.icon }}</td>
             <td style="position: relative;">
-                <button class="copy-resource-btn btn btn-link btn-sm" data-url="{{ res.share_url|default:res.url }}" title="Copy link">
+                <button class="copy-resource-btn btn btn-link" data-url="{{ res.share_url|default:res.url }}" title="Copy link">
                     <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
                 </button>
-                <span class="copy-resource-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: var(--color-surface); padding: 2px 4px; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm);"></span>
+                <span class="copy-resource-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: var(--font-size-sm); z-index: 10; background: var(--color-surface); padding: 2px 4px; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm);"></span>
             </td>
             <td class="col-main"><a href="{{ res.share_url|default:res.url }}" target="_blank" rel="noopener noreferrer">{{ res.url }}</a></td>
             <td class="col-main">{{ res.desc }}</td>
@@ -117,8 +116,8 @@
         <li>
             {{ quote.word }}
             {% if quote.bar_number %} (Bar {{ quote.bar_number }}){% endif %}
-            {% if quote.date %} — {{ quote.date }}{% endif %}
-            {% if quote.person %} — {{ quote.person }}{% endif %}
+            {% if quote.date %} - {{ quote.date }}{% endif %}
+            {% if quote.person %} - {{ quote.person }}{% endif %}
         </li>
     {% endfor %}
 </ul>
@@ -137,7 +136,7 @@
 {% if song.lyricstranslation_set.all %}
 <h3>Lyrics Translations</h3>
 {% for t in song.lyricstranslation_set.all %}
-    <h4>{{ t.languagecode }}{% if t.translator %} — {{ t.translator }}{% endif %}</h4>
+    <h4>{{ t.languagecode }}{% if t.translator %} - {{ t.translator }}{% endif %}</h4>
     <div>{{ t.translation|linebreaks }}</div>
 {% endfor %}
 {% endif %}

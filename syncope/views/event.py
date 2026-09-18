@@ -22,7 +22,7 @@ from syncope.forms import AddSongToEventForm, EventResourceFormSet, EventSongRes
 from syncope.views.drafts import DraftMixin
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param
-from syncope.breadcrumbs import event_breadcrumbs, DEFAULT_EVENT_ORIGIN
+from syncope.breadcrumbs import event_breadcrumbs, origin_root_crumb, DEFAULT_EVENT_ORIGIN
 
 
 def is_event_admin(user, org_user):
@@ -379,7 +379,7 @@ class EventSongsEditView(View):
 
         with transaction.atomic():
             if remove_pks:
-                # EventSongResource.event_song is on_delete=PROTECT — clear resources first.
+                # EventSongResource.event_song is on_delete=PROTECT - clear resources first.
                 EventSongResource.objects.filter(event_song_id__in=remove_pks).delete()
                 EventSong.objects.filter(event=event, pk__in=remove_pks).delete()
 
@@ -461,7 +461,7 @@ def event_songs_search(request, org_user, event):
 @login_required
 @event_admin_required
 def event_song_resources_save(request, org_user, event, eventsong_pk):
-    """Rare, low-frequency edit — a plain form POST + redirect is fine here (no AJAX needed)."""
+    """Rare, low-frequency edit - a plain form POST + redirect is fine here (no AJAX needed)."""
     eventsong = get_object_or_404(EventSong, pk=eventsong_pk, event=event)
     formset = EventSongResourceFormSet(
         request.POST, instance=eventsong, user=org_user, prefix=f"esresource_{eventsong.pk}",
@@ -726,7 +726,8 @@ class EventDeleteView(LoginRequiredMixin, DeleteView):
         return response
 
     def get_success_url(self):
-        return reverse('syncope:event_list', kwargs={'username': self.kwargs.get('username')})
+        root, _ = origin_root_crumb(self.request, self.kwargs.get('username'))
+        return root['url']
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

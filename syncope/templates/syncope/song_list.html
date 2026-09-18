@@ -3,13 +3,13 @@
 {% block content %}
 
 <div class="section-header">
-    <h2>Song Archive</h2>
+    <h1>Song Archive</h1>
     <a href="{%  url 'syncope:song_new' url_username %}" class="btn btn-primary" title="Add new song into archive">+ Add</a>
 </div>
 
 <p class="search-form">
     <input type="text" id="song-list-search-input" value="{{ q }}" placeholder="Search by ID, title, composer, arranger, poet, origin, keywords, language">
-    <button type="button" id="song-list-search-clear" class="btn btn-secondary btn-sm">Clear</button>
+    <button type="button" id="song-list-search-clear" class="btn btn-secondary">Clear</button>
 </p>
 
 <div id="song-list-results">

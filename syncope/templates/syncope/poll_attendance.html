@@ -5,20 +5,20 @@
 
 {% block content %}
 
-<h2>{{ poll.title }} - Attendance</h2>
+<h1>{{ poll.title }} - Attendance</h1>
 
 <div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
     {% if viewing_as %}
-    <button id="share-btn" class="btn btn-link btn-sm" title="Copy link">
+    <button id="share-btn" class="btn btn-link" title="Copy link">
         <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
     </button>
-    <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
+    <span id="share-result" style="margin-left: 0.5rem; font-size: var(--font-size-md);"></span>
     <div style="display:none;">{% csrf_token %}</div>
     {% endif %}
 </div>
 
 {% if viewing_as %}
-<p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1rem;">
+<p class="text-muted" style="font-size: var(--font-size-md); margin-bottom: 1rem;">
     Filling in for: <strong>{{ viewing_as.person.first_name }} {{ viewing_as.person.last_name }}</strong>
 </p>
 {% endif %}
@@ -72,7 +72,7 @@
                     {% for event in poll_events %}
                     <th class="table__event-col table__event-col--text {% if event.event_type.id != 1 %}table__event-header--strong{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
-                        {% if event.location %}{{ event.location }}{% else %}<em>—</em>{% endif %}
+                        {% if event.location %}{{ event.location }}{% else %}<em>-</em>{% endif %}
                     </th>
                     {% endfor %}
                 </tr>
@@ -84,7 +84,7 @@
                     {% for event in poll_events %}
                     <th class="table__event-col table__event-col--text {% if event.event_type.id != 1 %}table__event-header--strong{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
-                        {% if event.details %}{{ event.details }}{% else %}<em>—</em>{% endif %}
+                        {% if event.details %}{{ event.details }}{% else %}<em>-</em>{% endif %}
                     </th>
                     {% endfor %}
                 </tr>

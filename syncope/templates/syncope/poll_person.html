@@ -4,12 +4,7 @@
 {% block title %}{{ poll.title }} - Persons{% endblock %}
 
 {% block content %}
-<h2>{{ poll.title }} — Persons</h2>
-
-<div class="section-header">
-    <h3>Added Persons</h3>
-    <span class="badge">{{ poll_persons|length }}</span>
-</div>
+<h1>{{ poll.title }} - Persons</h1>
 
 <form method="post" id="persons-form">
     {% csrf_token %}
@@ -29,7 +24,7 @@
                     <td class="col-num">{{ pp.index }}</td>
                     <td class="col-main">{{ pp.person.first_name }} {{ pp.person.last_name }}</td>
                     <td class="col-action">
-                        {% if is_admin %}<button type="button" class="btn btn-sm btn-remove" title="Remove from poll">×</button>{% endif %}
+                        {% if is_admin %}<button type="button" class="btn btn-remove" title="Remove from poll">×</button>{% endif %}
                     </td>
                 </tr>
                 {% empty %}
@@ -48,8 +43,8 @@
             <span class="search-spinner" id="participant-search-spinner"></span>
         </p>
         <p style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-            <button type="button" id="participant-search-clear" class="btn btn-sm btn-secondary">Clear</button>
-            <button type="submit" form="persons-form" name="action" value="new_person" class="btn btn-sm btn-secondary" title="Create new person">New</button>
+            <button type="button" id="participant-search-clear" class="btn btn-secondary">Clear</button>
+            <button type="submit" form="persons-form" name="action" value="new_person" class="btn btn-primary" title="Create new person">+ Add</button>
         </p>
         <div id="participant-search-results"></div>
     </div>
@@ -63,7 +58,7 @@
     <input type="hidden" name="action" value="bulk_import">
     {{ bulk_import_form.role_criteria }}
     {{ bulk_import_form.skill_criteria }}
-    <button type="submit" class="btn btn-sm btn-secondary">Import</button>
+    <button type="submit" class="btn btn-secondary">Import</button>
 </form>
 {% endif %}
 
@@ -150,7 +145,7 @@
         tr.innerHTML = `
             <td></td>
             <td>${escapeHtml(personLabel)}</td>
-            <td><input type="hidden" name="add_person" value="${personId}"><button type="button" class="btn btn-sm btn-remove" title="Remove staged addition">&times;</button></td>
+            <td><input type="hidden" name="add_person" value="${personId}"><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>
         `;
         return tr;
     }

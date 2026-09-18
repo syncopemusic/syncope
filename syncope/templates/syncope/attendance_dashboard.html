@@ -12,7 +12,7 @@
 </style>
 
 <div class="attendance-dashboard">
-    <h2>Attendance</h2>
+    <h1>Attendance</h1>
 
     <details class="filter-panel" {% if request.GET.start_date or request.GET.end_date or request.GET.event_limit %}open{% endif %}>
         <summary>
@@ -50,9 +50,9 @@
         </form>
     </details>
 
-    <form method="post" action="{%  url 'syncope:quick_new_rehearsal' username=url_username %}" class="quick-add-form">
+    <form method="post" action="{%  url 'syncope:quick_new_rehearsal' username=url_username %}">
         {% csrf_token %}
-        <button type="submit" class="btn btn-primary" title="Add rehearsal now">+ Rehearsal</button>
+        <button type="submit" class="btn btn-primary" title="Add rehearsal now">+ Add</button>
     </form>
 
     {# Main Form with Attendance Table #}

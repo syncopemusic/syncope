@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="section-header">
-    <h2>Polls</h2>
+    <h1>Polls</h1>
     {% if membership and ADMIN_ROLE in membership.person.roles.all %}
     <a href="{% url 'syncope:poll_new' url_username %}" class="btn btn-primary" title="Add new poll">+ Add</a>
     {% endif %}
@@ -20,7 +20,6 @@
         <th class="col-num"><a href="?sort=id{% if current_sort == 'id' and not reverse %}&reverse=true{% endif %}" class="sortable-header">#{% if current_sort == 'id' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th class="col-main"><a href="?sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Title{% if current_sort == 'title' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th><a href="?sort=updated{% if current_sort == 'updated' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Updated{% if current_sort == 'updated' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th></th>
     </tr>
     </thead>
     <tbody>
@@ -29,14 +28,6 @@
         <td class="col-num">{{ forloop.counter }}</td>
         <td class="col-main"><a href="{% url 'syncope:poll_detail' url_username poll.pk %}">{{ poll.title }}</a></td>
         <td><span data-dt="{{ poll.updated_at|date:"c" }}" data-dt-fmt="datetime">{{ poll.updated_at|date:"Y-m-d H:i" }}</span></td>
-        <td>
-            {% if is_admin %}
-            <form method="post" action="{% url 'syncope:poll_delete' url_username poll.pk %}" class="inline-form" onclick="return confirm('Remove poll &quot;{{ poll.title }}&quot;?')">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-            </form>
-            {% endif %}
-        </td>
     </tr>
     {% endfor %}
     </tbody>

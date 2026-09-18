@@ -5,7 +5,7 @@
 
 <div class="container mt-4">
 
-    <h2>Import {{ import_method|title }}</h2>
+    <h1>Import {{ import_method|title }}</h1>
 
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
@@ -57,7 +57,7 @@
         <h5>CSV header - copy and paste into Excel:</h5>
         <div class="card bg-light">
             <div class="card-body p-3">
-                <pre id="csv_header" class="mb-0" style="font-family: monospace; font-size: 0.95rem; white-space: pre-wrap; word-wrap: break-word;">{{ csv_header }}</pre>
+                <pre id="csv_header" class="mb-0" style="font-family: monospace; font-size: var(--font-size-md); white-space: pre-wrap; word-wrap: break-word;">{{ csv_header }}</pre>
             </div>
         </div>
 

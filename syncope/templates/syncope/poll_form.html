@@ -3,7 +3,7 @@
 {% block title %}{% if form.instance.pk %}Edit{% else %}New{% endif %} title{% endblock %}
 
 {% block content %}
-<h2>{% if form.instance.pk %}Edit{% else %}New{% endif %} Poll title</h2>
+<h1>{% if form.instance.pk %}Edit{% else %}New{% endif %} Poll title</h1>
 
 <form method="post">
     {% csrf_token %}

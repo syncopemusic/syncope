@@ -7,14 +7,17 @@
 
 <div id="event-detail-content">
 
-<h2 class="event-title"><span class="event-title-text"> <span title="Title">{{ event.name }}</span> <small><span title="Type"> | {{ event.event_type }}</span></small></span>
+<h1 class="event-title"><span class="event-title-text"> <span title="Title">{{ event.name }}</span> <small><span title="Type"> | {{ event.event_type }}</span></small></span>
     <span class="share-controls">
-        <button id="share-btn" class="btn btn-link btn-sm" title="Copy link">
+        <button id="share-btn" class="btn btn-link" title="Copy link">
             <img src="{% static 'syncope/images/link.svg' %}" width="16" height="16" alt="Link">
         </button>
         <span id="share-result" class="share-result"></span>
     </span>
-</h2>
+</h1>
+{% if is_admin %}
+<p><a href="{% url 'syncope:event_meta_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary">Edit</a></p>
+{% endif %}
 <p class="event-summary">{% if event.location %}Location: {{ event.location }}<br>{% endif %}
 {% if event.same_date %}
 <span class="dt-full" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-full">{{ event.started_at|date:"l d F, Y, H:i" }}</span><span class="dt-short" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-short">{{ event.started_at|date:"D d M, Y, H:i" }}</span>&ndash;<span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="time">{{ event.ended_at|date:"H:i" }}</span>
@@ -40,16 +43,12 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
     </tbody>
 </table>
 {% endif %}
-
-{% if is_admin %}
-<p><a href="{% url 'syncope:event_meta_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary btn-sm">Edit meta data</a></p>
-{% endif %}
 <div style="display:none;">{% csrf_token %}</div>
 
 
 <div class="section-header">
     <h3>Songs</h3>
-    {% if is_admin %}<a href="{% url 'syncope:event_songs_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary btn-sm">Edit</a>{% endif %}
+    {% if is_admin %}<a href="{% url 'syncope:event_songs_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% if eventsongs %}
     <div class="table-container">
@@ -96,7 +95,7 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
 {% if can_view_attendance %}
 <div class="section-header">
     <h3>Attendance</h3>
-    {% if is_admin %}<a href="{% url 'syncope:event_attendance_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary btn-sm">Edit</a>{% endif %}
+    {% if is_admin %}<a href="{% url 'syncope:event_attendance_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% if attendances %}
     <div class="table-container">

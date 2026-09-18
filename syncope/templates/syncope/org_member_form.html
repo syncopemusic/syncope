@@ -104,6 +104,10 @@
     <div class="form-actions">
         <button type="submit" class="btn btn-primary">Save</button>
     </div>
+
+    {% if is_admin and form.instance.pk %}
+    <p class="danger-zone"><a href="{% url 'syncope:org_member_delete' url_username form.instance.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger">Delete</a></p>
+    {% endif %}
 </form>
 
 {% if is_linked and can_unlink %}

@@ -338,7 +338,7 @@ class EventForm(forms.ModelForm):
         self.fields['event_type'].initial = rehearsal_event_type
         self.fields['event_type'].empty_label = None
 
-        # Name is optional — auto-generated from event type + date if left blank (see clean())
+        # Name is optional - auto-generated from event type + date if left blank (see clean())
         self.fields['name'].required = False
         self.fields['name'].widget.attrs['placeholder'] = 'Auto-generated from date if left blank'
 

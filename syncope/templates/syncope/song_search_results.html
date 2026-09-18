@@ -2,7 +2,7 @@
     <div id="song-checkbox-list">
         {% for song in add_song_form.fields.song.queryset %}
             <div class="search-result-row">
-                <button type="button" class="btn btn-sm btn-secondary"
+                <button type="button" class="btn btn-secondary"
                         data-id="{{ song.pk }}"
                         data-title="{{ song.title }}"
                         data-composer="{% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}{% endif %}"

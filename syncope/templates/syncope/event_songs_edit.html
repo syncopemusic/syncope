@@ -4,7 +4,6 @@
 
 {% block extra_css %}
 <style>
-    .songs-table td, .songs-table th { padding: 0.3rem 0.25rem; }
     .drag-handle-cell { width: 2.2rem; text-align: center; padding-left: 0; padding-right: 0; }
     .drag-handle {
         cursor: grab;
@@ -27,7 +26,7 @@
         justify-content: space-between;
         align-items: baseline;
         gap: 0.5rem;
-        font-size: 0.85rem;
+        font-size: var(--font-size-sm);
         color: var(--color-text-muted);
         overflow-wrap: break-word;
     }
@@ -46,7 +45,7 @@
 
 {% block content %}
 
-<h2>Songs &mdash; {{ event.name }}</h2>
+<h1>Songs &mdash; {{ event.name }}</h1>
 
 <div id="songs-content">
     <form method="post" id="songs-form">
@@ -82,8 +81,8 @@
             <span class="search-spinner" id="song-search-spinner"></span>
         </p>
         <p style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-            <button type="button" id="song-search-clear" class="btn btn-sm btn-secondary">Clear</button>
-            <button type="submit" form="songs-form" name="action" value="new_song" class="btn btn-sm btn-secondary" title="Save current changes and create a new song">New</button>
+            <button type="button" id="song-search-clear" class="btn btn-secondary">Clear</button>
+            <button type="submit" form="songs-form" name="action" value="new_song" class="btn btn-primary" title="Save current changes and create a new song">+ Add</button>
         </p>
         <div id="song-search-results">
             {% include "syncope/song_search_results.html" %}
@@ -232,7 +231,7 @@
             if (handle && dragPointerId !== null && handle.hasPointerCapture(dragPointerId)) {
                 handle.releasePointerCapture(dragPointerId);
             }
-        } catch (err) { /* pointer already invalid/released — ignore */ }
+        } catch (err) { /* pointer already invalid/released - ignore */ }
         dragRow.classList.remove('dragging');
         dragRow = null;
         dragPointerId = null;

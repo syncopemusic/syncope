@@ -4,17 +4,17 @@
 {% block title %}{{ project.title }}{% endblock %}
 
 {% block content %}
-<h2>{{ project.title }}
+<h1 class="event-title">{{ project.title }}
     <span class="share-controls">
-        <button id="share-btn" class="btn btn-link btn-sm" title="Copy link">
+        <button id="share-btn" class="btn btn-link" title="Copy link">
             <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
         </button>
         <span id="share-result" class="share-result"></span>
     </span>
-</h2>
+</h1>
 
 <p>
-    <a href="{% url 'syncope:project_update' url_username project.pk %}" class="btn btn-secondary btn-sm">Edit</a>
+    <a href="{% url 'syncope:project_update' url_username project.pk %}" class="btn btn-secondary">Edit</a>
 </p>
 <div style="display:none;">{% csrf_token %}</div>
 

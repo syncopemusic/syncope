@@ -5,7 +5,7 @@
 {% block content %}
 
 <div class="section-header">
-    <h2>Events</h2>
+    <h1>Events</h1>
     {% if membership and ADMIN_ROLE in membership.person.roles.all %}
     <a href="{%  url 'syncope:event_new' url_username %}" class="btn btn-primary" title="Add new event to the schedule">+ Add</a>
     {% endif %}
@@ -37,7 +37,7 @@
                 </a>
             </td>
             <td>{{ event.event_type }}</td>
-            <td class="col-main">{% if event.project %}<a href="{%  url 'syncope:project_detail' url_username event.project.id %}">{{ event.project }}</a>{% else %}—{% endif %}</td>
+            <td class="col-main">{% if event.project %}<a href="{%  url 'syncope:project_detail' url_username event.project.id %}">{{ event.project }}</a>{% else %}-{% endif %}</td>
             <td>
               {% if event.resource_count > 0 %}
                 <span title="Event resources">

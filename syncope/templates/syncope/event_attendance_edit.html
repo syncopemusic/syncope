@@ -13,7 +13,7 @@
         border-radius: 4px;
         cursor: pointer;
         user-select: none;
-        font-size: 0.95rem;
+        font-size: var(--font-size-md);
         line-height: 1;
         width: 7.5rem;
     }
@@ -31,13 +31,13 @@
 
 {% block content %}
 
-<h2>Attendance &mdash; {{ event.name }}</h2>
+<h1>Attendance &mdash; {{ event.name }}</h1>
 
 <div id="attendance-content">
     <form method="post" id="attendance-form">
         {% csrf_token %}
         <div class="table-container">
-            <table class="table attendance-table">
+            <table class="table">
                 <thead>
                     <tr>
                         <th class="col-main">Person</th>
@@ -64,8 +64,8 @@
             <span class="search-spinner" id="participant-search-spinner"></span>
         </p>
         <p style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-            <button type="button" id="participant-search-clear" class="btn btn-sm btn-secondary">Clear</button>
-            <button type="submit" form="attendance-form" name="action" value="new_person" class="btn btn-sm btn-secondary" title="Create new person">New</button>
+            <button type="button" id="participant-search-clear" class="btn btn-secondary">Clear</button>
+            <button type="submit" form="attendance-form" name="action" value="new_person" class="btn btn-primary" title="Create new person">+ Add</button>
         </p>
         <p style="display:flex; align-items:center; gap:0.5rem; margin-top:1rem;">
             <strong>Attendance:</strong>

@@ -1,12 +1,12 @@
 {% extends "syncope/base.html" %}
 {% load static %}
 
-{% block title %}{% if editing %}Edit Date{% else %}Dates{% endif %} — {{ poll.title }}{% endblock %}
+{% block title %}{% if editing %}Edit Date{% else %}Dates{% endif %} - {{ poll.title }}{% endblock %}
 
 {% block content %}
 
 {% if editing %}
-<h2>{{ poll.title }} — Edit Date</h2>
+<h1>{{ poll.title }} - Edit Date</h1>
 
 <form method="post">
     {% csrf_token %}
@@ -50,12 +50,7 @@
 {% include "syncope/_save_bar.html" with url=return_target %}
 
 {% else %}
-<h2>{{ poll.title }} — Dates</h2>
-
-<div class="section-header">
-    <h3>Added Dates</h3>
-    <span class="badge">{{ poll_events|length }}</span>
-</div>
+<h1>{{ poll.title }} - Dates</h1>
 
 <form method="post" id="dates-form">
     {% csrf_token %}
@@ -79,11 +74,11 @@
                     <td>{{ pe.event_type.name }}</td>
                     <td>{% if pe.same_date %}<span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span>{% else %}<span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span> – <span data-dt="{{ pe.ended_at|date:"c" }}" data-dt-fmt="date">{{ pe.ended_at|date:"d M" }}</span>{% endif %}</td>
                     <td><span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="time">{{ pe.started_at|date:"H:i" }}</span> <br> <span data-dt="{{ pe.ended_at|date:"c" }}" data-dt-fmt="time">{{ pe.ended_at|date:"H:i" }}</span></td>
-                    <td>{% if pe.location %}{{ pe.location }}{% else %}<em>—</em>{% endif %}</td>
-                    <td class="col-main">{% if pe.details %}{{ pe.details }}{% else %}<em>—</em>{% endif %}</td>
+                    <td>{% if pe.location %}{{ pe.location }}{% else %}<em>-</em>{% endif %}</td>
+                    <td class="col-main">{% if pe.details %}{{ pe.details }}{% else %}<em>-</em>{% endif %}</td>
                     <td class="col-action">
-                        <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}" class="btn btn-secondary btn-sm">Edit</a>
-                        {% if is_admin %}<button type="button" class="btn btn-sm btn-remove" title="Remove this date">×</button>{% endif %}
+                        <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}" class="btn btn-secondary">Edit</a>
+                        {% if is_admin %}<button type="button" class="btn btn-remove" title="Remove this date">×</button>{% endif %}
                     </td>
                 </tr>
                 {% empty %}
@@ -118,7 +113,7 @@
             <label for="{{ form.details.id_for_label }}">{{ form.details.label }}</label>
             {{ form.details }}
         </div>
-        <p><button type="button" id="add-date-btn" class="btn btn-sm btn-secondary">Add</button></p>
+        <p><button type="button" id="add-date-btn" class="btn btn-primary" title="Add this date">+ Add</button></p>
     </div>
     {% endif %}
 </form>
@@ -218,8 +213,18 @@ $(function () {
         return div.innerHTML;
     }
 
+    function addOneDay(datetimeLocalValue) {
+        if (!datetimeLocalValue) return datetimeLocalValue;
+        const d = new Date(datetimeLocalValue);
+        if (isNaN(d)) return datetimeLocalValue;
+        d.setDate(d.getDate() + 1);
+        const pad = n => String(n).padStart(2, '0');
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+            'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
     function formatDateForDisplay(value) {
-        if (!value) return '—';
+        if (!value) return '-';
         const d = new Date(value);
         if (isNaN(d)) return escapeHtml(value);
         return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
@@ -240,8 +245,8 @@ $(function () {
             <td>${escapeHtml(values.typeLabel)}</td>
             <td>${formatDateForDisplay(values.startedAt)}</td>
             <td>${formatTimeForDisplay(values.startedAt)} <br> ${formatTimeForDisplay(values.endedAt)}</td>
-            <td>${values.location ? escapeHtml(values.location) : '<em>—</em>'}</td>
-            <td>${values.details ? escapeHtml(values.details) : '<em>—</em>'}</td>
+            <td>${values.location ? escapeHtml(values.location) : '<em>-</em>'}</td>
+            <td>${values.details ? escapeHtml(values.details) : '<em>-</em>'}</td>
             <td></td>
         `;
         const actionsCell = tr.lastElementChild;
@@ -261,7 +266,7 @@ $(function () {
         }
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
-        removeBtn.className = 'btn btn-sm btn-remove';
+        removeBtn.className = 'btn btn-remove';
         removeBtn.title = 'Remove staged addition';
         removeBtn.textContent = '×';
         actionsCell.appendChild(removeBtn);
@@ -296,8 +301,8 @@ $(function () {
             location: locationInput.value,
             details: detailsInput.value,
         }));
-        locationInput.value = '';
-        detailsInput.value = '';
+        startedAtInput.value = addOneDay(startedAtInput.value);
+        endedAtInput.value = addOneDay(endedAtInput.value);
         saveBarCtl.sync();
     });
 </script>

@@ -2,7 +2,7 @@
     {% if form.fields.person.queryset.exists %}
         <div id="participant-checkbox-list">
             {% for person in form.fields.person.queryset %}
-                <div class="search-result-row"><button type="button" class="btn btn-sm btn-secondary" data-id="{{ person.pk }}">+</button> <span class="result-label">{{ person }}</span></div>
+                <div class="search-result-row"><button type="button" class="btn btn-secondary" data-id="{{ person.pk }}">+</button> <span class="result-label">{{ person }}</span></div>
             {% endfor %}
         </div>
     {% else %}

@@ -3,7 +3,7 @@
 {% block title %}Edit Project{% endblock %}
 
 {% block content %}
-<h2>Edit Project</h2>
+<h1>Edit Project</h1>
 
 <form method="post" id="project-form">
     {% csrf_token %}
@@ -61,7 +61,7 @@
 <div class="section-header">
     <h3 id="add-event-section">Project Events</h3>
     {% if is_admin %}
-    <button type="submit" class="btn btn-sm btn-secondary" form="project-form" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:event_new' url_username %}?project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23add-event-section" title="Create new event">New</button>
+    <button type="submit" class="btn btn-primary" form="project-form" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:event_new' url_username %}?project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23add-event-section" title="Create new event">+ Add</button>
     {% endif %}
 </div>
 
@@ -85,7 +85,7 @@
                     {% if is_admin %}
                     <form method="post" action="{%  url 'syncope:project_remove_event' url_username form.instance.pk event.pk %}" class="inline-form">
                         {% csrf_token %}
-                        <button type="submit" onclick="return confirm('Remove this event from the project?')" class="btn btn-sm btn-danger">Remove</button>
+                        <button type="submit" onclick="return confirm('Remove this event from the project?')" class="btn btn-danger">Remove</button>
                     </form>
                     {% endif %}
                 </td>
@@ -98,8 +98,8 @@
 
 <form method="get" class="search-form">
     <input type="text" name="event_q" value="{{ event_search_q }}" placeholder="Search by event name">
-    <button type="submit" class="btn btn-sm btn-secondary">Search</button>
-    {% if event_search_q %}<a href="{%  url 'syncope:project_update' url_username form.instance.pk %}" class="btn btn-sm btn-link">Clear</a>{% endif %}
+    <button type="submit" class="btn btn-secondary">Search</button>
+    {% if event_search_q %}<a href="{%  url 'syncope:project_update' url_username form.instance.pk %}" class="btn btn-link">Clear</a>{% endif %}
 </form>
 
 {% if add_event_form.fields.event.queryset.exists %}
@@ -117,7 +117,7 @@
 <div class="section-header">
     <h3 id="songs-section">Project Songs</h3>
     {% if is_admin %}
-    <button type="submit" class="btn btn-sm btn-secondary" form="project-form" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:song_new' url_username %}?auto_add_project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23songs-section" title="Create new song">New</button>
+    <button type="submit" class="btn btn-primary" form="project-form" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:song_new' url_username %}?auto_add_project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23songs-section" title="Create new song">+ Add</button>
     {% endif %}
 </div>
 
@@ -142,7 +142,7 @@
                     {% if is_admin %}
                     <form method="post" action="{%  url 'syncope:project_remove_song' url_username form.instance.pk song.pk %}" class="inline-form">
                         {% csrf_token %}
-                        <button type="submit" onclick="return confirm('Remove this song from the project?')" class="btn btn-sm btn-danger">Remove</button>
+                        <button type="submit" onclick="return confirm('Remove this song from the project?')" class="btn btn-danger">Remove</button>
                     </form>
                     {% endif %}
                 </td>
@@ -155,8 +155,8 @@
 
 <form method="get" class="search-form">
     <input type="text" name="song_q" value="{{ song_search_q }}" placeholder="Search by title, composer, or ID">
-    <button type="submit" class="btn btn-sm btn-secondary">Search</button>
-    {% if song_search_q %}<a href="{%  url 'syncope:project_update' url_username form.instance.pk %}" class="btn btn-sm btn-link">Clear</a>{% endif %}
+    <button type="submit" class="btn btn-secondary">Search</button>
+    {% if song_search_q %}<a href="{%  url 'syncope:project_update' url_username form.instance.pk %}" class="btn btn-link">Clear</a>{% endif %}
 </form>
 
 {% if add_song_form.fields.song.queryset.exists %}
@@ -174,7 +174,7 @@
 <div class="section-header">
     <h3 id="guests-section">Project Guests</h3>
     {% if is_admin %}
-    <button type="submit" class="btn btn-sm btn-secondary" form="project-form" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new' url_username %}?auto_add_project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23guests-section" title="Create new person">New</button>
+    <button type="submit" class="btn btn-primary" form="project-form" formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new' url_username %}?auto_add_project={{ form.instance.pk }}&next={% url 'syncope:project_update' url_username form.instance.pk %}%23guests-section" title="Create new person">+ Add</button>
     {% endif %}
 </div>
 
@@ -195,7 +195,7 @@
                     {% if is_admin %}
                     <form method="post" action="{%  url 'syncope:project_remove_guest' url_username form.instance.pk guest.pk %}" class="inline-form">
                         {% csrf_token %}
-                        <button type="submit" onclick="return confirm('Remove this guest from the project?')" class="btn btn-sm btn-danger">Remove</button>
+                        <button type="submit" onclick="return confirm('Remove this guest from the project?')" class="btn btn-danger">Remove</button>
                     </form>
                     {% endif %}
                 </td>
@@ -208,8 +208,8 @@
 
 <form method="get" class="search-form">
     <input type="text" name="guest_q" value="{{ guest_search_q }}" placeholder="Search by name">
-    <button type="submit" class="btn btn-sm btn-secondary">Search</button>
-    {% if guest_search_q %}<a href="{%  url 'syncope:project_update' url_username form.instance.pk %}" class="btn btn-sm btn-link">Clear</a>{% endif %}
+    <button type="submit" class="btn btn-secondary">Search</button>
+    {% if guest_search_q %}<a href="{%  url 'syncope:project_update' url_username form.instance.pk %}" class="btn btn-link">Clear</a>{% endif %}
 </form>
 
 {% if add_guest_form.fields.guest.queryset.exists %}

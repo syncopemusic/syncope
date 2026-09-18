@@ -32,7 +32,7 @@
     </div>
 {% endif %}
 
-<h2>Event Details &mdash; {{ object.name }}</h2>
+<h1>Event Details &mdash; {{ object.name }}</h1>
 
 <form method="post" id="event-meta-form">
     {% csrf_token %}
@@ -74,7 +74,7 @@
     </div>
 
     <div class="form-actions danger-zone">
-        <a href="{% url 'syncope:event_delete' url_username event.pk %}" class="btn btn-danger">Delete</a>
+        <a href="{% url 'syncope:event_delete' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-danger">Delete</a>
     </div>
 </form>
 
