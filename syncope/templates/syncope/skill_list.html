@@ -2,7 +2,7 @@
 {% block title %}Skills{% endblock %}
 {% block content %}
 <h1>Skills</h1>
-<h2> Add new skill </h2>
+<h2>Add new skill</h2>
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
@@ -11,11 +11,11 @@
     </div>
 </form>
 
-<h2> Skill list </h2>
+<h2>Skill list</h2>
 <ul>
 {% for skill in skills %}
-    <p>{{ skill.title }}
-    - info: {{ skill.additional_notes }} - added  {{ skill.created_at }}
+    <li>{{ skill.title }}
+    - info: {{ skill.additional_notes }} - added {{ skill.created_at }}
     {% if is_admin %}
     <form method="post" class="inline-form">
         {% csrf_token %}
@@ -23,9 +23,7 @@
         <button type="submit" name="delete_skill" class="btn btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
       </form>
     {% endif %}
-    </p>
+    </li>
 {% endfor %}
 </ul>
-
-
 {% endblock %}

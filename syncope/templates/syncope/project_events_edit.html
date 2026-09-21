@@ -1,0 +1,87 @@
+{% extends "syncope/base.html" %}
+{% load static %}
+{% block title %}Events &mdash; {{ project.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .song-title { font-weight: 500; overflow-wrap: break-word; }
+    .song-subline {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem;
+        font-size: var(--font-size-sm);
+        color: var(--color-text-muted);
+        overflow-wrap: break-word;
+    }
+    .song-meta { white-space: nowrap; color: var(--color-text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<h1>Events &mdash; {{ project.title }}</h1>
+
+{% if events %}
+<div class="table-container">
+<table class="table">
+    <thead>
+        <tr>
+            <th class="col-main">Event Name</th>
+            <th>Date &amp; Time</th>
+            <th class="col-action">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for event in events %}
+        <tr>
+            <td class="col-main">
+                <a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a>
+                {% if event.resource_count > 0 %} - &#128279;{% endif %}
+                {% if event.event_song_resource_count > 0 %}&#127925;{% endif %}
+            </td>
+            <td>{% if event.started_at %}<span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="date-time">{{ event.started_at|date:"M d, Y H:i" }}</span>{% if event.ended_at %} - <span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="time">{{ event.ended_at|date:"H:i" }}</span>{% endif %}{% else %}-{% endif %}</td>
+            <td class="col-action">
+                <form method="post" action="{% url 'syncope:project_remove_event' url_username project.pk event.pk %}" class="inline-form">
+                    {% csrf_token %}
+                    <button type="submit" onclick="return confirm('Remove this event from the project?')" class="btn btn-remove" title="Remove from project">&times;</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<p>No events yet.</p>
+{% endif %}
+
+<div id="add-events" style="max-width:42rem;">
+    <h3>Add event</h3>
+    <p style="position:relative;">
+        <input type="text" id="event-search-input" value="{{ search_q }}" placeholder="Search by event name" style="max-width:100%; width:100%; box-sizing:border-box;">
+        <span class="search-spinner" id="event-search-spinner"></span>
+    </p>
+    <p style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <button type="button" id="event-search-clear" class="btn btn-secondary">Clear</button>
+        <a href="{% url 'syncope:event_new' url_username %}?project={{ project.pk }}&next={% url 'syncope:project_events_edit' url_username project.pk %}" class="btn btn-primary" title="Create new event">+ Add</a>
+    </p>
+    <div id="event-search-results">
+        {% include "syncope/project_event_search_results.html" %}
+    </div>
+</div>
+
+{% url 'syncope:project_detail' url_username project.pk as project_detail_url %}
+{% include "syncope/_save_bar.html" with url=project_detail_url %}
+
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script>
+    initLiveSearch({
+        input: document.getElementById('event-search-input'),
+        spinner: document.getElementById('event-search-spinner'),
+        results: document.getElementById('event-search-results'),
+        clearBtn: document.getElementById('event-search-clear'),
+        buildUrl: query => `{% url 'syncope:project_events_search' url_username project.pk %}?q=${encodeURIComponent(query)}`,
+    });
+</script>
+{% endblock %}

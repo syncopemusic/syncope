@@ -4,109 +4,71 @@
 {% block title %}Import Data Hub{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1>Import Data Hub</h1>
-    <p class="text-muted">Upload and manage your data in multiple steps. Steps can be repeated as needed.</p>
+<h1>Import Data Hub</h1>
+<p class="text-muted">Upload and manage your data in multiple steps. Steps can be repeated as needed.</p>
 
-    <div class="row g-4 mt-2">
-        <!-- Step 1: Import Members -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="mb-3">
-                        <span class="badge bg-primary rounded-circle" style="font-size: var(--font-size-xl); padding: 0.5rem 0.75rem;">1</span>
-                    </div>
-                    <h5 class="card-title">Import Members</h5>
-                    <p class="card-text text-muted">Upload a CSV file with member/person data including names, roles, and skills.</p>
-                    <a href="{%  url 'syncope:import_dashboard' username=url_username method='members' %}" class="btn btn-primary">
-                        Upload &rarr;
-                    </a>
-                </div>
-            </div>
-        </div>
+<div class="card-grid">
+    <!-- Step 1: Import Members -->
+    <div class="card">
+        <span class="badge badge-primary badge-circle">1</span>
+        <h3>Import Members</h3>
+        <p class="text-muted">Upload a CSV file with member/person data including names, roles, and skills.</p>
+        <a href="{%  url 'syncope:import_dashboard' username=url_username method='members' %}" class="btn btn-primary">
+            Upload &rarr;
+        </a>
+    </div>
 
-        <!-- Step 2: Import Events -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="mb-3">
-                        <span class="badge bg-primary rounded-circle" style="font-size: var(--font-size-xl); padding: 0.5rem 0.75rem;">2</span>
-                    </div>
-                    <h5 class="card-title">Import Events</h5>
-                    <p class="card-text text-muted">Upload a CSV file with event data. Projects are auto-created from event names.</p>
-                    <a href="{%  url 'syncope:import_dashboard' username=url_username method='events' %}" class="btn btn-primary">
-                        Upload &rarr;
-                    </a>
-                </div>
-            </div>
-        </div>
+    <!-- Step 2: Import Events -->
+    <div class="card">
+        <span class="badge badge-primary badge-circle">2</span>
+        <h3>Import Events</h3>
+        <p class="text-muted">Upload a CSV file with event data. Projects are auto-created from event names.</p>
+        <a href="{%  url 'syncope:import_dashboard' username=url_username method='events' %}" class="btn btn-primary">
+            Upload &rarr;
+        </a>
+    </div>
 
-        <!-- Step 3: Import Songs -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="mb-3">
-                        <span class="badge bg-primary rounded-circle" style="font-size: var(--font-size-xl); padding: 0.5rem 0.75rem;">3</span>
-                    </div>
-                    <h5 class="card-title">Import Songs</h5>
-                    <p class="card-text text-muted">Upload a CSV file with song data including titles, composers, and poets.</p>
-                    <a href="{%  url 'syncope:import_dashboard' username=url_username method='songs' %}" class="btn btn-primary">
-                        Upload &rarr;
-                    </a>
-                </div>
-            </div>
-        </div>
+    <!-- Step 3: Import Songs -->
+    <div class="card">
+        <span class="badge badge-primary badge-circle">3</span>
+        <h3>Import Songs</h3>
+        <p class="text-muted">Upload a CSV file with song data including titles, composers, and poets.</p>
+        <a href="{%  url 'syncope:import_dashboard' username=url_username method='songs' %}" class="btn btn-primary">
+            Upload &rarr;
+        </a>
+    </div>
 
-        <!-- Step 4: Import Attendance -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="mb-3">
-                        <span class="badge bg-primary rounded-circle" style="font-size: var(--font-size-xl); padding: 0.5rem 0.75rem;">4</span>
-                    </div>
-                    <h5 class="card-title">Import Attendance</h5>
-                    <p class="card-text text-muted">Upload a CSV with dates as columns and attendance codes (+/−/o) for each member.</p>
-                    <a href="{%  url 'syncope:import_dashboard' username=url_username method='attendance' %}" class="btn btn-primary">
-                        Upload &rarr;
-                    </a>
-                </div>
-            </div>
-        </div>
+    <!-- Step 4: Import Attendance -->
+    <div class="card">
+        <span class="badge badge-primary badge-circle">4</span>
+        <h3>Import Attendance</h3>
+        <p class="text-muted">Upload a CSV with dates as columns and attendance codes (+/&minus;/o) for each member.</p>
+        <a href="{%  url 'syncope:import_dashboard' username=url_username method='attendance' %}" class="btn btn-primary">
+            Upload &rarr;
+        </a>
+    </div>
 
-        <!-- Step 5: Import Event Songs -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="mb-3">
-                        <span class="badge bg-primary rounded-circle" style="font-size: var(--font-size-xl); padding: 0.5rem 0.75rem;">5</span>
-                    </div>
-                    <h5 class="card-title">Import Event Songs</h5>
-                    <p class="card-text text-muted">Upload a CSV with event dates as columns and songs to assign to each event.</p>
-                    <a href="{%  url 'syncope:import_dashboard' username=url_username method='event_songs' %}" class="btn btn-primary">
-                        Upload &rarr;
-                    </a>
-                </div>
-            </div>
-        </div>
+    <!-- Step 5: Import Event Songs -->
+    <div class="card">
+        <span class="badge badge-primary badge-circle">5</span>
+        <h3>Import Event Songs</h3>
+        <p class="text-muted">Upload a CSV with event dates as columns and songs to assign to each event.</p>
+        <a href="{%  url 'syncope:import_dashboard' username=url_username method='event_songs' %}" class="btn btn-primary">
+            Upload &rarr;
+        </a>
+    </div>
 
-        <!-- Step 6: Combine Event Projects -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100 border-success">
-                <div class="card-body">
-                    <div class="mb-3">
-                        <span class="badge bg-success rounded-circle" style="font-size: var(--font-size-xl); padding: 0.5rem 0.75rem;">6</span>
-                    </div>
-                    <h5 class="card-title">Combine Event Projects</h5>
-                    <p class="card-text text-muted">Assign rehearsals to projects based on their chronological order. Each rehearsal links to the project it leads up to.</p>
-                    <form method="post" action="{%  url 'syncope:import_combine' username=url_username %}" style="display: inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-primary">
-                            Combine &rarr;
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
+    <!-- Step 6: Combine Event Projects -->
+    <div class="card" style="border-color: var(--color-success-border);">
+        <span class="badge badge-circle" style="background-color: var(--color-success-bg); color: var(--color-success-text);">6</span>
+        <h3>Combine Event Projects</h3>
+        <p class="text-muted">Assign rehearsals to projects based on their chronological order. Each rehearsal links to the project it leads up to.</p>
+        <form method="post" action="{%  url 'syncope:import_combine' username=url_username %}" class="inline-form">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">
+                Combine &rarr;
+            </button>
+        </form>
     </div>
 </div>
 {% endblock %}

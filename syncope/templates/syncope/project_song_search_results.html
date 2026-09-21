@@ -1,15 +1,13 @@
-{% if song_search_q %}
-    {% if add_song_form.fields.song.queryset.exists %}
-        <div id="song-checkbox-list">
-            {% for song in add_song_form.fields.song.queryset %}
+{% if search_q %}
+    {% if add_song_form.search_results %}
+        <div id="song-result-list">
+            {% for song in add_song_form.search_results %}
                 <div class="search-result-row">
-                    <button type="button" class="btn btn-secondary"
-                            data-id="{{ song.pk }}"
-                            data-title="{{ song.title }}"
-                            data-composer="{% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}{% endif %}"
-                            data-arranger="{% if song.arranger %}{{ song.arranger.first_name }} {{ song.arranger.last_name }}{% endif %}"
-                            data-resources="{{ song.resource_count }}"
-                            data-internal-id="{{ song.internal_id|default:'' }}">+</button>
+                    <form method="post" action="{% url 'syncope:project_new_song' url_username project.pk %}" class="inline-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="song" value="{{ song.pk }}">
+                        <button type="submit" class="btn btn-secondary">+</button>
+                    </form>
                     <div class="search-result-info">
                         <div class="song-title">{{ song.title }}</div>
                         <div class="song-subline">

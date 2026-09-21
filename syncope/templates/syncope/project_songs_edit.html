@@ -1,0 +1,85 @@
+{% extends "syncope/base.html" %}
+{% load static %}
+{% block title %}Songs &mdash; {{ project.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .song-title { font-weight: 500; overflow-wrap: break-word; }
+    .song-subline {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem;
+        font-size: var(--font-size-sm);
+        color: var(--color-text-muted);
+        overflow-wrap: break-word;
+    }
+    .song-meta { white-space: nowrap; color: var(--color-text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<h1>Songs &mdash; {{ project.title }}</h1>
+
+{% if songs %}
+<div class="table-container">
+<table class="table">
+    <thead>
+        <tr>
+            <th class="col-main">Song Title</th>
+            <th>Composer</th>
+            <th class="col-action">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for song in songs %}
+        <tr>
+            <td class="col-main">
+                <a href="{% url 'syncope:song_detail' url_username song.pk %}">{{ song.title }}</a>
+            </td>
+            <td>{{ song.composer|default:"-" }}</td>
+            <td class="col-action">
+                <form method="post" action="{% url 'syncope:project_remove_song' url_username project.pk song.pk %}" class="inline-form">
+                    {% csrf_token %}
+                    <button type="submit" onclick="return confirm('Remove this song from the project?')" class="btn btn-remove" title="Remove from project">&times;</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<p>No songs yet.</p>
+{% endif %}
+
+<div id="add-songs" style="max-width:42rem;">
+    <h3>Add song</h3>
+    <p style="position:relative;">
+        <input type="text" id="song-search-input" value="{{ search_q }}" placeholder="Search by ID, title, composer, or keywords" style="max-width:100%; width:100%; box-sizing:border-box;">
+        <span class="search-spinner" id="song-search-spinner"></span>
+    </p>
+    <p style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <button type="button" id="song-search-clear" class="btn btn-secondary">Clear</button>
+        <a href="{% url 'syncope:song_new' url_username %}?auto_add_project={{ project.pk }}&next={% url 'syncope:project_songs_edit' url_username project.pk %}" class="btn btn-primary" title="Create new song">+ Add</a>
+    </p>
+    <div id="song-search-results">
+        {% include "syncope/project_song_search_results.html" %}
+    </div>
+</div>
+
+{% url 'syncope:project_detail' url_username project.pk as project_detail_url %}
+{% include "syncope/_save_bar.html" with url=project_detail_url %}
+
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script>
+    initLiveSearch({
+        input: document.getElementById('song-search-input'),
+        spinner: document.getElementById('song-search-spinner'),
+        results: document.getElementById('song-search-results'),
+        clearBtn: document.getElementById('song-search-clear'),
+        buildUrl: query => `{% url 'syncope:project_songs_search' url_username project.pk %}?q=${encodeURIComponent(query)}`,
+    });
+</script>
+{% endblock %}

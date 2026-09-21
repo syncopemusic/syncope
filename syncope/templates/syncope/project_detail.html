@@ -4,24 +4,25 @@
 {% block title %}{{ project.title }}{% endblock %}
 
 {% block content %}
-<h1 class="event-title">{{ project.title }}
-    <span class="share-controls">
-        <button id="share-btn" class="btn btn-link" title="Copy link">
-            <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-        </button>
-        <span id="share-result" class="share-result"></span>
-    </span>
-</h1>
-
-<p>
-    <a href="{% url 'syncope:project_update' url_username project.pk %}" class="btn btn-secondary">Edit</a>
-</p>
+<div class="section-header">
+    <h1 class="event-title">{{ project.title }}
+        <span class="share-controls">
+            <button id="share-btn" class="btn btn-link" title="Copy link">
+                <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
+            </button>
+            <span id="share-result" class="share-result"></span>
+        </span>
+    </h1>
+    {% if is_admin %}<a href="{% url 'syncope:project_meta_edit' url_username project.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
 <div style="display:none;">{% csrf_token %}</div>
 
 <div class="project-header">
+    <h3>Description</h3>
+    <p>{{ project.description|default:"-"|linebreaksbr }}</p>
+    <h3>Details</h3>
+    <p>{{ project.details|default:"-"|linebreaksbr }}</p>
     <table class="table-detail">
-        <tr><th>Description</th><td>{{ project.description|default:"-"|linebreaksbr }}</td></tr>
-        <tr><th>Details</th><td>{{ project.details|default:"-"|linebreaksbr }}</td></tr>
         <tr><th>Start Date</th><td>{{ project.start_date|default:"-" }}</td></tr>
         <tr><th>End Date</th><td>{{ project.end_date|default:"-" }}</td></tr>
     </table>
@@ -29,61 +30,45 @@
 
 <hr>
 
-<h3>Members</h3>
-{% if members %}
+<div class="section-header">
+    <h3>Participants</h3>
+    {% if is_admin %}<a href="{% url 'syncope:project_participants_edit' url_username project.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
+{% if participants %}
 <div class="table-container">
 <table class="table table-narrow">
     <thead>
     <tr>
-        <th class="col-num">#</th>
+        <th class="col-num"></th>
         <th class="col-main">Name</th>
+        <th></th>
     </tr>
     </thead>
     <tbody>
-    {% for member in members %}
+    {% for person in participants %}
     <tr>
         <td class="col-num">{{ forloop.counter }}</td>
-        <td class="col-main"><a href="{% url 'syncope:org_member_detail' url_username member.pk %}">{{ member.first_name }} {{ member.last_name }}</a></td>
+        <td class="col-main"><a href="{% url 'syncope:org_member_detail' url_username person.pk %}">{{ person.first_name }} {{ person.last_name }}</a></td>
+        <td>{% if person.is_guest %}<small>Guest</small>{% endif %}</td>
     </tr>
     {% endfor %}
     </tbody>
 </table>
 </div>
 {% else %}
-<p>No members.</p>
+<p>No participants.</p>
 {% endif %}
 
-<h3>Guests</h3>
-{% if guests %}
-<div class="table-container">
-<table class="table table-narrow">
-    <thead>
-    <tr>
-        <th class="col-num">#</th>
-        <th class="col-main">Name</th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for guest in guests %}
-    <tr>
-        <td class="col-num">{{ forloop.counter }}</td>
-        <td class="col-main"><a href="{% url 'syncope:org_member_detail' url_username guest.pk %}">{{ guest.first_name }} {{ guest.last_name }}</a></td>
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
+<div class="section-header">
+    <h3>Songs</h3>
+    {% if is_admin %}<a href="{% url 'syncope:project_songs_edit' url_username project.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
-{% else %}
-<p>No guests.</p>
-{% endif %}
-
-<h3>Songs</h3>
 {% if songs %}
 <div class="table-container">
 <table class="table">
     <thead>
     <tr>
-        <th class="col-num">#</th>
+        <th class="col-num"></th>
         <th class="col-main">Title</th>
         <th>Composer</th>
     </tr>
@@ -103,13 +88,16 @@
 <p>No songs.</p>
 {% endif %}
 
-<h3>Events</h3>
+<div class="section-header">
+    <h3>Events</h3>
+    {% if is_admin %}<a href="{% url 'syncope:project_events_edit' url_username project.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
 {% if events %}
 <div class="table-container">
 <table class="table">
     <thead>
     <tr>
-        <th class="col-num">#</th>
+        <th class="col-num"></th>
         <th class="col-main">Name</th>
         <th>🔗</th>
         <th>Date</th>
@@ -182,12 +170,6 @@
 </div>
 {% else %}
 <p>No resources.</p>
-{% endif %}
-
-{% if can_delete %}
-<p class="danger-zone">
-    <a href="{% url 'syncope:project_delete' url_username project.pk %}" class="btn btn-danger">Delete</a>
-</p>
 {% endif %}
 
 {% url 'syncope:project_list' url_username as return_target %}

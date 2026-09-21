@@ -1,0 +1,18 @@
+{% if search_q %}
+    {% if add_guest_form.search_results %}
+        <div id="guest-result-list">
+            {% for guest in add_guest_form.search_results %}
+                <div class="search-result-row">
+                    <form method="post" action="{% url 'syncope:project_new_guest' url_username project.pk %}" class="inline-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="guest" value="{{ guest.pk }}">
+                        <button type="submit" class="btn btn-secondary">+</button>
+                    </form>
+                    <span class="result-label">{{ guest.first_name }} {{ guest.last_name }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No matching guests found.</p>
+    {% endif %}
+{% endif %}

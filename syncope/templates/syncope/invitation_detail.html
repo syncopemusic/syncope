@@ -4,26 +4,28 @@
 {% block content %}
 <h1>Invitation</h1>
 
-<p><strong>Type:</strong> {{ invitation.invitation_type }}</p>
-<p><strong>From:</strong> {{ invitation.sender }}</p>
-<p><strong>To:</strong> {{ invitation.recipient }}</p>
-{% if invitation.admin_involved %}
-    <p><strong>Initiated by:</strong> {{ invitation.admin_involved }}</p>
-{% endif %}
-<p><strong>Status:</strong> {{ invitation.status }}</p>
-{% if invitation.existing_person %}
-    <p><strong>Linked member record:</strong> {{ invitation.existing_person.first_name }} {{ invitation.existing_person.last_name }}</p>
-{% endif %}
-{% if is_request %}
-    <p><strong>Requester opted to copy profile details:</strong> {{ invitation.copy_details|yesno:"Yes,No" }}</p>
-{% endif %}
-{% if invitation.expires_at %}
-    <p><strong>Expires:</strong> <span data-dt="{{ invitation.expires_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.expires_at|date:"d M, Y, H:i" }}</span></p>
-{% endif %}
-{% if invitation.admin_involved and invitation.reviewed_at %}
-    <p><strong>Admin involved:</strong> {{ invitation.admin_involved }} on
-        <span data-dt="{{ invitation.reviewed_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.reviewed_at|date:"d M, Y, H:i" }}</span></p>
-{% endif %}
+<table class="table-detail">
+    <tr><th>Type</th><td>{{ invitation.invitation_type }}</td></tr>
+    <tr><th>From</th><td>{{ invitation.sender }}</td></tr>
+    <tr><th>To</th><td>{{ invitation.recipient }}</td></tr>
+    {% if invitation.admin_involved %}
+        <tr><th>Initiated by</th><td>{{ invitation.admin_involved }}</td></tr>
+    {% endif %}
+    <tr><th>Status</th><td>{{ invitation.status }}</td></tr>
+    {% if invitation.existing_person %}
+        <tr><th>Linked member record</th><td>{{ invitation.existing_person.first_name }} {{ invitation.existing_person.last_name }}</td></tr>
+    {% endif %}
+    {% if is_request %}
+        <tr><th>Requester opted to copy profile details</th><td>{{ invitation.copy_details|yesno:"Yes,No" }}</td></tr>
+    {% endif %}
+    {% if invitation.expires_at %}
+        <tr><th>Expires</th><td><span data-dt="{{ invitation.expires_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.expires_at|date:"d M, Y, H:i" }}</span></td></tr>
+    {% endif %}
+    {% if invitation.admin_involved and invitation.reviewed_at %}
+        <tr><th>Admin involved</th><td>{{ invitation.admin_involved }} on
+            <span data-dt="{{ invitation.reviewed_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.reviewed_at|date:"d M, Y, H:i" }}</span></td></tr>
+    {% endif %}
+</table>
 
 {% if is_pending %}
     {% if invitation.recipient.username == url_username %}

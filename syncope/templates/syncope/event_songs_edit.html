@@ -4,7 +4,7 @@
 
 {% block extra_css %}
 <style>
-    .drag-handle-cell { width: 2.2rem; text-align: center; padding-left: 0; padding-right: 0; }
+    .drag-handle-cell { width: 2.2rem; text-align: center; padding-inline: 0; }
     .drag-handle {
         cursor: grab;
         touch-action: none;
@@ -14,12 +14,12 @@
         align-items: center;
         line-height: 0.7;
         padding: 0.5rem 0.4rem;
-        font-weight: bold;
+        font-weight: 700;
         font-size: 1.1rem;
     }
     .drag-handle:active { cursor: grabbing; }
     tr.song-row.dragging { opacity: 0.6; background-color: var(--color-info-bg); }
-    .song-index { text-align: center; width: 1.3rem; padding-left: 0; padding-right: 0; }
+    .song-index { text-align: center; width: 1.3rem; padding-inline: 0; }
     .song-title { font-weight: 500; overflow-wrap: break-word; }
     .song-subline {
         display: flex;
@@ -31,8 +31,8 @@
         overflow-wrap: break-word;
     }
     .song-meta { white-space: nowrap; color: var(--color-text-muted); }
-    .song-resources { text-align: center; width: 1.4rem; padding-left: 0; padding-right: 0; }
-    .song-actions { white-space: nowrap; text-align: center; width: 2.2rem; padding-left: 0; }
+    .song-resources { text-align: center; width: 1.4rem; padding-inline: 0; }
+    .song-actions { white-space: nowrap; text-align: center; width: 2.2rem; padding-inline-start: 0; }
     tr.row-moved { background-color: var(--color-info-bg); }
 
     @media (max-width: 768px) {
@@ -56,7 +56,7 @@
                 <thead>
                     <tr>
                         <th class="drag-handle-cell"></th>
-                        <th class="song-index">#</th>
+                        <th class="song-index"></th>
                         <th class="col-main">Song</th>
                         <th class="song-resources" title="Resources">&#128206;</th>
                         {% if is_admin %}<th class="song-actions"></th>{% endif %}
@@ -75,7 +75,7 @@
 
     {% if is_admin %}
     <div id="add-songs" style="max-width:42rem;">
-        <p><strong>Add song</strong></p>
+        <h3>Add song</h3>
         <p style="position:relative;">
             <input type="text" id="song-search-input" value="{{ song_search_q }}" placeholder="Search by ID, title, composer, or keywords" style="max-width:100%; width:100%; box-sizing:border-box;">
             <span class="search-spinner" id="song-search-spinner"></span>

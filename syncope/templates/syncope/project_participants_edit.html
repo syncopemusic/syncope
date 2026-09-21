@@ -1,0 +1,74 @@
+{% extends "syncope/base.html" %}
+{% load static %}
+{% block title %}Participants &mdash; {{ project.title }}{% endblock %}
+
+{% block content %}
+
+<h1>Participants &mdash; {{ project.title }}</h1>
+
+{% if participants %}
+<div class="table-container">
+<table class="table">
+    <thead>
+        <tr>
+            <th class="col-main">Name</th>
+            <th></th>
+            <th class="col-action">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for person in participants %}
+        <tr>
+            <td class="col-main">{{ person.first_name }} {{ person.last_name }}</td>
+            <td>{% if not person.is_guest %}<small>Member</small>{% endif %}</td>
+            <td class="col-action">
+                {% if person.is_guest %}
+                <form method="post" action="{% url 'syncope:project_remove_guest' url_username project.pk person.pk %}" class="inline-form">
+                    {% csrf_token %}
+                    <button type="submit" onclick="return confirm('Remove this guest from the project?')" class="btn btn-remove" title="Remove from project">&times;</button>
+                </form>
+                {% else %}
+                <form method="post" action="{% url 'syncope:project_remove_member' url_username project.pk person.pk %}" class="inline-form">
+                    {% csrf_token %}
+                    <button type="submit" onclick="return confirm('Remove this member from the project?')" class="btn btn-remove" title="Remove from project">&times;</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<p>No participants yet.</p>
+{% endif %}
+
+<div id="add-guests" style="max-width:42rem;">
+    <h3>Add guest</h3>
+    <p style="position:relative;">
+        <input type="text" id="guest-search-input" value="{{ search_q }}" placeholder="Search by name" style="max-width:100%; width:100%; box-sizing:border-box;">
+        <span class="search-spinner" id="guest-search-spinner"></span>
+    </p>
+    <p style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <button type="button" id="guest-search-clear" class="btn btn-secondary">Clear</button>
+        <a href="{% url 'syncope:org_member_new' url_username %}?auto_add_project={{ project.pk }}&next={% url 'syncope:project_participants_edit' url_username project.pk %}" class="btn btn-primary" title="Create new person">+ Add</a>
+    </p>
+    <div id="guest-search-results">
+        {% include "syncope/project_guest_search_results.html" %}
+    </div>
+</div>
+
+{% url 'syncope:project_detail' url_username project.pk as project_detail_url %}
+{% include "syncope/_save_bar.html" with url=project_detail_url %}
+
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script>
+    initLiveSearch({
+        input: document.getElementById('guest-search-input'),
+        spinner: document.getElementById('guest-search-spinner'),
+        results: document.getElementById('guest-search-results'),
+        clearBtn: document.getElementById('guest-search-clear'),
+        buildUrl: query => `{% url 'syncope:project_guests_search' url_username project.pk %}?q=${encodeURIComponent(query)}`,
+    });
+</script>
+{% endblock %}

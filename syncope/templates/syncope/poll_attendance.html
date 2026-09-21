@@ -31,13 +31,13 @@
     {% csrf_token %}
 
     <div class="table-container">
-        <table class="table table--matrix">
+        <table class="table table-matrix">
             <thead>
                 {# Event Type Row #}
                 <tr>
                     <th class="sticky-col">Event</th>
                     {% for event in poll_events %}
-                    <th class="table__event-col table__event-col--text {% if event.event_type.id != 1 %}table__event-header--strong{% endif %}"
+                    <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
                         {{ event.event_type.name }}
                     </th>
@@ -48,7 +48,7 @@
                 <tr>
                     <th class="sticky-col">Date</th>
                     {% for event in poll_events %}
-                    <th class="table__event-col table__event-col--text {% if event.event_type.id != 1 %}table__event-header--strong{% endif %}"
+                    <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
                         {% if event.same_date %}<span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="date-dow">{{ event.started_at|date:"D d M" }}</span>{% else %}<span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="date-dow">{{ event.started_at|date:"D d M" }}</span> <br> <span data-dt="{{ event.ended_at|date:"c" }}" data-dt-fmt="date-dow">{{ event.ended_at|date:"D d M" }}</span>{% endif %}
                     </th>
@@ -59,7 +59,7 @@
                 <tr>
                     <th class="sticky-col">Time</th>
                     {% for event in poll_events %}
-                    <th class="table__event-col table__event-col--text {% if event.event_type.id != 1 %}table__event-header--strong{% endif %}"
+                    <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
                         <span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="time">{{ event.started_at|date:"H:i" }}</span> <br> <span data-dt="{{ event.ended_at|date:"c" }}" data-dt-fmt="time">{{ event.ended_at|date:"H:i" }}</span>
                     </th>
@@ -70,7 +70,7 @@
                 <tr>
                     <th class="sticky-col">Location</th>
                     {% for event in poll_events %}
-                    <th class="table__event-col table__event-col--text {% if event.event_type.id != 1 %}table__event-header--strong{% endif %}"
+                    <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
                         {% if event.location %}{{ event.location }}{% else %}<em>-</em>{% endif %}
                     </th>
@@ -82,7 +82,7 @@
                 <tr>
                     <th class="sticky-col">Details</th>
                     {% for event in poll_events %}
-                    <th class="table__event-col table__event-col--text {% if event.event_type.id != 1 %}table__event-header--strong{% endif %}"
+                    <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
                         {% if event.details %}{{ event.details }}{% else %}<em>-</em>{% endif %}
                     </th>
@@ -94,10 +94,10 @@
             <tbody>
                 {# Attendance Row #}
                 <tr>
-                    <td class="sticky-col"><strong>Attendance</strong></td>
+                    <th class="sticky-col">Attendance</th>
                     {% for cell in table_rows.0.event_cells %}
-                    <td class="table__event-col table__event-col--text">
-                        <div class="table__cell--attendance att-type-{{ cell.attendance_type_id }}"
+                    <td class="table-event-col table-event-col-text">
+                        <div class="table-cell-attendance att-type-{{ cell.attendance_type_id }}"
                              data-type-id="{{ cell.attendance_type_id }}"
                              data-event-id="{{ cell.event.id }}"
                              data-person-id="{{ cell.person.id }}"
@@ -114,12 +114,12 @@
 
                 {# Comment Row #}
                 <tr>
-                    <td class="sticky-col"><strong>Note</strong></td>
+                    <th class="sticky-col">Note</th>
                     {% for cell in table_rows.0.event_cells %}
-                    <td class="table__event-col table__event-col--text">
+                    <td class="table-event-col table-event-col-text">
                         <input type="text"
                                name="comment_{{ cell.event.id }}_{{ cell.person.id }}"
-                               class="table__comment-input"
+                               class="table-comment-input"
                                placeholder="note"
                                value="{{ cell.comment|default:'' }}">
                     </td>
@@ -157,7 +157,7 @@ function cycleAttendance(cell) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.table__cell--attendance[data-type-id]').forEach(cell => {
+    document.querySelectorAll('.table-cell-attendance[data-type-id]').forEach(cell => {
         const meta = TYPE_META[parseInt(cell.dataset.typeId, 10)] || TYPE_META[0];
         cell.querySelector('.att-icon').textContent = meta.icon;
         cell.title = meta.label;

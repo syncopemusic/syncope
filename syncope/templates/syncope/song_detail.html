@@ -3,20 +3,17 @@
 {% block title %}{{ song.title }}{% endblock %}
 {% block content %}
 
-<h1 class="event-title">{{ song.title }}
-    <span class="share-controls">
-        <button id="share-btn" class="btn btn-link" title="Copy link">
-            <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-        </button>
-        <span id="share-result" class="share-result"></span>
-    </span>
-</h1>
-
-{% if can_manage %}
-<p>
-    <a href="{%  url 'syncope:song_update' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-secondary">Edit</a>
-</p>
-{% endif %}
+<div class="section-header">
+    <h1 class="event-title">{{ song.title }}
+        <span class="share-controls">
+            <button id="share-btn" class="btn btn-link" title="Copy link">
+                <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
+            </button>
+            <span id="share-result" class="share-result"></span>
+        </span>
+    </h1>
+    {% if can_manage %}<a href="{%  url 'syncope:song_update' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
 <div class="visually-hidden">{% csrf_token %}</div>
 
 {% url 'syncope:song_list' url_username as song_list_url %}
@@ -90,7 +87,7 @@
                 <button class="copy-resource-btn btn btn-link" data-url="{{ res.share_url|default:res.url }}" title="Copy link">
                     <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
                 </button>
-                <span class="copy-resource-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: var(--font-size-sm); z-index: 10; background: var(--color-surface); padding: 2px 4px; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm);"></span>
+                <span class="copy-resource-result share-result-floating"></span>
             </td>
             <td class="col-main"><a href="{{ res.share_url|default:res.url }}" target="_blank" rel="noopener noreferrer">{{ res.url }}</a></td>
             <td class="col-main">{{ res.desc }}</td>
@@ -147,7 +144,7 @@
 <table id="events-table" class="table">
     <thead>
         <tr>
-            <th class="col-num">#</th>
+            <th class="col-num"></th>
             <th class="col-main">Name</th>
             <th><a href="#" id="sort-type" class="sortable-header">Type <span id="sort-type-indicator"></span></a></th>
             <th><a href="#" id="sort-date" class="sortable-header">Date <span id="sort-date-indicator"></span></a></th>
@@ -157,12 +154,8 @@
         {% for event in events %}
         <tr>
             <td class="col-num">{{ forloop.counter }}</td>
-            <td class="col-main">
-                {% if event.event_type.id != 1 %}
-                    <strong><a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a></strong>
-                {% else %}
-                    <a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a>
-                {% endif %}
+            <td class="col-main {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}">
+                <a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a>
             </td>
             <td>{{ event.event_type }}</td>
             <td><span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="date-year">{{ event.started_at|date:"Y-m-d" }}</span></td>

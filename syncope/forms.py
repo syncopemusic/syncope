@@ -352,16 +352,6 @@ class EventForm(forms.ModelForm):
         return cleaned_data
 
 
-class SongChoiceField(forms.ModelChoiceField):
-    def __init__(self, *args, already_added_ids=None, **kwargs):
-        self.already_added_ids = already_added_ids or set()
-        super().__init__(*args, **kwargs)
-
-    def label_from_instance(self, obj):
-        label = str(obj)
-        if obj.pk in self.already_added_ids:
-            return f"* {label}"
-        return label
 
 
 class AddSongToEventForm(forms.Form):
@@ -376,12 +366,12 @@ class AddSongToEventForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.song_search_truncated = False
         if org_user and event is not None:
-            already_added_ids = set(event.eventsong_set.values_list('song_id', flat=True))
-            exclude_pks = already_added_ids | set(exclude_ids or [])
-            qs = Song.objects.filter(user=org_user).exclude(id__in=exclude_pks).annotate(
-                resource_count=Count('song_resource', distinct=True)
-            ).order_by('title')
             if search_q:
+                already_added_ids = set(event.eventsong_set.values_list('song_id', flat=True))
+                exclude_pks = already_added_ids | set(exclude_ids or [])
+                qs = Song.objects.filter(user=org_user).exclude(id__in=exclude_pks).annotate(
+                    resource_count=Count('song_resource', distinct=True)
+                ).order_by('title')
                 if search_q.isdigit():
                     qs = qs.filter(internal_id=int(search_q))
                 else:
@@ -390,105 +380,79 @@ class AddSongToEventForm(forms.Form):
                         Q(composer__last_name__icontains=search_q) |
                         Q(keywords__icontains=search_q)
                     ).distinct()
-            if limit_results:
-                total_matches = qs.count()
-                limited_ids = list(qs.values_list('pk', flat=True)[:25])
-                qs = qs.filter(pk__in=limited_ids)
-                self.song_search_truncated = total_matches > 25
+                if limit_results:
+                    total_matches = qs.count()
+                    limited_ids = list(qs.values_list('pk', flat=True)[:25])
+                    qs = qs.filter(pk__in=limited_ids)
+                    self.song_search_truncated = total_matches > 25
+            else:
+                qs = Song.objects.none()
             self.fields['song'].queryset = qs
 
 
-class EventChoiceField(forms.ModelChoiceField):
-    def __init__(self, *args, already_added_ids=None, other_project_ids=None, **kwargs):
-        self.already_added_ids = already_added_ids or set()
-        self.other_project_ids = other_project_ids or {}
-        super().__init__(*args, **kwargs)
-
-    def label_from_instance(self, obj):
-        # Format: "Event Name (2024-12-25 19:00 - 21:00)"
-        if obj.started_at:
-            time_str = obj.started_at.strftime('%Y-%m-%d %H:%M')
-            if obj.ended_at:
-                time_str += f" - {obj.ended_at.strftime('%H:%M')}"
-        else:
-            time_str = "No date"
-        label = f"{obj.name} ({time_str})"
-        if obj.pk in self.already_added_ids:
-            return f"* {label}"
-        if obj.pk in self.other_project_ids:
-            other_project = self.other_project_ids[obj.pk]
-            return f"⚠ {label} (in: {other_project})"
-        return label
-
-
 class AddEventToProjectForm(forms.Form):
+    """Admin-only form to assign an org event to a project (live search; see project_events_edit.html).
+
+    The `event` field's queryset is every eligible event (needed so a POST validates
+    regardless of what, if anything, was typed into the search box that produced it).
+    `search_results` is the narrower, search_q-filtered list for display only.
+    """
     def __init__(self, *args, org_user=None, project=None, search_q='', **kwargs):
         super().__init__(*args, **kwargs)
+        self.other_project_ids = {}
+        self.search_results = []
         if org_user and project is not None:
-            already_added_ids = set(project.events.values_list('id', flat=True))
-            qs = Event.objects.filter(user=org_user).order_by('-started_at')
+            eligible = Event.objects.filter(user=org_user).exclude(project=project).select_related(
+                'project'
+            ).order_by('-started_at')
+            self.fields['event'] = forms.ModelChoiceField(queryset=eligible, empty_label=None, label='Event')
             if search_q:
-                qs = qs.filter(name__icontains=search_q)
-
-            # Build a mapping of events in other projects
-            other_project_ids = {}
-            for event in qs.exclude(project__isnull=True):
-                other_project_ids[event.pk] = event.project.title
-
-            self.fields['event'] = EventChoiceField(
-                queryset=qs,
-                already_added_ids=already_added_ids,
-                other_project_ids=other_project_ids,
-                widget=forms.Select(attrs={'size': '8'}),
-                empty_label=None,
-                label='Event',
-            )
+                self.search_results = list(eligible.filter(name__icontains=search_q))
+                for event in self.search_results:
+                    if event.project_id:
+                        self.other_project_ids[event.pk] = event.project.title
 
 
 class AddSongToProjectForm(forms.Form):
+    """Admin-only form to add an archive song to a project (live search; see project_songs_edit.html).
+
+    See AddEventToProjectForm's docstring for why `song`'s queryset isn't search_q-filtered.
+    """
     def __init__(self, *args, org_user=None, project=None, search_q='', **kwargs):
         super().__init__(*args, **kwargs)
+        self.search_results = []
         if org_user and project is not None:
-            already_added_ids = set(project.songs.values_list('id', flat=True))
-            qs = Song.objects.filter(user=org_user).order_by('title')
+            eligible = Song.objects.filter(user=org_user).exclude(projects=project).order_by('title')
+            self.fields['song'] = forms.ModelChoiceField(queryset=eligible, empty_label=None, label='Song')
             if search_q:
                 if search_q.isdigit():
-                    qs = qs.filter(internal_id=int(search_q))
+                    self.search_results = list(eligible.filter(internal_id=int(search_q)))
                 else:
-                    qs = qs.filter(
+                    self.search_results = list(eligible.filter(
                         Q(title__icontains=search_q) |
                         Q(composer__last_name__icontains=search_q) |
                         Q(keywords__icontains=search_q)
-                    ).distinct()
-            self.fields['song'] = SongChoiceField(
-                queryset=qs,
-                already_added_ids=already_added_ids,
-                widget=forms.Select(attrs={'size': '8'}),
-                empty_label=None,
-                label='Song',
-            )
+                    ).distinct())
 
 
 class AddGuestToProjectForm(forms.Form):
+    """Admin-only form to add an org person as a project guest (live search; see project_participants_edit.html).
+
+    See AddEventToProjectForm's docstring for why `guest`'s queryset isn't search_q-filtered.
+    """
     def __init__(self, *args, org_user=None, project=None, search_q='', **kwargs):
         super().__init__(*args, **kwargs)
+        self.search_results = []
         if org_user and project is not None:
-            already_added_ids = set(project.guests.values_list('id', flat=True))
-            qs = Person.objects.filter(
-                membership_period__user=org_user,
-            ).distinct()
+            eligible = Person.objects.filter(membership_period__user=org_user).exclude(
+                projects=project
+            ).distinct().order_by('last_name', 'first_name')
+            self.fields['guest'] = forms.ModelChoiceField(queryset=eligible, empty_label=None, label='Guest')
             if search_q:
-                qs = qs.filter(
+                self.search_results = list(eligible.filter(
                     Q(first_name__icontains=search_q) |
                     Q(last_name__icontains=search_q)
-                ).distinct()
-            qs = qs.order_by('last_name', 'first_name')
-            self.fields['guest'] = forms.ModelChoiceField(
-                queryset=qs,
-                widget=forms.Select(attrs={'size': '8'}),
-                empty_label=None,
-                label='Guest',
-            )
+                ).distinct())
 
 
 class AddAttendanceForm(forms.Form):
@@ -509,34 +473,34 @@ class AddAttendanceForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.person_search_truncated = False
         if org_user and event:
-            from django.db.models import Exists, OuterRef, ExpressionWrapper, BooleanField
-            from .models import Singer, Instrumentalist
-            already_attending = event.attendance_set.values_list('person_id', flat=True)
-            exclude_pks = set(already_attending) | set(exclude_ids or [])
-            qs = Person.objects.filter(
-                membership_period__user=org_user,
-            ).exclude(
-                id__in=exclude_pks
-            ).distinct()
             if search_q:
-                qs = qs.filter(
+                from django.db.models import Exists, OuterRef, ExpressionWrapper, BooleanField
+                from .models import Singer, Instrumentalist
+                already_attending = event.attendance_set.values_list('person_id', flat=True)
+                exclude_pks = set(already_attending) | set(exclude_ids or [])
+                qs = Person.objects.filter(
+                    membership_period__user=org_user,
+                ).exclude(
+                    id__in=exclude_pks
+                ).filter(
                     Q(first_name__icontains=search_q) |
                     Q(last_name__icontains=search_q) |
                     Q(singer__voice__name__icontains=search_q) |
                     Q(instrumentalist__instrument__name__icontains=search_q)
-                ).distinct()
-            qs = qs.annotate(
-                is_performer=ExpressionWrapper(
-                    Exists(Singer.objects.filter(person=OuterRef('pk'))) |
-                    Exists(Instrumentalist.objects.filter(person=OuterRef('pk'))),
-                    output_field=BooleanField()
-                )
-            ).order_by('-is_performer', 'last_name', 'first_name')
-            if limit_results:
-                total_matches = qs.count()
-                limited_ids = list(qs.values_list('pk', flat=True)[:25])
-                qs = qs.filter(pk__in=limited_ids)
-                self.person_search_truncated = total_matches > 25
+                ).distinct().annotate(
+                    is_performer=ExpressionWrapper(
+                        Exists(Singer.objects.filter(person=OuterRef('pk'))) |
+                        Exists(Instrumentalist.objects.filter(person=OuterRef('pk'))),
+                        output_field=BooleanField()
+                    )
+                ).order_by('-is_performer', 'last_name', 'first_name')
+                if limit_results:
+                    total_matches = qs.count()
+                    limited_ids = list(qs.values_list('pk', flat=True)[:25])
+                    qs = qs.filter(pk__in=limited_ids)
+                    self.person_search_truncated = total_matches > 25
+            else:
+                qs = Person.objects.none()
             self.fields['person'].queryset = qs
 
 

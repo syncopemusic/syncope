@@ -7,17 +7,17 @@
 
 <div id="event-detail-content">
 
-<h1 class="event-title"><span class="event-title-text"> <span title="Title">{{ event.name }}</span> <small><span title="Type"> | {{ event.event_type }}</span></small></span>
-    <span class="share-controls">
-        <button id="share-btn" class="btn btn-link" title="Copy link">
-            <img src="{% static 'syncope/images/link.svg' %}" width="16" height="16" alt="Link">
-        </button>
-        <span id="share-result" class="share-result"></span>
-    </span>
-</h1>
-{% if is_admin %}
-<p><a href="{% url 'syncope:event_meta_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary">Edit</a></p>
-{% endif %}
+<div class="section-header">
+    <h1 class="event-title"><span class="event-title-text"> <span title="Title">{{ event.name }}</span> <small><span title="Type"> | {{ event.event_type }}</span></small></span>
+        <span class="share-controls">
+            <button id="share-btn" class="btn btn-link" title="Copy link">
+                <img src="{% static 'syncope/images/link.svg' %}" width="16" height="16" alt="Link">
+            </button>
+            <span id="share-result" class="share-result"></span>
+        </span>
+    </h1>
+    {% if is_admin %}<a href="{% url 'syncope:event_meta_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
 <p class="event-summary">{% if event.location %}Location: {{ event.location }}<br>{% endif %}
 {% if event.same_date %}
 <span class="dt-full" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-full">{{ event.started_at|date:"l d F, Y, H:i" }}</span><span class="dt-short" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-short">{{ event.started_at|date:"D d M, Y, H:i" }}</span>&ndash;<span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="time">{{ event.ended_at|date:"H:i" }}</span>
@@ -102,7 +102,7 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
     <table class="table">
         <thead>
             <tr>
-                <th class="col-num">#</th>
+                <th class="col-num"></th>
 
                 <th class="col-main">Person</th>
 

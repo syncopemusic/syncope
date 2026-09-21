@@ -29,7 +29,7 @@ Parameters:
 <table class="table">
     <thead>
     <tr>
-        <th class="col-num">#</th>
+        <th class="col-num"></th>
         <th><a href="?{{ prefix }}_sort=date{% if sort == 'date' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}" class="sortable-header">Date{% if sort == 'date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th><a href="?{{ prefix }}_sort=type{% if sort == 'type' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}" class="sortable-header">Type{% if sort == 'type' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th class="col-main"><a href="?{{ prefix }}_sort=sent_by{% if sort == 'sent_by' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}" class="sortable-header">Sender{% if sort == 'sent_by' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>

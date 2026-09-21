@@ -467,6 +467,14 @@ class AccessControl:
         return cls._is_admin_for_org(auth_user, url_username)
 
     @classmethod
+    def can_edit_project(cls, auth_user, url_username):
+        """
+        Check if auth_user can edit a project (meta fields, or its events/songs/guests).
+        Only ADMIN role can edit projects.
+        """
+        return cls._is_admin_for_org(auth_user, url_username)
+
+    @classmethod
     def can_manage_invite(cls, auth_user, url_username):
         """
         Check if auth_user can accept or create an invitation in the organization.

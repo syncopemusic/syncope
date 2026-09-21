@@ -16,7 +16,7 @@
 <table class="table">
     <thead>
     <tr>
-        <th class="col-num">#</th>
+        <th class="col-num"></th>
         <th><a href="?pending_sort=date{% if pending_sort == 'date' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}" class="sortable-header">Date{% if pending_sort == 'date' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th><a href="?pending_sort=type{% if pending_sort == 'type' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}" class="sortable-header">Type{% if pending_sort == 'type' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th class="col-main"><a href="?pending_sort=sent_by{% if pending_sort == 'sent_by' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}" class="sortable-header">Sender{% if pending_sort == 'sent_by' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
@@ -52,7 +52,7 @@
 <table class="table">
     <thead>
     <tr>
-        <th class="col-num">#</th>
+        <th class="col-num"></th>
         <th><a href="?history_sort=date{% if history_sort == 'date' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}" class="sortable-header">Date{% if history_sort == 'date' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th><a href="?history_sort=type{% if history_sort == 'type' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}" class="sortable-header">Type{% if history_sort == 'type' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th class="col-main"><a href="?history_sort=sent_by{% if history_sort == 'sent_by' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}" class="sortable-header">Sender{% if history_sort == 'sent_by' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>

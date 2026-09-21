@@ -537,6 +537,10 @@ class Project(models.Model):
 
     guests = models.ManyToManyField(Person, blank=True, related_name="projects")
     songs = models.ManyToManyField(Song, blank=True, related_name="projects")
+    excluded_members = models.ManyToManyField(
+        Person, blank=True, related_name="excluded_from_projects",
+        help_text="Members otherwise active during the project's date range, removed from its participant list."
+    )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

@@ -1,0 +1,26 @@
+{% if search_q %}
+    {% if event_results %}
+        <div id="event-result-list">
+            {% for event in event_results %}
+                <div class="search-result-row">
+                    <form method="post" action="{% url 'syncope:project_new_event' url_username project.pk %}" class="inline-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="event" value="{{ event.pk }}">
+                        <button type="submit" class="btn btn-secondary">+</button>
+                    </form>
+                    <div class="search-result-info">
+                        <div class="song-title">{{ event.name }}</div>
+                        <div class="song-subline">
+                            <span>{% if event.started_at %}{{ event.started_at|date:"M d, Y H:i" }}{% else %}No date{% endif %}</span>
+                            {% if event.other_project_title %}
+                                <small class="song-meta">&#9888; in: {{ event.other_project_title }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No matching events found.</p>
+    {% endif %}
+{% endif %}

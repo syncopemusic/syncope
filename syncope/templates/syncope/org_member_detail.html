@@ -2,19 +2,18 @@
 {% load static %}
 {% block title %}{{ person }}{% endblock %}
 {% block content %}
-<h1 class="event-title">{{ person }}
-    <span class="share-controls">
-        <button id="share-btn" class="btn btn-link" title="Copy link">
-            <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-        </button>
-        <span id="share-result" class="share-result"></span>
-    </span>
-</h1>
-<div class="visually-hidden">{% csrf_token %}</div>
-
-<p>
+<div class="section-header">
+    <h1 class="event-title">{{ person }}
+        <span class="share-controls">
+            <button id="share-btn" class="btn btn-link" title="Copy link">
+                <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
+            </button>
+            <span id="share-result" class="share-result"></span>
+        </span>
+    </h1>
     <a href="{{ person_edit_url }}" class="btn btn-secondary">Edit</a>
-</p>
+</div>
+<div class="visually-hidden">{% csrf_token %}</div>
 
 {% if person_data %}
 <table class="table-detail">

@@ -8,21 +8,22 @@
   {% with person=user.persons.first %}
   {% if person %}
     <p>{{ person.first_name }} {{ person.last_name }}</p>
-    <p><a href="{%  url 'syncope:org_new' %}" class="btn btn-primary" title="Add new organization">+ Add</a></p>
 
     {% if org_memberships %}
       <h3>Your memberships</h3>
       <div class="card-grid">
         {% for membership in org_memberships %}
           <div class="card">
-            <h3><a href="{% url 'syncope:org_dashboard' membership.user.username %}">{{ membership.user.username }}</a></h3>
+            <h3>{{ membership.user.username }}</h3>
             <p>{{ membership.person.roles.all|join:", " }}</p>
+            <a href="{% url 'syncope:org_dashboard' membership.user.username %}" class="btn btn-secondary">View organization</a>
           </div>
         {% endfor %}
       </div>
     {% else %}
       <p>You are not member of any organization.</p>
     {% endif %}
+    <p><a href="{%  url 'syncope:org_new' %}" class="btn btn-primary" title="Add new organization">+ Add</a></p>
 
   {% else %}
     <a href="{%  url 'syncope:person_update' url_username %}">

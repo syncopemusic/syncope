@@ -1,6 +1,7 @@
 {% extends "syncope/base.html" %}
 {% block title %}
-{% if list_type == 'active' %}Active Members
+{% if list_type == 'all' and url_username == user.username %}Personal Contacts
+{% elif list_type == 'active' %}Active Members
 {% elif list_type == 'inactive' %}Inactive Members
 {% elif list_type == 'others' %}Unspecified
 {% elif list_type == 'all' %}All Persons
@@ -14,7 +15,8 @@
 {% block content %}
 <div class="section-header">
     <h1>
-    {% if list_type == 'active' %}Active Members
+    {% if list_type == 'all' and url_username == user.username %}Personal Contacts
+    {% elif list_type == 'active' %}Active Members
     {% elif list_type == 'inactive' %}Inactive Members
     {% elif list_type == 'others' %}Unspecified
     {% elif list_type == 'all' %}All Persons

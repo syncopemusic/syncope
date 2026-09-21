@@ -60,14 +60,14 @@
         {% csrf_token %}
 
         <div class="table-container">
-            <table class="table table--matrix table-grouped">
+            <table class="table table-matrix table-grouped">
                 <thead>
                     <tr>
                         <th class="col-num"></th>
                         <th class="sticky-col col-main">Member</th>
                         {% for event in events %}
-                            <th class="table__event-col">
-                                <div class="table__event-header {% if event.event_type.id != 1 %}table__event-header--strong{% endif %}">
+                            <th class="table-event-col">
+                                <div class="table-event-header {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}">
                                     <a href="{%  url 'syncope:event_detail' url_username event.id %}?origin=attendance"
                                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
                                         <span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="date">{{ event.started_at|date:"d M" }}</span>
@@ -87,10 +87,10 @@
                             <td class="sticky-col col-main member-name">{{ row.member }}</td>
                             {% for cell in row.attendance_cells %}
                                 {% if cell.is_ineligible %}
-                                    <td class="table__event-col--ineligible"></td>
+                                    <td class="table-event-col-ineligible"></td>
                                 {% else %}
-                                    <td class="table__event-col">
-                                        <div class="table__cell--attendance att-type-{{ cell.attendance_type_id|default:0 }} {% if cell.is_grayed_out %}table__cell--attendance--disabled{% endif %}"
+                                    <td class="table-event-col">
+                                        <div class="table-cell-attendance att-type-{{ cell.attendance_type_id|default:0 }} {% if cell.is_grayed_out %}table-cell-attendance-disabled{% endif %}"
                                             data-type-id="{{ cell.attendance_type_id|default:0 }}"
                                             {% if not cell.is_grayed_out %}onclick="cycleAttendance(this)"{% endif %}>
                                             <input type="hidden"
@@ -106,7 +106,7 @@
                         </tr>
                         {% endfor %}
                     {% endfor %}
-                    <tr class="totals-row table__row--total">
+                    <tr class="totals-row table-row-total">
                         <td class="col-num"></td>
                         <td class="sticky-col"></td>
                         {% for total in event_totals %}
@@ -147,7 +147,7 @@ function paintCell(cell, typeId) {
 
 function countUnsavedChanges() {
     let count = 0;
-    document.querySelectorAll('.table__cell--attendance[data-type-id]').forEach(cell => {
+    document.querySelectorAll('.table-cell-attendance[data-type-id]').forEach(cell => {
         if (cell.dataset.typeId !== cell.dataset.originalTypeId) count++;
     });
     return count;
@@ -157,7 +157,7 @@ const saveBarCtl = initSaveBar({
     formId: 'attendance-form',
     countUnsavedChanges,
     onDiscard: () => {
-        document.querySelectorAll('.table__cell--attendance[data-type-id]').forEach(cell => {
+        document.querySelectorAll('.table-cell-attendance[data-type-id]').forEach(cell => {
             if (cell.dataset.originalTypeId !== undefined) {
                 paintCell(cell, parseInt(cell.dataset.originalTypeId, 10));
             }
@@ -173,7 +173,7 @@ function cycleAttendance(cell) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.table__cell--attendance[data-type-id]').forEach(cell => {
+    document.querySelectorAll('.table-cell-attendance[data-type-id]').forEach(cell => {
         cell.dataset.originalTypeId = cell.dataset.typeId;
         const meta = TYPE_META[parseInt(cell.dataset.typeId, 10)] || TYPE_META[0];
         cell.querySelector('.att-icon').textContent = meta.icon;

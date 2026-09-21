@@ -1,6 +1,6 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}Details &mdash; {{ object.name }}{% endblock %}
+{% block title %}Details &mdash; {{ object.title }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -9,7 +9,7 @@
     }
 
     @media (max-width: 768px) {
-        #event-meta-form {
+        #project-meta-form {
             padding-block-end: 4rem;
         }
     }
@@ -32,9 +32,9 @@
     </div>
 {% endif %}
 
-<h1>Event Details &mdash; {{ object.name }}</h1>
+<h1>Details &mdash; {{ object.title }}</h1>
 
-<form method="post" id="event-meta-form">
+<form method="post" id="project-meta-form">
     {% csrf_token %}
 
     {% for field in form %}
@@ -45,20 +45,8 @@
         </div>
     {% endfor %}
 
-    {% if eventsongs %}
-    <div class="form-group">
-        <label for="id_encore_song">Encore song</label>
-        <select name="encore_song" id="id_encore_song">
-            <option value="">&mdash;</option>
-            {% for eventsong in eventsongs %}
-                <option value="{{ eventsong.pk }}" {% if eventsong.pk == encore_eventsong_id %}selected{% endif %}>{{ eventsong.song.title }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    {% endif %}
-
     <h3>Resources</h3>
-    <p><small>This event's specific resources.</small></p>
+    <p><small>This project's specific resources.</small></p>
     <div id="resource-formset">
         {{ resource_formset.management_form }}
         <div id="resource-rows">
@@ -78,20 +66,20 @@
     </div>
 
     <div class="form-actions danger-zone">
-        <a href="{% url 'syncope:event_delete' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-danger">Delete</a>
+        <a href="{% url 'syncope:project_delete' url_username object.pk %}" class="btn btn-danger">Delete</a>
     </div>
 </form>
 
-{% url 'syncope:event_detail' url_username object.pk as event_detail_url %}
-{% include "syncope/_save_bar.html" with form_id="event-meta-form" url=event_detail_url|add:"?origin="|add:origin_key %}
+{% url 'syncope:project_detail' url_username object.pk as project_detail_url %}
+{% include "syncope/_save_bar.html" with form_id="project-meta-form" url=project_detail_url %}
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script>
-    const form = document.getElementById('event-meta-form');
+    const form = document.getElementById('project-meta-form');
     let formDirty = false;
 
     const saveBarCtl = initSaveBar({
-        formId: 'event-meta-form',
+        formId: 'project-meta-form',
         countUnsavedChanges: () => formDirty ? 1 : 0,
         onDiscard: () => {
             form.reset();

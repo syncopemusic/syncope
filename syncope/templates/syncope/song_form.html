@@ -99,12 +99,16 @@
     </div>
     <button type="submit" name="action" value="add_translation_row" class="btn btn-primary" title="Add another translation">+ Add</button>
 
+    <h3>Resources</h3>
     {{ resource_formset.management_form }}
     {% for r_form in resource_formset %}
-    <h3>Resources</h3>
-        <div class="form-group">
+        <div class="resource-row">
             {{ r_form.url }} {{ r_form.description }}
-            {% if r_form.instance.pk %}{{ r_form.DELETE }}{% endif %}
+            {% if r_form.instance.pk %}
+                <input type="checkbox" name="{{ r_form.DELETE.html_name }}" id="{{ r_form.DELETE.auto_id }}"
+                       onclick="return confirm('Delete this resource? Remember to press save.');">
+                <small class="form-help">Delete this resource</small>
+            {% endif %}
             {{ r_form.id }}
         </div>
     {% endfor %}

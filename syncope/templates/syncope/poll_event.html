@@ -58,7 +58,7 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th class="col-num">#</th>
+                    <th class="col-num"></th>
                     <th>Event Type</th>
                     <th>Date</th>
                     <th>Start <br> End</th>
@@ -90,7 +90,7 @@
 
     {% if is_admin %}
     <div id="add-date" style="max-width:42rem;">
-        <p><strong>Add date</strong></p>
+        <h3>Add date</h3>
         <div class="form-group">
             <label for="{{ form.event_type.id_for_label }}">{{ form.event_type.label }}</label>
             {{ form.event_type }}

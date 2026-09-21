@@ -10,7 +10,7 @@
         justify-content: center;
         gap: 0.3rem;
         padding: 0.25rem 0.6rem;
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
         cursor: pointer;
         user-select: none;
         font-size: var(--font-size-md);
@@ -58,7 +58,7 @@
 
     {% if is_admin %}
     <div id="add-participants" style="max-width:42rem;">
-        <p><strong>Add participant</strong></p>
+        <h3>Add participant</h3>
         <p style="position:relative;">
             <input type="text" id="participant-search-input" value="{{ search_q }}" placeholder="Search by name, voice, or instrument" style="max-width:100%; width:100%; box-sizing:border-box;">
             <span class="search-spinner" id="participant-search-spinner"></span>

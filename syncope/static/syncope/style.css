@@ -36,7 +36,6 @@
     --color-primary: #8b6f47;
     --color-primary-hover: #a8895e;
     --color-danger: #c0392b;
-    --color-danger-hover: #a3301f;
 
     /* Shared outline used by the outline-based focus idiom (links, buttons,
        interactive table cells). Text form fields intentionally use a
@@ -185,10 +184,12 @@
     }
 
     .sidebar-header {
+        display: block;
         padding: var(--space-5) var(--space-4) var(--space-4);
         text-align: center;
         border-block-end: 1px solid rgba(255, 255, 255, 0.1);
         margin-block-end: var(--space-3);
+        text-decoration: none;
     }
 
     .sidebar-logo {
@@ -288,23 +289,6 @@
         color: var(--color-text-on-accent);
     }
 
-    .org-item.active > a::before {
-        content: "";
-        display: inline-block;
-        inline-size: 6px;
-        block-size: 6px;
-        margin-inline-end: var(--space-2);
-        border-radius: 50%;
-        background-color: var(--color-text-on-accent);
-    }
-
-    .org-meta {
-        display: block;
-        padding-inline: var(--space-3);
-        margin-block-end: var(--space-1);
-        color: rgba(255, 255, 255, 0.45);
-        font-size: var(--font-size-2xs);
-    }
 
     .org-submenu {
         padding-inline-start: var(--space-4);
@@ -349,6 +333,15 @@
         flex-direction: column;
         position: relative;
         min-width: 0;
+    }
+
+    /* Pages whose <h1> sits inside .section-header lose the browser's default
+       h1 top margin (.section-header h1 { margin: 0 }), while plain <h1>s
+       elsewhere keep it - making page headers sit at different heights purely
+       by accident of markup. Zero it everywhere so every page's first heading
+       lines up regardless of whether it's wrapped in .section-header. */
+    .main-content h1:first-of-type {
+        margin-block-start: 0;
     }
 
     .content {
@@ -631,9 +624,9 @@
         border-radius: var(--radius-sm);
         border: 1.5px solid transparent;
         font-family: var(--font-body);
-        font-size: var(--font-size-md);
+        font-size: 14px;
         font-weight: 500;
-        line-height: 1.4;
+        line-height: 20px;
         white-space: nowrap;
         cursor: pointer;
         text-decoration: none;
@@ -649,6 +642,12 @@
         outline-offset: var(--focus-ring-offset);
     }
 
+    .btn:disabled,
+    .btn[disabled] {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
     .btn-primary {
         background-color: var(--color-primary);
         color: var(--color-text-on-accent);
@@ -660,7 +659,7 @@
     }
 
     .btn-secondary {
-        background-color: transparent;
+        background-color: var(--color-bg);
         border-color: var(--color-border);
         color: var(--color-text);
     }
@@ -669,9 +668,10 @@
         background-color: var(--color-bg-subtle);
     }
 
-    /* .btn-secondary assumes a light surface (border/text colors made for that) -
+    /* .btn-secondary assumes a light surface (border/text/background made for that) -
        override for the dark sidebar so Login/Logout stay visible. */
     .sidebar .btn-secondary {
+        background-color: var(--color-ink);
         border-color: rgba(255, 255, 255, 0.3);
         color: rgba(255, 255, 255, 0.75);
     }
@@ -682,7 +682,7 @@
     }
 
     .btn-danger {
-        background-color: transparent;
+        background-color: var(--color-bg);
         border-color: var(--color-danger);
         color: var(--color-danger);
     }
@@ -723,6 +723,7 @@
     .btn-remove:hover {
         background: none;
         color: var(--color-danger);
+        text-decoration: underline;
     }
 
     /* Row of grouped secondary actions (e.g. a poll/event page's "Edit title | Edit people | ..."
@@ -743,7 +744,7 @@
 
     /* Floating variant of .share-result, positioned relative to a share button
        inside a table cell instead of inline after it. */
-    .share-result--floating {
+    .share-result-floating {
         position: absolute;
         top: 50%;
         left: 100%;
@@ -753,6 +754,8 @@
         z-index: 10;
         background: var(--color-surface);
         padding: 2px 4px;
+        border-radius: var(--radius-sm);
+        box-shadow: var(--shadow-sm);
     }
 
     /* Button row for form submit/cancel pairs: secondary/cancel left, primary right
@@ -930,7 +933,7 @@
        One component, reused by every data table in the app. `.table` is the
        block; `.table-detail`/`.table-grouped`/`.totals-row`/`.table-narrow`
        are its existing modifiers (kept as-is - used across 15+ templates);
-       `.table--matrix` + its `.table__*` elements below are the one shared
+       `.table-matrix` + its `.table-event-*`/`.table-cell-*` elements below are the one shared
        definition for the three attendance/pivot grids (poll_detail.html,
        poll_attendance.html, attendance_dashboard.html), replacing what used
        to be three separate, diverging page-local <style> blocks. */
@@ -963,13 +966,16 @@
             letter-spacing: 0.04em;
         }
 
-        & tbody td {
+        & tbody td,
+        & tbody th {
             padding: var(--space-2);
             border-block-end: 1px solid var(--color-border-subtle);
             vertical-align: middle;
+            text-align: inherit;
         }
 
-        & tbody tr:last-child td {
+        & tbody tr:last-child td,
+        & tbody tr:last-child th {
             border-block-end: none;
         }
 
@@ -1019,7 +1025,7 @@
        width:1% + nowrap trick for auto-layout tables) so a table never
        stretches its narrow columns (numbering, dates, single buttons) just
        because there's leftover viewport width. Wrapped in :where() so this
-       has zero specificity - any existing sizing rule below (.table__event-col,
+       has zero specificity - any existing sizing rule below (.table-event-col,
        .song-index, etc.) or .col-main (utilities layer) wins automatically
        without needing to out-specify this default. */
     :where(.table) :where(thead th, tbody td) {
@@ -1138,6 +1144,11 @@
     .poll-summary {
         margin-block: 0.25em;
         font-size: var(--font-size-md);
+        overflow-wrap: anywhere;
+    }
+
+    .project-header p {
+        overflow-wrap: anywhere;
     }
     .resource-table-compact {
         border-collapse: separate;
@@ -1169,7 +1180,7 @@
 
     @media (max-width: 768px) {
         #event-detail-content {
-            padding-bottom: 4rem;
+            padding-block-end: 4rem;
         }
         .dt-full { display: none; }
         .dt-short { display: inline; }
@@ -1188,14 +1199,9 @@
     }
 
     /* --- Matrix/pivot tables (attendance grids) --- */
-    .table--matrix thead th {
-        text-transform: none;
-        letter-spacing: normal;
-    }
-
     /* Only the rotated-label headers (poll_detail.html, attendance_dashboard.html)
        need extra height - poll_attendance.html's plain multi-line text headers
-       don't use .table__event-header, so :has() scopes this to just them.
+       don't use .table-event-header, so :has() scopes this to just them.
        Without it, the rotated text's height (its pre-rotation WIDTH - a
        transform doesn't change layout size) exceeds the header row's normal
        height and pokes out past the dark background.
@@ -1206,7 +1212,7 @@
        middle - the rotated result then sits low and partly outside the
        cell, clipping its leading character. Centering first keeps the
        rotation symmetric within the cell. */
-    .table--matrix thead th:has(.table__event-header) {
+    .table-matrix thead th:has(.table-event-header) {
         block-size: 4.5rem;
         vertical-align: middle;
     }
@@ -1214,7 +1220,7 @@
     /* Width no longer needed here - the base .table default (width:1%,
        above) already shrinks this to content; only the tighter padding
        for matrix density remains. */
-    .table--matrix .col-num {
+    .table-matrix .col-num {
         padding-inline: var(--space-1);
     }
 
@@ -1222,20 +1228,20 @@
        generic tbody td padding otherwise pads every matrix row well past the
        button's fixed size. Scoped with :has() so it only touches cells that
        actually hold the button (not the comment/note row or label columns). */
-    .table--matrix tbody td:has(.table__cell--attendance) {
+    .table-matrix tbody td:has(.table-cell-attendance) {
         padding-block: 0;
     }
 
-    /* Fixed, not min: a CSS transform (used by .table__event-header's rotation
+    /* Fixed, not min: a CSS transform (used by .table-event-header's rotation
        below) doesn't shrink an element's LAYOUT box, only its rendered
        appearance - so a rotated date header's natural (unrotated) text width
        still drives auto table-layout sizing unless every cell in the column
        agrees on one fixed width. A min-inline-size here let each rotated
        column size itself independently off its own unrotated text length,
        producing uneven, misaligned columns between header and body.
-       position:relative anchors .table__event-header's absolute centering
+       position:relative anchors .table-event-header's absolute centering
        below - harmless on cells that don't contain it. */
-    .table__event-col {
+    .table-event-col {
         inline-size: var(--table-matrix-size);
         text-align: center;
         position: relative;
@@ -1243,17 +1249,17 @@
 
     /* poll_attendance.html's headers hold multi-line plain text (event type,
        date, time, location, details), not a rotated label - they need to
-       grow past the fixed size above. Add alongside .table__event-col on
+       grow past the fixed size above. Add alongside .table-event-col on
        every <th>/<td> in that template's columns (all agreeing on the same
        width keeps header/body aligned, same principle as above). */
-    .table__event-col--text {
+    .table-event-col-text {
         inline-size: auto;
         min-inline-size: 5rem;
     }
 
     /* Wraps a rotated date/label inside a matrix <th> (poll_detail.html,
        attendance_dashboard.html). poll_attendance.html's transposed header
-       rows use .table__event-col directly without this wrapper, since their
+       rows use .table-event-col directly without this wrapper, since their
        labels are stacked plain text, not rotated. */
     /* Absolutely positioned and centered on its own cell, then rotated in
        place - this both perfectly centers the rotated label over the icon
@@ -1263,7 +1269,7 @@
        column wider than --table-matrix-size no matter how long a date
        string gets. The header cell's own block-size:4.5rem still reserves
        the vertical room the rotated text needs. */
-    .table__event-header {
+    .table-event-header {
         position: absolute;
         top: 50%;
         left: 50%;
@@ -1272,11 +1278,11 @@
         font-size: var(--font-size-2xs);
     }
 
-    .table__event-header--strong {
+    .table-event-header-strong {
         font-weight: 700;
     }
 
-    .table__cell--attendance {
+    .table-cell-attendance {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -1290,28 +1296,28 @@
         transition: transform var(--transition-fast), box-shadow var(--transition-fast);
     }
 
-    .table__cell--attendance:hover {
+    .table-cell-attendance:hover {
         transform: translateY(-2px);
         box-shadow: var(--shadow-sm);
     }
 
-    .table__cell--attendance:focus-visible {
+    .table-cell-attendance:focus-visible {
         outline: var(--focus-ring);
         outline-offset: var(--focus-ring-offset);
     }
 
     /* Read-only matrix cells (poll_detail.html's votes summary - nothing to
        click there) drop the pointer/hover-lift affordance. */
-    .table__cell--attendance--static {
+    .table-cell-attendance-static {
         cursor: default;
     }
 
-    .table__cell--attendance--static:hover {
+    .table-cell-attendance-static:hover {
         transform: none;
         box-shadow: none;
     }
 
-    .table__event-col--ineligible {
+    .table-event-col-ineligible {
         background-color: var(--color-bg-subtle);
         color: var(--color-border);
         pointer-events: none;
@@ -1320,17 +1326,17 @@
     /* Composes with .totals-row (which supplies the border) - add both
        classes to the <tr>; this one only adds the extra bold weight the
        matrix variant wants. */
-    .table__row--total td {
+    .table-row-total td {
         font-weight: 600;
     }
 
-    .table__comment {
+    .table-comment {
         font-size: 0.65rem;
         color: var(--color-text-muted);
         overflow-wrap: anywhere;
     }
 
-    .table__comment-input {
+    .table-comment-input {
         inline-size: 100%;
         font-size: var(--font-size-xs);
         padding: var(--space-1);
@@ -1347,9 +1353,9 @@
         align-items: center;
     }
 
-    /* Sizing only - hover/cursor neutralizing is .table__cell--attendance--static's
+    /* Sizing only - hover/cursor neutralizing is .table-cell-attendance-static's
        job; legend chips carry both classes. */
-    .legend .table__cell--attendance {
+    .legend .table-cell-attendance {
         inline-size: auto;
         block-size: auto;
         padding: 2px 6px;
@@ -1526,6 +1532,23 @@
         font-weight: 500;
         border-radius: 999px;
     }
+
+    .badge-primary {
+        background-color: var(--color-primary);
+        color: var(--color-text-on-accent);
+    }
+
+    .badge-danger {
+        background-color: var(--color-danger);
+        color: var(--color-text-on-accent);
+        font-weight: 700;
+    }
+
+    .badge-circle {
+        border-radius: 999px;
+        font-size: var(--font-size-xl);
+        padding: 0.5rem 0.75rem;
+    }
 }
 
 @layer utilities {
@@ -1609,18 +1632,22 @@
 
     /* Suppresses the att-type-N status color for a disabled matrix cell.
        Deliberately placed in @layer utilities (not components, where
-       .table__cell--attendance itself lives) so it shares a layer with
+       .table-cell-attendance itself lives) so it shares a layer with
        .att-type-N above and can win on source order/specificity - a rule in
        @layer components can never outrank one in @layer utilities regardless
        of specificity, since utilities is declared later in the layer order. */
-    .table__cell--attendance--disabled {
+    .table-cell-attendance-disabled {
         background-color: var(--color-surface);
         color: var(--color-text);
         pointer-events: none;
         cursor: default;
     }
 
-    .col-num {
+    /* Also covers .col-action - a non-numbering narrow column (e.g. a single
+       action button) that shouldn't be labeled "num" but wants the same
+       right alignment. */
+    .col-num,
+    .col-action {
         text-align: right;
     }
 
@@ -1630,12 +1657,6 @@
     .col-main {
         width: 100%;
         white-space: normal;
-    }
-
-    /* Same alignment as .col-num, for non-numbering narrow columns
-       (e.g. a single action button) that shouldn't be labeled "num". */
-    .col-action {
-        text-align: right;
     }
 
     .sortable-header {

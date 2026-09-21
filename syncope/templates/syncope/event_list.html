@@ -15,7 +15,7 @@
 <table class="table">
     <thead>
     <tr>
-        <th class="col-num">#</th>
+        <th class="col-num"></th>
         <th><a href="?sort=date{% if current_sort == 'date' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Date{% if current_sort == 'date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th><a href="?sort=type{% if current_sort == 'type' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Type{% if current_sort == 'type' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th class="col-main"><a href="?sort=project{% if current_sort == 'project' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Project{% if current_sort == 'project' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
