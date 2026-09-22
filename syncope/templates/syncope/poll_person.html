@@ -22,7 +22,16 @@
                 {% for pp in group.items %}
                 <tr data-poll-person-id="{{ pp.pk }}" data-person-id="{{ pp.person_id }}" {% if forloop.first and not forloop.parentloop.first %}class="group-start"{% endif %}>
                     <td class="col-num">{{ pp.index }}</td>
-                    <td class="col-main">{{ pp.person.first_name }} {{ pp.person.last_name }}</td>
+                    <td class="col-main">
+                        <div>{{ pp.person.first_name }} {{ pp.person.last_name }}</div>
+                        <div class="song-subline">
+                            {% with voice=pp.person.singer_set.first instrument=pp.person.instrumentalist_set.first %}
+                                {% if voice %}{{ voice.voice.name }}
+                                {% elif instrument %}{{ instrument.instrument.name }}
+                                {% else %}<small>No voice/instrument</small>{% endif %}
+                            {% endwith %}
+                        </div>
+                    </td>
                     <td class="col-action">
                         {% if is_admin %}<button type="button" class="btn btn-remove" title="Remove from poll">×</button>{% endif %}
                     </td>
@@ -50,17 +59,6 @@
     </div>
     {% endif %}
 </form>
-
-{% if is_admin %}
-<p><small>Bulk importing option:</small></p>
-<form method="post" class="search-form">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="bulk_import">
-    {{ bulk_import_form.role_criteria }}
-    {{ bulk_import_form.skill_criteria }}
-    <button type="submit" class="btn btn-secondary">Import</button>
-</form>
-{% endif %}
 
 {% url 'syncope:poll_detail' url_username poll.pk as return_target %}
 {% include "syncope/_save_bar.html" with form_id="persons-form" url=return_target %}

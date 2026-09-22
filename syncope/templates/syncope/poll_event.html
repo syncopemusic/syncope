@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static dt_tags %}
 
 {% block title %}{% if editing %}Edit Date{% else %}Dates{% endif %} - {{ poll.title }}{% endblock %}
 
@@ -59,11 +59,8 @@
             <thead>
                 <tr>
                     <th class="col-num"></th>
-                    <th>Event Type</th>
-                    <th>Date</th>
-                    <th>Start <br> End</th>
-                    <th>Location</th>
-                    <th class="col-main">Detail</th>
+                    <th>Event</th>
+                    <th class="col-main">Location</th>
                     <th class="col-action">Actions</th>
                 </tr>
             </thead>
@@ -71,18 +68,23 @@
                 {% for pe in poll_events %}
                 <tr data-event-id="{{ pe.pk }}">
                     <td class="col-num">{{ forloop.counter }}</td>
-                    <td>{{ pe.event_type.name }}</td>
-                    <td>{% if pe.same_date %}<span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span>{% else %}<span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span> – <span data-dt="{{ pe.ended_at|date:"c" }}" data-dt-fmt="date">{{ pe.ended_at|date:"d M" }}</span>{% endif %}</td>
-                    <td><span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="time">{{ pe.started_at|date:"H:i" }}</span> <br> <span data-dt="{{ pe.ended_at|date:"c" }}" data-dt-fmt="time">{{ pe.ended_at|date:"H:i" }}</span></td>
-                    <td>{% if pe.location %}{{ pe.location }}{% else %}<em>-</em>{% endif %}</td>
-                    <td class="col-main">{% if pe.details %}{{ pe.details }}{% else %}<em>-</em>{% endif %}</td>
+                    <td>
+                        <div class="song-title">{{ pe.event_type.name }}</div>
+                        <div class="song-subline">
+                            {% if pe.same_date %}{% dt pe.started_at "date-dow" %} {% dt pe.started_at "time" %}-{% dt pe.ended_at "time" %}{% else %}{% dt pe.started_at "date-dow" %} {% dt pe.started_at "time" %}-{% dt pe.ended_at "date-dow" %} {% dt pe.ended_at "time" %}{% endif %}
+                        </div>
+                    </td>
+                    <td class="col-main">
+                        <div>{% if pe.location %}{{ pe.location }}{% else %}-{% endif %}</div>
+                        <div class="song-subline">{% if pe.details %}{{ pe.details }}{% else %}-{% endif %}</div>
+                    </td>
                     <td class="col-action">
                         <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}" class="btn btn-secondary">Edit</a>
                         {% if is_admin %}<button type="button" class="btn btn-remove" title="Remove this date">×</button>{% endif %}
                     </td>
                 </tr>
                 {% empty %}
-                <tr id="no-dates-row"><td colspan="7">No dates added yet.</td></tr>
+                <tr id="no-dates-row"><td colspan="4">No dates added yet.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -173,7 +175,7 @@ $(function () {
                 if (btn) { btn.textContent = '×'; btn.title = 'Remove this date'; }
             });
             if (!datesTbody.querySelector('tr[data-event-id]') && !datesTbody.querySelector('tr.staged-add') && !document.getElementById('no-dates-row')) {
-                datesTbody.insertAdjacentHTML('beforeend', '<tr id="no-dates-row"><td colspan="7">No dates added yet.</td></tr>');
+                datesTbody.insertAdjacentHTML('beforeend', '<tr id="no-dates-row"><td colspan="4">No dates added yet.</td></tr>');
             }
         },
     });
@@ -227,7 +229,7 @@ $(function () {
         if (!value) return '-';
         const d = new Date(value);
         if (isNaN(d)) return escapeHtml(value);
-        return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
+        return d.toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' });
     }
 
     function formatTimeForDisplay(value) {
@@ -242,11 +244,14 @@ $(function () {
         tr.className = 'staged-add';
         tr.innerHTML = `
             <td></td>
-            <td>${escapeHtml(values.typeLabel)}</td>
-            <td>${formatDateForDisplay(values.startedAt)}</td>
-            <td>${formatTimeForDisplay(values.startedAt)} <br> ${formatTimeForDisplay(values.endedAt)}</td>
-            <td>${values.location ? escapeHtml(values.location) : '<em>-</em>'}</td>
-            <td>${values.details ? escapeHtml(values.details) : '<em>-</em>'}</td>
+            <td>
+                <div class="song-title">${escapeHtml(values.typeLabel)}</div>
+                <div class="song-subline">${formatDateForDisplay(values.startedAt)} ${formatTimeForDisplay(values.startedAt)}-${formatTimeForDisplay(values.endedAt)}</div>
+            </td>
+            <td class="col-main">
+                <div>${values.location ? escapeHtml(values.location) : '-'}</div>
+                <div class="song-subline">${values.details ? escapeHtml(values.details) : '-'}</div>
+            </td>
             <td></td>
         `;
         const actionsCell = tr.lastElementChild;

@@ -82,7 +82,9 @@ def _project_members(project, org_user):
     ).filter(
         Q(membership_period__ended_at__gte=reference_date) |
         Q(membership_period__ended_at__isnull=True)
-    ).exclude(excluded_from_projects=project).distinct()
+    ).exclude(excluded_from_projects=project).distinct().prefetch_related(
+        'singer_set__voice', 'instrumentalist_set__instrument', 'skills'
+    )
 
 
 def _project_participants(project, org_user):
@@ -90,7 +92,7 @@ def _project_participants(project, org_user):
     as a member) and sorted together."""
     participants = list(_project_members(project, org_user))
     member_ids = {p.pk for p in participants}
-    for guest in project.guests.all():
+    for guest in project.guests.all().prefetch_related('singer_set__voice', 'instrumentalist_set__instrument', 'skills'):
         if guest.pk in member_ids:
             continue
         guest.is_guest = True

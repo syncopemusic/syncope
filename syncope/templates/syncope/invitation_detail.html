@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load dt_tags %}
 {% block title %}Invitation{% endblock %}
 
 {% block content %}
@@ -19,11 +20,11 @@
         <tr><th>Requester opted to copy profile details</th><td>{{ invitation.copy_details|yesno:"Yes,No" }}</td></tr>
     {% endif %}
     {% if invitation.expires_at %}
-        <tr><th>Expires</th><td><span data-dt="{{ invitation.expires_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.expires_at|date:"d M, Y, H:i" }}</span></td></tr>
+        <tr><th>Expires</th><td>{% dt invitation.expires_at "datetime" %}</td></tr>
     {% endif %}
     {% if invitation.admin_involved and invitation.reviewed_at %}
         <tr><th>Admin involved</th><td>{{ invitation.admin_involved }} on
-            <span data-dt="{{ invitation.reviewed_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.reviewed_at|date:"d M, Y, H:i" }}</span></td></tr>
+            {% dt invitation.reviewed_at "datetime" %}</td></tr>
     {% endif %}
 </table>
 

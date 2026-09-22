@@ -10,7 +10,7 @@ from django.db.models import Q
 from django.utils import timezone
 from datetime import timedelta
 from syncope.models import CustomUser, PollAttendance, Poll, PollPerson, PollEvent, PollAttendanceType, Person, Role
-from syncope.forms import PollCreateForm, PollPersonForm, PollAttendanceForm, PollEventForm, PollBulkImportForm
+from syncope.forms import PollCreateForm, PollPersonForm, PollAttendanceForm, PollEventForm
 from syncope.permissions import AccessControl
 from syncope.views.drafts import DraftMixin
 from syncope.utils import group_by_section, add_query_param
@@ -161,7 +161,6 @@ class PollPersonView(PollAdminMixin, View):
     def get(self, request, username, pk):
         poll_persons_qs, grouped_poll_persons = self._poll_persons_context()
         return render(request, self.template_name, {
-            'bulk_import_form': PollBulkImportForm(),
             'poll': self.poll,
             'poll_persons': poll_persons_qs,
             'grouped_poll_persons': grouped_poll_persons,
@@ -170,9 +169,6 @@ class PollPersonView(PollAdminMixin, View):
         })
 
     def post(self, request, username, pk):
-        if request.POST.get('action') == 'bulk_import':
-            return self.bulk_import_persons(request, username, pk)
-
         with transaction.atomic():
             remove_pks = {
                 int(key[len('remove_'):]) for key in request.POST
@@ -200,33 +196,6 @@ class PollPersonView(PollAdminMixin, View):
             return HttpResponseRedirect(new_person_url)
 
         messages.success(request, "Persons updated successfully!")
-        return redirect('syncope:poll_persons', username=username, pk=pk)
-
-    def bulk_import_persons(self, request, username, pk):
-        """Auto-import members filtered by role and/or skill."""
-        role_criteria = request.POST.get('role_criteria')
-        skill_criteria = request.POST.get('skill_criteria')
-
-        persons = Person.objects.in_org_user(self.org_user)
-
-        if role_criteria and role_criteria != 'all':
-            persons = persons.filter(roles__title=role_criteria)
-
-        if skill_criteria and skill_criteria != 'all':
-            persons = persons.filter(skills__title=skill_criteria)
-
-        existing_person_ids = self.poll.poll_persons.values_list('person_id', flat=True)
-        persons = persons.exclude(id__in=existing_person_ids).distinct()
-
-        poll_persons = [PollPerson(poll=self.poll, person=person) for person in persons]
-
-        created_count = len(poll_persons)
-        if created_count > 0:
-            PollPerson.objects.bulk_create(poll_persons, ignore_conflicts=True)
-            messages.success(request, f'Successfully imported {created_count} persons.')
-        else:
-            messages.info(request, 'No new persons to import.')
-
         return redirect('syncope:poll_persons', username=username, pk=pk)
 
 

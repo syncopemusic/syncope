@@ -1,6 +1,6 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}Songs &mdash; {{ event.name }}{% endblock %}
+{% block title %}Songs - {{ event.name }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -45,7 +45,7 @@
 
 {% block content %}
 
-<h1>Songs &mdash; {{ event.name }}</h1>
+<h1>Songs - {{ event.name }}</h1>
 
 <div id="songs-content">
     <form method="post" id="songs-form">

@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load dt_tags %}
 
 {% block title %}Polls{% endblock %}
 
@@ -27,7 +28,7 @@
     <tr>
         <td class="col-num">{{ forloop.counter }}</td>
         <td class="col-main"><a href="{% url 'syncope:poll_detail' url_username poll.pk %}">{{ poll.title }}</a></td>
-        <td><span data-dt="{{ poll.updated_at|date:"c" }}" data-dt-fmt="datetime">{{ poll.updated_at|date:"Y-m-d H:i" }}</span></td>
+        <td>{% dt poll.updated_at "datetime" %}</td>
     </tr>
     {% endfor %}
     </tbody>

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-{% load static %}
+{% load static dt_tags %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
@@ -59,11 +59,6 @@
                                                     <li><a href="{%  url 'syncope:poll_list' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'poll_list,poll_detail,poll_new,poll_update,poll_delete,poll_persons,poll_events,poll_attendance' %}class="active"{% endif %}>Polls</a></li>
 
                                                 {% endif %}
-                                                {% if ADMIN_ROLE in membership.person.roles.all %}
-
-                                                    <li><a href="{%  url 'syncope:import_hub' username=org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'import_hub,import_dashboard,import_combine' %}class="active"{% endif %}>Import Data</a></li>
-                                                    <li><a href="{%  url 'syncope:invitation_list' org.user.username %}" {% if url_username == org.user.username and request.resolver_match.url_name|url_in:'invitation_list,invitation_new,invitation_detail' %}class="active"{% endif %}>Invitations{% if membership.pending_invitations %} <span class="badge nav-badge">{{ membership.pending_invitations }}</span>{% endif %}</a></li>
-                                                {% endif %}
                                             </ul>
                                         </li>
                                     {% endif %}
@@ -111,10 +106,10 @@
                 <div class="footer-info">
                     <!-- timestamp  -->
                         {% if object.updated_at %}
-                        Last updated: <span data-dt="{{ object.updated_at|date:"c" }}" data-dt-fmt="datetime">{{ object.updated_at|date:"d M, Y, H:i" }}</span>
+                        Last updated: {% dt object.updated_at "datetime" %}
                     {% endif %}
                     {% if object.created_at %}
-                        | Created: <span data-dt="{{ object.created_at|date:"c" }}" data-dt-fmt="date-year">{{ object.created_at|date:"d M, Y" }}</span>
+                        | Created: {% dt object.created_at "date-year" %}
                     {% endif %}
                     <p>© 2025-2026 Syncope Music</p>
                 </div>

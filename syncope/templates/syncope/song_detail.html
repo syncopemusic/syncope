@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static dt_tags %}
 {% block title %}{{ song.title }}{% endblock %}
 {% block content %}
 
@@ -93,7 +93,7 @@
             <td class="col-main">{{ res.desc }}</td>
             <td>
                 {% if res.event %}
-                    <a href="{% url 'syncope:event_detail' url_username res.event.pk %}">{{ res.event.name }} (<span data-dt="{{ res.event.started_at|date:'c' }}" data-dt-fmt="date-year">{{ res.event.started_at|date:"Y-m-d" }}</span>)</a>
+                    <a href="{% url 'syncope:event_detail' url_username res.event.pk %}">{{ res.event.name }} ({% dt res.event.started_at "date-year" %})</a>
                 {% else %}
                 -
                 {% endif %}
@@ -158,7 +158,7 @@
                 <a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a>
             </td>
             <td>{{ event.event_type }}</td>
-            <td><span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="date-year">{{ event.started_at|date:"Y-m-d" }}</span></td>
+            <td>{% dt event.started_at "date-year" %}</td>
         </tr>
         {% endfor %}
     </tbody>

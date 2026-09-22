@@ -1,26 +1,36 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}Participants &mdash; {{ project.title }}{% endblock %}
+{% block title %}Participants - {{ project.title }}{% endblock %}
 
 {% block content %}
 
-<h1>Participants &mdash; {{ project.title }}</h1>
+<h1>Participants - {{ project.title }}</h1>
 
 {% if participants %}
 <div class="table-container">
 <table class="table">
     <thead>
         <tr>
+            <th class="col-num"></th>
             <th class="col-main">Name</th>
-            <th></th>
             <th class="col-action">Action</th>
         </tr>
     </thead>
     <tbody>
         {% for person in participants %}
         <tr>
-            <td class="col-main">{{ person.first_name }} {{ person.last_name }}</td>
-            <td>{% if not person.is_guest %}<small>Member</small>{% endif %}</td>
+            <td class="col-num">{{ forloop.counter }}</td>
+            <td class="col-main">
+                <div>{{ person.first_name }} {{ person.last_name }}</div>
+                <div class="song-subline">
+                    {% with voice=person.singer_set.first instrument=person.instrumentalist_set.first skill=person.skills.first %}
+                        {% if voice %}{{ voice.voice.name }}
+                        {% elif instrument %}{{ instrument.instrument.name }}
+                        {% elif skill %}{{ skill.title }}
+                        {% else %}<small>No skill</small>{% endif %}
+                    {% endwith %}
+                </div>
+            </td>
             <td class="col-action">
                 {% if person.is_guest %}
                 <form method="post" action="{% url 'syncope:project_remove_guest' url_username project.pk person.pk %}" class="inline-form">

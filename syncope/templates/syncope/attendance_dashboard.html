@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static dt_tags %}
 {% block title %}Attendance{% endblock %}
 {% block content %}
 <style>
@@ -70,7 +70,7 @@
                                 <div class="table-event-header {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}">
                                     <a href="{%  url 'syncope:event_detail' url_username event.id %}?origin=attendance"
                                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
-                                        <span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="date">{{ event.started_at|date:"d M" }}</span>
+                                        {% dt event.started_at "date" %}
                                     </a>
                                 </div>
                             </th>

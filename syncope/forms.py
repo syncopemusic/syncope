@@ -804,20 +804,6 @@ class PollAttendanceForm(forms.ModelForm):
         }
 
 
-class PollBulkImportForm(forms.Form):
-    role_criteria = forms.ChoiceField(required=False, label='Role')
-    skill_criteria = forms.ChoiceField(required=False, label='Skill')
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['role_criteria'].choices = [('all', 'All roles')] + list(
-            Role.objects.values_list('title', 'title')
-        )
-        self.fields['skill_criteria'].choices = [('all', 'All skills')] + list(
-            Skill.objects.values_list('title', 'title')
-        )
-
-
 class InvitationForm(forms.ModelForm):
     recipient_username = forms.CharField(
         max_length=250,

@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static dt_tags %}
 
 {% block title %}{{ poll.title }} votes{% endblock %}
 
@@ -32,70 +32,11 @@
     <h3>Dates</h3>
     {% if is_admin %}<a href="{% url 'syncope:poll_events' url_username poll.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
-{% if poll_events %}
-<div class="table-container">
-    <table class="table">
-        <thead>
-            <tr>
-                <th class="col-num"></th>
-                <th>Type</th>
-                <th>Date</th>
-                <th>Start <br> End</th>
-                <th>Location</th>
-                <th class="col-main">Detail</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for pe in poll_events %}
-            <tr>
-                <td class="col-num">{{ forloop.counter }}</td>
-                <td>{{ pe.event_type.name }}</td>
-                <td>{% if pe.same_date %}<span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span>{% else %}<span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span> – <span data-dt="{{ pe.ended_at|date:"c" }}" data-dt-fmt="date">{{ pe.ended_at|date:"d M" }}</span>{% endif %}</td>
-                <td><span data-dt="{{ pe.started_at|date:"c" }}" data-dt-fmt="time">{{ pe.started_at|date:"H:i" }}</span> <br> <span data-dt="{{ pe.ended_at|date:"c" }}" data-dt-fmt="time">{{ pe.ended_at|date:"H:i" }}</span></td>
-                <td>{% if pe.location %}{{ pe.location }}{% else %}<em>-</em>{% endif %}</td>
-                <td class="col-main">{% if pe.details %}{{ pe.details }}{% else %}<em>-</em>{% endif %}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% else %}
-<p>No dates added yet.</p>
-{% endif %}
 
 <div class="section-header">
     <h3>Invited persons</h3>
     {% if is_admin %}<a href="{% url 'syncope:poll_persons' url_username poll.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
-{% if table_rows %}
-<div class="table-container">
-    <table class="table table-grouped">
-        <thead>
-            <tr>
-                <th class="col-num"></th>
-                <th class="col-main">Name</th>
-                <th>Instrument/Voice</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for group in grouped_table_rows %}
-            {% for row in group.items %}
-            <tr {% if forloop.first and not forloop.parentloop.first %}class="group-start"{% endif %}>
-                <td class="col-num">{{ row.index }}</td>
-                <td class="col-main">{{ row.person.person.first_name }} {{ row.person.person.last_name }}</td>
-                <td>
-                    {% for singer in row.person.person.singer_set.all %}{{ singer.voice.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                    {% for instrumentalist in row.person.person.instrumentalist_set.all %}{{ instrumentalist.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                </td>
-            </tr>
-            {% endfor %}
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% else %}
-<p>No persons invited yet.</p>
-{% endif %}
 
 {% if table_rows %}
 <div class="table-container">
@@ -109,7 +50,7 @@
                 <th class="table-event-col"
                     title="{% if pe.event_type.id == 1 %}{{ pe.name }}{% else %}{{ pe.event_type }}&#10;{{ pe.name }}{% endif %}&#10;{{ pe.started_at|date:"H:i" }}{% if pe.location %}&#10;{{ pe.location }}{% endif %}">
                     <div class="table-event-header {% if pe.event_type.id != 1 %}table-event-header-strong{% endif %}">
-                        {% if pe.same_date %}<span data-dt="{{ pe.started_at|date:'c' }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span>{% else %}<span data-dt="{{ pe.started_at|date:'c' }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span> – <span data-dt="{{ pe.ended_at|date:'c' }}" data-dt-fmt="date">{{ pe.ended_at|date:"d M" }}</span>{% endif %}
+                        {% if pe.same_date %}{% dt pe.started_at "date" %}{% else %}{% dt pe.started_at "date" %}-{% dt pe.ended_at "date" %}{% endif %}
                     </div>
                 </th>
                 {% endfor %}
@@ -124,7 +65,13 @@
             <tr {% if forloop.first and not forloop.parentloop.first %}class="group-start"{% endif %}>
                 <td class="col-num">{{ row.index }}</td>
                 <td class="sticky-col col-main">
-                    {{ row.person.person.first_name }} {{ row.person.person.last_name }}
+                    <div>{{ row.person.person.first_name }} {{ row.person.person.last_name }}</div>
+                    <div class="song-subline">
+                        {% if row.person.person.singer_set.all or row.person.person.instrumentalist_set.all %}
+                            {% for singer in row.person.person.singer_set.all %}{{ singer.voice.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                            {% for instrumentalist in row.person.person.instrumentalist_set.all %}{{ instrumentalist.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        {% else %}<small>No voice/instrument</small>{% endif %}
+                    </div>
                 </td>
                 <td>
                     <a href="{{ person_attendance_url }}" target="_blank" class="btn btn-secondary" title="Edit your poll results">Edit</a>

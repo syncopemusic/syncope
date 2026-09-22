@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static dt_tags %}
 
 {% block title %}{{ poll.title }} - Attendance{% endblock %}
 
@@ -50,7 +50,7 @@
                     {% for event in poll_events %}
                     <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
-                        {% if event.same_date %}<span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="date-dow">{{ event.started_at|date:"D d M" }}</span>{% else %}<span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="date-dow">{{ event.started_at|date:"D d M" }}</span> <br> <span data-dt="{{ event.ended_at|date:"c" }}" data-dt-fmt="date-dow">{{ event.ended_at|date:"D d M" }}</span>{% endif %}
+                        {% if event.same_date %}{% dt event.started_at "date-dow" %}{% else %}{% dt event.started_at "date-dow" %} <br> {% dt event.ended_at "date-dow" %}{% endif %}
                     </th>
                     {% endfor %}
                 </tr>
@@ -61,7 +61,7 @@
                     {% for event in poll_events %}
                     <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
                         title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
-                        <span data-dt="{{ event.started_at|date:"c" }}" data-dt-fmt="time">{{ event.started_at|date:"H:i" }}</span> <br> <span data-dt="{{ event.ended_at|date:"c" }}" data-dt-fmt="time">{{ event.ended_at|date:"H:i" }}</span>
+                        {% dt event.started_at "time" %} <br> {% dt event.ended_at "time" %}
                     </th>
                     {% endfor %}
                 </tr>

@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load dt_tags %}
 {% block title %}Skills{% endblock %}
 {% block content %}
 <h1>Skills</h1>
@@ -15,7 +16,7 @@
 <ul>
 {% for skill in skills %}
     <li>{{ skill.title }}
-    - info: {{ skill.additional_notes }} - added {{ skill.created_at }}
+    - info: {{ skill.additional_notes }} - added {% dt skill.created_at "datetime" %}
     {% if is_admin %}
     <form method="post" class="inline-form">
         {% csrf_token %}

@@ -1,6 +1,6 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}Details &mdash; {{ object.title }}{% endblock %}
+{% block title %}Details - {{ object.title }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -32,7 +32,7 @@
     </div>
 {% endif %}
 
-<h1>Details &mdash; {{ object.title }}</h1>
+<h1>Details - {{ object.title }}</h1>
 
 <form method="post" id="project-meta-form">
     {% csrf_token %}

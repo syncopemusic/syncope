@@ -1,6 +1,6 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}Details &mdash; {{ object.name }}{% endblock %}
+{% block title %}Details - {{ object.name }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -32,7 +32,7 @@
     </div>
 {% endif %}
 
-<h1>Event Details &mdash; {{ object.name }}</h1>
+<h1>Event Details - {{ object.name }}</h1>
 
 <form method="post" id="event-meta-form">
     {% csrf_token %}
@@ -49,7 +49,7 @@
     <div class="form-group">
         <label for="id_encore_song">Encore song</label>
         <select name="encore_song" id="id_encore_song">
-            <option value="">&mdash;</option>
+            <option value="">-</option>
             {% for eventsong in eventsongs %}
                 <option value="{{ eventsong.pk }}" {% if eventsong.pk == encore_eventsong_id %}selected{% endif %}>{{ eventsong.song.title }}</option>
             {% endfor %}

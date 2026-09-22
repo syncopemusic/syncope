@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static dt_tags %}
 {% block title %}{{ person }}{% endblock %}
 {% block content %}
 <div class="section-header">
@@ -20,7 +20,7 @@
   {% if person_data.email %}<tr><th>Email</th><td>{{ person_data.email }}</td></tr>{% endif %}
   {% if person_data.phone %}<tr><th>Phone</th><td>{{ person_data.phone }}</td></tr>{% endif %}
   {% if person_data.address %}<tr><th>Address</th><td>{{ person_data.address }}</td></tr>{% endif %}
-  {% if person_data.birth_date %}<tr><th>Birth date</th><td><span data-dt="{{ person_data.birth_date|date:'c' }}" data-dt-fmt="date-year">{{ person_data.birth_date|date:"Y-m-d" }}</span></td></tr>{% endif %}
+  {% if person_data.birth_date %}<tr><th>Birth date</th><td>{% dt person_data.birth_date "date-year" %}</td></tr>{% endif %}
   {% if person_data.skills %}
   <tr><th>Skills</th><td>{% for skill in person_data.skills %}{{ skill }}{% if not forloop.last %}, {% endif %}{% endfor %}</td></tr>
   {% endif %}

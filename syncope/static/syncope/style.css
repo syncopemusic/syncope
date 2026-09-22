@@ -1163,9 +1163,9 @@
 
     .dt-short { display: none; }
 
-    .event-songs-table .song-index { text-align: center; vertical-align: middle; width: 1.5rem; }
-    .event-songs-table .song-title { font-weight: 500; }
-    .event-songs-table .song-subline {
+    .song-index { text-align: center; vertical-align: middle; width: 1.5rem; }
+    .song-title { font-weight: 500; }
+    .song-subline {
         display: flex;
         justify-content: space-between;
         align-items: baseline;
@@ -1173,8 +1173,9 @@
         font-size: var(--font-size-sm);
         color: var(--color-text-muted);
     }
-    .event-songs-table .song-meta { white-space: nowrap; color: var(--color-text-muted); }
-    .event-songs-table .song-encore { text-align: center; }
+    .song-meta { white-space: nowrap; color: var(--color-text-muted); }
+    .dt-range { white-space: nowrap; }
+    .song-encore { text-align: center; }
 
     .songs-table td, .songs-table th { padding: 0.3rem 0.25rem; }
 

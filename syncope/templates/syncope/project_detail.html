@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static dt_tags %}
 
 {% block title %}{{ project.title }}{% endblock %}
 
@@ -23,15 +23,15 @@
     <h3>Details</h3>
     <p>{{ project.details|default:"-"|linebreaksbr }}</p>
     <table class="table-detail">
-        <tr><th>Start Date</th><td>{{ project.start_date|default:"-" }}</td></tr>
-        <tr><th>End Date</th><td>{{ project.end_date|default:"-" }}</td></tr>
+        <tr><th>Start Date</th><td>{% if project.start_date %}{% dt project.start_date "date-year" %}{% else %}-{% endif %}</td></tr>
+        <tr><th>End Date</th><td>{% if project.end_date %}{% dt project.end_date "date-year" %}{% else %}-{% endif %}</td></tr>
     </table>
 </div>
 
 <hr>
 
 <div class="section-header">
-    <h3>Participants</h3>
+    <h3>Participants ({{ participants|length }})</h3>
     {% if is_admin %}<a href="{% url 'syncope:project_participants_edit' url_username project.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% if participants %}
@@ -60,7 +60,7 @@
 {% endif %}
 
 <div class="section-header">
-    <h3>Songs</h3>
+    <h3>Songs ({{ songs|length }})</h3>
     {% if is_admin %}<a href="{% url 'syncope:project_songs_edit' url_username project.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% if songs %}
@@ -68,17 +68,27 @@
 <table class="table">
     <thead>
     <tr>
-        <th class="col-num"></th>
-        <th class="col-main">Title</th>
-        <th>Composer</th>
+        <th class="song-index"></th>
+        <th class="col-main">Song</th>
     </tr>
     </thead>
     <tbody>
     {% for song in songs %}
     <tr>
-        <td class="col-num">{{ forloop.counter }}</td>
-        <td class="col-main"><a href="{% url 'syncope:song_detail' url_username song.pk %}">{{ song.title }}</a></td>
-        <td>{{ song.composer|default:"-" }}</td>
+        <td class="song-index">{{ forloop.counter }}</td>
+        <td class="col-main">
+            <div class="song-title">
+                <a href="{% url 'syncope:song_detail' url_username song.pk %}">{{ song.title }}</a>
+            </div>
+            <div class="song-subline">
+                <span{% if song.composer %} title="{{ song.composer.first_name }} {{ song.composer.last_name }} {{ song.composer.birth_date|date:'Y' }}-{{ song.composer.death_date|date:'Y' }}"{% endif %}>
+                    {% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}
+                    {% elif song.arranger %}{{ song.arranger.first_name }} {{ song.arranger.last_name }}
+                    {% else %}<small>No composer</small>{% endif %}
+                </span>
+                {% if song.internal_id %}<small class="song-meta">#{{ song.internal_id }}</small>{% endif %}
+            </div>
+        </td>
     </tr>
     {% endfor %}
     </tbody>
@@ -89,7 +99,7 @@
 {% endif %}
 
 <div class="section-header">
-    <h3>Events</h3>
+    <h3>Events ({{ events|length }})</h3>
     {% if is_admin %}<a href="{% url 'syncope:project_events_edit' url_username project.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% if events %}
@@ -98,11 +108,9 @@
     <thead>
     <tr>
         <th class="col-num"></th>
-        <th class="col-main">Name</th>
-        <th>🔗</th>
-        <th>Date</th>
-        <th>Location</th>
-        <th>Type</th>
+        <th class="col-main">Event</th>
+        <th>Location / Type</th>
+        <th class="col-action">Resources</th>
         <th>Songs</th>
     </tr>
     </thead>
@@ -111,17 +119,21 @@
         <tr>
             <td class="col-num">{{ forloop.counter }}</td>
             <td class="col-main">
-                <a href="{%  url 'syncope:event_detail' url_username event.pk %}">
-                    {{ event.name }}
-                </a>
+                <div class="song-title">
+                    <a href="{%  url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a>
+                </div>
+                <div class="song-subline">
+                    {% include "syncope/_event_daterange.html" with no_date_text="-" %}
+                </div>
             </td>
-            <td>{% if event.resource_count > 0 %}<span title="Event resources">🔗{{ event.resource_count }}</span>{% endif %}
-            {% if event.event_song_resource_count > 0 %}<span title="Song resources from this event">🎵{{ event.event_song_resource_count }}</span>{% endif %}
+            <td>
+                <div>{{ event.location|default:"-" }}</div>
+                <div class="song-subline">{{ event.event_type|default:"-" }}</div>
             </td>
-            <td><span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="date-year">{{ event.started_at|date:"M d, Y" }}</span></td>
-
-            <td>{{ event.location|default:"-" }}</td>
-            <td>{{ event.event_type|default:"-" }}</td>
+            <td class="song-meta col-action">
+                {% if event.resource_count > 0 %}<span title="Event resources">🔗{{ event.resource_count }}</span>{% endif %}
+                {% if event.event_song_resource_count > 0 %}<span title="Song resources from this event">🎵{{ event.event_song_resource_count }}</span>{% endif %}
+            </td>
             <td>
                 {% with songs=event.eventsong_set.all|dictsort:"order" %}
                     {% if songs %}

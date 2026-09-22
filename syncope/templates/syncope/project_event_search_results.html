@@ -11,7 +11,7 @@
                     <div class="search-result-info">
                         <div class="song-title">{{ event.name }}</div>
                         <div class="song-subline">
-                            <span>{% if event.started_at %}{{ event.started_at|date:"M d, Y H:i" }}{% else %}No date{% endif %}</span>
+                            <span>{% include "syncope/_event_daterange.html" with no_date_text="No date" %}</span>
                             {% if event.other_project_title %}
                                 <small class="song-meta">&#9888; in: {{ event.other_project_title }}</small>
                             {% endif %}

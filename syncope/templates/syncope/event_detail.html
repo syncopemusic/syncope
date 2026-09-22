@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static dt_tags %}
 
 {% block title %}{{ event.name }}{% endblock %}
 
@@ -20,10 +20,10 @@
 </div>
 <p class="event-summary">{% if event.location %}Location: {{ event.location }}<br>{% endif %}
 {% if event.same_date %}
-<span class="dt-full" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-full">{{ event.started_at|date:"l d F, Y, H:i" }}</span><span class="dt-short" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-short">{{ event.started_at|date:"D d M, Y, H:i" }}</span>&ndash;<span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="time">{{ event.ended_at|date:"H:i" }}</span>
+{% dt event.started_at "datetime-dow-full" "dt-full" %}{% dt event.started_at "datetime-dow-short" "dt-short" %}-{% dt event.ended_at "time" %}
 {% else %}
-Date: <span class="dt-full" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-full">{{ event.started_at|date:"l d F, Y, H:i" }}</span><span class="dt-short" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-short">{{ event.started_at|date:"D d M, Y, H:i" }}</span><br>
-Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="datetime-dow-full">{{ event.ended_at|date:"l d F, Y, H:i" }}</span><span class="dt-short" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="datetime-dow-short">{{ event.ended_at|date:"D d M, Y, H:i" }}</span>
+Date: {% dt event.started_at "datetime-dow-full" "dt-full" %}{% dt event.started_at "datetime-dow-short" "dt-short" %}<br>
+Ends: {% dt event.ended_at "datetime-dow-full" "dt-full" %}{% dt event.ended_at "datetime-dow-short" "dt-short" %}
 {% endif %}
 {% if event.project %}<br><span title="Project"> Project:<a href="{% url 'syncope:project_detail' url_username event.project.pk %}">{{ event.project.title }}</a></span>{% endif %}
 {% if event.description %}<br>{{ event.description }}{% endif %}

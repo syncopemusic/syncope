@@ -38,15 +38,22 @@
         <p>Manage concerts, seasons, and productions.</p>
         <a href="{% url 'syncope:project_list' url_username %}" class="btn btn-secondary">View projects</a>
     </div>
-    {% if is_admin %}
+</div>
+
+{% if is_admin %}
+<div class="card-grid">
     <div class="card">
         <h3>Admin</h3>
+        <p>Manage pending invitations.</p>
+        <a href="{% url 'syncope:invitation_list' url_username %}" class="btn btn-secondary">Invitations{% if membership.pending_invitations %} <span class="badge nav-badge">{{ membership.pending_invitations }}</span>{% endif %}</a>
         <p>View all persons across the organization.</p>
         <a href="{% url 'syncope:org_member_list_all' url_username %}" class="btn btn-secondary">All persons</a>
         <p>Edit organization name, email, and address.</p>
         <a href="{% url 'syncope:org_edit' url_username %}" class="btn btn-secondary">Edit organization</a>
+        <p>Import data from external sources.</p>
+        <a href="{% url 'syncope:import_hub' url_username %}" class="btn btn-secondary">Import data</a>
     </div>
-    {% endif %}
 </div>
+{% endif %}
 
 {% endblock %}

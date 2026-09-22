@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load dt_tags %}
 
 {% block title %}Projects{% endblock %}
 
@@ -36,8 +37,8 @@
 
             </td>
 
-            <td>{{ project.start_date|default:"-" }}</td>
-            <td>{{ project.end_date|default:"-" }}</td>
+            <td>{% if project.start_date %}{% dt project.start_date "date-year" %}{% else %}-{% endif %}</td>
+            <td>{% if project.end_date %}{% dt project.end_date "date-year" %}{% else %}-{% endif %}</td>
             <td><span title="Events">{{ project.num_main_events }}</span><span title="Rehearsals">({{ project.num_rehearsals }})</span></td>
         </tr>
     {% endfor %}

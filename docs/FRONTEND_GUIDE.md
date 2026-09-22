@@ -74,7 +74,7 @@ dependency). Two variable-weight `.woff2` files live in
 
 Both are declared via `@font-face` right above the `:root` block in `style.css`, with
 `font-display: swap` so text isn't invisible while the font loads. Each file is a
-variable font covering weights 400–500 in the Latin subset only (this app doesn't need
+variable font covering weights 400-500 in the Latin subset only (this app doesn't need
 Cyrillic/Greek/etc. glyphs, so those subsets were skipped to keep the files small).
 
 **Recipe - swap to a different font pairing:**

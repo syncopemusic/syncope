@@ -1,46 +1,33 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}Events &mdash; {{ project.title }}{% endblock %}
-
-{% block extra_css %}
-<style>
-    .song-title { font-weight: 500; overflow-wrap: break-word; }
-    .song-subline {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: 0.5rem;
-        font-size: var(--font-size-sm);
-        color: var(--color-text-muted);
-        overflow-wrap: break-word;
-    }
-    .song-meta { white-space: nowrap; color: var(--color-text-muted); }
-</style>
-{% endblock %}
+{% block title %}Events - {{ project.title }}{% endblock %}
 
 {% block content %}
 
-<h1>Events &mdash; {{ project.title }}</h1>
+<h1>Events - {{ project.title }}</h1>
 
 {% if events %}
 <div class="table-container">
 <table class="table">
     <thead>
         <tr>
+            <th class="col-num"></th>
             <th class="col-main">Event Name</th>
-            <th>Date &amp; Time</th>
             <th class="col-action">Action</th>
         </tr>
     </thead>
     <tbody>
         {% for event in events %}
         <tr>
+            <td class="col-num">{{ forloop.counter }}</td>
             <td class="col-main">
-                <a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a>
-                {% if event.resource_count > 0 %} - &#128279;{% endif %}
-                {% if event.event_song_resource_count > 0 %}&#127925;{% endif %}
+                <div class="song-title">
+                    <a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a>
+                    {% if event.resource_count > 0 %} - &#128279;{% endif %}
+                    {% if event.event_song_resource_count > 0 %}&#127925;{% endif %}
+                </div>
+                <div class="song-subline">{% include "syncope/_event_daterange.html" with no_date_text="-" %}</div>
             </td>
-            <td>{% if event.started_at %}<span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="date-time">{{ event.started_at|date:"M d, Y H:i" }}</span>{% if event.ended_at %} - <span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="time">{{ event.ended_at|date:"H:i" }}</span>{% endif %}{% else %}-{% endif %}</td>
             <td class="col-action">
                 <form method="post" action="{% url 'syncope:project_remove_event' url_username project.pk event.pk %}" class="inline-form">
                     {% csrf_token %}
