@@ -1,6 +1,6 @@
 {% extends "syncope/base.html" %}
-{% load static %}
-{% block title %}Attendance - {{ event.name }}{% endblock %}
+{% load static dt_tags %}
+{% block title %}Attendance - {% event_label event %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -31,7 +31,7 @@
 
 {% block content %}
 
-<h1>Attendance - {{ event.name }}</h1>
+<h1>Attendance - {% event_label event %}</h1>
 
 <div id="attendance-content">
     <form method="post" id="attendance-form">
@@ -64,8 +64,9 @@
             <input type="text" id="participant-search-input" value="{{ search_q }}" placeholder="Search by name, voice, or instrument" style="max-width:100%; width:100%; box-sizing:border-box;">
             <span class="search-spinner" id="participant-search-spinner"></span>
         </p>
-        <p style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <p style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
             <button type="button" id="participant-search-clear" class="btn btn-secondary">Clear</button>
+            <span id="participant-search-count" class="result-count"></span>
             <button type="submit" form="attendance-form" name="action" value="new_person" class="btn btn-primary" title="Create new person">+ Add</button>
         </p>
         <p style="display:flex; align-items:center; gap:0.5rem; margin-top:1rem;">
@@ -89,6 +90,7 @@
 {% endif %}
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
+<script src="{% static 'syncope/search-box.js' %}"></script>
 <script>
     const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
     const attendanceTbody = document.getElementById('attendance-tbody');
@@ -256,6 +258,7 @@
 
     const participantSearchInput = document.getElementById('participant-search-input');
     const participantSearchResults = document.getElementById('participant-search-results');
+    const participantSearchCount = document.getElementById('participant-search-count');
     const selectedParticipantsChips = document.getElementById('selected-participants-chips');
     let participantSearchTimeout;
 
@@ -289,6 +292,7 @@
         fetch(url).then(r => r.text()).then(html => {
             endParticipantSpinner();
             participantSearchResults.innerHTML = html;
+            relocateResultCount(participantSearchResults, participantSearchCount);
         });
     }
 
@@ -321,6 +325,8 @@
         row?.remove();
         saveBarCtl.sync();
     });
+
+    relocateResultCount(participantSearchResults, participantSearchCount);
 
     paintChip(document.getElementById('add-type-chip'));
     initAllChips();

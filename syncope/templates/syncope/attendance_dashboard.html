@@ -9,6 +9,10 @@
     gap: 0.75rem;
 }
 .attendance-dashboard h2 { margin: 0; }
+.attendance-add-rehearsal {
+    display: flex;
+    justify-content: flex-end;
+}
 </style>
 
 <div class="attendance-dashboard">
@@ -50,9 +54,9 @@
         </form>
     </details>
 
-    <form method="post" action="{%  url 'syncope:quick_new_rehearsal' username=url_username %}">
+    <form method="post" action="{%  url 'syncope:quick_new_rehearsal' username=url_username %}" class="attendance-add-rehearsal">
         {% csrf_token %}
-        <button type="submit" class="btn btn-primary" title="Add rehearsal now">+ Add</button>
+        <button type="submit" class="btn btn-primary" title="Add rehearsal now">+ Add Rehearsal</button>
     </form>
 
     {# Main Form with Attendance Table #}
@@ -69,7 +73,7 @@
                             <th class="table-event-col">
                                 <div class="table-event-header {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}">
                                     <a href="{%  url 'syncope:event_detail' url_username event.id %}?origin=attendance"
-                                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                                        title="{{ event }}">
                                         {% dt event.started_at "date" %}
                                     </a>
                                 </div>

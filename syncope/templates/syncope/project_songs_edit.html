@@ -6,47 +6,45 @@
 
 <h1>Songs - {{ project.title }}</h1>
 
-{% if songs %}
-<div class="table-container">
-<table class="table">
-    <thead>
-        <tr>
-            <th class="song-index"></th>
-            <th class="col-main">Song</th>
-            <th class="col-action">Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for song in songs %}
-        <tr>
-            <td class="song-index">{{ forloop.counter }}</td>
-            <td class="col-main">
-                <div class="song-title">
-                    <a href="{% url 'syncope:song_detail' url_username song.pk %}">{{ song.title }}</a>
-                </div>
-                <div class="song-subline">
-                    <span{% if song.composer %} title="{{ song.composer.first_name }} {{ song.composer.last_name }} {{ song.composer.birth_date|date:'Y' }}-{{ song.composer.death_date|date:'Y' }}"{% endif %}>
-                        {% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}
-                        {% elif song.arranger %}{{ song.arranger.first_name }} {{ song.arranger.last_name }}
-                        {% else %}<small>No composer</small>{% endif %}
-                    </span>
-                    {% if song.internal_id %}<small class="song-meta">#{{ song.internal_id }}</small>{% endif %}
-                </div>
-            </td>
-            <td class="col-action">
-                <form method="post" action="{% url 'syncope:project_remove_song' url_username project.pk song.pk %}" class="inline-form">
-                    {% csrf_token %}
-                    <button type="submit" onclick="return confirm('Remove this song from the project?')" class="btn btn-remove" title="Remove from project">&times;</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-</div>
-{% else %}
-<p>No songs yet.</p>
-{% endif %}
+<form method="post" id="songs-form">
+    {% csrf_token %}
+    <div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th class="song-index"></th>
+                <th class="col-main">Song</th>
+                <th class="col-action">Action</th>
+            </tr>
+        </thead>
+        <tbody id="songs-tbody">
+            {% for song in songs %}
+            <tr data-id="{{ song.pk }}">
+                <td class="song-index">{{ forloop.counter }}</td>
+                <td class="col-main">
+                    <div class="song-title">
+                        <a href="{% url 'syncope:song_detail' url_username song.pk %}">{{ song.title }}</a>
+                    </div>
+                    <div class="song-subline">
+                        <span{% if song.composer %} title="{{ song.composer.first_name }} {{ song.composer.last_name }} {{ song.composer.birth_date|date:'Y' }}-{{ song.composer.death_date|date:'Y' }}"{% endif %}>
+                            {% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}
+                            {% elif song.arranger %}{{ song.arranger.first_name }} {{ song.arranger.last_name }}
+                            {% else %}<small>No composer</small>{% endif %}
+                        </span>
+                        {% if song.internal_id %}<small class="song-meta">#{{ song.internal_id }}</small>{% endif %}
+                    </div>
+                </td>
+                <td class="col-action">
+                    <button type="button" class="btn btn-remove" title="Remove from project">&times;</button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr id="no-songs-row"><td colspan="3">No songs yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</form>
 
 <div id="add-songs" style="max-width:42rem;">
     <h3>Add song</h3>
@@ -54,8 +52,9 @@
         <input type="text" id="song-search-input" value="{{ search_q }}" placeholder="Search by ID, title, composer, or keywords" style="max-width:100%; width:100%; box-sizing:border-box;">
         <span class="search-spinner" id="song-search-spinner"></span>
     </p>
-    <p style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+    <p style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
         <button type="button" id="song-search-clear" class="btn btn-secondary">Clear</button>
+        <span id="song-search-count" class="result-count"></span>
         <a href="{% url 'syncope:song_new' url_username %}?auto_add_project={{ project.pk }}&next={% url 'syncope:project_songs_edit' url_username project.pk %}" class="btn btn-primary" title="Create new song">+ Add</a>
     </p>
     <div id="song-search-results">
@@ -64,16 +63,125 @@
 </div>
 
 {% url 'syncope:project_detail' url_username project.pk as project_detail_url %}
-{% include "syncope/_save_bar.html" with url=project_detail_url %}
+{% include "syncope/_save_bar.html" with form_id="songs-form" url=project_detail_url %}
 
+<script src="{% static 'syncope/save-bar.js' %}"></script>
 <script src="{% static 'syncope/search-box.js' %}"></script>
 <script>
-    initLiveSearch({
-        input: document.getElementById('song-search-input'),
-        spinner: document.getElementById('song-search-spinner'),
-        results: document.getElementById('song-search-results'),
-        clearBtn: document.getElementById('song-search-clear'),
-        buildUrl: query => `{% url 'syncope:project_songs_search' url_username project.pk %}?q=${encodeURIComponent(query)}`,
+    const songsTbody = document.getElementById('songs-tbody');
+
+    function removeEmptyRow() {
+        document.getElementById('no-songs-row')?.remove();
+    }
+
+    function countUnsavedChanges() {
+        return songsTbody.querySelectorAll('tr.staged-add, tr.pending-remove').length;
+    }
+
+    const saveBarCtl = initSaveBar({
+        formId: 'songs-form',
+        countUnsavedChanges,
+        onDiscard: () => {
+            songsTbody.querySelectorAll('tr.staged-add').forEach(row => row.remove());
+            songsTbody.querySelectorAll('tr.pending-remove').forEach(row => {
+                row.classList.remove('pending-remove');
+                row.querySelector('.pending-remove-input')?.remove();
+                const btn = row.querySelector('.btn-remove');
+                if (btn) { btn.textContent = '×'; btn.title = 'Remove from project'; }
+            });
+            if (!songsTbody.querySelector('tr[data-id]') && !document.getElementById('no-songs-row')) {
+                songsTbody.insertAdjacentHTML('beforeend', '<tr id="no-songs-row"><td colspan="3">No songs yet.</td></tr>');
+            }
+        },
+        afterDiscard: () => runSongSearch(songSearchInput ? songSearchInput.value : ''),
     });
+
+    function toggleRemove(row) {
+        const pk = row.dataset.id;
+        if (!pk) return;
+        const btn = row.querySelector('.btn-remove');
+        const pending = row.classList.toggle('pending-remove');
+        if (pending) {
+            row.insertAdjacentHTML('beforeend', `<input type="hidden" class="pending-remove-input" name="remove_${pk}" value="1">`);
+            btn.textContent = '↺';
+            btn.title = 'Undo removal';
+        } else {
+            row.querySelector('.pending-remove-input')?.remove();
+            btn.textContent = '×';
+            btn.title = 'Remove from project';
+        }
+        saveBarCtl.sync();
+    }
+
+    songsTbody.addEventListener('click', function(e) {
+        const removeBtn = e.target.closest('.btn-remove');
+        if (!removeBtn) return;
+        const row = removeBtn.closest('tr');
+        if (row.classList.contains('staged-add')) {
+            row.remove();
+            saveBarCtl.sync();
+            runSongSearch(songSearchInput.value);
+            return;
+        }
+        toggleRemove(row);
+    });
+
+    function currentSongIds() {
+        return Array.from(songsTbody.querySelectorAll('tr[data-id]')).map(tr => tr.dataset.id);
+    }
+
+    const songSearchInput = document.getElementById('song-search-input');
+    const songSearchResults = document.getElementById('song-search-results');
+    const songSearchCount = document.getElementById('song-search-count');
+    let songSearchTimeout;
+    const songSearchSpinner = document.getElementById('song-search-spinner');
+
+    function runSongSearch(query) {
+        songSearchSpinner.classList.add('is-active');
+        const url = `{% url 'syncope:project_songs_search' url_username project.pk %}?q=${encodeURIComponent(query)}&exclude=${encodeURIComponent(currentSongIds().join(','))}`;
+        fetch(url).then(r => r.text()).then(html => {
+            songSearchSpinner.classList.remove('is-active');
+            songSearchResults.innerHTML = html;
+            relocateResultCount(songSearchResults, songSearchCount);
+        });
+    }
+
+    if (songSearchInput) {
+        songSearchInput.addEventListener('input', function() {
+            clearTimeout(songSearchTimeout);
+            songSearchSpinner.classList.add('is-active');
+            songSearchTimeout = setTimeout(() => runSongSearch(this.value), 1000);
+        });
+        songSearchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') e.preventDefault();
+        });
+    }
+
+    document.getElementById('song-search-clear')?.addEventListener('click', function() {
+        clearTimeout(songSearchTimeout);
+        songSearchInput.value = '';
+        runSongSearch('');
+    });
+
+    songSearchResults?.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-secondary');
+        if (!btn) return;
+        const row = btn.closest('.search-result-row');
+        const info = row.querySelector('.search-result-info').innerHTML;
+        removeEmptyRow();
+        const tr = document.createElement('tr');
+        tr.className = 'staged-add';
+        tr.dataset.id = btn.dataset.id;
+        tr.innerHTML = `
+            <td class="song-index"></td>
+            <td class="col-main">${info}<input type="hidden" name="add_song" value="${btn.dataset.id}"></td>
+            <td class="col-action"><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>
+        `;
+        songsTbody.appendChild(tr);
+        row.remove();
+        saveBarCtl.sync();
+    });
+
+    relocateResultCount(songSearchResults, songSearchCount);
 </script>
 {% endblock %}

@@ -210,6 +210,7 @@ class EventListView(ListView):
             'date': 'started_at',
             'type': 'event_type__name',
             'project': 'project__title',
+            'location': 'location',
         }
         sort_field = sort_field_map.get(sort, 'started_at')
         if reverse:
@@ -720,7 +721,7 @@ class EventDeleteView(LoginRequiredMixin, DeleteView):
 
     def delete(self, request, *args, **kwargs):
         event = self.get_object()
-        event_name = event.name
+        event_name = str(event)
         response = super().delete(request, *args, **kwargs)
         messages.success(request, f"Successfully deleted event '{event_name}'.")
         return response

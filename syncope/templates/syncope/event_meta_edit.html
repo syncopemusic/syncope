@@ -1,6 +1,6 @@
 {% extends "syncope/base.html" %}
-{% load static %}
-{% block title %}Details - {{ object.name }}{% endblock %}
+{% load static dt_tags %}
+{% block title %}Details - {% event_label object %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -32,7 +32,7 @@
     </div>
 {% endif %}
 
-<h1>Event Details - {{ object.name }}</h1>
+<h1>Event Details - {% event_label object %}</h1>
 
 <form method="post" id="event-meta-form">
     {% csrf_token %}
@@ -77,9 +77,7 @@
         </div>
     </div>
 
-    <div class="form-actions danger-zone">
-        <a href="{% url 'syncope:event_delete' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-danger">Delete</a>
-    </div>
+    <p class="danger-zone"><a href="{% url 'syncope:event_delete' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-danger">Delete Event</a></p>
 </form>
 
 {% url 'syncope:event_detail' url_username object.pk as event_detail_url %}

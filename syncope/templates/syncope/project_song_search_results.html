@@ -1,13 +1,10 @@
 {% if search_q %}
+    <p class="result-count">{{ add_song_form.search_results|length }} result{{ add_song_form.search_results|length|pluralize }}</p>
     {% if add_song_form.search_results %}
         <div id="song-result-list">
             {% for song in add_song_form.search_results %}
                 <div class="search-result-row">
-                    <form method="post" action="{% url 'syncope:project_new_song' url_username project.pk %}" class="inline-form">
-                        {% csrf_token %}
-                        <input type="hidden" name="song" value="{{ song.pk }}">
-                        <button type="submit" class="btn btn-secondary">+</button>
-                    </form>
+                    <button type="button" class="btn btn-secondary" data-id="{{ song.pk }}">+</button>
                     <div class="search-result-info">
                         <div class="song-title">{{ song.title }}</div>
                         <div class="song-subline">

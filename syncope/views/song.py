@@ -386,7 +386,7 @@ class SongUpdateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Updat
             event = Event.objects.filter(pk=from_event_pk, user=self.owner_user).first()
             if event:
                 event_url = reverse('syncope:event_detail', kwargs={'username': self.owner_user.username, 'pk': event.pk})
-                return with_origin(event_url, origin_key), f"Return to {event.name}"
+                return with_origin(event_url, origin_key), f"Return to {event}"
         return None, None
 
     def get_context_data(self, quote_formset=None, translation_formset=None, resource_formset=None, **kwargs):

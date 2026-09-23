@@ -1,40 +1,21 @@
 {% extends "syncope/base.html" %}
-{% block title %}{{song.pk}} confirm delete{% endblock %}
+{% block title %}Delete Song{% endblock %}
 {% block content %}
 
-<div class="delete-confirmation-container">
-    <div class="warning-header">
-        <h1>Delete Song Confirmation</h1>
-    </div>
+<h1>Delete Song?</h1>
+<p>Are you sure you want to delete <strong>{{ song.title }}</strong>?</p>
+<p>This will remove the song from all rehearsals where it was scheduled.</p>
 
-    <div class="warning-message">
-        <p>Are you sure you want to delete this song?</p>
-        <div class="item-details">
-            <p>Title: {{ song.title }}</p>
-            <p>Song ID: {{song.pk}}</p>
-            <p>Composer: {{ song.composer|default:"-" }}</p>
-        </div>
-        <div class="warning-note">
-            <p>️ This action cannot be undone.</p>
-        </div>
+{% if can_manage %}
+<form method="POST">
+    {% csrf_token %}
+    {% if request.GET.from_event %}<input type="hidden" name="from_event" value="{{ request.GET.from_event }}">{% endif %}
+    {% if request.GET.origin %}<input type="hidden" name="origin" value="{{ request.GET.origin }}">{% endif %}
+    <div class="form-actions">
+        <button type="submit" class="btn btn-danger">Delete Song</button>
     </div>
-
-    <div class="confirmation-form">
-        {% if can_manage %}
-        <form method="POST">
-            {% csrf_token %}
-            {% if request.GET.from_event %}<input type="hidden" name="from_event" value="{{ request.GET.from_event }}">{% endif %}
-            {% if request.GET.origin %}<input type="hidden" name="origin" value="{{ request.GET.origin }}">{% endif %}
-            <div class="form-actions">
-                <button type="submit" class="btn btn-danger">Delete</button>
-            </div>
-        </form>
-        {% endif %}
-    </div>
-    <div class="additional-info">
-        <p>This will remove the song from all rehearsals where it was scheduled.</p>
-    </div>
-</div>
+</form>
+{% endif %}
 
 {% include "syncope/_save_bar.html" with url=cancel_url %}
 

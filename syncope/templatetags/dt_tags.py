@@ -23,3 +23,13 @@ def dt(value, fmt, css_class=''):
         '<span{} data-dt="{}" data-dt-fmt="{}">{}</span>',
         class_attr, date_filter(value, 'c'), fmt, date_filter(value, _FALLBACKS[fmt]),
     )
+
+@register.simple_tag
+def event_label(event):
+    """Plain-text event label for headings/<title>: name if set, else "type (date)"."""
+    if not event:
+        return ''
+    if event.name:
+        return event.name
+    when = date_filter(event.started_at, _FALLBACKS['date-year']) if event.started_at else 'no date yet'
+    return f"{event.event_type} ({when})"

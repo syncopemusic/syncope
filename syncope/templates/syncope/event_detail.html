@@ -1,14 +1,14 @@
 {% extends "syncope/base.html" %}
 {% load static dt_tags %}
 
-{% block title %}{{ event.name }}{% endblock %}
+{% block title %}{{ event.name|default:event.event_type }}{% endblock %}
 
 {% block content %}
 
 <div id="event-detail-content">
 
 <div class="section-header">
-    <h1 class="event-title"><span class="event-title-text"> <span title="Title">{{ event.name }}</span> <small><span title="Type"> | {{ event.event_type }}</span></small></span>
+    <h1 class="event-title"><span class="event-title-text"> {% if event.name %}<span title="Title">{{ event.name }}</span> <small><span title="Type"> | {{ event.event_type }}</span></small>{% else %}<span title="Type">{{ event.event_type }}</span>{% endif %}</span>
         <span class="share-controls">
             <button id="share-btn" class="btn btn-link" title="Copy link">
                 <img src="{% static 'syncope/images/link.svg' %}" width="16" height="16" alt="Link">
@@ -18,19 +18,20 @@
     </h1>
     {% if is_admin %}<a href="{% url 'syncope:event_meta_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
-<p class="event-summary">{% if event.location %}Location: {{ event.location }}<br>{% endif %}
-{% if event.same_date %}
-{% dt event.started_at "datetime-dow-full" "dt-full" %}{% dt event.started_at "datetime-dow-short" "dt-short" %}-{% dt event.ended_at "time" %}
-{% else %}
-Date: {% dt event.started_at "datetime-dow-full" "dt-full" %}{% dt event.started_at "datetime-dow-short" "dt-short" %}<br>
-Ends: {% dt event.ended_at "datetime-dow-full" "dt-full" %}{% dt event.ended_at "datetime-dow-short" "dt-short" %}
-{% endif %}
-{% if event.project %}<br><span title="Project"> Project:<a href="{% url 'syncope:project_detail' url_username event.project.pk %}">{{ event.project.title }}</a></span>{% endif %}
-{% if event.description %}<br>{{ event.description }}{% endif %}
-{% if event.producers %}<br>Organizers: {{ event.producers }}{% endif %}
-{% if event.num_visitors %}<br>Visitors: {{ event.num_visitors }}{% endif %}
-{% if is_admin and event.additional_notes %}<br>Personal notes: {{ event.additional_notes }}{% endif %}
-</p>
+<table class="table-detail">
+    {% if event.location %}<tr><th>Location</th><td>{{ event.location }}</td></tr>{% endif %}
+    {% if event.same_date %}
+    <tr><th>Date</th><td>{% dt event.started_at "datetime-dow-full" "dt-full" %}{% dt event.started_at "datetime-dow-short" "dt-short" %}-{% dt event.ended_at "time" %}</td></tr>
+    {% else %}
+    <tr><th>Start date</th><td>{% dt event.started_at "datetime-dow-full" "dt-full" %}{% dt event.started_at "datetime-dow-short" "dt-short" %}</td></tr>
+    <tr><th>End date</th><td>{% dt event.ended_at "datetime-dow-full" "dt-full" %}{% dt event.ended_at "datetime-dow-short" "dt-short" %}</td></tr>
+    {% endif %}
+    {% if event.project %}<tr><th>Project</th><td><a href="{% url 'syncope:project_detail' url_username event.project.pk %}">{{ event.project.title }}</a></td></tr>{% endif %}
+    {% if event.description %}<tr><th>Description</th><td>{{ event.description }}</td></tr>{% endif %}
+    {% if event.producers %}<tr><th>Organizers</th><td>{{ event.producers }}</td></tr>{% endif %}
+    {% if event.num_visitors %}<tr><th>Visitors</th><td>{{ event.num_visitors }}</td></tr>{% endif %}
+    {% if is_admin and event.additional_notes %}<tr><th>Personal notes</th><td>{{ event.additional_notes }}</td></tr>{% endif %}
+</table>
 
 {% if all_event_resources %}
 <table class="resource-table-compact">

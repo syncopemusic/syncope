@@ -114,7 +114,7 @@
     {% endfor %}
 
     {% if object %}
-    <p class="danger-zone"><a href="{% url 'syncope:song_delete' url_username object.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-danger">Delete</a></p>
+    <p class="danger-zone"><a href="{% url 'syncope:song_delete' url_username object.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-danger">Delete Song</a></p>
     {% endif %}
 </form>
 

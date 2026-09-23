@@ -350,8 +350,6 @@
 
     .footer {
         padding: 1.5rem 2.5rem;
-        border-block-start: 1px solid var(--color-border);
-        position: relative;
         font-size: var(--font-size-sm);
         color: var(--color-text-muted);
     }
@@ -974,6 +972,15 @@
             text-align: inherit;
         }
 
+        /* Row-header th's living in tbody (e.g. poll_attendance.html's
+           "Attendance"/"Note" rows) aren't covered by the thead th rule
+           above, so they'd otherwise be the only unstyled labels in the
+           table. */
+        & tbody th.sticky-col {
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
         & tbody tr:last-child td,
         & tbody tr:last-child th {
             border-block-end: none;
@@ -983,10 +990,12 @@
            --color-bg is that same #f4f1ea, so this is the same color, not
            just visually close. */
         & tbody tr:nth-child(even) {
+            --row-tint: var(--color-bg) 40%;
             background-color: color-mix(in srgb, var(--color-bg) 40%, transparent);
         }
 
         & tbody tr:hover {
+            --row-tint: var(--color-primary) 8%;
             background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
         }
 
@@ -1429,6 +1438,8 @@
 
     .filter-label {
         color: var(--color-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
     }
 
     .filter-field input {
@@ -1567,6 +1578,11 @@
         color: var(--color-text-muted);
     }
 
+    .result-count {
+        color: var(--color-text-muted);
+        margin: 0.25rem 0 0.5rem;
+    }
+
     /* overflow-y: auto + max-height make this the table's real vertical
        scroll container, the same way overflow-x already makes it the real
        horizontal one for .sticky-col. Without a bounded height here, the
@@ -1586,19 +1602,26 @@
 
     /* Pinning only - no width cap/ellipsis truncation. Titles and names
        must never be cut off; a sticky column just grows to fit its content
-       (still nowrap by default, from .table's base rule) instead. */
+       (still nowrap by default, from .table's base rule) instead.
+
+       Background derives from --row-tint (set by .table's tbody tr:hover /
+       tr:nth-child(even) rules) mixed into an opaque surface color, instead
+       of a flat color - .sticky-col's background must stay opaque so
+       scrolled-under content doesn't show through the frozen column, but it
+       still needs to visually track the row's current hover/stripe state.
+       Reading --row-tint here means there's one source of truth for that
+       state instead of duplicate per-state override rules to keep in sync. */
     .sticky-col {
         position: sticky;
         left: 0;
-        background-color: var(--color-surface);
+        background-color: color-mix(in srgb, var(--row-tint, transparent 0%), var(--color-surface));
         z-index: var(--z-sticky);
     }
 
-    /* .sticky-col's own background-color (needed so scrolled-under content
-       doesn't show through the frozen column) would otherwise beat .table's
-       dark header background too - utilities always outranks components by
-       layer order regardless of specificity. Restore the dark header here,
-       in the same layer as .sticky-col, with enough specificity to win.
+    /* .sticky-col's own background-color would otherwise beat .table's dark
+       header background too - utilities always outranks components by layer
+       order regardless of specificity. Restore the dark header here, in the
+       same layer as .sticky-col, with enough specificity to win.
 
        z-index needs the same override: this corner cell is both the sticky
        header AND the sticky column, so it must outrank plain header cells
@@ -1607,21 +1630,6 @@
     .table thead th.sticky-col {
         background-color: var(--color-ink);
         z-index: calc(var(--z-sticky) + 2);
-    }
-
-    /* Same reasoning as above: .sticky-col's own opaque background (needed
-       to hide content scrolling underneath it) would otherwise always mask
-       the row's :hover tint, leaving the sticky name/title cell looking
-       "stuck" at the plain surface color while the rest of the row dims. */
-    .table tbody tr:hover td.sticky-col {
-        background-color: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
-    }
-
-    /* Same reasoning again, for the zebra stripe: without this, even rows'
-       sticky name/title cell sits at the plain surface color while the rest
-       of that row shows the tinted stripe. */
-    .table tbody tr:nth-child(even) td.sticky-col {
-        background-color: color-mix(in srgb, var(--color-bg) 40%, var(--color-surface));
     }
 
     /* See the --color-attendance-* token comment above for the pk mapping. */

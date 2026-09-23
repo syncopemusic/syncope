@@ -12,7 +12,7 @@
     <button type="submit" class="btn btn-primary">{% if object %}Save{% else %}Create{% endif %}</button>
   </div>
   {% if object %}
-  <p class="danger-zone"><a href="{% url 'syncope:org_delete' object.user.username %}" class="btn btn-danger">Delete</a></p>
+  <p class="danger-zone"><a href="{% url 'syncope:org_delete' object.user.username %}" class="btn btn-danger">Delete Organization</a></p>
   {% endif %}
 </form>
 

@@ -23,8 +23,8 @@
     <h3>Details</h3>
     <p>{{ project.details|default:"-"|linebreaksbr }}</p>
     <table class="table-detail">
-        <tr><th>Start Date</th><td>{% if project.start_date %}{% dt project.start_date "date-year" %}{% else %}-{% endif %}</td></tr>
-        <tr><th>End Date</th><td>{% if project.end_date %}{% dt project.end_date "date-year" %}{% else %}-{% endif %}</td></tr>
+        <tr><th>Start date</th><td>{% if project.start_date %}{% dt project.start_date "date-year" %}{% else %}-{% endif %}</td></tr>
+        <tr><th>End date</th><td>{% if project.end_date %}{% dt project.end_date "date-year" %}{% else %}-{% endif %}</td></tr>
     </table>
 </div>
 
@@ -109,7 +109,7 @@
     <tr>
         <th class="col-num"></th>
         <th class="col-main">Event</th>
-        <th>Location / Type</th>
+        <th>Location</th>
         <th class="col-action">Resources</th>
         <th>Songs</th>
     </tr>
@@ -120,7 +120,7 @@
             <td class="col-num">{{ forloop.counter }}</td>
             <td class="col-main">
                 <div class="song-title">
-                    <a href="{%  url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a>
+                    <a href="{%  url 'syncope:event_detail' url_username event.pk %}">{{ event }}</a>
                 </div>
                 <div class="song-subline">
                     {% include "syncope/_event_daterange.html" with no_date_text="-" %}
@@ -128,7 +128,6 @@
             </td>
             <td>
                 <div>{{ event.location|default:"-" }}</div>
-                <div class="song-subline">{{ event.event_type|default:"-" }}</div>
             </td>
             <td class="song-meta col-action">
                 {% if event.resource_count > 0 %}<span title="Event resources">🔗{{ event.resource_count }}</span>{% endif %}
@@ -137,7 +136,7 @@
             <td>
                 {% with songs=event.eventsong_set.all|dictsort:"order" %}
                     {% if songs %}
-                        <ul style="margin: 0; padding-left: 20px;">
+                        <ul style="margin: 0; padding-left: 0; list-style: none;">
                             {% for event_song in songs %}
                                 <li>
                                     <a href="{%  url 'syncope:song_detail' url_username event_song.song.pk %}">

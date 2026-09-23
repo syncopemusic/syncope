@@ -338,18 +338,9 @@ class EventForm(forms.ModelForm):
         self.fields['event_type'].initial = rehearsal_event_type
         self.fields['event_type'].empty_label = None
 
-        # Name is optional - auto-generated from event type + date if left blank (see clean())
+        # Name is optional - events can exist as just a date and type
         self.fields['name'].required = False
-        self.fields['name'].widget.attrs['placeholder'] = 'Auto-generated from date if left blank'
-
-    def clean(self):
-        cleaned_data = super().clean()
-        if not cleaned_data.get('name'):
-            event_type = cleaned_data.get('event_type')
-            started_at = cleaned_data.get('started_at') or timezone.now()
-            type_name = event_type.name if event_type else 'Event'
-            cleaned_data['name'] = f"{type_name} - {started_at.strftime('%d %b %Y')}"
-        return cleaned_data
+        self.fields['name'].widget.attrs['placeholder'] = 'Optional'
 
 
 
@@ -391,68 +382,64 @@ class AddSongToEventForm(forms.Form):
 
 
 class AddEventToProjectForm(forms.Form):
-    """Admin-only form to assign an org event to a project (live search; see project_events_edit.html).
+    """Admin-only form powering the Events subpage's live search (see project_events_edit.html).
 
-    The `event` field's queryset is every eligible event (needed so a POST validates
-    regardless of what, if anything, was typed into the search box that produced it).
-    `search_results` is the narrower, search_q-filtered list for display only.
+    Adds/removes are staged client-side and committed in one batched POST
+    (ProjectEventsEditView.post), so `exclude_ids` lets the search hide events
+    already staged-but-not-yet-saved, not just ones already committed to the project.
     """
-    def __init__(self, *args, org_user=None, project=None, search_q='', **kwargs):
+    def __init__(self, *args, org_user=None, project=None, search_q='', exclude_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.other_project_ids = {}
         self.search_results = []
-        if org_user and project is not None:
-            eligible = Event.objects.filter(user=org_user).exclude(project=project).select_related(
-                'project'
-            ).order_by('-started_at')
-            self.fields['event'] = forms.ModelChoiceField(queryset=eligible, empty_label=None, label='Event')
-            if search_q:
-                self.search_results = list(eligible.filter(name__icontains=search_q))
-                for event in self.search_results:
-                    if event.project_id:
-                        self.other_project_ids[event.pk] = event.project.title
+        if org_user and project is not None and search_q:
+            eligible = Event.objects.filter(user=org_user).exclude(
+                project=project
+            ).exclude(pk__in=exclude_ids or []).select_related('project').order_by('-started_at')
+            self.search_results = list(eligible.filter(name__icontains=search_q))
+            for event in self.search_results:
+                if event.project_id:
+                    self.other_project_ids[event.pk] = event.project.title
 
 
 class AddSongToProjectForm(forms.Form):
-    """Admin-only form to add an archive song to a project (live search; see project_songs_edit.html).
+    """Admin-only form powering the Songs subpage's live search (see project_songs_edit.html).
 
-    See AddEventToProjectForm's docstring for why `song`'s queryset isn't search_q-filtered.
+    See AddEventToProjectForm's docstring for why `exclude_ids` exists.
     """
-    def __init__(self, *args, org_user=None, project=None, search_q='', **kwargs):
+    def __init__(self, *args, org_user=None, project=None, search_q='', exclude_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.search_results = []
-        if org_user and project is not None:
-            eligible = Song.objects.filter(user=org_user).exclude(projects=project).order_by('title')
-            self.fields['song'] = forms.ModelChoiceField(queryset=eligible, empty_label=None, label='Song')
-            if search_q:
-                if search_q.isdigit():
-                    self.search_results = list(eligible.filter(internal_id=int(search_q)))
-                else:
-                    self.search_results = list(eligible.filter(
-                        Q(title__icontains=search_q) |
-                        Q(composer__last_name__icontains=search_q) |
-                        Q(keywords__icontains=search_q)
-                    ).distinct())
+        if org_user and project is not None and search_q:
+            eligible = Song.objects.filter(user=org_user).exclude(
+                projects=project
+            ).exclude(pk__in=exclude_ids or []).order_by('title')
+            if search_q.isdigit():
+                self.search_results = list(eligible.filter(internal_id=int(search_q)))
+            else:
+                self.search_results = list(eligible.filter(
+                    Q(title__icontains=search_q) |
+                    Q(composer__last_name__icontains=search_q) |
+                    Q(keywords__icontains=search_q)
+                ).distinct())
 
 
 class AddGuestToProjectForm(forms.Form):
-    """Admin-only form to add an org person as a project guest (live search; see project_participants_edit.html).
+    """Admin-only form powering the Participants subpage's live search (see project_participants_edit.html).
 
-    See AddEventToProjectForm's docstring for why `guest`'s queryset isn't search_q-filtered.
+    See AddEventToProjectForm's docstring for why `exclude_ids` exists.
     """
-    def __init__(self, *args, org_user=None, project=None, search_q='', **kwargs):
+    def __init__(self, *args, org_user=None, project=None, search_q='', exclude_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.search_results = []
-        if org_user and project is not None:
+        if org_user and project is not None and search_q:
             eligible = Person.objects.filter(membership_period__user=org_user).exclude(
                 projects=project
-            ).distinct().order_by('last_name', 'first_name')
-            self.fields['guest'] = forms.ModelChoiceField(queryset=eligible, empty_label=None, label='Guest')
-            if search_q:
-                self.search_results = list(eligible.filter(
-                    Q(first_name__icontains=search_q) |
-                    Q(last_name__icontains=search_q)
-                ).distinct())
+            ).exclude(pk__in=exclude_ids or []).distinct().order_by('last_name', 'first_name')
+            self.search_results = list(eligible.filter(
+                Q(first_name__icontains=search_q) |
+                Q(last_name__icontains=search_q)
+            ).distinct())
 
 
 class AddAttendanceForm(forms.Form):

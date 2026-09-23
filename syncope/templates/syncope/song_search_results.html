@@ -1,4 +1,5 @@
 {% if song_search_q %}
+    <p class="result-count">{{ add_song_form.fields.song.queryset|length }} result{{ add_song_form.fields.song.queryset|length|pluralize }}</p>
     {% if add_song_form.fields.song.queryset.exists %}
         <div id="song-checkbox-list">
             {% for song in add_song_form.fields.song.queryset %}

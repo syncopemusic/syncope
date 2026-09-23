@@ -1,6 +1,6 @@
 {% extends "syncope/base.html" %}
-{% load static %}
-{% block title %}Songs - {{ event.name }}{% endblock %}
+{% load static dt_tags %}
+{% block title %}Songs - {% event_label event %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -45,7 +45,7 @@
 
 {% block content %}
 
-<h1>Songs - {{ event.name }}</h1>
+<h1>Songs - {% event_label event %}</h1>
 
 <div id="songs-content">
     <form method="post" id="songs-form">
@@ -80,8 +80,9 @@
             <input type="text" id="song-search-input" value="{{ song_search_q }}" placeholder="Search by ID, title, composer, or keywords" style="max-width:100%; width:100%; box-sizing:border-box;">
             <span class="search-spinner" id="song-search-spinner"></span>
         </p>
-        <p style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <p style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
             <button type="button" id="song-search-clear" class="btn btn-secondary">Clear</button>
+            <span id="song-search-count" class="result-count"></span>
             <button type="submit" form="songs-form" name="action" value="new_song" class="btn btn-primary" title="Save current changes and create a new song">+ Add</button>
         </p>
         <div id="song-search-results">
@@ -97,6 +98,7 @@
 {% endif %}
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
+<script src="{% static 'syncope/search-box.js' %}"></script>
 <script>
     const songsTbody = document.getElementById('songs-tbody');
     const songOrderInput = document.getElementById('song-order-input');
@@ -302,6 +304,7 @@
 
     const songSearchInput = document.getElementById('song-search-input');
     const songSearchResults = document.getElementById('song-search-results');
+    const songSearchCount = document.getElementById('song-search-count');
     let songSearchTimeout;
 
     const songSearchSpinner = document.getElementById('song-search-spinner');
@@ -320,6 +323,7 @@
         fetch(url).then(r => r.text()).then(html => {
             endSongSpinner();
             songSearchResults.innerHTML = html;
+            relocateResultCount(songSearchResults, songSearchCount);
         });
     }
 
@@ -351,6 +355,7 @@
         saveBarCtl.sync();
     });
 
+    relocateResultCount(songSearchResults, songSearchCount);
     snapshotOriginalOrder();
     saveBarCtl.sync();
 </script>

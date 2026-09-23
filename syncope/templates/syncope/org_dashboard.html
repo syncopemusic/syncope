@@ -5,8 +5,12 @@
 {% block content %}
 <div class="card">
     <h1>{{ organization.name }}</h1>
-    {% if organization.email %}<p>Email: {{ organization.email }}</p>{% endif %}
-    {% if organization.address %}<p>Address: {{ organization.address|linebreaksbr }}</p>{% endif %}
+    {% if organization.email or organization.address %}
+    <table class="table-detail">
+        {% if organization.email %}<tr><th>Email</th><td>{{ organization.email }}</td></tr>{% endif %}
+        {% if organization.address %}<tr><th>Address</th><td>{{ organization.address|linebreaksbr }}</td></tr>{% endif %}
+    </table>
+    {% endif %}
 </div>
 
 <h3>Quick Links</h3>

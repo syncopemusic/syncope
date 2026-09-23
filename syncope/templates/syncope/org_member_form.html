@@ -97,7 +97,7 @@
     </div>
 
     {% if is_admin and form.instance.pk %}
-    <p class="danger-zone"><a href="{% url 'syncope:org_member_delete' url_username form.instance.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger">Delete</a></p>
+    <p class="danger-zone"><a href="{% url 'syncope:org_member_delete' url_username form.instance.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger">Delete Member</a></p>
     {% endif %}
 </form>
 

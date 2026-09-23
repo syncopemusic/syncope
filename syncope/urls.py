@@ -14,7 +14,6 @@ from .views.invitation import InvitationListView, InvitationCreateView, Invitati
 from .views.organization import OrganizationCreateView, OrganizationDashboard
 from .views.project import ProjectDeleteView, ProjectCreateView, ProjectDetailView, ProjectListView
 from .views.project import ProjectMetaEditView, ProjectEventsEditView, ProjectSongsEditView, ProjectParticipantsEditView
-from .views.project import project_add_guest, project_add_event, project_remove_event, project_remove_song, project_add_song, project_remove_guest, project_remove_member
 from .views.project import project_events_search, project_songs_search, project_guests_search
 from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongUpdateView, SongQuoteView, song_list_search
 from .views.user_login_register import SignUp, UserLoginView, UserLogoutView
@@ -123,19 +122,12 @@ urlpatterns = [
 
     path('<str:username>/projects/<int:pk>/events/edit/', ProjectEventsEditView.as_view(), name='project_events_edit'),
     path('<str:username>/projects/<int:pk>/events/edit/search/', project_events_search, name='project_events_search'),
-    path('<str:username>/projects/<int:pk>/events/new/', project_add_event, name='project_new_event'),
-    path('<str:username>/projects/<int:pk>/events/<int:event_pk>/remove/', project_remove_event, name='project_remove_event'),
 
     path('<str:username>/projects/<int:pk>/songs/edit/', ProjectSongsEditView.as_view(), name='project_songs_edit'),
     path('<str:username>/projects/<int:pk>/songs/edit/search/', project_songs_search, name='project_songs_search'),
-    path('<str:username>/projects/<int:pk>/songs/new/', project_add_song, name='project_new_song'),
-    path('<str:username>/projects/<int:pk>/songs/<int:song_pk>/remove/', project_remove_song, name='project_remove_song'),
 
     path('<str:username>/projects/<int:pk>/participants/edit/', ProjectParticipantsEditView.as_view(), name='project_participants_edit'),
     path('<str:username>/projects/<int:pk>/participants/edit/search/', project_guests_search, name='project_guests_search'),
-    path('<str:username>/projects/<int:pk>/guests/new/', project_add_guest, name='project_new_guest'),
-    path('<str:username>/projects/<int:pk>/guests/<int:guest_pk>/remove/', project_remove_guest, name='project_remove_guest'),
-    path('<str:username>/projects/<int:pk>/members/<int:member_pk>/remove/', project_remove_member, name='project_remove_member'),
 
     path("<str:username>/polls/<int:pk>/<int:person_pk>/", PollPersonAttendanceView.as_view(), name="poll_person_attendance"),
 

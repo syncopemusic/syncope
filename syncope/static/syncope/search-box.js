@@ -1,4 +1,11 @@
-function initLiveSearch({ input, spinner, results, clearBtn, buildUrl }) {
+function relocateResultCount(results, countTarget) {
+    if (!countTarget) return;
+    const count = results.querySelector('.result-count');
+    countTarget.textContent = count ? count.textContent : '';
+    count?.remove();
+}
+
+function initLiveSearch({ input, spinner, results, clearBtn, buildUrl, countTarget }) {
     if (!input) return;
     let timeout;
 
@@ -7,6 +14,7 @@ function initLiveSearch({ input, spinner, results, clearBtn, buildUrl }) {
         fetch(buildUrl(query)).then(r => r.text()).then(html => {
             spinner.classList.remove('is-active');
             results.innerHTML = html;
+            relocateResultCount(results, countTarget);
         });
     }
 
@@ -24,5 +32,6 @@ function initLiveSearch({ input, spinner, results, clearBtn, buildUrl }) {
         run('');
     });
 
+    relocateResultCount(results, countTarget);
     return { run };
 }

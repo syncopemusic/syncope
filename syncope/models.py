@@ -568,7 +568,7 @@ class Event(models.Model):
         related_name="events"
     )
     internal_id = models.PositiveIntegerField("ID", blank=True, null=True)
-    name = models.CharField("name of the event", max_length=250)
+    name = models.CharField("name of the event", max_length=250, blank=True)
     location = models.TextField(blank=True, null=True)
     started_at = models.DateTimeField("start date hour", blank=True, null=True)
     ended_at = models.DateTimeField("end date hour", blank=True, null=True)
@@ -593,6 +593,9 @@ class Event(models.Model):
         blank=True,
         related_name='events'
     )
+
+    def __str__(self):
+        return f"{self.name} ({self.event_type})" if self.name else str(self.event_type)
 
     @property
     def same_date(self):

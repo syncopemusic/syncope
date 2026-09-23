@@ -11,9 +11,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
-from django.views.decorators.http import require_POST
 from django.contrib import messages
-from syncope.models import CustomUser, Person, Role
+from syncope.models import CustomUser, Person, Role, Song
 from syncope.models import Event, EventType, Project, EventSongResource, ProjectResource, Resource
 from syncope.forms import ProjectForm
 from syncope.forms import AddEventToProjectForm
@@ -101,79 +100,9 @@ def _project_participants(project, org_user):
     return participants
 
 
-@require_POST
-@login_required
-@project_admin_required
-def project_add_event(request, org_user, project):
-    form = AddEventToProjectForm(request.POST, org_user=org_user, project=project)
-    if form.is_valid():
-        event = form.cleaned_data['event']
-        event.project = project
-        event.save()
-
-    return redirect('syncope:project_events_edit', username=org_user.username, pk=project.pk)
-
-
-@require_POST
-@login_required
-@project_admin_required
-def project_remove_event(request, org_user, project, event_pk):
-    event = get_object_or_404(Event, pk=event_pk, project=project)
-    event.project = None
-    event.save()
-
-    return redirect('syncope:project_events_edit', username=org_user.username, pk=project.pk)
-
-
-@require_POST
-@login_required
-@project_admin_required
-def project_add_song(request, org_user, project):
-    form = AddSongToProjectForm(request.POST, org_user=org_user, project=project)
-    if form.is_valid():
-        project.songs.add(form.cleaned_data['song'])
-
-    return redirect('syncope:project_songs_edit', username=org_user.username, pk=project.pk)
-
-
-@require_POST
-@login_required
-@project_admin_required
-def project_remove_song(request, org_user, project, song_pk):
-    project.songs.remove(song_pk)
-
-    return redirect('syncope:project_songs_edit', username=org_user.username, pk=project.pk)
-
-
-@require_POST
-@login_required
-@project_admin_required
-def project_add_guest(request, org_user, project):
-    form = AddGuestToProjectForm(request.POST, org_user=org_user, project=project)
-    if form.is_valid():
-        project.guests.add(form.cleaned_data['guest'])
-
-    return redirect('syncope:project_participants_edit', username=org_user.username, pk=project.pk)
-
-
-@require_POST
-@login_required
-@project_admin_required
-def project_remove_guest(request, org_user, project, guest_pk):
-    project.guests.remove(guest_pk)
-
-    return redirect('syncope:project_participants_edit', username=org_user.username, pk=project.pk)
-
-
-@require_POST
-@login_required
-@project_admin_required
-def project_remove_member(request, org_user, project, member_pk):
-    """Exclude an otherwise-active member from this project's participant list."""
-    member = get_object_or_404(Person, pk=member_pk, membership_period__user=org_user)
-    project.excluded_members.add(member)
-
-    return redirect('syncope:project_participants_edit', username=org_user.username, pk=project.pk)
+def _exclude_ids_from_request(request):
+    exclude_raw = request.GET.get('exclude', '')
+    return [int(x) for x in exclude_raw.split(',') if x.strip().isdigit()]
 
 
 @login_required
@@ -181,7 +110,9 @@ def project_remove_member(request, org_user, project, member_pk):
 def project_events_search(request, org_user, project):
     """AJAX event search for the Events subpage's add-event picker."""
     search_q = request.GET.get('q', '')
-    add_event_form = AddEventToProjectForm(org_user=org_user, project=project, search_q=search_q)
+    add_event_form = AddEventToProjectForm(
+        org_user=org_user, project=project, search_q=search_q, exclude_ids=_exclude_ids_from_request(request)
+    )
     return render(request, 'syncope/project_event_search_results.html', {
         'event_results': _event_search_results(add_event_form),
         'search_q': search_q,
@@ -195,7 +126,9 @@ def project_events_search(request, org_user, project):
 def project_songs_search(request, org_user, project):
     """AJAX song search for the Songs subpage's add-song picker."""
     search_q = request.GET.get('q', '')
-    add_song_form = AddSongToProjectForm(org_user=org_user, project=project, search_q=search_q)
+    add_song_form = AddSongToProjectForm(
+        org_user=org_user, project=project, search_q=search_q, exclude_ids=_exclude_ids_from_request(request)
+    )
     return render(request, 'syncope/project_song_search_results.html', {
         'add_song_form': add_song_form,
         'search_q': search_q,
@@ -209,7 +142,9 @@ def project_songs_search(request, org_user, project):
 def project_guests_search(request, org_user, project):
     """AJAX guest search for the Participants subpage's add-guest picker."""
     search_q = request.GET.get('q', '')
-    add_guest_form = AddGuestToProjectForm(org_user=org_user, project=project, search_q=search_q)
+    add_guest_form = AddGuestToProjectForm(
+        org_user=org_user, project=project, search_q=search_q, exclude_ids=_exclude_ids_from_request(request)
+    )
     return render(request, 'syncope/project_guest_search_results.html', {
         'add_guest_form': add_guest_form,
         'search_q': search_q,
@@ -395,6 +330,26 @@ class ProjectEventsEditView(ProjectAdminRequiredMixin, View):
         }
         return render(request, self.template_name, context)
 
+    def post(self, request, *args, **kwargs):
+        project = self.project
+        org_user = self.org_user
+
+        with transaction.atomic():
+            current_ids = set(project.events.values_list('pk', flat=True))
+            remove_ids = {pk for pk in current_ids if request.POST.get(f'remove_{pk}') == '1'}
+            if remove_ids:
+                Event.objects.filter(pk__in=remove_ids).update(project=None)
+
+            eligible_ids = set(
+                Event.objects.filter(user=org_user).exclude(project=project).values_list('pk', flat=True)
+            )
+            add_ids = {int(v) for v in request.POST.getlist('add_event') if v.isdigit()} & eligible_ids
+            if add_ids:
+                Event.objects.filter(pk__in=add_ids).update(project=project)
+
+        messages.success(request, "Events updated successfully!")
+        return redirect('syncope:project_events_edit', username=self.kwargs.get('username'), pk=project.pk)
+
 
 @method_decorator(login_required, name='dispatch')
 class ProjectSongsEditView(ProjectAdminRequiredMixin, View):
@@ -413,6 +368,26 @@ class ProjectSongsEditView(ProjectAdminRequiredMixin, View):
         }
         return render(request, self.template_name, context)
 
+    def post(self, request, *args, **kwargs):
+        project = self.project
+        org_user = self.org_user
+
+        with transaction.atomic():
+            current_ids = set(project.songs.values_list('pk', flat=True))
+            remove_ids = {pk for pk in current_ids if request.POST.get(f'remove_{pk}') == '1'}
+            if remove_ids:
+                project.songs.remove(*remove_ids)
+
+            eligible_ids = set(
+                Song.objects.filter(user=org_user).exclude(projects=project).values_list('pk', flat=True)
+            )
+            add_ids = {int(v) for v in request.POST.getlist('add_song') if v.isdigit()} & eligible_ids
+            if add_ids:
+                project.songs.add(*add_ids)
+
+        messages.success(request, "Songs updated successfully!")
+        return redirect('syncope:project_songs_edit', username=self.kwargs.get('username'), pk=project.pk)
+
 
 @method_decorator(login_required, name='dispatch')
 class ProjectParticipantsEditView(ProjectAdminRequiredMixin, View):
@@ -430,6 +405,35 @@ class ProjectParticipantsEditView(ProjectAdminRequiredMixin, View):
             'add_guest_form': AddGuestToProjectForm(org_user=self.org_user, project=project, search_q=search_q),
         }
         return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        project = self.project
+        org_user = self.org_user
+
+        with transaction.atomic():
+            current_participant_ids = {p.pk for p in _project_participants(project, org_user)}
+            remove_ids = {pk for pk in current_participant_ids if request.POST.get(f'remove_{pk}') == '1'}
+            if remove_ids:
+                guest_ids = set(project.guests.filter(pk__in=remove_ids).values_list('pk', flat=True))
+                if guest_ids:
+                    project.guests.remove(*guest_ids)
+                member_ids = remove_ids - guest_ids
+                if member_ids:
+                    project.excluded_members.add(
+                        *Person.objects.filter(pk__in=member_ids, membership_period__user=org_user)
+                    )
+
+            eligible_ids = set(
+                Person.objects.filter(membership_period__user=org_user).exclude(
+                    projects=project
+                ).values_list('pk', flat=True)
+            )
+            add_ids = {int(v) for v in request.POST.getlist('add_guest') if v.isdigit()} & eligible_ids
+            if add_ids:
+                project.guests.add(*add_ids)
+
+        messages.success(request, "Participants updated successfully!")
+        return redirect('syncope:project_participants_edit', username=self.kwargs.get('username'), pk=project.pk)
 
 
 @method_decorator(login_required, name="dispatch")

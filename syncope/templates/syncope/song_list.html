@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 {% block title %}Songs{% endblock %}
 {% block content %}
 
@@ -8,7 +9,10 @@
 </div>
 
 <p class="search-form">
-    <input type="text" id="song-list-search-input" value="{{ q }}" placeholder="Search by ID, title, composer, arranger, poet, origin, keywords, language">
+    <span style="position:relative; flex:1; min-width:200px;">
+        <input type="text" id="song-list-search-input" value="{{ q }}" placeholder="Search by ID, title, composer, arranger, poet, origin, keywords, language" style="width:100%; box-sizing:border-box;">
+        <span class="search-spinner" id="song-list-search-spinner"></span>
+    </span>
     <button type="button" id="song-list-search-clear" class="btn btn-secondary">Clear</button>
 </p>
 
@@ -17,34 +21,15 @@
 </div>
 
 {% block extra_js %}
+<script src="{% static 'syncope/search-box.js' %}"></script>
 <script>
-var songListSearchInput = document.getElementById('song-list-search-input');
-var songListResults = document.getElementById('song-list-results');
-var songListSearchTimeout;
-
-function runSongListSearch(query) {
-    var url = '{% url "syncope:song_list_search" url_username %}?q=' + encodeURIComponent(query);
-    fetch(url)
-        .then(function (response) { return response.text(); })
-        .then(function (html) { songListResults.innerHTML = html; });
-}
-
-if (songListSearchInput) {
-    songListSearchInput.addEventListener('input', function () {
-        clearTimeout(songListSearchTimeout);
-        var value = this.value;
-        songListSearchTimeout = setTimeout(function () { runSongListSearch(value); }, 1000);
+    initLiveSearch({
+        input: document.getElementById('song-list-search-input'),
+        spinner: document.getElementById('song-list-search-spinner'),
+        results: document.getElementById('song-list-results'),
+        clearBtn: document.getElementById('song-list-search-clear'),
+        buildUrl: query => `{% url 'syncope:song_list_search' url_username %}?q=${encodeURIComponent(query)}`,
     });
-    songListSearchInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') e.preventDefault();
-    });
-}
-
-document.getElementById('song-list-search-clear')?.addEventListener('click', function () {
-    clearTimeout(songListSearchTimeout);
-    songListSearchInput.value = '';
-    runSongListSearch('');
-});
 </script>
 {% endblock %}
 

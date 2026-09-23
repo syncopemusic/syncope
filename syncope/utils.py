@@ -143,6 +143,8 @@ def import_songs(org_user, request, file_path, delimiter=";"):
             keywords_value = (row.get(KEYWORDS_KEY) or '').strip()
             language_code_value = (row.get(LANGUAGE_CODE_KEY) or '').strip()
             additional_notes_value = (row.get(ADDITIONAL_NOTES_KEY) or '').strip()
+            for tag in ('<br/>', '<br />', '<br>'):
+                additional_notes_value = additional_notes_value.replace(tag, '\n')
             lyrics_value = (row.get(LYRICS_KEY) or '').strip()
             try:
                 composer = _get_or_create_person_with_skill(

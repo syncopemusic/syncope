@@ -17,12 +17,12 @@
     <tr>
         <th class="col-num"></th>
         <th>
+            <div class="song-title"><a href="?sort=type{% if current_sort == 'type' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Type{% if current_sort == 'type' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></div>
             <div class="song-title"><a href="?sort=date{% if current_sort == 'date' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Date{% if current_sort == 'date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></div>
-            <div class="song-subline"><a href="?sort=type{% if current_sort == 'type' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Type{% if current_sort == 'type' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></div>
         </th>
         <th class="col-main">
             <div class="song-title"><a href="?sort=project{% if current_sort == 'project' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Project{% if current_sort == 'project' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></div>
-            <div class="song-subline">Location</div>
+            <div class="song-title"><a href="?sort=location{% if current_sort == 'location' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Location{% if current_sort == 'location' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></div>
         </th>
         <th class="col-action">Resources</th>
         <th>Songs</th>
@@ -34,11 +34,11 @@
             <td class="col-num">{{ forloop.counter }}</td>
             <td>
                 <div class="song-title">
-                    <a href="{%  url 'syncope:event_detail' url_username event.id %}?origin=events">
-                        {% include "syncope/_event_daterange.html" %}
-                    </a>
+                    <a href="{%  url 'syncope:event_detail' url_username event.id %}?origin=events">{{ event }}</a>
                 </div>
-                <div class="song-subline">{{ event.event_type }}</div>
+                <div class="song-subline">
+                    {% include "syncope/_event_daterange.html" %}
+                </div>
             </td>
             <td class="col-main">
                 <div class="song-title">{% if event.project %}<a href="{%  url 'syncope:project_detail' url_username event.project.id %}">{{ event.project }}</a>{% else %}-{% endif %}</div>
@@ -55,7 +55,7 @@
             <td>
                 {% with songs=event.eventsong_set.all|dictsort:"order" %}
                     {% if songs %}
-                        <ul style="margin: 0; padding-left: 20px;">
+                        <ul style="margin: 0; padding-left: 0; list-style: none;">
                             {% for event_song in songs %}
                                 <li><a href="{%  url 'syncope:song_detail' url_username event_song.song.pk %}">{{ event_song.song.title }}</a></li>
                             {% endfor %}

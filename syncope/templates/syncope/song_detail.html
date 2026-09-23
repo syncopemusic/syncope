@@ -59,7 +59,7 @@
         <td>{{ song.keywords|default:"-" }}</td>
     </tr>
     <tr>
-        <th>Original Language</th>
+        <th>Language</th>
         <td>{{ song.languagecode|default:"-" }}</td>
     </tr>
 </table>
@@ -122,7 +122,7 @@
 
 {% if song.additional_notes %}
 <h3>Additional Notes</h3>
-<p>{{ song.additional_notes }}</p>
+<p>{{ song.additional_notes|linebreaksbr }}</p>
 {% endif %}
 
 {% if song.lyrics %}
@@ -145,8 +145,10 @@
     <thead>
         <tr>
             <th class="col-num"></th>
-            <th class="col-main">Name</th>
-            <th><a href="#" id="sort-type" class="sortable-header">Type <span id="sort-type-indicator"></span></a></th>
+            <th class="col-main">
+                <a href="#" id="sort-name" class="sortable-header">Name <span id="sort-name-indicator"></span></a> /
+                <a href="#" id="sort-type" class="sortable-header">Type <span id="sort-type-indicator"></span></a>
+            </th>
             <th><a href="#" id="sort-date" class="sortable-header">Date <span id="sort-date-indicator"></span></a></th>
         </tr>
     </thead>
@@ -155,9 +157,8 @@
         <tr>
             <td class="col-num">{{ forloop.counter }}</td>
             <td class="col-main {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}">
-                <a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a>
+                <a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event }}</a>
             </td>
-            <td>{{ event.event_type }}</td>
             <td>{% dt event.started_at "date-year" %}</td>
         </tr>
         {% endfor %}
@@ -191,13 +192,18 @@
         });
     }
 
+    makeTableSorter('sort-name', 'sort-name-indicator',
+        function (row) { return row.cells[1].textContent.trim().toLowerCase(); },
+        function (a, b, asc) { return asc ? a.localeCompare(b) : b.localeCompare(a); }
+    );
+
     makeTableSorter('sort-type', 'sort-type-indicator',
-        function (row) { return row.cells[2].textContent.trim().toLowerCase(); },
+        function (row) { return row.cells[1].textContent.trim().toLowerCase(); },
         function (a, b, asc) { return asc ? a.localeCompare(b) : b.localeCompare(a); }
     );
 
     makeTableSorter('sort-date', 'sort-date-indicator',
-        function (row) { return row.cells[3].querySelector('[data-dt]').dataset.dt; },
+        function (row) { return row.cells[2].querySelector('[data-dt]').dataset.dt; },
         function (a, b, asc) { return asc ? a.localeCompare(b) : b.localeCompare(a); }
     );
 

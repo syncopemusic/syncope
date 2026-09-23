@@ -48,7 +48,7 @@
                 <th></th>
                 {% for pe in poll_events %}
                 <th class="table-event-col"
-                    title="{% if pe.event_type.id == 1 %}{{ pe.name }}{% else %}{{ pe.event_type }}&#10;{{ pe.name }}{% endif %}&#10;{{ pe.started_at|date:"H:i" }}{% if pe.location %}&#10;{{ pe.location }}{% endif %}">
+                    title="{{ pe.event_type }}&#10;{{ pe.started_at|date:"H:i" }}{% if pe.location %}&#10;{{ pe.location }}{% endif %}">
                     <div class="table-event-header {% if pe.event_type.id != 1 %}table-event-header-strong{% endif %}">
                         {% if pe.same_date %}{% dt pe.started_at "date" %}{% else %}{% dt pe.started_at "date" %}-{% dt pe.ended_at "date" %}{% endif %}
                     </div>

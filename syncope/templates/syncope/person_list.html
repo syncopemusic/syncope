@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 {% block title %}
 {% if list_type == 'all' and url_username == user.username %}Personal Contacts
 {% elif list_type == 'active' %}Active Members
@@ -42,16 +43,11 @@
     {% endif %}
 </div>
 
-{% if url_username == user.username %}
-    <p>
-        This is your personal page.
-    </p>
-{% else %}
-    <p>This is organization: {{ url_username }}</p>
-{% endif %}
-
 <p class="search-form">
-    <input type="text" id="person-search-input" value="{{ q }}" placeholder="Filter by skill, voice or instrument">
+    <span style="position:relative; flex:1; min-width:200px;">
+        <input type="text" id="person-search-input" value="{{ q }}" placeholder="Search by name, skill, voice, instrument" style="width:100%; box-sizing:border-box;">
+        <span class="search-spinner" id="person-search-spinner"></span>
+    </span>
     <button type="button" id="person-search-clear" class="btn btn-secondary">Clear</button>
 </p>
 
@@ -60,35 +56,15 @@
 </div>
 
 {% block extra_js %}
+<script src="{% static 'syncope/search-box.js' %}"></script>
 <script>
-const personSearchInput = document.getElementById('person-search-input');
-const personListResults = document.getElementById('person-list-results');
-let personSearchTimeout;
-
-function runPersonListSearch(query) {
-    const sort = '{{ current_sort }}';
-    const reverse = '{{ reverse|yesno:"true,false" }}';
-    const url = `{% url 'syncope:person_list_search' url_username list_type %}?q=${encodeURIComponent(query)}&sort=${sort}&reverse=${reverse}`;
-    fetch(url)
-        .then(response => response.text())
-        .then(html => { personListResults.innerHTML = html; });
-}
-
-if (personSearchInput) {
-    personSearchInput.addEventListener('input', function() {
-        clearTimeout(personSearchTimeout);
-        personSearchTimeout = setTimeout(() => runPersonListSearch(this.value), 1000);
+    initLiveSearch({
+        input: document.getElementById('person-search-input'),
+        spinner: document.getElementById('person-search-spinner'),
+        results: document.getElementById('person-list-results'),
+        clearBtn: document.getElementById('person-search-clear'),
+        buildUrl: query => `{% url 'syncope:person_list_search' url_username list_type %}?q=${encodeURIComponent(query)}&sort={{ current_sort }}&reverse={{ reverse|yesno:"true,false" }}`,
     });
-    personSearchInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') e.preventDefault();
-    });
-}
-
-document.getElementById('person-search-clear')?.addEventListener('click', function() {
-    clearTimeout(personSearchTimeout);
-    personSearchInput.value = '';
-    runPersonListSearch('');
-});
 </script>
 {% endblock %}
 

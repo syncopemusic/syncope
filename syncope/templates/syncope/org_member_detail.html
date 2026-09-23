@@ -155,7 +155,9 @@
 {% if singer_projects %}
 <h3>Singer - Projects</h3>
 {% if singer_voices %}
-<p>Voices: {% for voice in singer_voices %}{{ voice.voice.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+<table class="table-detail">
+    <tr><th>Voices</th><td>{% for voice in singer_voices %}{{ voice.voice.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td></tr>
+</table>
 {% endif %}
 <div class="table-container">
 <table class="table table-narrow">
@@ -185,7 +187,9 @@
 {% if instrumentalist_projects %}
 <h3>Instrumentalist - Projects</h3>
 {% if instrumentalist_instruments %}
-<p>Instruments: {% for inst in instrumentalist_instruments %}{{ inst.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+<table class="table-detail">
+    <tr><th>Instruments</th><td>{% for inst in instrumentalist_instruments %}{{ inst.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td></tr>
+</table>
 {% endif %}
 <div class="table-container">
 <table class="table table-narrow">

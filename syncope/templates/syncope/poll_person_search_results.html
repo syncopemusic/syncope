@@ -1,4 +1,5 @@
 {% if search_q %}
+    <p class="result-count">{{ form.fields.person.queryset|length }} result{{ form.fields.person.queryset|length|pluralize }}</p>
     {% if form.fields.person.queryset.exists %}
         <div id="participant-checkbox-list">
             {% for person in form.fields.person.queryset %}

@@ -16,7 +16,7 @@
 <ul>
 {% for skill in skills %}
     <li>{{ skill.title }}
-    - info: {{ skill.additional_notes }} - added {% dt skill.created_at "datetime" %}
+    - Info: {{ skill.additional_notes }} - added {% dt skill.created_at "datetime" %}
     {% if is_admin %}
     <form method="post" class="inline-form">
         {% csrf_token %}

@@ -6,42 +6,40 @@
 
 <h1>Events - {{ project.title }}</h1>
 
-{% if events %}
-<div class="table-container">
-<table class="table">
-    <thead>
-        <tr>
-            <th class="col-num"></th>
-            <th class="col-main">Event Name</th>
-            <th class="col-action">Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for event in events %}
-        <tr>
-            <td class="col-num">{{ forloop.counter }}</td>
-            <td class="col-main">
-                <div class="song-title">
-                    <a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a>
-                    {% if event.resource_count > 0 %} - &#128279;{% endif %}
-                    {% if event.event_song_resource_count > 0 %}&#127925;{% endif %}
-                </div>
-                <div class="song-subline">{% include "syncope/_event_daterange.html" with no_date_text="-" %}</div>
-            </td>
-            <td class="col-action">
-                <form method="post" action="{% url 'syncope:project_remove_event' url_username project.pk event.pk %}" class="inline-form">
-                    {% csrf_token %}
-                    <button type="submit" onclick="return confirm('Remove this event from the project?')" class="btn btn-remove" title="Remove from project">&times;</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-</div>
-{% else %}
-<p>No events yet.</p>
-{% endif %}
+<form method="post" id="events-form">
+    {% csrf_token %}
+    <div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th class="col-num"></th>
+                <th class="col-main">Event Name</th>
+                <th class="col-action">Action</th>
+            </tr>
+        </thead>
+        <tbody id="events-tbody">
+            {% for event in events %}
+            <tr data-id="{{ event.pk }}">
+                <td class="col-num">{{ forloop.counter }}</td>
+                <td class="col-main">
+                    <div class="song-title">
+                        <a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event }}</a>
+                        {% if event.resource_count > 0 %} - &#128279;{% endif %}
+                        {% if event.event_song_resource_count > 0 %}&#127925;{% endif %}
+                    </div>
+                    <div class="song-subline">{% include "syncope/_event_daterange.html" with no_date_text="-" %}</div>
+                </td>
+                <td class="col-action">
+                    <button type="button" class="btn btn-remove" title="Remove from project">&times;</button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr id="no-events-row"><td colspan="3">No events yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</form>
 
 <div id="add-events" style="max-width:42rem;">
     <h3>Add event</h3>
@@ -49,8 +47,9 @@
         <input type="text" id="event-search-input" value="{{ search_q }}" placeholder="Search by event name" style="max-width:100%; width:100%; box-sizing:border-box;">
         <span class="search-spinner" id="event-search-spinner"></span>
     </p>
-    <p style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+    <p style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
         <button type="button" id="event-search-clear" class="btn btn-secondary">Clear</button>
+        <span id="event-search-count" class="result-count"></span>
         <a href="{% url 'syncope:event_new' url_username %}?project={{ project.pk }}&next={% url 'syncope:project_events_edit' url_username project.pk %}" class="btn btn-primary" title="Create new event">+ Add</a>
     </p>
     <div id="event-search-results">
@@ -59,16 +58,125 @@
 </div>
 
 {% url 'syncope:project_detail' url_username project.pk as project_detail_url %}
-{% include "syncope/_save_bar.html" with url=project_detail_url %}
+{% include "syncope/_save_bar.html" with form_id="events-form" url=project_detail_url %}
 
+<script src="{% static 'syncope/save-bar.js' %}"></script>
 <script src="{% static 'syncope/search-box.js' %}"></script>
 <script>
-    initLiveSearch({
-        input: document.getElementById('event-search-input'),
-        spinner: document.getElementById('event-search-spinner'),
-        results: document.getElementById('event-search-results'),
-        clearBtn: document.getElementById('event-search-clear'),
-        buildUrl: query => `{% url 'syncope:project_events_search' url_username project.pk %}?q=${encodeURIComponent(query)}`,
+    const eventsTbody = document.getElementById('events-tbody');
+
+    function removeEmptyRow() {
+        document.getElementById('no-events-row')?.remove();
+    }
+
+    function countUnsavedChanges() {
+        return eventsTbody.querySelectorAll('tr.staged-add, tr.pending-remove').length;
+    }
+
+    const saveBarCtl = initSaveBar({
+        formId: 'events-form',
+        countUnsavedChanges,
+        onDiscard: () => {
+            eventsTbody.querySelectorAll('tr.staged-add').forEach(row => row.remove());
+            eventsTbody.querySelectorAll('tr.pending-remove').forEach(row => {
+                row.classList.remove('pending-remove');
+                row.querySelector('.pending-remove-input')?.remove();
+                const btn = row.querySelector('.btn-remove');
+                if (btn) { btn.textContent = '×'; btn.title = 'Remove from project'; }
+            });
+            if (!eventsTbody.querySelector('tr[data-id]') && !document.getElementById('no-events-row')) {
+                eventsTbody.insertAdjacentHTML('beforeend', '<tr id="no-events-row"><td colspan="3">No events yet.</td></tr>');
+            }
+        },
+        afterDiscard: () => runEventSearch(eventSearchInput ? eventSearchInput.value : ''),
     });
+
+    function toggleRemove(row) {
+        const pk = row.dataset.id;
+        if (!pk) return;
+        const btn = row.querySelector('.btn-remove');
+        const pending = row.classList.toggle('pending-remove');
+        if (pending) {
+            row.insertAdjacentHTML('beforeend', `<input type="hidden" class="pending-remove-input" name="remove_${pk}" value="1">`);
+            btn.textContent = '↺';
+            btn.title = 'Undo removal';
+        } else {
+            row.querySelector('.pending-remove-input')?.remove();
+            btn.textContent = '×';
+            btn.title = 'Remove from project';
+        }
+        saveBarCtl.sync();
+    }
+
+    eventsTbody.addEventListener('click', function(e) {
+        const removeBtn = e.target.closest('.btn-remove');
+        if (!removeBtn) return;
+        const row = removeBtn.closest('tr');
+        if (row.classList.contains('staged-add')) {
+            row.remove();
+            saveBarCtl.sync();
+            runEventSearch(eventSearchInput.value);
+            return;
+        }
+        toggleRemove(row);
+    });
+
+    function currentEventIds() {
+        return Array.from(eventsTbody.querySelectorAll('tr[data-id]')).map(tr => tr.dataset.id);
+    }
+
+    const eventSearchInput = document.getElementById('event-search-input');
+    const eventSearchResults = document.getElementById('event-search-results');
+    const eventSearchCount = document.getElementById('event-search-count');
+    let eventSearchTimeout;
+    const eventSearchSpinner = document.getElementById('event-search-spinner');
+
+    function runEventSearch(query) {
+        eventSearchSpinner.classList.add('is-active');
+        const url = `{% url 'syncope:project_events_search' url_username project.pk %}?q=${encodeURIComponent(query)}&exclude=${encodeURIComponent(currentEventIds().join(','))}`;
+        fetch(url).then(r => r.text()).then(html => {
+            eventSearchSpinner.classList.remove('is-active');
+            eventSearchResults.innerHTML = html;
+            relocateResultCount(eventSearchResults, eventSearchCount);
+        });
+    }
+
+    if (eventSearchInput) {
+        eventSearchInput.addEventListener('input', function() {
+            clearTimeout(eventSearchTimeout);
+            eventSearchSpinner.classList.add('is-active');
+            eventSearchTimeout = setTimeout(() => runEventSearch(this.value), 1000);
+        });
+        eventSearchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') e.preventDefault();
+        });
+    }
+
+    document.getElementById('event-search-clear')?.addEventListener('click', function() {
+        clearTimeout(eventSearchTimeout);
+        eventSearchInput.value = '';
+        runEventSearch('');
+    });
+
+    eventSearchResults?.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-secondary');
+        if (!btn) return;
+        const row = btn.closest('.search-result-row');
+        const info = row.querySelector('.search-result-info').innerHTML;
+        removeEmptyRow();
+        const tr = document.createElement('tr');
+        tr.className = 'staged-add';
+        tr.dataset.id = btn.dataset.id;
+        tr.innerHTML = `
+            <td class="col-num"></td>
+            <td class="col-main">${info}<input type="hidden" name="add_event" value="${btn.dataset.id}"></td>
+            <td class="col-action"><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>
+        `;
+        eventsTbody.appendChild(tr);
+        row.remove();
+        saveBarCtl.sync();
+    });
+
+    relocateResultCount(eventSearchResults, eventSearchCount);
 </script>
 {% endblock %}

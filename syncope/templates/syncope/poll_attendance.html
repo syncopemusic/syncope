@@ -38,8 +38,8 @@
                     <th class="sticky-col">Event</th>
                     {% for event in poll_events %}
                     <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
-                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
-                        {{ event.event_type.name }}
+                        title="{{ event }}">
+                        {{ event }}
                     </th>
                     {% endfor %}
                 </tr>
@@ -49,7 +49,7 @@
                     <th class="sticky-col">Date</th>
                     {% for event in poll_events %}
                     <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
-                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                        title="{{ event }}">
                         {% if event.same_date %}{% dt event.started_at "date-dow" %}{% else %}{% dt event.started_at "date-dow" %} <br> {% dt event.ended_at "date-dow" %}{% endif %}
                     </th>
                     {% endfor %}
@@ -60,7 +60,7 @@
                     <th class="sticky-col">Time</th>
                     {% for event in poll_events %}
                     <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
-                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                        title="{{ event }}">
                         {% dt event.started_at "time" %} <br> {% dt event.ended_at "time" %}
                     </th>
                     {% endfor %}
@@ -71,7 +71,7 @@
                     <th class="sticky-col">Location</th>
                     {% for event in poll_events %}
                     <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
-                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                        title="{{ event }}">
                         {% if event.location %}{{ event.location }}{% else %}<em>-</em>{% endif %}
                     </th>
                     {% endfor %}
@@ -83,7 +83,7 @@
                     <th class="sticky-col">Details</th>
                     {% for event in poll_events %}
                     <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
-                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
+                        title="{{ event }}">
                         {% if event.details %}{{ event.details }}{% else %}<em>-</em>{% endif %}
                     </th>
                     {% endfor %}
