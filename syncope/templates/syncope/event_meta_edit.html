@@ -4,10 +4,6 @@
 
 {% block extra_css %}
 <style>
-    #resource-formset {
-        margin-block-end: 2rem;
-    }
-
     @media (max-width: 768px) {
         #event-meta-form {
             padding-block-end: 4rem;
@@ -57,26 +53,6 @@
     </div>
     {% endif %}
 
-    <h3>Resources</h3>
-    <p><small>This event's specific resources.</small></p>
-    <div id="resource-formset">
-        {{ resource_formset.management_form }}
-        <div id="resource-rows">
-            {% for rform in resource_formset %}
-                <div class="resource-row">
-                    {{ rform.url }}
-                    {{ rform.description }}
-                    {% if rform.instance.pk %}
-                        <input type="checkbox" name="{{ rform.DELETE.html_name }}" id="{{ rform.DELETE.auto_id }}"
-                               onclick="return confirm('Delete this resource? Remember to press save.');">
-                        <small class="form-help">Delete this resource</small>
-                    {% endif %}
-                    {{ rform.id }}
-                </div>
-            {% endfor %}
-        </div>
-    </div>
-
     <p class="danger-zone"><a href="{% url 'syncope:event_delete' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-danger">Delete Event</a></p>
 </form>
 
@@ -86,66 +62,18 @@
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script>
     const form = document.getElementById('event-meta-form');
-    let formDirty = false;
+    const fieldTracker = trackFormFieldChanges(form);
 
     const saveBarCtl = initSaveBar({
         formId: 'event-meta-form',
-        countUnsavedChanges: () => formDirty ? 1 : 0,
+        countUnsavedChanges: fieldTracker.count,
         onDiscard: () => {
             form.reset();
-            resourceRows.querySelectorAll('.resource-row.added-row').forEach(row => row.remove());
-            formDirty = false;
+            fieldTracker.reset();
         },
     });
 
-    form.addEventListener('input', () => { formDirty = true; saveBarCtl.sync(); });
-    form.addEventListener('change', () => { formDirty = true; saveBarCtl.sync(); });
-
-    const resourceFormset = document.getElementById('resource-formset');
-    const resourceRows = document.getElementById('resource-rows');
-
-    function totalFormsInput() {
-        return resourceFormset.querySelector('input[name$="-TOTAL_FORMS"]');
-    }
-
-    function lastResourceRow() {
-        const rows = resourceRows.querySelectorAll('.resource-row');
-        return rows[rows.length - 1];
-    }
-
-    function addBlankResourceRow() {
-        const totalInput = totalFormsInput();
-        const prefix = totalInput.name.slice(0, -'-TOTAL_FORMS'.length);
-        const oldIndex = parseInt(totalInput.value, 10) - 1;
-        const newIndex = oldIndex + 1;
-        const clone = lastResourceRow().cloneNode(true);
-        clone.querySelectorAll('input, textarea, select').forEach(function(el) {
-            if (el.type === 'checkbox') { el.checked = false; }
-            else { el.value = ''; }
-            ['name', 'id'].forEach(function(attr) {
-                const value = el.getAttribute(attr);
-                if (value) el.setAttribute(attr, value.replace(`${prefix}-${oldIndex}-`, `${prefix}-${newIndex}-`));
-            });
-        });
-        clone.querySelectorAll('label').forEach(function(label) {
-            if (label.htmlFor) label.htmlFor = label.htmlFor.replace(`${prefix}-${oldIndex}-`, `${prefix}-${newIndex}-`);
-        });
-        clone.classList.add('added-row');
-        resourceRows.appendChild(clone);
-        totalInput.value = newIndex + 1;
-    }
-
-    let resourceRowTimeout;
-    resourceRows.addEventListener('input', function(e) {
-        if (!e.target.matches('input, textarea')) return;
-        clearTimeout(resourceRowTimeout);
-        resourceRowTimeout = setTimeout(function() {
-            const last = lastResourceRow();
-            const url = last.querySelector('input[name$="-url"]');
-            if (last && e.target.closest('.resource-row') === last && url && url.value.trim()) {
-                addBlankResourceRow();
-            }
-        }, 1000);
-    });
+    form.addEventListener('input', () => saveBarCtl.sync());
+    form.addEventListener('change', () => saveBarCtl.sync());
 </script>
 {% endblock %}

@@ -1,0 +1,12 @@
+{% if search_q is not None %}
+    <p class="result-count">{{ persons|length }} result{{ persons|length|pluralize }}</p>
+    {% if persons %}
+        <div>
+            {% for person in persons %}
+                <div class="search-result-row"><button type="button" class="btn btn-secondary" data-id="{{ person.pk }}">Select</button> <span class="result-label">{{ person }}</span></div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No matching persons found.</p>
+    {% endif %}
+{% endif %}

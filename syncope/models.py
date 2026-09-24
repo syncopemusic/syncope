@@ -219,6 +219,14 @@ class PersonQuerySet(models.QuerySet):
         """Generic method - any skill any organization. Returns persons ordered by most recently created first."""
         return self.in_org_user(user).with_skill(skill_id).order_by('-created_at')
 
+    def matching_name(self, q):
+        """Match persons whose first/last name together contain every whitespace-separated
+        token in q, e.g. "John Doe" matches first_name="John", last_name="Doe"."""
+        persons = self
+        for token in q.split():
+            persons = persons.filter(Q(first_name__icontains=token) | Q(last_name__icontains=token))
+        return persons
+
     def active_performers(self, org_user, at_date):
         """Persons with an active MEMBER period at the given date.
         Used to determine who gets auto-populated into event attendance."""

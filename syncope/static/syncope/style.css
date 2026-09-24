@@ -794,6 +794,23 @@
         color: var(--color-text-muted);
     }
 
+    .person-picker-label-row label {
+        margin-block-end: 0;
+    }
+
+    /* Cap the row to the same 480px as the form fields below it (see .form-actions above
+       for the same max-inline-size pattern). */
+    .person-picker-label-row {
+        max-inline-size: 480px;
+    }
+
+    /* Push "+ New" to the end of its own flex line - unlike justify-content: space-between,
+       this keeps it right-aligned even when .link-row's flex-wrap sends it onto its own
+       line alone on mobile. */
+    .person-picker-new {
+        margin-inline-start: auto;
+    }
+
     .form-error,
     .error {
         color: var(--color-error-text);
@@ -927,6 +944,35 @@
         margin-block-end: var(--space-5);
     }
 
+    /* Lyrics edit page: lyrics + translations side by side on desktop, stacked on mobile. */
+    .lyrics-columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-5);
+        align-items: start;
+    }
+
+    @media (max-width: 768px) {
+        .lyrics-columns {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .translation-card {
+        position: relative;
+        margin-block-end: var(--space-4);
+    }
+
+    .translation-card .translation-remove {
+        position: absolute;
+        inset-block-start: var(--space-2);
+        inset-inline-end: var(--space-2);
+    }
+
+    .translation-card.pending-remove {
+        display: none;
+    }
+
     /* --- Tables ---
        One component, reused by every data table in the app. `.table` is the
        block; `.table-detail`/`.table-grouped`/`.totals-row`/`.table-narrow`
@@ -1029,6 +1075,25 @@
             }
         }
     }
+
+    /* Shared by every drag-to-reorder table (event songs, resources, ...) -
+       one definition so the handle and the dragging-row highlight look and
+       behave the same everywhere. */
+    .drag-handle-cell { width: 2.2rem; text-align: center; padding-inline: 0; }
+    .drag-handle {
+        cursor: grab;
+        touch-action: none;
+        color: var(--color-text-muted);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        line-height: 0.7;
+        padding: 0.5rem 0.4rem;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+    .drag-handle:active { cursor: grabbing; }
+    tr.dragging { opacity: 0.6; background-color: var(--color-info-bg); }
 
     /* Shrink every column to its content by default (the classic
        width:1% + nowrap trick for auto-layout tables) so a table never

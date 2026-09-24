@@ -1,0 +1,60 @@
+{% load static dt_tags %}
+{% with table_id=table_id|default:"resource-table" %}
+{% if rows or related_rows or editable %}
+<div class="table-container">
+<table class="table" id="{{ table_id }}">
+    <thead>
+        <tr>
+            {% if editable %}<th class="drag-handle-cell"></th>{% endif %}
+            <th class="col-num"></th>
+            <th></th>
+            <th class="col-main">Resource</th>
+            <th class="col-main">Description</th>
+            {% if related_column_label %}<th>{{ related_column_label }}</th>{% endif %}
+            {% if editable %}<th class="col-action"></th>{% endif %}
+        </tr>
+    </thead>
+    <tbody id="{{ table_id }}-own-rows">
+        {% for row in rows %}
+        <tr data-id="{{ row.pk }}">
+            {% if editable %}<td class="drag-handle-cell"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span></td>{% endif %}
+            <td class="col-num">{{ forloop.counter }}</td>
+            <td>{{ row.icon }}</td>
+            <td class="col-main"><a href="{{ row.share_url|default:row.url }}" target="_blank" rel="noopener noreferrer">{{ row.url }}</a></td>
+            <td class="col-main">{{ row.desc }}</td>
+            {% if related_column_label %}<td>-</td>{% endif %}
+            {% if editable %}
+            <td class="col-action">
+                <button type="button" class="btn btn-remove" title="Remove">&times;</button>
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+    {% if related_rows %}
+    <tbody>
+        {% for row in related_rows %}
+        <tr>
+            {% if editable %}<td class="drag-handle-cell"></td>{% endif %}
+            <td class="col-num"></td>
+            <td>{{ row.icon }}</td>
+            <td class="col-main"><a href="{{ row.share_url|default:row.url }}" target="_blank" rel="noopener noreferrer">{{ row.url }}</a></td>
+            <td class="col-main">{{ row.desc }}</td>
+            <td>
+                {% if row.related_type == 'event' %}
+                    <a href="{% url 'syncope:event_detail' url_username row.related_obj.pk %}">{{ row.related_obj }} ({% dt row.related_obj.started_at "date-year" %})</a>
+                {% elif row.related_type == 'song' %}
+                    <a href="{% url 'syncope:song_detail' url_username row.related_obj.pk %}">{{ row.related_obj.title }}</a>
+                {% endif %}
+            </td>
+            {% if editable %}<td></td>{% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+    {% endif %}
+</table>
+</div>
+{% elif not editable %}
+<p>No resources.</p>
+{% endif %}
+{% endwith %}

@@ -13,10 +13,10 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.contrib import messages
 from syncope.models import CustomUser, Person, Role, Song
-from syncope.models import Event, EventType, Project, EventSongResource, ProjectResource, Resource
+from syncope.models import Event, EventType, Project, EventSongResource
 from syncope.forms import ProjectForm
 from syncope.forms import AddEventToProjectForm
-from syncope.forms import AddSongToProjectForm, AddGuestToProjectForm, ProjectResourceFormSet
+from syncope.forms import AddSongToProjectForm, AddGuestToProjectForm
 from syncope.utils import resource_icon_list
 from syncope.permissions import AccessControl
 from syncope.views.drafts import DraftMixin
@@ -269,45 +269,10 @@ class ProjectMetaEditView(ProjectAdminRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.kwargs.get('username')
-        if self.request.POST:
-            context['resource_formset'] = ProjectResourceFormSet(
-                self.request.POST, instance=self.object, user=self.request.user
-            )
-        else:
-            context['resource_formset'] = ProjectResourceFormSet(
-                instance=self.object, user=self.request.user
-            )
         return context
 
-    def _save_resources(self, project, resource_formset):
-        project.project_resource.all().delete()
-        valid_forms = [
-            f for f in resource_formset.forms
-            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('url')
-        ]
-        for idx, f in enumerate(valid_forms):
-            url = f.cleaned_data['url']
-            description = f.cleaned_data.get('description', '')
-            resource, created = Resource.objects.get_or_create(
-                url=url,
-                defaults={'owner': self.request.user, 'description': description}
-            )
-            if not created:
-                resource.description = description
-                resource.save(update_fields=['description'])
-            ProjectResource.objects.create(project=project, resource=resource, order=idx + 1)
-
     def form_valid(self, form):
-        context = self.get_context_data()
-        resource_formset = context['resource_formset']
-        if not resource_formset.is_valid():
-            messages.error(self.request, "Please fix errors in the resources section.")
-            return self.form_invalid(form)
-
-        with transaction.atomic():
-            self.object = form.save()
-            self._save_resources(self.object, resource_formset)
-
+        self.object = form.save()
         messages.success(self.request, "Project updated successfully!")
         return redirect(self.get_success_url())
 

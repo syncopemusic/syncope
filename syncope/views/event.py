@@ -16,9 +16,9 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.http import url_has_allowed_host_and_scheme
 from syncope.models import CustomUser, Person, Role, Song
-from syncope.models import Event, EventSong, Attendance, AttendanceType, EventResource, EventSongResource, Resource, SongResource
+from syncope.models import Event, EventSong, Attendance, AttendanceType, EventSongResource, Resource
 from syncope.forms import EventForm, AddAttendanceForm
-from syncope.forms import AddSongToEventForm, EventResourceFormSet, EventSongResourceFormSet
+from syncope.forms import AddSongToEventForm, EventSongResourceFormSet
 from syncope.views.drafts import DraftMixin
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param
@@ -43,7 +43,7 @@ def can_view_event_attendance(user, org_user):
 
 
 def _save_resource_formset(existing_manager, resource_model, owner_kwargs, resource_formset, owner_user):
-    """Shared save logic for EventResourceFormSet / EventSongResourceFormSet."""
+    """Shared save logic for a resource formset against its owner's manager."""
     existing_manager.all().delete()
     valid_forms = [
         f for f in resource_formset.forms
@@ -60,11 +60,6 @@ def _save_resource_formset(existing_manager, resource_model, owner_kwargs, resou
             resource.description = description
             resource.save(update_fields=['description'])
         resource_model.objects.create(resource=resource, order=idx + 1, **owner_kwargs)
-
-
-def save_event_resources(event, resource_formset, owner_user):
-    """Persist an EventResourceFormSet against `event`."""
-    _save_resource_formset(event.event_resource, EventResource, {'event': event}, resource_formset, owner_user)
 
 
 def save_event_song_resources(event_song, resource_formset, owner_user):
@@ -634,14 +629,6 @@ class EventMetaEditView(UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         event = self.object
-        if self.request.POST:
-            context['resource_formset'] = EventResourceFormSet(
-                self.request.POST, instance=event, user=self.customuser,
-            )
-        else:
-            context['resource_formset'] = EventResourceFormSet(
-                instance=event, user=self.customuser,
-            )
         context['url_username'] = self.kwargs.get('username')
         context['is_admin'] = self.is_admin
         context['eventsongs'] = event.eventsong_set.select_related('song').order_by('order')
@@ -652,18 +639,11 @@ class EventMetaEditView(UpdateView):
         return context
 
     def form_valid(self, form):
-        context = self.get_context_data()
-        resource_formset = context['resource_formset']
-        if not resource_formset.is_valid():
-            messages.error(self.request, "Please fix errors in the resources section.")
-            return self.form_invalid(form)
-
         encore_raw = self.request.POST.get('encore_song', '')
         encore_pk = int(encore_raw) if encore_raw.isdigit() else None
 
         with transaction.atomic():
             self.object = form.save()
-            save_event_resources(self.object, resource_formset, self.customuser)
             eventsongs = self.object.eventsong_set.filter(encore=True) | self.object.eventsong_set.filter(pk=encore_pk)
             for es in eventsongs.distinct():
                 new_encore = es.pk == encore_pk

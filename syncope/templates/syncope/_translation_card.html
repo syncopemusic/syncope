@@ -1,0 +1,14 @@
+<div class="card translation-card">
+    <button type="button" class="btn btn-remove translation-remove" title="Remove">&times;</button>
+    {% for hidden in t_form.hidden_fields %}{{ hidden }}{% endfor %}
+    <div class="form-group">
+        <label for="{{ t_form.languagecode.id_for_label }}">Language</label>
+        {{ t_form.languagecode }}
+    </div>
+    <div class="form-group">
+        {{ t_form.translation }}
+    </div>
+    {% include "syncope/_person_picker.html" with field=t_form.translator field_name="translator" label="Translator" current=t_form.instance.translator new_person_url_name="syncope:org_member_new_translator" %}
+    <div hidden>{{ t_form.DELETE }}</div>
+    {% if t_form.errors %}<p class="form-help">{{ t_form.errors }}</p>{% endif %}
+</div>

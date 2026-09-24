@@ -15,7 +15,8 @@ from .views.organization import OrganizationCreateView, OrganizationDashboard
 from .views.project import ProjectDeleteView, ProjectCreateView, ProjectDetailView, ProjectListView
 from .views.project import ProjectMetaEditView, ProjectEventsEditView, ProjectSongsEditView, ProjectParticipantsEditView
 from .views.project import project_events_search, project_songs_search, project_guests_search
-from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongUpdateView, SongQuoteView, song_list_search
+from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongMetaEditView, SongLyricsEditView, SongQuoteView, song_list_search, song_person_search
+from .views.resource import ResourcesEditView
 from .views.user_login_register import SignUp, UserLoginView, UserLogoutView
 from .views.poll import PollListView, PollCreateUpdateView, PollDetailView, PollDeleteView, PollPersonView, PollEventView, PollEventUpdateView, PollEventAttendanceView, PollPersonAttendanceView, poll_persons_search
 from .views.share import create_share_link, visit_share
@@ -62,6 +63,7 @@ urlpatterns = [
     path("<str:username>/events/<int:pk>/attendance/edit/search/", event_attendance_search, name="event_attendance_search"),
 
     path("<str:username>/events/<int:pk>/meta/edit/", EventMetaEditView.as_view(), name="event_meta_edit"),
+    path("<str:username>/events/<int:pk>/resources/edit/", ResourcesEditView.as_view(kind='event'), name="event_resources_edit"),
 
     path("<str:username>/members/", RedirectView.as_view(pattern_name="syncope:org_member_list", permanent=False)),
     path("<str:username>/members/active/", PersonListView.as_view(), {"list_type": "active"}, name="org_member_list"),
@@ -73,6 +75,7 @@ urlpatterns = [
     path("<str:username>/members/new/member/", OrgMemberAddView.as_view(), {'preset': 'member'}, name="org_member_new_member"),
     path("<str:username>/members/<int:pk>/", OrgMemberDetailView.as_view(), name="org_member_detail"),
     path("<str:username>/members/<int:pk>/edit/", OrgMemberEditView.as_view(), name="org_member_edit"),
+    path("<str:username>/members/<int:pk>/resources/edit/", ResourcesEditView.as_view(kind='person'), name="person_resources_edit"),
     path("<str:username>/members/<int:pk>/delete/", OrgMemberDeleteView.as_view(), name="org_member_delete"),
     path("<str:username>/members/<int:pk>/unlink/", org_member_unlink, name="org_member_unlink"),
 
@@ -106,7 +109,10 @@ urlpatterns = [
     path("<str:username>/songs/search/", song_list_search, name="song_list_search"),
     path("<str:username>/songs/new/", SongCreateView.as_view(), name="song_new"),
     path("<str:username>/songs/<int:pk>/", SongDetailView.as_view(), name="song_detail"),
-    path("<str:username>/songs/<int:pk>/update/", SongUpdateView.as_view(), name="song_update"),
+    path("<str:username>/songs/<int:pk>/meta/edit/", SongMetaEditView.as_view(), name="song_meta_edit"),
+    path("<str:username>/songs/<int:pk>/lyrics/edit/", SongLyricsEditView.as_view(), name="song_lyrics_edit"),
+    path("<str:username>/songs/<int:pk>/resources/edit/", ResourcesEditView.as_view(kind='song'), name="song_resources_edit"),
+    path("<str:username>/songs/persons/search/<str:field>/", song_person_search, name="song_person_search"),
     path("<str:username>/songs/<int:pk>/delete/", SongDeleteView.as_view(), name="song_delete"),
     path("<str:username>/songs/<int:pk>/quotes/", SongQuoteView.as_view(), name="song_quotes"),
     path('<str:username>/attendance/', AttendanceDashboardView.as_view(), name='attendance'),
@@ -119,6 +125,7 @@ urlpatterns = [
     path('<str:username>/projects/<int:pk>/delete/', ProjectDeleteView.as_view(), name='project_delete'),
 
     path('<str:username>/projects/<int:pk>/meta/edit/', ProjectMetaEditView.as_view(), name='project_meta_edit'),
+    path('<str:username>/projects/<int:pk>/resources/edit/', ResourcesEditView.as_view(kind='project'), name='project_resources_edit'),
 
     path('<str:username>/projects/<int:pk>/events/edit/', ProjectEventsEditView.as_view(), name='project_events_edit'),
     path('<str:username>/projects/<int:pk>/events/edit/search/', project_events_search, name='project_events_search'),

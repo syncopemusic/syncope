@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse_lazy, reverse
-from django.http import HttpResponseRedirect, HttpResponseForbidden
+from django.http import HttpResponseRedirect, HttpResponseForbidden, HttpResponseBadRequest
 from django.views.generic import ListView, CreateView, UpdateView,  DetailView, View
 from django.views.generic.edit import DeleteView
 from django.db.models import Q, Exists, OuterRef, Count, Max
@@ -9,35 +9,16 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
-from syncope.models import Song, EventType, CustomUser
-from syncope.models import Event, SongResource, Resource, EventSongResource, EventSong, Project
-from syncope.forms import  SongForm
-from syncope.forms import  QuoteFormSet, LyricsTranslationFormSet, SongResourceFormSet
+from syncope.models import Song, EventType, CustomUser, Person
+from syncope.models import Event, EventSong, Project
+from syncope.forms import SongMetaForm, SongLyricsForm, SONG_PERSON_FIELD_SKILLS
+from syncope.forms import QuoteFormSet, LyricsTranslationFormSet
 from syncope.mixins import  SongOwnerMixin
 from syncope.views.drafts import DraftMixin, clear_draft
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param, safe_next_url
 from syncope.breadcrumbs import event_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
-
-
-def save_song_resources(song, resource_formset, owner_user):
-    """Save resources from a formset to a song."""
-    song.song_resource.all().delete()
-    valid_forms = [
-        f for f in resource_formset.forms
-        if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('url')
-    ]
-    for idx, f in enumerate(valid_forms):
-        url = f.cleaned_data['url']
-        description = f.cleaned_data.get('description', '')
-        resource, created = Resource.objects.get_or_create(
-            url=url,
-            defaults={'owner': owner_user, 'description': description}
-        )
-        if not created:
-            resource.description = description
-            resource.save(update_fields=['description'])
-        SongResource.objects.create(song=song, resource=resource, order=idx + 1)
+from syncope.views.resource import song_related_resource_rows
 
 
 def _build_song_queryset(qs, q):
@@ -185,30 +166,13 @@ class SongDetailView(SongOwnerMixin, DetailView):
             eventsong__song=song
         ).order_by('-started_at').distinct()
 
-        for event in events:
-            event_songs = event.eventsong_set.filter(song=song)
-            event_song_resources = EventSongResource.objects.filter(
-                event_song__in=event_songs
-            ).select_related('resource').order_by('order')
-            event.song_resources_in_event = resource_icon_list(event_song_resources)
-
         context['events'] = events
+        context['can_manage'] = AccessControl.can_manage_song(self.request.user, song)
+
         context['song_resources'] = resource_icon_list(
             song.song_resource.select_related('resource').order_by('order')
         )
-        context['can_manage'] = AccessControl.can_manage_song(self.request.user, song)
-
-        # Build combined resource list: song resources first, then event-song resources
-        all_song_resources = [
-            {'url': r['url'], 'icon': r['icon'], 'desc': r['desc'], 'event': None, 'share_url': r.get('share_url')}
-            for r in context['song_resources']
-        ]
-        for event in events:
-            for r in event.song_resources_in_event:
-                all_song_resources.append({
-                    'url': r['url'], 'icon': r['icon'], 'desc': r['desc'], 'event': event, 'share_url': r.get('share_url')
-                })
-        context['all_song_resources'] = all_song_resources
+        context['related_song_resources'] = song_related_resource_rows(song)
 
         return context
 
@@ -234,8 +198,8 @@ class SelectPersonInitialMixin:
 
 @method_decorator(login_required, name='dispatch')
 class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, CreateView):
-    form_class = SongForm
-    template_name = "syncope/song_form.html"
+    form_class = SongMetaForm
+    template_name = "syncope/song_meta_edit.html"
     permission_check_method = AccessControl.can_manage_song
     person_preset_fields = ['composer', 'arranger', 'poet', 'translator']
 
@@ -244,56 +208,14 @@ class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Creat
         kwargs["user"] = self.owner_user
         return kwargs
 
-    def get_context_data(self, quote_formset=None, translation_formset=None, songresource_formset=None, **kwargs):
+    def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
         context['can_manage'] = True
         context['cancel_url'] = safe_next_url(
             self.request, reverse('syncope:song_list', kwargs={'username': self.owner_user.username})
         )
-        post_data = self.request.POST or None
-
-        context['quote_formset'] = (
-            quote_formset or self._get_formset_from_draft(
-                QuoteFormSet, 'quotes',
-                data=post_data,
-                user=self.owner_user
-            )
-        )
-        context['translation_formset'] = (
-            translation_formset or self._get_formset_from_draft(
-                LyricsTranslationFormSet, 'translations',
-                data=post_data,
-                user=self.owner_user
-            )
-        )
-        context['songresource_formset'] = (
-            songresource_formset or self._get_formset_from_draft(
-                SongResourceFormSet, 'resources',
-                data=post_data,
-                user=self.owner_user
-            )
-        )
         return context
-
-    def post(self, request, *args, **kwargs):
-        if request.POST.get('action') == 'add_kw_row':
-            self.object = None
-            form = self.get_form()
-            post_data = request.POST.copy()
-            total = int(post_data.get('quotes-TOTAL_FORMS', 0))
-            post_data['quotes-TOTAL_FORMS'] = total + 1
-            kf = QuoteFormSet(post_data, prefix='quotes', user=self.owner_user)
-            return self.render_to_response(self.get_context_data(form=form, quote_formset=kf))
-        if request.POST.get('action') == 'add_translation_row':
-            self.object = None
-            form = self.get_form()
-            post_data = request.POST.copy()
-            total = int(post_data.get('translations-TOTAL_FORMS', 0))
-            post_data['translations-TOTAL_FORMS'] = total + 1
-            tf = LyricsTranslationFormSet(post_data, prefix='translations', user=self.owner_user)
-            return self.render_to_response(self.get_context_data(form=form, translation_formset=tf))
-        return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
         clear_draft(self.request, self.get_draft_key())
@@ -302,19 +224,6 @@ class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Creat
             max_id = Song.objects.filter(user=self.owner_user).aggregate(Max("internal_id"))["internal_id__max"]
             form.instance.internal_id = (max_id or 0) + 1
         self.object = form.save()
-        kf = QuoteFormSet(self.request.POST, instance=self.object, prefix='quotes', user=self.object.user)
-        if kf.is_valid():
-            kf.save()
-        tf = LyricsTranslationFormSet(
-            self.request.POST, instance=self.object, prefix='translations', user=self.owner_user
-        )
-        if tf.is_valid():
-            tf.save()
-        rf = SongResourceFormSet(
-            self.request.POST, instance=self.object, prefix='resources', user=self.owner_user
-        )
-        if rf.is_valid():
-            save_song_resources(self.object, rf, self.owner_user)
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
@@ -354,9 +263,10 @@ class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Creat
 
 
 @method_decorator(login_required, name='dispatch')
-class SongUpdateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, UpdateView):
-    form_class = SongForm
-    template_name = "syncope/song_form.html"
+class SongMetaEditView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, UpdateView):
+    """Details subpage: identifying fields, composer/arranger/poet/translator pickers, and Delete."""
+    form_class = SongMetaForm
+    template_name = "syncope/song_meta_edit.html"
     permission_check_method = AccessControl.can_manage_song
     person_preset_fields = ['composer', 'arranger', 'poet', 'translator']
 
@@ -389,83 +299,37 @@ class SongUpdateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Updat
                 return with_origin(event_url, origin_key), f"Return to {event}"
         return None, None
 
-    def get_context_data(self, quote_formset=None, translation_formset=None, resource_formset=None, **kwargs):
+    def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
         context['can_manage'] = True
         context['cancel_url'] = self._song_detail_url()
         context['return_url'], context['return_label'] = self._return_target()
-        post_data = self.request.POST or None
-
-        context['quote_formset'] = (
-            quote_formset or self._get_formset_from_draft(
-                QuoteFormSet, 'quotes',
-                data=post_data,
-                instance=self.object,
-                user=self.object.user
-            )
-        )
-        context['translation_formset'] = (
-            translation_formset or self._get_formset_from_draft(
-                LyricsTranslationFormSet, 'translations',
-                data=post_data,
-                instance=self.object,
-                user=self.owner_user
-            )
-        )
-        context['resource_formset'] = (
-            resource_formset or self._get_formset_from_draft(
-                SongResourceFormSet, 'resources',
-                data=post_data,
-                instance=self.object,
-                user=self.owner_user
-            )
-        )
         return context
-
-    def post(self, request, *args, **kwargs):
-        if request.POST.get('action') == 'add_kw_row':
-            self.object = self.get_object()
-            form = self.get_form()
-            post_data = request.POST.copy()
-            total = int(post_data.get('quotes-TOTAL_FORMS', 0))
-            post_data['quotes-TOTAL_FORMS'] = total + 1
-            kf = QuoteFormSet(post_data, instance=self.object, prefix='quotes', user=self.object.user)
-            return self.render_to_response(self.get_context_data(form=form, quote_formset=kf))
-        if request.POST.get('action') == 'add_translation_row':
-            self.object = self.get_object()
-            form = self.get_form()
-            post_data = request.POST.copy()
-            total = int(post_data.get('translations-TOTAL_FORMS', 0))
-            post_data['translations-TOTAL_FORMS'] = total + 1
-            tf = LyricsTranslationFormSet(post_data, instance=self.object, prefix='translations', user=self.owner_user)
-            return self.render_to_response(self.get_context_data(form=form, translation_formset=tf))
-        return super().post(request, *args, **kwargs)
-
-    def _save_resources(self, song, resource_formset):
-        save_song_resources(song, resource_formset, self.owner_user)
 
     def form_valid(self, form):
         clear_draft(self.request, self.get_draft_key())
         form.instance.user = self.owner_user
         self.object = form.save()
-        kf = QuoteFormSet(self.request.POST, instance=self.object, prefix='quotes', user=self.object.user)
-        if kf.is_valid():
-            kf.save()
-        tf = LyricsTranslationFormSet(
-            self.request.POST, instance=self.object, prefix='translations', user=self.owner_user
-        )
-        if tf.is_valid():
-            tf.save()
-        rf = SongResourceFormSet(
-            self.request.POST, instance=self.object, prefix='resources', user=self.owner_user
-        )
-        if rf.is_valid():
-            self._save_resources(self.object, rf)
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
         return self._song_detail_url()
+
+
+@login_required
+def song_person_search(request, username, field):
+    """AJAX single-person search for the Meta subpage's composer/arranger/poet/translator picker."""
+    owner_user = get_object_or_404(CustomUser, username=username)
+    skill_id = SONG_PERSON_FIELD_SKILLS.get(field)
+    if skill_id is None:
+        return HttpResponseBadRequest()
+    q = request.GET.get('q', '')
+    persons = Person.objects.for_user_with_skill(user=owner_user, skill_id=skill_id).matching_name(q)
+    return render(request, 'syncope/song_person_search_results.html', {
+        'persons': persons[:25],
+        'search_q': q,
+    })
 
 
 @method_decorator(login_required, name='dispatch')
@@ -571,5 +435,44 @@ class SongQuoteView(SongOwnerMixin, View):
             'url_username': username,
             'next': request.POST.get('next', ''),
         })
+
+
+@method_decorator(login_required, name='dispatch')
+class SongLyricsEditView(SongOwnerMixin, View):
+    """Manage lyrics, language, and translations for a specific song."""
+    template_name = 'syncope/song_lyrics_edit.html'
+    permission_check_method = AccessControl.can_manage_song
+
+    def _get_song(self, pk):
+        song = get_object_or_404(Song, pk=pk, user=self.owner_user)
+        if not AccessControl.can_manage_song(self.request.user, song):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return song
+
+    def _context(self, song, username, form=None, translation_formset=None):
+        return {
+            'song': song,
+            'form': form or SongLyricsForm(instance=song, user=self.owner_user),
+            'translation_formset': translation_formset or LyricsTranslationFormSet(
+                instance=song, prefix='translations', user=self.owner_user
+            ),
+            'url_username': username,
+            'can_manage': True,
+        }
+
+    def get(self, request, username, pk):
+        song = self._get_song(pk)
+        return render(request, self.template_name, self._context(song, username))
+
+    def post(self, request, username, pk):
+        song = self._get_song(pk)
+        form = SongLyricsForm(request.POST, instance=song, user=self.owner_user)
+        tf = LyricsTranslationFormSet(request.POST, instance=song, prefix='translations', user=self.owner_user)
+        if form.is_valid() and tf.is_valid():
+            form.save()
+            tf.save()
+            return redirect('syncope:song_detail', username=username, pk=song.pk)
+        return render(request, self.template_name, self._context(song, username, form=form, translation_formset=tf))
 
 

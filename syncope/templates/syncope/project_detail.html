@@ -160,28 +160,11 @@
 {% endif %}
 
 
-<h3>Project Resources</h3>
-{% if project_resources %}
-<div class="table-container">
-<table class="table">
-    <thead>
-    <tr><th class="col-num"></th><th></th><th class="col-main">Description</th><th class="col-main">URL</th></tr>
-    </thead>
-    <tbody>
-    {% for link in project_resources %}
-    <tr>
-        <td class="col-num">{{ forloop.counter }}</td>
-        <td>{{ link.icon }}</td>
-        <td class="col-main">{{ link.desc }}</td>
-        <td class="col-main"><a href="{{ link.share_url|default:link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a></td>
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
+<div class="section-header">
+    <h3>Project Resources</h3>
+    {% if is_admin %}<a href="{% url 'syncope:project_resources_edit' url_username object.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
-{% else %}
-<p>No resources.</p>
-{% endif %}
+{% include "syncope/_resource_table.html" with rows=project_resources editable=False %}
 
 {% url 'syncope:project_list' url_username as return_target %}
 {% include "syncope/_save_bar.html" with url=return_target %}

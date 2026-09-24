@@ -4,8 +4,8 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.utils import timezone
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
     PollAttendance, Invitation
-from .models import Event, EventSong, AttendanceType,  Voice, Instrument, EventType, EventResource, EventSongResource
-from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource, ProjectResource, \
+from .models import Event, EventSong, AttendanceType,  Voice, Instrument, EventType, EventSongResource
+from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, PersonResource, \
     MembershipPeriod, PersonRole
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q, Count
@@ -217,7 +217,17 @@ class QuoteForm(forms.ModelForm):
             self.fields['person'].queryset = Person.objects.in_org_user(user)
 
 
-class SongForm(forms.ModelForm):
+# Skill each person-picker field on SongMetaForm draws its candidates from; also used
+# by song_person_search to scope the AJAX search per field.
+SONG_PERSON_FIELD_SKILLS = {
+    'composer': Skill.COMPOSER,
+    'arranger': Skill.ARRANGER,
+    'poet': Skill.POET,
+    'translator': Skill.TRANSLATOR,
+}
+
+
+class SongMetaForm(forms.ModelForm):
     class Meta:
         model = Song
         fields = [
@@ -234,15 +244,13 @@ class SongForm(forms.ModelForm):
             "ensemble",
             "number_of_voices",
             "additional_notes",
-            "lyrics",
-            "languagecode",
             "keywords",
         ]
         widgets = {
-            "lyrics": forms.Textarea(attrs={'rows': 12}),
-        }
-        labels = {
-            "languagecode": "Language",
+            "composer": forms.HiddenInput(),
+            "arranger": forms.HiddenInput(),
+            "poet": forms.HiddenInput(),
+            "translator": forms.HiddenInput(),
         }
 
     def __init__(self, *args, user=None, **kwargs):
@@ -250,13 +258,7 @@ class SongForm(forms.ModelForm):
         self.user = user
 
         if user:
-            person_field_skills = {
-                'composer': Skill.COMPOSER,
-                'arranger': Skill.ARRANGER,
-                'poet': Skill.POET,
-                'translator': Skill.TRANSLATOR,
-            }
-            for field_name, skill_id in person_field_skills.items():
+            for field_name, skill_id in SONG_PERSON_FIELD_SKILLS.items():
                 self.fields[field_name].queryset = Person.objects.for_user_with_skill(
                     user=user, skill_id=skill_id
                 )
@@ -270,6 +272,26 @@ class SongForm(forms.ModelForm):
             if qs.exists():
                 raise forms.ValidationError("ID already in use.")
         return value
+
+
+class SongLyricsForm(forms.ModelForm):
+    class Meta:
+        model = Song
+        fields = ["lyrics", "languagecode", "poet"]
+        widgets = {
+            "lyrics": forms.Textarea(attrs={'rows': 12}),
+            "poet": forms.HiddenInput(),
+        }
+        labels = {
+            "languagecode": "Language",
+        }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['poet'].queryset = Person.objects.for_user_with_skill(
+                user=user, skill_id=SONG_PERSON_FIELD_SKILLS['poet']
+            )
 
 
 class ProjectForm(forms.ModelForm):
@@ -436,10 +458,7 @@ class AddGuestToProjectForm(forms.Form):
             eligible = Person.objects.filter(membership_period__user=org_user).exclude(
                 projects=project
             ).exclude(pk__in=exclude_ids or []).distinct().order_by('last_name', 'first_name')
-            self.search_results = list(eligible.filter(
-                Q(first_name__icontains=search_q) |
-                Q(last_name__icontains=search_q)
-            ).distinct())
+            self.search_results = list(eligible.matching_name(search_q))
 
 
 class AddAttendanceForm(forms.Form):
@@ -470,8 +489,7 @@ class AddAttendanceForm(forms.Form):
                 ).exclude(
                     id__in=exclude_pks
                 ).filter(
-                    Q(first_name__icontains=search_q) |
-                    Q(last_name__icontains=search_q) |
+                    Q(pk__in=Person.objects.matching_name(search_q)) |
                     Q(singer__voice__name__icontains=search_q) |
                     Q(instrumentalist__instrument__name__icontains=search_q)
                 ).distinct().annotate(
@@ -516,7 +534,10 @@ class LyricsTranslationForm(forms.ModelForm):
     class Meta:
         model = LyricsTranslation
         fields = ['languagecode', 'translation', 'translator']
-        widgets = {'translation': forms.Textarea(attrs={'rows': 5})}
+        widgets = {
+            'translation': forms.Textarea(attrs={'rows': 5}),
+            'translator': forms.HiddenInput(),
+        }
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -545,7 +566,7 @@ LyricsTranslationFormSet = inlineformset_factory(
     LyricsTranslation,
     form=LyricsTranslationForm,
     formset=BaseLyricsTranslationFormSet,
-    extra=1,
+    extra=0,
     can_delete=True,
 )
 
@@ -607,32 +628,15 @@ def make_resource_form(resource_model):
     return ResourceForm
 
 
-SongResourceForm = make_resource_form(SongResource)
 PersonResourceForm = make_resource_form(PersonResource)
-EventResourceForm = make_resource_form(EventResource)
 EventSongResourceForm = make_resource_form(EventSongResource)
 
-SongResourceFormSet = inlineformset_factory(
-    Song, SongResource, form=SongResourceForm,
-    formset=BaseResourceFormSet, extra=1, can_delete=True,
-)
 PersonResourceFormSet = inlineformset_factory(
     Person, PersonResource, form=PersonResourceForm,
     formset=BaseResourceFormSet, extra=1, can_delete=True,
 )
-EventResourceFormSet = inlineformset_factory(
-    Event, EventResource, form=EventResourceForm,
-    formset=BaseResourceFormSet, extra=1, can_delete=True,
-)
 EventSongResourceFormSet = inlineformset_factory(
     EventSong, EventSongResource, form=EventSongResourceForm,
-    formset=BaseResourceFormSet, extra=1, can_delete=True,
-)
-
-ProjectResourceForm = make_resource_form(ProjectResource)
-
-ProjectResourceFormSet = inlineformset_factory(
-    Project, ProjectResource, form=ProjectResourceForm,
     formset=BaseResourceFormSet, extra=1, can_delete=True,
 )
 
@@ -741,8 +745,7 @@ class PollPersonForm(forms.ModelForm):
             qs = Person.objects.in_org_user(org_user).exclude(pk__in=exclude_pks)
             if search_q:
                 qs = qs.filter(
-                    Q(first_name__icontains=search_q) |
-                    Q(last_name__icontains=search_q) |
+                    Q(pk__in=Person.objects.matching_name(search_q)) |
                     Q(roles__title__icontains=search_q) |
                     Q(skills__title__icontains=search_q) |
                     Q(singer__voice__name__icontains=search_q) |

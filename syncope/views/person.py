@@ -84,8 +84,7 @@ def _build_person_queryset(visible_memberships, q=''):
 
     if q:
         queryset = queryset.filter(
-            Q(person__first_name__icontains=q) |
-            Q(person__last_name__icontains=q) |
+            Q(person__in=Person.objects.matching_name(q)) |
             Q(person__skills__title__icontains=q) |
             Q(person__singer__voice__name__icontains=q) |
             Q(person__instrumentalist__instrument__name__icontains=q)
@@ -1003,14 +1002,8 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
         period_kwargs = dict(instance=self.person, prefix='periods', user=self.customuser, person=self.person, queryset=period_qs)
 
         if self.request.POST:
-            context['resource_formset'] = PersonResourceFormSet(
-                self.request.POST, instance=self.person, prefix='resources', user=self.request.user
-            )
             context['period_formset'] = MembershipPeriodFormSet(self.request.POST, **period_kwargs)
         else:
-            context['resource_formset'] = PersonResourceFormSet(
-                instance=self.person, prefix='resources', user=self.request.user
-            )
             context['period_formset'] = MembershipPeriodFormSet(**period_kwargs)
         return context
 
@@ -1049,32 +1042,7 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
             # 9. update date fields
             self._update_dates(form)
 
-            # 10. save resources
-            rf = PersonResourceFormSet(
-                self.request.POST, instance=self.person, prefix='resources', user=self.request.user
-            )
-            if rf.is_valid():
-                self._save_resources(rf)
-
         return redirect(self._person_detail_url())
-
-    def _save_resources(self, resource_formset):
-        self.person.person_resource.all().delete()
-        valid_forms = [
-            f for f in resource_formset.forms
-            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('url')
-        ]
-        for idx, f in enumerate(valid_forms):
-            url = f.cleaned_data['url']
-            description = f.cleaned_data.get('description', '')
-            resource, created = Resource.objects.get_or_create(
-                url=url,
-                defaults={'owner': self.request.user, 'description': description}
-            )
-            if not created:
-                resource.description = description
-                resource.save(update_fields=['description'])
-            PersonResource.objects.create(person=self.person, resource=resource, order=idx + 1)
 
     def _update_person_info(self, form):
         """update personal info"""

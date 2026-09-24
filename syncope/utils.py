@@ -1141,7 +1141,8 @@ def resource_icon_list(resource_qs):
     }
 
     return [
-        {'url': r.resource.url,
+        {'pk': r.pk,
+         'url': r.resource.url,
          'share_url': reverse('syncope:share_visit', args=[share_map.get(r.resource_id)]) if r.resource_id in share_map else None,
          'icon': RESOURCE_ICONS[get_url_info(r.resource.url)],
          'desc': r.resource.description or r.resource.url}

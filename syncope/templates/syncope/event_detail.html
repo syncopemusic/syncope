@@ -33,8 +33,9 @@
     {% if is_admin and event.additional_notes %}<tr><th>Personal notes</th><td>{{ event.additional_notes }}</td></tr>{% endif %}
 </table>
 
-{% if all_event_resources %}
-<table class="resource-table-compact">
+{% if all_event_resources or is_admin %}
+<div class="section-header">
+    {% if all_event_resources %}<table class="resource-table-compact">
     <tbody>
         {% for res in all_event_resources %}
         <tr>
@@ -42,7 +43,9 @@
         </tr>
         {% endfor %}
     </tbody>
-</table>
+</table>{% endif %}
+    {% if is_admin %}<a href="{% url 'syncope:event_resources_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary">Edit resources</a>{% endif %}
+</div>
 {% endif %}
 <div style="display:none;">{% csrf_token %}</div>
 

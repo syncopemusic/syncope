@@ -12,7 +12,7 @@
             <span id="share-result" class="share-result"></span>
         </span>
     </h1>
-    {% if can_manage %}<a href="{%  url 'syncope:song_update' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-secondary">Edit</a>{% endif %}
+    {% if can_manage %}<a href="{%  url 'syncope:song_meta_edit' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 <div class="visually-hidden">{% csrf_token %}</div>
 
@@ -64,50 +64,19 @@
     </tr>
 </table>
 
-{% if all_song_resources %}
-<h3>Resources</h3>
-<div class="table-container">
-<table class="table">
-    <thead>
-        <tr>
-            <th class="col-num"></th>
-            <th></th>
-            <th></th>
-            <th class="col-main">Resource</th>
-            <th class="col-main">Description</th>
-            <th>Event</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for res in all_song_resources %}
-        <tr>
-            <td class="col-num">{{ forloop.counter }}</td>
-            <td>{{ res.icon }}</td>
-            <td style="position: relative;">
-                <button class="copy-resource-btn btn btn-link" data-url="{{ res.share_url|default:res.url }}" title="Copy link">
-                    <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-                </button>
-                <span class="copy-resource-result share-result-floating"></span>
-            </td>
-            <td class="col-main"><a href="{{ res.share_url|default:res.url }}" target="_blank" rel="noopener noreferrer">{{ res.url }}</a></td>
-            <td class="col-main">{{ res.desc }}</td>
-            <td>
-                {% if res.event %}
-                    <a href="{% url 'syncope:event_detail' url_username res.event.pk %}">{{ res.event.name }} ({% dt res.event.started_at "date-year" %})</a>
-                {% else %}
-                -
-                {% endif %}
-            </td>
-
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+{% if song_resources or related_song_resources or can_manage %}
+<div class="section-header">
+    <h3>Resources</h3>
+    {% if can_manage %}<a href="{% url 'syncope:song_resources_edit' url_username song.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
+{% include "syncope/_resource_table.html" with rows=song_resources related_rows=related_song_resources related_column_label="Event" editable=False %}
 {% endif %}
 
-{% if song.quotes.all %}
-<h3>Quotes</h3>
+{% if song.quotes.all or can_manage %}
+<div class="section-header">
+    <h3>Quotes</h3>
+    {% if can_manage %}<a href="{% url 'syncope:song_quotes' url_username song.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
 <ul>
     {% for quote in song.quotes.all %}
         <li>
@@ -125,13 +94,12 @@
 <p>{{ song.additional_notes|linebreaksbr }}</p>
 {% endif %}
 
-{% if song.lyrics %}
-<h3>Lyrics</h3>
-<div>{{ song.lyrics|linebreaks }}</div>
-{% endif %}
-
-{% if song.lyricstranslation_set.all %}
-<h3>Lyrics Translations</h3>
+{% if song.lyrics or song.lyricstranslation_set.all or can_manage %}
+<div class="section-header">
+    <h3>Lyrics</h3>
+    {% if can_manage %}<a href="{% url 'syncope:song_lyrics_edit' url_username song.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
+{% if song.lyrics %}<div>{{ song.lyrics|linebreaks }}</div>{% endif %}
 {% for t in song.lyricstranslation_set.all %}
     <h4>{{ t.languagecode }}{% if t.translator %} - {{ t.translator }}{% endif %}</h4>
     <div>{{ t.translation|linebreaks }}</div>

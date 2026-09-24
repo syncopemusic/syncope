@@ -4,21 +4,6 @@
 
 {% block extra_css %}
 <style>
-    .drag-handle-cell { width: 2.2rem; text-align: center; padding-inline: 0; }
-    .drag-handle {
-        cursor: grab;
-        touch-action: none;
-        color: var(--color-text-muted);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        line-height: 0.7;
-        padding: 0.5rem 0.4rem;
-        font-weight: 700;
-        font-size: 1.1rem;
-    }
-    .drag-handle:active { cursor: grabbing; }
-    tr.song-row.dragging { opacity: 0.6; background-color: var(--color-info-bg); }
     .song-index { text-align: center; width: 1.3rem; padding-inline: 0; }
     .song-title { font-weight: 500; overflow-wrap: break-word; }
     .song-subline {
@@ -193,57 +178,7 @@
         afterDiscard: () => runSongSearch(songSearchInput ? songSearchInput.value : ''),
     });
 
-    // --- Drag-and-drop reorder (Pointer Events: works for mouse and touch alike) ---
-    let dragRow = null;
-    let dragPointerId = null;
-
-    songsTbody.addEventListener('pointerdown', function(e) {
-        const handle = e.target.closest('.drag-handle');
-        if (!handle) return;
-        const row = handle.closest('tr.song-row');
-        if (!row) return;
-        e.preventDefault();
-        handle.setPointerCapture(e.pointerId);
-        dragRow = row;
-        dragPointerId = e.pointerId;
-        row.classList.add('dragging');
-        window.addEventListener('pointerup', endDrag);
-        window.addEventListener('pointercancel', endDrag);
-        window.addEventListener('blur', endDrag);
-    });
-
-    songsTbody.addEventListener('pointermove', function(e) {
-        if (!dragRow || e.pointerId !== dragPointerId) return;
-        const rows = Array.from(songsTbody.querySelectorAll('tr.song-row'));
-        let target = null;
-        for (const row of rows) {
-            if (row === dragRow) continue;
-            const rect = row.getBoundingClientRect();
-            if (e.clientY < rect.top + rect.height / 2) { target = row; break; }
-        }
-        if (target) songsTbody.insertBefore(dragRow, target);
-        else songsTbody.appendChild(dragRow);
-    });
-
-    function endDrag(e) {
-        if (!dragRow) return;
-        if (e && typeof e.pointerId === 'number' && e.pointerId !== dragPointerId) return;
-        const handle = dragRow.querySelector('.drag-handle');
-        try {
-            if (handle && dragPointerId !== null && handle.hasPointerCapture(dragPointerId)) {
-                handle.releasePointerCapture(dragPointerId);
-            }
-        } catch (err) { /* pointer already invalid/released - ignore */ }
-        dragRow.classList.remove('dragging');
-        dragRow = null;
-        dragPointerId = null;
-        window.removeEventListener('pointerup', endDrag);
-        window.removeEventListener('pointercancel', endDrag);
-        window.removeEventListener('blur', endDrag);
-        saveBarCtl.sync();
-    }
-    songsTbody.addEventListener('pointerup', endDrag);
-    songsTbody.addEventListener('pointercancel', endDrag);
+    initDragReorder(songsTbody, { rowSelector: 'tr.song-row', onDrop: () => saveBarCtl.sync() });
 
     // --- Remove / undo ---
     function toggleRemove(row) {

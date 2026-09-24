@@ -27,8 +27,11 @@
 </table>
 {% endif %}
 
-{% if person_resources %}
-<h3>Resources</h3>
+{% if person_resources or is_admin %}
+<div class="section-header">
+    <h3>Resources</h3>
+    {% if is_admin %}<a href="{% url 'syncope:person_resources_edit' url_username person.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
 <div class="table-container">
 <table class="table">
   <thead>

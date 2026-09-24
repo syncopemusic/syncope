@@ -1,0 +1,124 @@
+{% extends "syncope/base.html" %}
+{% load static %}
+{% block title %}Resources - {{ owner }}{% endblock %}
+{% block content %}
+
+<h1>Resources - {{ owner }}</h1>
+
+<form method="post" id="resources-form">
+    {% csrf_token %}
+    <input type="hidden" name="order" id="resources-order">
+
+    {% include "syncope/_resource_table.html" with rows=own_rows related_rows=related_rows related_column_label=related_column_label editable=True table_id="resources" %}
+
+    <div id="add-resource" style="max-width:42rem;">
+        <h3>Add resource</h3>
+        <p><input type="url" id="new-resource-url" placeholder="URL" style="width:100%; box-sizing:border-box;"></p>
+        <p><input type="text" id="new-resource-description" placeholder="Description" style="width:100%; box-sizing:border-box;"></p>
+        {% if event_options %}
+        <p>
+            <select id="new-resource-event">
+                <option value="">Song resource (not tied to an event)</option>
+                {% for event in event_options %}
+                <option value="{{ event.pk }}">Specific to: {{ event }}</option>
+                {% endfor %}
+            </select>
+        </p>
+        {% endif %}
+        <p><button type="button" id="add-resource-btn" class="btn btn-primary">+ Add</button></p>
+    </div>
+</form>
+
+{% include "syncope/_save_bar.html" with form_id="resources-form" url=owner_detail_url %}
+
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>
+    const resourcesForm = document.getElementById('resources-form');
+    const ownRowsBody = document.getElementById('resources-own-rows');
+    const orderInput = document.getElementById('resources-order');
+    let dirty = false;
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    const saveBarCtl = initSaveBar({
+        formId: 'resources-form',
+        countUnsavedChanges: () => dirty ? 1 : 0,
+        onDiscard: () => window.location.reload(),
+    });
+
+    ownRowsBody.addEventListener('click', function(e) {
+        const removeBtn = e.target.closest('.btn-remove');
+        if (!removeBtn) return;
+        const row = removeBtn.closest('tr');
+        if (row.classList.contains('staged-add')) {
+            row.remove();
+        } else {
+            const pk = row.dataset.id;
+            const pending = row.classList.toggle('pending-remove');
+            if (pending) {
+                row.insertAdjacentHTML('beforeend', `<input type="hidden" class="pending-remove-input" name="remove_${pk}" value="1">`);
+                removeBtn.textContent = '↺';
+                removeBtn.title = 'Undo removal';
+            } else {
+                row.querySelector('.pending-remove-input')?.remove();
+                removeBtn.textContent = '×';
+                removeBtn.title = 'Remove';
+            }
+        }
+        dirty = true;
+        saveBarCtl.sync();
+    });
+
+    initDragReorder(ownRowsBody, { onDrop: () => { dirty = true; saveBarCtl.sync(); } });
+
+    const newUrlInput = document.getElementById('new-resource-url');
+    const newDescInput = document.getElementById('new-resource-description');
+    const relatedColumnLabel = {{ related_column_label|yesno:"true,false" }};
+
+    const newEventSelect = document.getElementById('new-resource-event');
+
+    document.getElementById('add-resource-btn').addEventListener('click', function() {
+        const url = newUrlInput.value.trim();
+        if (!url) return;
+        const desc = newDescInput.value.trim();
+        const eventId = newEventSelect ? newEventSelect.value : '';
+        const eventLabel = newEventSelect && eventId ? newEventSelect.selectedOptions[0].textContent : '-';
+        const tr = document.createElement('tr');
+        tr.className = 'staged-add';
+        tr.innerHTML = `
+            <td class="drag-handle-cell"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span></td>
+            <td class="col-num"></td>
+            <td></td>
+            <td class="col-main">${escapeHtml(url)}<input type="hidden" name="new_url" value="${escapeHtml(url)}"></td>
+            <td class="col-main">${escapeHtml(desc)}<input type="hidden" name="new_description" value="${escapeHtml(desc)}"></td>
+            ${relatedColumnLabel ? `<td>${escapeHtml(eventLabel)}<input type="hidden" name="new_event_id" value="${escapeHtml(eventId)}"></td>` : ''}
+            <td class="col-action"><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>
+        `;
+        ownRowsBody.appendChild(tr);
+        newUrlInput.value = '';
+        newDescInput.value = '';
+        if (newEventSelect) newEventSelect.value = '';
+        dirty = true;
+        saveBarCtl.sync();
+    });
+
+    resourcesForm.addEventListener('submit', function() {
+        const tokens = [];
+        let newIdx = 0;
+        ownRowsBody.querySelectorAll('tr').forEach(function(row) {
+            if (row.classList.contains('pending-remove')) return;
+            if (row.dataset.id) {
+                tokens.push('r' + row.dataset.id);
+            } else if (row.classList.contains('staged-add')) {
+                tokens.push('n' + newIdx);
+                newIdx++;
+            }
+        });
+        orderInput.value = tokens.join(',');
+    });
+</script>
+{% endblock %}

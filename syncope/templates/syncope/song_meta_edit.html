@@ -1,0 +1,103 @@
+{% extends "syncope/base.html" %}
+{% load static %}
+{% block title %}{% if object %}Details - {{ object.title }}{% else %}New Song{% endif %}{% endblock %}
+{% block content %}
+
+{% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<h1>{% if object %}Details - {{ object.title }}{% else %}New Song{% endif %}</h1>
+
+<form method="post" id="song-meta-form">
+    {% csrf_token %}
+    <input type="hidden" name="draft_key" value="{{ draft_key }}">
+
+    {% for field in form %}
+        {% if field.name == "composer" %}
+            {% include "syncope/_person_picker.html" with field=field field_name="composer" label="Composer" current=object.composer new_person_url_name="syncope:org_member_new_composer" %}
+        {% elif field.name == "arranger" %}
+            {% include "syncope/_person_picker.html" with field=field field_name="arranger" label="Arranger" current=object.arranger new_person_url_name="syncope:org_member_new_arranger" %}
+        {% elif field.name == "poet" %}
+            {% include "syncope/_person_picker.html" with field=field field_name="poet" label="Poet" current=object.poet new_person_url_name="syncope:org_member_new_poet" %}
+        {% elif field.name == "translator" %}
+            {% include "syncope/_person_picker.html" with field=field field_name="translator" label="Translator" current=object.translator new_person_url_name="syncope:org_member_new_translator" %}
+        {% else %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<p class="form-help">{{ field.help_text }}</p>{% endif %}
+            {{ field.errors }}
+        </div>
+        {% endif %}
+    {% endfor %}
+
+    {% if object %}
+    <p class="danger-zone"><a href="{% url 'syncope:song_delete' url_username object.pk %}" class="btn btn-danger">Delete Song</a></p>
+    {% endif %}
+</form>
+
+{% include "syncope/_save_bar.html" with form_id="song-meta-form" url=return_url|default:cancel_url %}
+
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>
+    const form = document.getElementById('song-meta-form');
+    const fieldTracker = trackFormFieldChanges(form);
+
+    const saveBarCtl = initSaveBar({
+        formId: 'song-meta-form',
+        countUnsavedChanges: fieldTracker.count,
+        onDiscard: () => {
+            form.reset();
+            fieldTracker.reset();
+        },
+    });
+
+    form.addEventListener('input', () => saveBarCtl.sync());
+    form.addEventListener('change', () => saveBarCtl.sync());
+
+    document.querySelectorAll('.person-picker').forEach(function(container) {
+        const fieldInput = container.querySelector('input[type=hidden]');
+        const input = container.querySelector('.person-picker-input');
+        const spinner = container.querySelector('.person-picker-spinner');
+        const results = container.querySelector('.person-picker-results');
+        const searchUrl = container.dataset.searchUrl;
+
+        const live = initLiveSearch({
+            input: input,
+            spinner: spinner,
+            results: results,
+            buildUrl: q => `${searchUrl}?q=${encodeURIComponent(q)}`,
+        });
+
+        input.addEventListener('focus', function() {
+            input.select();
+            results.hidden = false;
+            live.run(input.value);
+        });
+
+        input.addEventListener('blur', function() {
+            setTimeout(() => { results.hidden = true; }, 150);
+        });
+
+        input.addEventListener('input', function() {
+            fieldInput.value = '';
+            fieldInput.dispatchEvent(new Event('input', {bubbles: true}));
+        });
+
+        results.addEventListener('click', function(e) {
+            const btn = e.target.closest('[data-id]');
+            if (!btn) return;
+            fieldInput.value = btn.dataset.id;
+            input.value = btn.closest('.search-result-row').querySelector('.result-label').textContent.trim();
+            results.hidden = true;
+            fieldInput.dispatchEvent(new Event('input', {bubbles: true}));
+        });
+    });
+</script>
+{% endblock %}

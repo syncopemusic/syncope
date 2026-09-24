@@ -1,0 +1,15 @@
+<div class="form-group person-picker" data-field="{{ field_name }}" data-search-url="{% url 'syncope:song_person_search' url_username field_name %}">
+    <div class="link-row person-picker-label-row">
+        <label>{{ label }}</label>
+        <button type="submit" class="btn btn-primary person-picker-new"
+                formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url new_person_url_name url_username %}&next={{ request.get_full_path|urlencode }}"
+                title="Add new {{ label }}">+ New {{ label }}</button>
+    </div>
+    {{ field }}
+    <p style="position:relative;">
+        <input type="text" class="person-picker-input" value="{{ current|default:'' }}" placeholder="Search {{ label }}" autocomplete="off" style="width:100%; box-sizing:border-box;">
+        <span class="search-spinner person-picker-spinner"></span>
+    </p>
+    <div class="person-picker-results" hidden></div>
+    {% if field.errors %}<p class="form-help">{{ field.errors }}</p>{% endif %}
+</div>
