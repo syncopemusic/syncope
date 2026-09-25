@@ -319,13 +319,21 @@ class SongMetaEditView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Upd
 
 @login_required
 def song_person_search(request, username, field):
-    """AJAX single-person search for the Meta subpage's composer/arranger/poet/translator picker."""
+    """AJAX single-person search for the Meta/Quotes subpages' person pickers.
+
+    Composer/arranger/poet/translator are scoped to a skill; the Quotes "person"
+    field isn't skill-specific, so it searches every org person instead - the
+    same scope QuoteForm already uses for its dropdown.
+    """
     owner_user = get_object_or_404(CustomUser, username=username)
-    skill_id = SONG_PERSON_FIELD_SKILLS.get(field)
-    if skill_id is None:
-        return HttpResponseBadRequest()
     q = request.GET.get('q', '')
-    persons = Person.objects.for_user_with_skill(user=owner_user, skill_id=skill_id).matching_name(q)
+    if field == 'person':
+        persons = Person.objects.in_org_user(owner_user).matching_name(q)
+    else:
+        skill_id = SONG_PERSON_FIELD_SKILLS.get(field)
+        if skill_id is None:
+            return HttpResponseBadRequest()
+        persons = Person.objects.for_user_with_skill(user=owner_user, skill_id=skill_id).matching_name(q)
     return render(request, 'syncope/song_person_search_results.html', {
         'persons': persons[:25],
         'search_q': q,
@@ -472,7 +480,7 @@ class SongLyricsEditView(SongOwnerMixin, View):
         if form.is_valid() and tf.is_valid():
             form.save()
             tf.save()
-            return redirect('syncope:song_detail', username=username, pk=song.pk)
+            return redirect('syncope:song_lyrics_edit', username=username, pk=song.pk)
         return render(request, self.template_name, self._context(song, username, form=form, translation_formset=tf))
 
 

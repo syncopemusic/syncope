@@ -13,17 +13,24 @@
 
     <div id="add-resource" style="max-width:42rem;">
         <h3>Add resource</h3>
-        <p><input type="url" id="new-resource-url" placeholder="URL" style="width:100%; box-sizing:border-box;"></p>
-        <p><input type="text" id="new-resource-description" placeholder="Description" style="width:100%; box-sizing:border-box;"></p>
-        {% if event_options %}
-        <p>
-            <select id="new-resource-event">
-                <option value="">Song resource (not tied to an event)</option>
-                {% for event in event_options %}
-                <option value="{{ event.pk }}">Specific to: {{ event }}</option>
+        <div class="form-group">
+            <label for="new-resource-url">URL</label>
+            <input type="url" id="new-resource-url" style="width:100%; box-sizing:border-box;">
+        </div>
+        <div class="form-group">
+            <label for="new-resource-description">Description</label>
+            <input type="text" id="new-resource-description" style="width:100%; box-sizing:border-box;">
+        </div>
+        {% if setlist_options %}
+        <div class="form-group">
+            <label for="new-resource-setlist">{{ related_column_label }}</label>
+            <select id="new-resource-setlist">
+                <option value="">Not tied to a {{ related_column_label|lower }}</option>
+                {% for opt in setlist_options %}
+                <option value="{{ opt.pk }}">Specific to: {{ opt.label }}</option>
                 {% endfor %}
             </select>
-        </p>
+        </div>
         {% endif %}
         <p><button type="button" id="add-resource-btn" class="btn btn-primary">+ Add</button></p>
     </div>
@@ -79,14 +86,14 @@
     const newDescInput = document.getElementById('new-resource-description');
     const relatedColumnLabel = {{ related_column_label|yesno:"true,false" }};
 
-    const newEventSelect = document.getElementById('new-resource-event');
+    const newSetlistSelect = document.getElementById('new-resource-setlist');
 
     document.getElementById('add-resource-btn').addEventListener('click', function() {
         const url = newUrlInput.value.trim();
         if (!url) return;
         const desc = newDescInput.value.trim();
-        const eventId = newEventSelect ? newEventSelect.value : '';
-        const eventLabel = newEventSelect && eventId ? newEventSelect.selectedOptions[0].textContent : '-';
+        const setlistId = newSetlistSelect ? newSetlistSelect.value : '';
+        const setlistLabel = newSetlistSelect && setlistId ? newSetlistSelect.selectedOptions[0].textContent : '-';
         const tr = document.createElement('tr');
         tr.className = 'staged-add';
         tr.innerHTML = `
@@ -95,13 +102,13 @@
             <td></td>
             <td class="col-main">${escapeHtml(url)}<input type="hidden" name="new_url" value="${escapeHtml(url)}"></td>
             <td class="col-main">${escapeHtml(desc)}<input type="hidden" name="new_description" value="${escapeHtml(desc)}"></td>
-            ${relatedColumnLabel ? `<td>${escapeHtml(eventLabel)}<input type="hidden" name="new_event_id" value="${escapeHtml(eventId)}"></td>` : ''}
+            ${relatedColumnLabel ? `<td>${escapeHtml(setlistLabel)}<input type="hidden" name="new_setlist_id" value="${escapeHtml(setlistId)}"></td>` : ''}
             <td class="col-action"><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>
         `;
         ownRowsBody.appendChild(tr);
         newUrlInput.value = '';
         newDescInput.value = '';
-        if (newEventSelect) newEventSelect.value = '';
+        if (newSetlistSelect) newSetlistSelect.value = '';
         dirty = true;
         saveBarCtl.sync();
     });

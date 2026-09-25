@@ -61,43 +61,6 @@
     form.addEventListener('input', () => saveBarCtl.sync());
     form.addEventListener('change', () => saveBarCtl.sync());
 
-    document.querySelectorAll('.person-picker').forEach(function(container) {
-        const fieldInput = container.querySelector('input[type=hidden]');
-        const input = container.querySelector('.person-picker-input');
-        const spinner = container.querySelector('.person-picker-spinner');
-        const results = container.querySelector('.person-picker-results');
-        const searchUrl = container.dataset.searchUrl;
-
-        const live = initLiveSearch({
-            input: input,
-            spinner: spinner,
-            results: results,
-            buildUrl: q => `${searchUrl}?q=${encodeURIComponent(q)}`,
-        });
-
-        input.addEventListener('focus', function() {
-            input.select();
-            results.hidden = false;
-            live.run(input.value);
-        });
-
-        input.addEventListener('blur', function() {
-            setTimeout(() => { results.hidden = true; }, 150);
-        });
-
-        input.addEventListener('input', function() {
-            fieldInput.value = '';
-            fieldInput.dispatchEvent(new Event('input', {bubbles: true}));
-        });
-
-        results.addEventListener('click', function(e) {
-            const btn = e.target.closest('[data-id]');
-            if (!btn) return;
-            fieldInput.value = btn.dataset.id;
-            input.value = btn.closest('.search-result-row').querySelector('.result-label').textContent.trim();
-            results.hidden = true;
-            fieldInput.dispatchEvent(new Event('input', {bubbles: true}));
-        });
-    });
+    document.querySelectorAll('.person-picker').forEach(wirePersonPicker);
 </script>
 {% endblock %}

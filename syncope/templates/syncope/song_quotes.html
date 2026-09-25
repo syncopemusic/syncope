@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 {% block title %}Quotes: {{ song.title }}{% endblock %}
 {% block content %}
 
@@ -7,9 +8,7 @@
     <a href="{% url 'syncope:song_meta_edit' url_username song.pk %}" class="btn btn-secondary">Edit</a>
 </div>
 
-<p><small>Quotes are specific phrases or sections from the song with their bar numbers for reference.</small></p>
-
-<form method="post">
+<form method="post" id="song-quotes-form">
     {% csrf_token %}
     {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
 
@@ -18,40 +17,120 @@
     <table class="table">
         <thead>
             <tr>
-                <th>Quote</th>
+                <th class="col-num"></th>
+                <th class="col-main">Quote</th>
                 <th>Bar Number</th>
                 <th>Date</th>
-                <th>Person</th>
-                <th>Remove</th>
+                <th class="col-main">Person</th>
+                <th class="col-action"></th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="quotes-tbody">
         {% for form in formset %}
-            <tr>
-                {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
-                <td>
-                    {{ form.word }}
-                    {% if form.word.errors %}
-                        <ul class="errorlist">{% for e in form.word.errors %}<li>{{ e }}</li>{% endfor %}</ul>
-                    {% endif %}
-                </td>
-                <td>{{ form.bar_number }}</td>
-                <td>{{ form.date }}</td>
-                <td>{{ form.person }}</td>
-                <td>{% if can_manage %}{{ form.DELETE }}{% endif %}</td>
-            </tr>
+            {% if form.instance.pk %}{% include "syncope/_quote_row.html" %}{% endif %}
         {% endfor %}
         </tbody>
     </table>
     </div>
+    <template id="empty-quote-row">
+        {% with form=formset.empty_form %}{% include "syncope/_quote_row.html" %}{% endwith %}
+    </template>
 
-    <div class="form-actions">
-        <button type="submit" name="action" value="add_kw_row" class="btn btn-primary" title="Add another quote">+ Add</button>
-        <button type="submit" name="action" value="" class="btn btn-primary">Save</button>
+    <div id="add-quote" style="max-width:42rem;">
+        <h3>Add Quote</h3>
+        <div class="form-group">
+            <label for="new-quote-word">Quote</label>
+            <input type="text" id="new-quote-word" style="width:100%; box-sizing:border-box;">
+        </div>
+        <div class="form-group">
+            <label for="new-quote-bar-number">Bar Number</label>
+            <input type="text" id="new-quote-bar-number" style="width:100%; box-sizing:border-box;">
+        </div>
+        <div class="form-group">
+            <label for="new-quote-date">Date</label>
+            <input type="date" id="new-quote-date" style="width:100%; box-sizing:border-box;">
+        </div>
+        {% include "syncope/_person_picker.html" with field=formset.empty_form.person field_name="person" label="Person" current=None new_person_url_name="syncope:org_member_new" %}
+        <p><button type="button" id="add-quote-btn" class="btn btn-primary">+ Add</button></p>
     </div>
 </form>
 
 {% url 'syncope:song_detail' url_username song.pk as return_target %}
-{% include "syncope/_save_bar.html" with url=return_target %}
+{% include "syncope/_save_bar.html" with form_id="song-quotes-form" url=return_target %}
+
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>
+    const quotesTbody = document.getElementById('quotes-tbody');
+    let dirty = false;
+
+    const saveBarCtl = initSaveBar({
+        formId: 'song-quotes-form',
+        countUnsavedChanges: () => dirty ? 1 : 0,
+        onDiscard: () => window.location.reload(),
+    });
+
+    document.querySelectorAll('.person-picker').forEach(wirePersonPicker);
+
+    const newWordInput = document.getElementById('new-quote-word');
+    const newBarInput = document.getElementById('new-quote-bar-number');
+    const newDateInput = document.getElementById('new-quote-date');
+    const newPersonPicker = document.getElementById('add-quote').querySelector('.person-picker');
+    const newPersonField = newPersonPicker.querySelector('input[type=hidden]');
+    const newPersonInput = newPersonPicker.querySelector('.person-picker-input');
+
+    document.getElementById('add-quote-btn').addEventListener('click', function() {
+        const word = newWordInput.value.trim();
+        if (!word) return;
+
+        const totalFormsInput = document.getElementById('id_quotes-TOTAL_FORMS');
+        const index = parseInt(totalFormsInput.value, 10);
+        const html = document.getElementById('empty-quote-row').innerHTML.replace(/__prefix__/g, index);
+        const wrapper = document.createElement('tbody');
+        wrapper.innerHTML = html;
+        const row = wrapper.firstElementChild;
+        row.classList.add('staged-add');
+
+        const barNumber = newBarInput.value.trim();
+        const date = newDateInput.value;
+        const personId = newPersonField.value;
+        const personLabel = newPersonInput.value.trim();
+
+        row.querySelector('[name$="-word"]').value = word;
+        row.querySelector('.quote-word-display').textContent = word;
+        row.querySelector('[name$="-bar_number"]').value = barNumber;
+        row.querySelector('.quote-bar-display').textContent = barNumber || '-';
+        row.querySelector('[name$="-date"]').value = date;
+        row.querySelector('.quote-date-display').textContent = date || '-';
+        row.querySelector('[name$="-person"]').value = personId;
+        row.querySelector('.quote-person-display').textContent = personLabel || '-';
+
+        quotesTbody.appendChild(row);
+        totalFormsInput.value = index + 1;
+
+        newWordInput.value = '';
+        newBarInput.value = '';
+        newDateInput.value = '';
+        newPersonField.value = '';
+        newPersonInput.value = '';
+        dirty = true;
+        saveBarCtl.sync();
+    });
+
+    quotesTbody.addEventListener('click', function(e) {
+        const removeBtn = e.target.closest('.quote-remove');
+        if (!removeBtn) return;
+        const row = removeBtn.closest('tr');
+        if (row.classList.contains('staged-add')) {
+            row.remove();
+        } else {
+            row.classList.add('pending-remove');
+            row.querySelector('[name$="-DELETE"]').checked = true;
+            removeBtn.disabled = true;
+        }
+        dirty = true;
+        saveBarCtl.sync();
+    });
+</script>
 
 {% endblock %}

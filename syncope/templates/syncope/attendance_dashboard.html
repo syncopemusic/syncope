@@ -73,7 +73,7 @@
                             <th class="table-event-col">
                                 <div class="table-event-header {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}">
                                     <a href="{%  url 'syncope:event_detail' url_username event.id %}?origin=attendance"
-                                        title="{{ event }}">
+                                        class="btn btn-ghost" title="{{ event }}">
                                         {% dt event.started_at "date" %}
                                     </a>
                                 </div>

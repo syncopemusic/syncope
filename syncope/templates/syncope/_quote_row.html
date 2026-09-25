@@ -1,0 +1,24 @@
+<tr class="quote-row" data-id="{{ form.instance.pk }}">
+    {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+    <td class="col-num">{{ forloop.counter }}</td>
+    <td class="col-main">
+        <span class="quote-word-display">{{ form.instance.word }}</span>
+        <div hidden>{{ form.word }}</div>
+    </td>
+    <td>
+        <span class="quote-bar-display">{{ form.instance.bar_number|default:"-" }}</span>
+        <div hidden>{{ form.bar_number }}</div>
+    </td>
+    <td>
+        <span class="quote-date-display">{{ form.instance.date|default:"-" }}</span>
+        <div hidden>{{ form.date }}</div>
+    </td>
+    <td class="col-main">
+        <span class="quote-person-display">{{ form.instance.person|default:"-" }}</span>
+        {{ form.person }}
+    </td>
+    <td class="col-action">
+        <button type="button" class="btn btn-remove quote-remove" title="Remove">&times;</button>
+        <div hidden>{{ form.DELETE }}</div>
+    </td>
+</tr>

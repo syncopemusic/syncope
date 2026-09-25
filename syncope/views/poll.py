@@ -465,12 +465,13 @@ class PollDetailView(DetailView):
         for pa in PollAttendance.objects.filter(poll_person__poll=poll).select_related('poll_attendance_type'):
             person_attendance.setdefault(pa.poll_person_id, {})[pa.poll_event_id] = pa
 
-        event_totals = {event.id: {'yes': 0, 'counted': 0} for event in poll_events}
+        event_totals = {event.id: {'yes': 0, 'maybe': 0, 'counted': 0} for event in poll_events}
 
         table_rows = []
         for pp in poll_persons:
             event_cells = []
             total_yes = 0
+            total_maybe = 0
             total_counted = 0
             for event in poll_events:
                 pa = person_attendance.get(pp.id, {}).get(event.id)
@@ -481,6 +482,9 @@ class PollDetailView(DetailView):
                     if attendance_type_id == PollAttendanceType.YES:
                         total_yes += 1
                         event_totals[event.id]['yes'] += 1
+                    elif attendance_type_id == PollAttendanceType.MAYBE:
+                        total_maybe += 1
+                        event_totals[event.id]['maybe'] += 1
                 event_cells.append({
                     'event': event,
                     'attendance_type_id': attendance_type_id,
@@ -491,6 +495,7 @@ class PollDetailView(DetailView):
                 'person': pp,
                 'event_cells': event_cells,
                 'total_yes': total_yes,
+                'total_maybe': total_maybe,
                 'total_counted': total_counted,
                 'percentage': (total_yes / total_counted * 100) if total_counted > 0 else 0,
             })
@@ -504,6 +509,7 @@ class PollDetailView(DetailView):
 
         event_totals = [event_totals[event.id] for event in poll_events]
         grand_yes = sum(t['yes'] for t in event_totals)
+        grand_maybe = sum(t['maybe'] for t in event_totals)
         grand_counted = sum(t['counted'] for t in event_totals)
         grand_percentage = (grand_yes / grand_counted * 100) if grand_counted > 0 else 0
 
@@ -513,6 +519,7 @@ class PollDetailView(DetailView):
         context['grouped_table_rows'] = grouped_table_rows
         context['event_totals'] = event_totals
         context['grand_yes'] = grand_yes
+        context['grand_maybe'] = grand_maybe
         context['grand_counted'] = grand_counted
         context['grand_percentage'] = grand_percentage
         context['is_admin'] = (

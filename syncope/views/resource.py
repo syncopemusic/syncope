@@ -3,7 +3,6 @@ from itertools import zip_longest
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Max
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -12,7 +11,7 @@ from django.views.generic import View
 
 from syncope.breadcrumbs import with_origin, DEFAULT_EVENT_ORIGIN
 from syncope.models import (
-    CustomUser, Role, Song, Event, EventSong, Project, Person,
+    CustomUser, Role, Song, Event, Project, Person,
     SongResource, EventResource, ProjectResource, PersonResource, EventSongResource, Resource,
 )
 from syncope.permissions import AccessControl
@@ -59,6 +58,22 @@ def event_related_resource_rows(event):
     return _event_song_resource_rows(event.eventsong_set.all(), 'song', 'song')
 
 
+def song_setlist_options(song):
+    """(EventSong.pk, label) pairs for 'attach this new resource within event X's setlist' - Song side."""
+    return [
+        {'pk': es.pk, 'label': str(es.event)}
+        for es in song.eventsong_set.select_related('event').order_by('-event__started_at')
+    ]
+
+
+def event_setlist_options(event):
+    """(EventSong.pk, label) pairs for 'attach this new resource to song X's setlist entry' - Event side."""
+    return [
+        {'pk': es.pk, 'label': es.song.title}
+        for es in event.eventsong_set.select_related('song').order_by('order')
+    ]
+
+
 KIND_CONFIG = {
     'song': {
         'resource_model': SongResource,
@@ -69,6 +84,7 @@ KIND_CONFIG = {
         'detail_url': 'song_detail',
         'related_rows': song_related_resource_rows,
         'related_column_label': 'Event',
+        'setlist_options': song_setlist_options,
     },
     'event': {
         'resource_model': EventResource,
@@ -79,6 +95,7 @@ KIND_CONFIG = {
         'detail_url': 'event_detail',
         'related_rows': event_related_resource_rows,
         'related_column_label': 'Song',
+        'setlist_options': event_setlist_options,
     },
     'project': {
         'resource_model': ProjectResource,
@@ -89,6 +106,7 @@ KIND_CONFIG = {
         'detail_url': 'project_detail',
         'related_rows': None,
         'related_column_label': None,
+        'setlist_options': None,
     },
     'person': {
         'resource_model': PersonResource,
@@ -99,6 +117,7 @@ KIND_CONFIG = {
         'detail_url': 'org_member_detail',
         'related_rows': None,
         'related_column_label': None,
+        'setlist_options': None,
     },
 }
 
@@ -135,19 +154,14 @@ class ResourcesEditView(View):
         own_manager = getattr(self.owner, self.cfg['related_name'])
         own_rows = resource_icon_list(own_manager.select_related('resource').order_by('order'))
         related_rows = self.cfg['related_rows'](self.owner) if self.cfg['related_rows'] else []
-
-        event_options = []
-        if self.kind == 'song':
-            event_options = [
-                es.event for es in self.owner.eventsong_set.select_related('event').order_by('-event__started_at')
-            ]
+        setlist_options = self.cfg['setlist_options'](self.owner) if self.cfg['setlist_options'] else []
 
         return render(request, self.template_name, {
             'owner': self.owner,
             'own_rows': own_rows,
             'related_rows': related_rows,
             'related_column_label': self.cfg['related_column_label'],
-            'event_options': event_options,
+            'setlist_options': setlist_options,
             'url_username': username,
             'owner_detail_url': self._owner_detail_url(request, username),
         })
@@ -165,15 +179,18 @@ class ResourcesEditView(View):
         }
         new_urls = request.POST.getlist('new_url')
         new_descriptions = request.POST.getlist('new_description')
-        new_event_ids = request.POST.getlist('new_event_id')
+        new_setlist_ids = request.POST.getlist('new_setlist_id')
 
         with transaction.atomic():
             if remove_ids:
                 own_manager.filter(pk__in=remove_ids).delete()
 
-            # (resource_id, event_id_or_None) per staged addition, in submission order.
+            # (resource_id, EventSong.pk_or_None) per staged addition, in submission order.
+            # The EventSong pk always comes from `setlist_options` (Song side: events this song
+            # is already on; Event side: songs already in this event's setlist), so it's always
+            # an existing setlist entry - no lookup/create needed to resolve it.
             new_entries = []
-            for url, description, event_id in zip_longest(new_urls, new_descriptions, new_event_ids, fillvalue=''):
+            for url, description, setlist_id in zip_longest(new_urls, new_descriptions, new_setlist_ids, fillvalue=''):
                 url = url.strip()
                 if not url:
                     continue
@@ -183,7 +200,7 @@ class ResourcesEditView(View):
                 if not created and description:
                     resource.description = description
                     resource.save(update_fields=['description'])
-                new_entries.append((resource.pk, event_id.strip() or None))
+                new_entries.append((resource.pk, setlist_id.strip() or None))
 
             existing_rows = {row.pk: row for row in own_manager.all()}
             order = 1
@@ -197,9 +214,9 @@ class ResourcesEditView(View):
                         order += 1
                 elif token.startswith('n'):
                     if new_idx < len(new_entries):
-                        resource_id, event_id = new_entries[new_idx]
-                        if event_id and self.kind == 'song':
-                            self._create_song_event_resource(event_id, resource_id, order)
+                        resource_id, setlist_id = new_entries[new_idx]
+                        if setlist_id:
+                            EventSongResource.objects.create(event_song_id=setlist_id, resource_id=resource_id, order=order)
                         else:
                             self.cfg['resource_model'].objects.create(**{
                                 self.cfg['fk_name']: self.owner,
@@ -214,16 +231,3 @@ class ResourcesEditView(View):
         if self.kind == 'event':
             edit_url = with_origin(edit_url, request.GET.get('origin', DEFAULT_EVENT_ORIGIN))
         return redirect(edit_url)
-
-    def _create_song_event_resource(self, event_id, resource_id, order):
-        """Attach a resource to this song specifically within one of its events' setlists.
-
-        `event_id` always comes from `event_options`, which only lists events this song is
-        already on, so this always finds an existing EventSong - the `get_or_create` is just
-        a defensive fallback, not a real "create a setlist entry" path.
-        """
-        event_song, _ = EventSong.objects.get_or_create(
-            event_id=event_id, song=self.owner,
-            defaults={'order': (EventSong.objects.filter(event_id=event_id).aggregate(Max('order'))['order__max'] or 0) + 1},
-        )
-        EventSongResource.objects.create(event_song=event_song, resource_id=resource_id, order=order)

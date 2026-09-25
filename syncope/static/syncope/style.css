@@ -90,6 +90,7 @@
     /* Shape / motion */
     --radius-sm: 6px;
     --radius-md: 10px;
+    --radius-lg: 999px;
     --shadow-sm: 0 1px 3px rgba(44, 42, 40, 0.08);
     --shadow-md: 0 2px 8px rgba(44, 42, 40, 0.1);
     --transition-fast: 0.2s ease;
@@ -679,6 +680,21 @@
         color: var(--color-text-on-accent);
     }
 
+    /* Transparent button for use on dark surfaces (e.g. the matrix table's
+       thead) where .btn-secondary's light background would clash. */
+    .btn-ghost {
+        background-color: transparent;
+        border-color: var(--color-text-on-accent);
+        color: var(--color-text-on-accent);
+        padding: var(--space-1) var(--space-2);
+        border-radius: var(--radius-lg);
+        font-size: var(--font-size-2xs);
+    }
+
+    .btn-ghost:hover {
+        background-color: rgba(255, 255, 255, 0.15);
+    }
+
     .btn-danger {
         background-color: var(--color-bg);
         border-color: var(--color-danger);
@@ -794,14 +810,11 @@
         color: var(--color-text-muted);
     }
 
-    .person-picker-label-row label {
-        margin-block-end: 0;
-    }
-
-    /* Cap the row to the same 480px as the form fields below it (see .form-actions above
-       for the same max-inline-size pattern). */
-    .person-picker-label-row {
-        max-inline-size: 480px;
+    /* Top-align the search box and "+ New" instead of .link-row's default vertical
+       centering, so the input's own top edge lines up with a plain label+field next
+       to it (e.g. the language select in .field-row) regardless of button height. */
+    .person-picker-row {
+        align-items: flex-start;
     }
 
     /* Push "+ New" to the end of its own flex line - unlike justify-content: space-between,
@@ -958,19 +971,21 @@
         }
     }
 
-    .translation-card {
-        position: relative;
+    .translation-panel {
         margin-block-end: var(--space-4);
     }
 
-    .translation-card .translation-remove {
-        position: absolute;
-        inset-block-start: var(--space-2);
-        inset-inline-end: var(--space-2);
+    .translation-panel.pending-remove {
+        background-color: var(--color-warning-bg);
+        opacity: 0.55;
     }
 
-    .translation-card.pending-remove {
-        display: none;
+    .translation-panel.pending-remove .translation-summary-text {
+        text-decoration: line-through;
+    }
+
+    .translation-panel .translation-remove {
+        align-self: flex-end;
     }
 
     /* --- Tables ---
@@ -1224,17 +1239,6 @@
     .project-header p {
         overflow-wrap: anywhere;
     }
-    .resource-table-compact {
-        border-collapse: separate;
-        border-spacing: 0;
-        overflow: hidden;
-        background-color: var(--color-surface);
-        border-radius: var(--radius-md);
-        font-size: var(--font-size-xs);
-        margin-block: 0.25rem;
-    }
-    .resource-table-compact td { padding: 1px var(--space-1); }
-
     .dt-short { display: none; }
 
     .song-index { text-align: center; vertical-align: middle; width: 1.5rem; }

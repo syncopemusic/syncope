@@ -77,16 +77,30 @@
     <h3>Quotes</h3>
     {% if can_manage %}<a href="{% url 'syncope:song_quotes' url_username song.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
-<ul>
-    {% for quote in song.quotes.all %}
-        <li>
-            {{ quote.word }}
-            {% if quote.bar_number %} (Bar {{ quote.bar_number }}){% endif %}
-            {% if quote.date %} - {{ quote.date }}{% endif %}
-            {% if quote.person %} - {{ quote.person }}{% endif %}
-        </li>
-    {% endfor %}
-</ul>
+<div class="table-container">
+<table class="table">
+    <thead>
+        <tr>
+            <th class="col-num"></th>
+            <th class="col-main">Quote</th>
+            <th>Bar Number</th>
+            <th>Date</th>
+            <th class="col-main">Person</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for quote in song.quotes.all %}
+        <tr>
+            <td class="col-num">{{ forloop.counter }}</td>
+            <td>{{ quote.word }}</td>
+            <td>{{ quote.bar_number|default:"-" }}</td>
+            <td>{{ quote.date|default:"-" }}</td>
+            <td>{{ quote.person|default:"-" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
 {% endif %}
 
 {% if song.additional_notes %}

@@ -57,7 +57,7 @@
                     {% if songs %}
                         <ul style="margin: 0; padding-left: 0; list-style: none;">
                             {% for event_song in songs %}
-                                <li><a href="{%  url 'syncope:song_detail' url_username event_song.song.pk %}">{{ event_song.song.title }}</a></li>
+                                <li><small class="song-meta">{{ forloop.counter }}.</small> <a href="{%  url 'syncope:song_detail' url_username event_song.song.pk %}">{{ event_song.song.title }}</a></li>
                             {% endfor %}
                         </ul>
                     {% else %}-{% endif %}

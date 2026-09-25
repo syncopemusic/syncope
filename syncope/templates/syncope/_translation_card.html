@@ -1,14 +1,24 @@
-<div class="card translation-card">
-    <button type="button" class="btn btn-remove translation-remove" title="Remove">&times;</button>
-    {% for hidden in t_form.hidden_fields %}{{ hidden }}{% endfor %}
-    <div class="form-group">
-        <label for="{{ t_form.languagecode.id_for_label }}">Language</label>
-        {{ t_form.languagecode }}
+<details class="filter-panel translation-panel" {% if t_form.errors %}open{% endif %}>
+    <summary>
+        <span class="translation-summary-text">{{ t_form.instance.languagecode|default:"New translation" }}</span>
+        <svg class="filter-toggle-icon" viewBox="0 0 24 24" width="18" height="18" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+    </summary>
+    <div class="filter-form">
+        {% for hidden in t_form.hidden_fields %}{{ hidden }}{% endfor %}
+        {% include "syncope/_person_picker.html" with field=t_form.translator field_name="translator" label="Translator" current=t_form.instance.translator new_person_url_name="syncope:org_member_new_translator" %}
+        <div class="form-group">
+            <label for="{{ t_form.languagecode.id_for_label }}">Language</label>
+            {{ t_form.languagecode }}
+        </div>
+        <div class="form-group">
+            <label for="{{ t_form.translation.id_for_label }}">Translation</label>
+            {{ t_form.translation }}
+        </div>
+        <button type="button" class="btn btn-danger translation-remove">Delete Translation</button>
+        <div hidden>{{ t_form.DELETE }}</div>
+        {% if t_form.errors %}<p class="form-help">{{ t_form.errors }}</p>{% endif %}
     </div>
-    <div class="form-group">
-        {{ t_form.translation }}
-    </div>
-    {% include "syncope/_person_picker.html" with field=t_form.translator field_name="translator" label="Translator" current=t_form.instance.translator new_person_url_name="syncope:org_member_new_translator" %}
-    <div hidden>{{ t_form.DELETE }}</div>
-    {% if t_form.errors %}<p class="form-help">{{ t_form.errors }}</p>{% endif %}
-</div>
+</details>

@@ -207,7 +207,7 @@ class ResourcesEditViewTests(TestCase):
     def test_add_resource_scoped_to_an_event_creates_event_song_resource(self):
         event_type = EventType.objects.create(name="Rehearsal")
         event = Event.objects.create(user=self.org_user, name="Test Event", event_type=event_type)
-        EventSong.objects.create(event=event, song=self.song, order=1)
+        event_song = EventSong.objects.create(event=event, song=self.song, order=1)
 
         self.client.login(username="org", password="pw12345")
         get_response = self.client.get(self.url)
@@ -217,7 +217,7 @@ class ResourcesEditViewTests(TestCase):
             "order": "n0",
             "new_url": ["https://a.example/"],
             "new_description": ["A"],
-            "new_event_id": [str(event.pk)],
+            "new_setlist_id": [str(event_song.pk)],
         })
 
         self.assertEqual(self.song.song_resource.count(), 0)

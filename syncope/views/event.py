@@ -20,6 +20,7 @@ from syncope.models import Event, EventSong, Attendance, AttendanceType, EventSo
 from syncope.forms import EventForm, AddAttendanceForm
 from syncope.forms import AddSongToEventForm, EventSongResourceFormSet
 from syncope.views.drafts import DraftMixin
+from syncope.views.resource import event_related_resource_rows
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param
 from syncope.breadcrumbs import event_breadcrumbs, origin_root_crumb, DEFAULT_EVENT_ORIGIN
@@ -291,16 +292,7 @@ class EventDetailView(DetailView):
                 eventsong.resource_icons = resource_icon_list(eventsong.event_song_resource.all())
         context['eventsongs'] = eventsongs
 
-        # Build combined resource list: event resources first, then event-song resources
-        all_event_resources = [
-            {'url': r['url'], 'icon': r['icon'], 'desc': r['desc'], 'song': None, 'share_url': r.get('share_url')}
-            for r in context['event_resources']
-        ]
-        for eventsong in eventsongs:
-            for r in resource_icon_list(eventsong.event_song_resource.all()):
-                r['song'] = eventsong.song
-                all_event_resources.append(r)
-        context['all_event_resources'] = all_event_resources
+        context['related_event_resources'] = event_related_resource_rows(self.object)
 
         return context
 

@@ -50,7 +50,13 @@
                 <th class="table-event-col"
                     title="{{ pe.event_type }}&#10;{{ pe.started_at|date:"H:i" }}{% if pe.location %}&#10;{{ pe.location }}{% endif %}">
                     <div class="table-event-header {% if pe.event_type.id != 1 %}table-event-header-strong{% endif %}">
+                        {% if is_admin %}
+                        <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}" class="btn btn-ghost">
+                            {% if pe.same_date %}{% dt pe.started_at "date" %}{% else %}{% dt pe.started_at "date" %}-{% dt pe.ended_at "date" %}{% endif %}
+                        </a>
+                        {% else %}
                         {% if pe.same_date %}{% dt pe.started_at "date" %}{% else %}{% dt pe.started_at "date" %}-{% dt pe.ended_at "date" %}{% endif %}
+                        {% endif %}
                     </div>
                 </th>
                 {% endfor %}
@@ -59,6 +65,16 @@
             </tr>
         </thead>
         <tbody>
+            <tr class="totals-row table-row-total">
+                <td class="col-num"></td>
+                <td class="sticky-col"></td>
+                <td></td>
+                {% for total in event_totals %}
+                <td>{{ total.yes }}{% if total.maybe %}({{ total.maybe }}){% endif %}</td>
+                {% endfor %}
+                <td class="col-main"><strong>{{ grand_yes }}{% if grand_maybe %}({{ grand_maybe }}){% endif %}</strong></td>
+                <td class="col-main"><strong>{{ grand_percentage|floatformat:0 }}%</strong></td>
+            </tr>
             {% for group in grouped_table_rows %}
             {% for row in group.items %}
             {% url 'syncope:poll_person_attendance' url_username poll.pk row.person.pk as person_attendance_url %}
@@ -90,16 +106,6 @@
             </tr>
             {% endfor %}
             {% endfor %}
-            <tr class="totals-row table-row-total">
-                <td class="col-num"></td>
-                <td class="sticky-col"></td>
-                <td></td>
-                {% for total in event_totals %}
-                <td>{{ total.yes }}/{{ total.counted }}</td>
-                {% endfor %}
-                <td class="col-main"><strong>{{ grand_yes }}/{{ grand_counted }}</strong></td>
-                <td class="col-main"><strong>{{ grand_percentage|floatformat:0 }}%</strong></td>
-            </tr>
         </tbody>
     </table>
 </div>

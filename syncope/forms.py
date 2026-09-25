@@ -209,6 +209,7 @@ class QuoteForm(forms.ModelForm):
             'word': forms.TextInput(attrs={'placeholder': 'Quote text'}),
             'bar_number': forms.TextInput(attrs={'placeholder': '43'}),
             'date': forms.DateInput(attrs={'type': 'date'}),
+            'person': forms.HiddenInput(),
         }
 
     def __init__(self, *args, user=None, **kwargs):
@@ -279,7 +280,7 @@ class SongLyricsForm(forms.ModelForm):
         model = Song
         fields = ["lyrics", "languagecode", "poet"]
         widgets = {
-            "lyrics": forms.Textarea(attrs={'rows': 12}),
+            "lyrics": forms.Textarea(attrs={'rows': 20}),
             "poet": forms.HiddenInput(),
         }
         labels = {
@@ -535,7 +536,7 @@ class LyricsTranslationForm(forms.ModelForm):
         model = LyricsTranslation
         fields = ['languagecode', 'translation', 'translator']
         widgets = {
-            'translation': forms.Textarea(attrs={'rows': 5}),
+            'translation': forms.Textarea(attrs={'rows': 12}),
             'translator': forms.HiddenInput(),
         }
 
