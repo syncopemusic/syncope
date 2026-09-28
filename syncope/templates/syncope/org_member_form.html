@@ -1,10 +1,11 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 {% block title %}{% if form.instance.pk %}Update{% else %}New Person{% endif %} {{ form.instance.first_name }} {{ form.instance.last_name }} {% endblock %}
 
 {% block content %}
 <h1>{% if form.instance.pk %}Update{% else %}New Person{% endif %} {{ form.instance.first_name }} {{ form.instance.last_name }} </h1>
 
-<form method="post">
+<form method="post" id="org-member-form">
     {% csrf_token %}
     <input type="hidden" name="draft_key" value="{{ draft_key }}">
     {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
@@ -13,28 +14,28 @@
     {% if request.GET.from_event %}<input type="hidden" name="from_event" value="{{ request.GET.from_event }}">{% endif %}
     {% if request.GET.origin %}<input type="hidden" name="origin" value="{{ request.GET.origin }}">{% endif %}
     <!-- Existing fields -->
-    <p>{{ form.first_name.label_tag }} {{ form.first_name }}</p>
-    <p>{{ form.last_name.label_tag }} {{ form.last_name }}</p>
-    <p>{{ form.email.label_tag }} {{ form.email }}</p>
-    <p>{{ form.phone.label_tag }} {{ form.phone }}</p>
-    <p>{{ form.address.label_tag }} {{ form.address }}</p>
+    <p>{{ form.first_name.label_tag }} {{ form.first_name }} {{ form.first_name.errors }}</p>
+    <p>{{ form.last_name.label_tag }} {{ form.last_name }} {{ form.last_name.errors }}</p>
+    <p>{{ form.email.label_tag }} {{ form.email }} {{ form.email.errors }}</p>
+    <p>{{ form.phone.label_tag }} {{ form.phone }} {{ form.phone.errors }}</p>
+    <p>{{ form.address.label_tag }} {{ form.address }} {{ form.address.errors }}</p>
 
     <!-- Date fields -->
 {#    <fieldset>#}
 {#        <legend>Birth Information</legend>#}
-        <p> * {{ form.birth_date.label_tag }} {{ form.birth_date }}</p>
+        <p> * {{ form.birth_date.label_tag }} {{ form.birth_date }} {{ form.birth_date.errors }}</p>
         <p>{{ form.birth_approximate.label_tag }} {{ form.birth_approximate }}</p>
 {#    </fieldset>#}
 
 {#    <fieldset>#}
 {#        <legend>Death Information</legend>#}
-        <p> + {{ form.death_date.label_tag }} {{ form.death_date }}</p>
+        <p> + {{ form.death_date.label_tag }} {{ form.death_date }} {{ form.death_date.errors }}</p>
         <p>{{ form.death_approximate.label_tag }} {{ form.death_approximate }}</p>
 {#    </fieldset>#}
 
     <!-- Roles -->
     <p>{{ form.roles.label_tag }}
-    {{ form.roles }}</p>
+    {{ form.roles }} {{ form.roles.errors }}</p>
 
     <!-- Membership Periods -->
     {% if period_formset %}
@@ -64,23 +65,18 @@
 
     <!-- Voices (renders as native <select multiple>) -->
     <p>{{ form.voices.label_tag }}
-        {{ form.voices }}</p>
+        {{ form.voices }} {{ form.voices.errors }}</p>
     <small class="form-help">Hold Ctrl/Cmd to select multiple voices</small>
 
     <!-- Instruments (renders as native <select multiple>) -->
     <p>{{ form.instruments.label_tag }}
-    {{ form.instruments }}</p>
+    {{ form.instruments }} {{ form.instruments.errors }}</p>
     <small class="form-help">Hold Ctrl/Cmd to select multiple instruments</small>
 
 
     <!-- Skills -->
     <p>{{ form.skills.label_tag }}
-        {{ form.skills }}</p>
-
-
-    <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Save</button>
-    </div>
+        {{ form.skills }} {{ form.skills.errors }}</p>
 
     {% if is_admin and form.instance.pk %}
     <p class="danger-zone"><a href="{% url 'syncope:org_member_delete' url_username form.instance.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger">Delete Member</a></p>
@@ -94,6 +90,23 @@
 </form>
 {% endif %}
 
-{% include "syncope/_save_bar.html" with url=return_url|default:cancel_url %}
+{% include "syncope/_save_bar.html" with form_id="org-member-form" url=return_url|default:cancel_url %}
 
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>
+    const form = document.getElementById('org-member-form');
+    const fieldTracker = trackFormFieldChanges(form);
+
+    const saveBarCtl = initSaveBar({
+        formId: 'org-member-form',
+        countUnsavedChanges: fieldTracker.count,
+        onDiscard: () => {
+            form.reset();
+            fieldTracker.reset();
+        },
+    });
+
+    form.addEventListener('input', () => saveBarCtl.sync());
+    form.addEventListener('change', () => saveBarCtl.sync());
+</script>
 {% endblock %}

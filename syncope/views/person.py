@@ -679,8 +679,9 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
     def form_valid(self, form):
         auto_add_event = self.request.POST.get('auto_add_event') or self.request.GET.get('auto_add_event')
         auto_add_poll = self.request.POST.get('auto_add_poll') or self.request.GET.get('auto_add_poll')
+        auto_add_project = self.request.POST.get('auto_add_project') or self.request.GET.get('auto_add_project')
         selected_roles = form.cleaned_data["roles"]
-        if not selected_roles and (auto_add_event or auto_add_poll):
+        if not selected_roles and (auto_add_event or auto_add_poll or auto_add_project):
             # Quick-added from an event's Attendance edit page: default to Member
             # rather than _add_roles' own External fallback, so they show up as
             # an active member.
@@ -709,7 +710,7 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
         host = self.request.get_host()
         safe_next = next_url if (next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={host})) else None
 
-        if safe_next and (auto_add_event or auto_add_poll):
+        if safe_next:
             if auto_add_event:
                 event = Event.objects.filter(pk=auto_add_event, user=self.customuser).first()
                 if event:
@@ -721,6 +722,13 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
                 poll = Poll.objects.filter(pk=auto_add_poll, user=self.customuser).first()
                 if poll:
                     PollPerson.objects.get_or_create(poll=poll, person=person)
+            if auto_add_project:
+                project = Project.objects.filter(pk=auto_add_project, user=self.customuser).first()
+                if project:
+                    project.guests.add(person)
+            preset = self.kwargs.get('preset')
+            if preset in ('composer', 'poet', 'arranger', 'translator'):
+                safe_next = add_query_param(safe_next, {f'select_{preset}': person.pk})
             draft_key = self.request.POST.get('draft_key') or self.request.GET.get('draft_key')
             if draft_key:
                 safe_next = add_query_param(safe_next, {'draft_key': draft_key})

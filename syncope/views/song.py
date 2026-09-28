@@ -11,7 +11,7 @@ from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from syncope.models import Song, EventType, CustomUser, Person
 from syncope.models import Event, EventSong, Project
-from syncope.forms import SongMetaForm, SongLyricsForm, SONG_PERSON_FIELD_SKILLS
+from syncope.forms import SongMetaForm, SongLyricsForm, SONG_PERSON_FIELD_SKILLS, SONG_PERSON_FIELD_META
 from syncope.forms import QuoteFormSet, LyricsTranslationFormSet
 from syncope.mixins import  SongOwnerMixin
 from syncope.views.drafts import DraftMixin, clear_draft
@@ -195,6 +195,14 @@ class SelectPersonInitialMixin:
                     initial[field] = pk
         return initial
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        form = context.get('form')
+        for field in self.person_preset_fields:
+            pk = form[field].value() if form and field in form.fields else None
+            context[f'{field}_selected'] = Person.objects.filter(pk=pk).first() if pk else None
+        return context
+
 
 @method_decorator(login_required, name='dispatch')
 class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, CreateView):
@@ -334,9 +342,14 @@ def song_person_search(request, username, field):
         if skill_id is None:
             return HttpResponseBadRequest()
         persons = Person.objects.for_user_with_skill(user=owner_user, skill_id=skill_id).matching_name(q)
+    label, new_person_url_name = SONG_PERSON_FIELD_META[field]
     return render(request, 'syncope/song_person_search_results.html', {
         'persons': persons[:25],
         'search_q': q,
+        'label': label,
+        'new_person_url_name': new_person_url_name,
+        'url_username': username,
+        'next': request.GET.get('next', ''),
     })
 
 

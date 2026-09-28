@@ -60,14 +60,15 @@
     {% if is_admin %}
     <div id="add-participants" style="max-width:42rem;">
         <h3>Add participant</h3>
-        <p style="position:relative;">
-            <input type="text" id="participant-search-input" value="{{ search_q }}" placeholder="Search by name, voice, or instrument" style="max-width:100%; width:100%; box-sizing:border-box;">
-            <span class="search-spinner" id="participant-search-spinner"></span>
-        </p>
-        <p style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+        <p class="search-form">
+            <span style="position:relative; flex:1; min-width:200px;">
+                <input type="text" id="participant-search-input" value="{{ search_q }}" placeholder="Search by name, voice, or instrument" style="width:100%; box-sizing:border-box;">
+                <span class="search-spinner" id="participant-search-spinner"></span>
+            </span>
             <button type="button" id="participant-search-clear" class="btn btn-secondary">Clear</button>
+        </p>
+        <p>
             <span id="participant-search-count" class="result-count"></span>
-            <button type="submit" form="attendance-form" name="action" value="new_person" class="btn btn-primary" title="Create new person">+ Add</button>
         </p>
         <p style="display:flex; align-items:center; gap:0.5rem; margin-top:1rem;">
             <span>Attendance:</span>

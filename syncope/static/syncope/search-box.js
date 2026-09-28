@@ -45,12 +45,13 @@ function wirePersonPicker(container) {
     const spinner = container.querySelector('.person-picker-spinner');
     const results = container.querySelector('.person-picker-results');
     const searchUrl = container.dataset.searchUrl;
+    const nextUrl = container.dataset.next || '';
 
     const live = initLiveSearch({
         input: input,
         spinner: spinner,
         results: results,
-        buildUrl: q => `${searchUrl}?q=${encodeURIComponent(q)}`,
+        buildUrl: q => `${searchUrl}?q=${encodeURIComponent(q)}&next=${encodeURIComponent(nextUrl)}`,
     });
 
     input.addEventListener('focus', function() {
@@ -63,6 +64,14 @@ function wirePersonPicker(container) {
 
     input.addEventListener('blur', function() {
         setTimeout(() => { results.hidden = true; }, 150);
+    });
+
+    // Without this, clicking a button inside results (Select, + New X) blurs
+    // the input first, racing the 150ms hide above - on a normal desktop
+    // click that outlasts 150ms, results gets hidden mid-click and the
+    // browser cancels the click entirely.
+    results.addEventListener('mousedown', function(e) {
+        e.preventDefault();
     });
 
     input.addEventListener('input', function() {

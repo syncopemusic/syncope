@@ -232,7 +232,7 @@ class ProjectCreateView(DraftMixin, LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('syncope:project_meta_edit', kwargs={'username': self.kwargs.get('username'), 'pk': self.object.pk})
+        return reverse('syncope:project_detail', kwargs={'username': self.kwargs.get('username'), 'pk': self.object.pk})
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()

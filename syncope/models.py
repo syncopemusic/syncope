@@ -5,6 +5,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.contrib.auth.models import  AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.conf import settings
+from django.template.defaultfilters import date as date_filter
 
 
 class Role(models.Model):
@@ -743,6 +744,9 @@ class PollEvent(models.Model):
     details = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.event_type} ({date_filter(self.started_at, 'd M, Y')})"
 
     @property
     def same_date(self):

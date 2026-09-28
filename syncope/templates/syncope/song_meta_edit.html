@@ -19,13 +19,13 @@
 
     {% for field in form %}
         {% if field.name == "composer" %}
-            {% include "syncope/_person_picker.html" with field=field field_name="composer" label="Composer" current=object.composer new_person_url_name="syncope:org_member_new_composer" %}
+            {% include "syncope/_person_picker.html" with field=field field_name="composer" label="Composer" current=composer_selected new_person_url_name="syncope:org_member_new_composer" %}
         {% elif field.name == "arranger" %}
-            {% include "syncope/_person_picker.html" with field=field field_name="arranger" label="Arranger" current=object.arranger new_person_url_name="syncope:org_member_new_arranger" %}
+            {% include "syncope/_person_picker.html" with field=field field_name="arranger" label="Arranger" current=arranger_selected new_person_url_name="syncope:org_member_new_arranger" %}
         {% elif field.name == "poet" %}
-            {% include "syncope/_person_picker.html" with field=field field_name="poet" label="Poet" current=object.poet new_person_url_name="syncope:org_member_new_poet" %}
+            {% include "syncope/_person_picker.html" with field=field field_name="poet" label="Poet" current=poet_selected new_person_url_name="syncope:org_member_new_poet" %}
         {% elif field.name == "translator" %}
-            {% include "syncope/_person_picker.html" with field=field field_name="translator" label="Translator" current=object.translator new_person_url_name="syncope:org_member_new_translator" %}
+            {% include "syncope/_person_picker.html" with field=field field_name="translator" label="Translator" current=translator_selected new_person_url_name="syncope:org_member_new_translator" %}
         {% else %}
         <div class="form-group">
             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
@@ -48,10 +48,14 @@
 <script>
     const form = document.getElementById('song-meta-form');
     const fieldTracker = trackFormFieldChanges(form);
+    // A new song has nothing saved yet, and returning from a "+ New X" draft
+    // round trip pre-fills fields at render time - either way the DOM-at-load
+    // snapshot below isn't a reliable "nothing changed" baseline, so force dirty.
+    const forceDirty = {% if not object or request.GET.draft_key %}true{% else %}false{% endif %};
 
     const saveBarCtl = initSaveBar({
         formId: 'song-meta-form',
-        countUnsavedChanges: fieldTracker.count,
+        countUnsavedChanges: () => forceDirty ? 1 : fieldTracker.count(),
         onDiscard: () => {
             form.reset();
             fieldTracker.reset();
@@ -60,6 +64,7 @@
 
     form.addEventListener('input', () => saveBarCtl.sync());
     form.addEventListener('change', () => saveBarCtl.sync());
+    saveBarCtl.sync();
 
     document.querySelectorAll('.person-picker').forEach(wirePersonPicker);
 </script>

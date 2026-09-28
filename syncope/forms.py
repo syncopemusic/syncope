@@ -227,6 +227,17 @@ SONG_PERSON_FIELD_SKILLS = {
     'translator': Skill.TRANSLATOR,
 }
 
+# Label and "create new person" URL name for each song person-picker field, keyed the
+# same as SONG_PERSON_FIELD_SKILLS plus 'person' (the Quotes page's non-skill-scoped field).
+# Used by song_person_search to render the "+ New" option at the bottom of its results.
+SONG_PERSON_FIELD_META = {
+    'composer': ('Composer', 'syncope:org_member_new_composer'),
+    'arranger': ('Arranger', 'syncope:org_member_new_arranger'),
+    'poet': ('Poet', 'syncope:org_member_new_poet'),
+    'translator': ('Translator', 'syncope:org_member_new_translator'),
+    'person': ('Person', 'syncope:org_member_new'),
+}
+
 
 class SongMetaForm(forms.ModelForm):
     class Meta:

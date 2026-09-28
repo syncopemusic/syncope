@@ -3,166 +3,199 @@
 
 {% block title %}{{ poll.title }} - Attendance{% endblock %}
 
+{% block extra_css %}
+<style>
+    .matrix-card-grid {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        margin-block-end: var(--space-5);
+    }
+
+    .matrix-card-title {
+        margin: 0 0 var(--space-2);
+        font-size: var(--font-size-md);
+    }
+
+    .matrix-card-field {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-2);
+        padding-block: var(--space-1);
+        border-block-end: 1px solid var(--color-border-subtle);
+    }
+
+    .matrix-card-field:last-child {
+        border-block-end: none;
+    }
+
+    .matrix-card-label {
+        color: var(--color-text-muted);
+        font-size: var(--font-size-sm);
+        flex-shrink: 0;
+    }
+
+    .matrix-card-value {
+        text-align: end;
+    }
+
+    .matrix-card-strong .matrix-card-title {
+        font-weight: 700;
+    }
+
+    .matrix-card-field .table-comment-input {
+        flex: 1;
+    }
+
+    .poll-answer-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.3rem;
+        padding: 0.25rem 0.6rem;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        user-select: none;
+        font-size: var(--font-size-md);
+        line-height: 1;
+        width: 7.5rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 
-<h1>{{ poll.title }} - Attendance</h1>
-
-<div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-    {% if viewing_as %}
-    <button id="share-btn" class="btn btn-link" title="Copy link">
-        <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-    </button>
-    <span id="share-result" style="margin-left: 0.5rem; font-size: var(--font-size-md);"></span>
-    <div style="display:none;">{% csrf_token %}</div>
-    {% endif %}
+<div class="section-header">
+    <h1 class="event-title"><span class="event-title-text"> {% if viewing_as %}<span title="Poll">{{ poll.title }}</span> <small><span title="Person"> | {{ viewing_as.person.first_name }} {{ viewing_as.person.last_name }}</span></small>{% else %}<span title="Poll">{{ poll.title }} - Attendance</span>{% endif %}</span>
+        {% if viewing_as %}
+        <span class="share-controls">
+            <button id="share-btn" class="btn btn-link" title="Copy link">
+                <img src="{% static 'syncope/images/link.svg' %}" width="16" height="16" alt="Link">
+            </button>
+            <span id="share-result" class="share-result"></span>
+        </span>
+        {% endif %}
+    </h1>
 </div>
-
-{% if viewing_as %}
-<p class="text-muted" style="font-size: var(--font-size-md); margin-bottom: 1rem;">
-    Filling in for: <strong>{{ viewing_as.person.first_name }} {{ viewing_as.person.last_name }}</strong>
-</p>
-{% endif %}
 
 {% if poll.description %}
 <p>{{ poll.description }}</p>
 {% endif %}
 
-<form method="post" style="min-width: 0;">
+<form method="post" id="poll-attendance-form" style="min-width: 0;">
     {% csrf_token %}
+    <input type="hidden" name="save_participant" value="{{ table_rows.0.person.id }}">
 
-    <div class="table-container">
-        <table class="table table-matrix">
-            <thead>
-                {# Event Type Row #}
-                <tr>
-                    <th class="sticky-col">Event</th>
-                    {% for event in poll_events %}
-                    <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
-                        title="{{ event }}">
-                        {{ event }}
-                    </th>
-                    {% endfor %}
-                </tr>
-
-                {# Date Row #}
-                <tr>
-                    <th class="sticky-col">Date</th>
-                    {% for event in poll_events %}
-                    <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
-                        title="{{ event }}">
-                        {% if event.same_date %}{% dt event.started_at "date-dow" %}{% else %}{% dt event.started_at "date-dow" %} <br> {% dt event.ended_at "date-dow" %}{% endif %}
-                    </th>
-                    {% endfor %}
-                </tr>
-
-                {# Time Row #}
-                <tr>
-                    <th class="sticky-col">Time</th>
-                    {% for event in poll_events %}
-                    <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
-                        title="{{ event }}">
-                        {% dt event.started_at "time" %} <br> {% dt event.ended_at "time" %}
-                    </th>
-                    {% endfor %}
-                </tr>
-
-                {# Location Row #}
-                <tr>
-                    <th class="sticky-col">Location</th>
-                    {% for event in poll_events %}
-                    <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
-                        title="{{ event }}">
-                        {% if event.location %}{{ event.location }}{% else %}<em>-</em>{% endif %}
-                    </th>
-                    {% endfor %}
-                </tr>
-
-                {# Details Row #}
-                {% if poll_events|length > 0 %}
-                <tr>
-                    <th class="sticky-col">Details</th>
-                    {% for event in poll_events %}
-                    <th class="table-event-col table-event-col-text {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}"
-                        title="{{ event }}">
-                        {% if event.details %}{{ event.details }}{% else %}<em>-</em>{% endif %}
-                    </th>
-                    {% endfor %}
-                </tr>
-                {% endif %}
-            </thead>
-
-            <tbody>
-                {# Attendance Row #}
-                <tr>
-                    <th class="sticky-col">Attendance</th>
-                    {% for cell in table_rows.0.event_cells %}
-                    <td class="table-event-col table-event-col-text">
-                        <div class="table-cell-attendance att-type-{{ cell.attendance_type_id }}"
-                             data-type-id="{{ cell.attendance_type_id }}"
-                             data-event-id="{{ cell.event.id }}"
-                             data-person-id="{{ cell.person.id }}"
-                             onclick="cycleAttendance(this)"
-                             title="">
-                            <input type="hidden"
-                                   name="attendance_{{ cell.event.id }}_{{ cell.person.id }}"
-                                   value="{{ cell.attendance_type_id }}">
-                            <span class="att-icon"></span>
-                        </div>
-                    </td>
-                    {% endfor %}
-                </tr>
-
-                {# Comment Row #}
-                <tr>
-                    <th class="sticky-col">Note</th>
-                    {% for cell in table_rows.0.event_cells %}
-                    <td class="table-event-col table-event-col-text">
-                        <input type="text"
-                               name="comment_{{ cell.event.id }}_{{ cell.person.id }}"
-                               class="table-comment-input"
-                               placeholder="note"
-                               value="{{ cell.comment|default:'' }}">
-                    </td>
-                    {% endfor %}
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <div class="form-actions">
-        <button type="submit" name="save_participant" value="{{ table_rows.0.person.id }}" class="btn btn-primary">Save</button>
+    <div class="card-grid matrix-card-grid">
+        {% for cell in table_rows.0.event_cells %}
+        <div class="card matrix-card {% if cell.event.event_type.id != 1 %}matrix-card-strong{% endif %}">
+            <h3 class="matrix-card-title">{{ cell.event }}</h3>
+            <div class="matrix-card-field">
+                <span class="matrix-card-label">Date</span>
+                <span class="matrix-card-value">
+                    {% if cell.event.same_date %}{% dt cell.event.started_at "date-dow" %}{% else %}{% dt cell.event.started_at "date-dow" %} - {% dt cell.event.ended_at "date-dow" %}{% endif %}
+                </span>
+            </div>
+            <div class="matrix-card-field">
+                <span class="matrix-card-label">Time</span>
+                <span class="matrix-card-value">{% dt cell.event.started_at "time" %} - {% dt cell.event.ended_at "time" %}</span>
+            </div>
+            <div class="matrix-card-field">
+                <span class="matrix-card-label">Location</span>
+                <span class="matrix-card-value">{% if cell.event.location %}{{ cell.event.location }}{% else %}<em>-</em>{% endif %}</span>
+            </div>
+            <div class="matrix-card-field">
+                <span class="matrix-card-label">Details</span>
+                <span class="matrix-card-value">{% if cell.event.details %}{{ cell.event.details }}{% else %}<em>-</em>{% endif %}</span>
+            </div>
+            <div class="matrix-card-field">
+                <span class="matrix-card-label">Attendance</span>
+                <span class="poll-answer-btn"
+                      data-type-id="{{ cell.attendance_type_id }}"
+                      data-original-type-id="{{ cell.attendance_type_id }}"
+                      onclick="cyclePollAnswer(this)">
+                    <span class="poll-answer-icon"></span> <span class="poll-answer-label"></span>
+                </span>
+                <input type="hidden"
+                       name="attendance_{{ cell.event.id }}_{{ cell.person.id }}"
+                       value="{{ cell.attendance_type_id }}">
+            </div>
+            <div class="matrix-card-field">
+                <span class="matrix-card-label">Note</span>
+                <input type="text"
+                       name="comment_{{ cell.event.id }}_{{ cell.person.id }}"
+                       class="table-comment-input"
+                       placeholder="note"
+                       value="{{ cell.comment|default:'' }}">
+            </div>
+        </div>
+        {% endfor %}
     </div>
 </form>
 
 {% url 'syncope:poll_detail' url_username poll.pk as return_target %}
-{% include "syncope/_save_bar.html" with url=return_target %}
-<script>
-const CYCLE_ORDER = [0, 1, 2, 3];  // TBD, YES, MAYBE, NO
-const TYPE_META = {
-    0: { label: 'TBD',    icon: '?',  cls: 'att-type-0' },
-    1: { label: 'YES',    icon: '✓',  cls: 'att-type-1' },
-    2: { label: 'MAYBE',  icon: '(✓)',  cls: 'att-type-2' },
-    3: { label: 'NO',     icon: '✗',  cls: 'att-type-3' },
-};
+{% include "syncope/_save_bar.html" with form_id="poll-attendance-form" url=return_target %}
 
-function cycleAttendance(cell) {
-    const cur = parseInt(cell.dataset.typeId, 10);
-    const next = CYCLE_ORDER[(CYCLE_ORDER.indexOf(cur) + 1) % CYCLE_ORDER.length];
-    cell.dataset.typeId = next;
-    cell.querySelector('input[type="hidden"]').value = next;
-    Object.values(TYPE_META).forEach(m => cell.classList.remove(m.cls));
-    cell.classList.add(TYPE_META[next].cls);
-    cell.querySelector('.att-icon').textContent = TYPE_META[next].icon;
-    cell.title = TYPE_META[next].label;
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>
+const POLL_ANSWER_TYPES = [
+    { id: 1, icon: '✓', label: 'Yes' },
+    { id: 2, icon: '(✓)', label: 'Maybe' },
+    { id: 3, icon: '✗', label: 'No' },
+    { id: 0, icon: '?', label: "Don't know" },
+];
+const POLL_ANSWER_CYCLE_ORDER = POLL_ANSWER_TYPES.map(t => t.id);
+
+function pollAnswerMeta(id) {
+    return POLL_ANSWER_TYPES.find(t => t.id === id) || POLL_ANSWER_TYPES[POLL_ANSWER_TYPES.length - 1];
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.table-cell-attendance[data-type-id]').forEach(cell => {
-        const meta = TYPE_META[parseInt(cell.dataset.typeId, 10)] || TYPE_META[0];
-        cell.querySelector('.att-icon').textContent = meta.icon;
-        cell.title = meta.label;
-    });
+function paintPollAnswer(btn) {
+    const id = parseInt(btn.dataset.typeId, 10);
+    const meta = pollAnswerMeta(id);
+    POLL_ANSWER_TYPES.forEach(t => btn.classList.remove(`att-type-${t.id}`));
+    btn.classList.add(`att-type-${id}`);
+    btn.querySelector('.poll-answer-icon').textContent = meta.icon;
+    btn.querySelector('.poll-answer-label').textContent = meta.label;
+    btn.title = meta.label;
+}
 
+function cyclePollAnswer(btn) {
+    const cur = parseInt(btn.dataset.typeId, 10);
+    const next = POLL_ANSWER_CYCLE_ORDER[(POLL_ANSWER_CYCLE_ORDER.indexOf(cur) + 1) % POLL_ANSWER_CYCLE_ORDER.length];
+    btn.dataset.typeId = next;
+    paintPollAnswer(btn);
+    btn.nextElementSibling.value = next;
+    saveBarCtl.sync();
+}
+
+function countUnsavedChanges() {
+    let count = 0;
+    document.querySelectorAll('.poll-answer-btn').forEach(btn => {
+        if (btn.dataset.typeId !== btn.dataset.originalTypeId) count++;
+    });
+    document.querySelectorAll('.table-comment-input').forEach(input => {
+        if (input.value !== input.defaultValue) count++;
+    });
+    return count;
+}
+
+const form = document.getElementById('poll-attendance-form');
+const saveBarCtl = initSaveBar({
+    formId: 'poll-attendance-form',
+    countUnsavedChanges,
+    onDiscard: () => {
+        form.reset();
+        document.querySelectorAll('.poll-answer-btn').forEach(btn => {
+            btn.dataset.typeId = btn.dataset.originalTypeId;
+            btn.nextElementSibling.value = btn.dataset.typeId;
+            paintPollAnswer(btn);
+        });
+    },
+});
+document.querySelectorAll('.poll-answer-btn').forEach(paintPollAnswer);
+form.addEventListener('input', () => saveBarCtl.sync());
+
+document.addEventListener('DOMContentLoaded', function () {
     // Share button handler
     function createShareHandler(btn, resultSpan, shareData) {
         return function () {
@@ -217,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function () {
         shareBtn.addEventListener('click', createShareHandler(
             shareBtn,
             document.getElementById('share-result'),
-            { type: 'poll_person', id: {{ viewing_as.pk }} }
+            { type: 'poll_person', id: {{ viewing_as.pk|default:"null" }} }
         ));
     }
 });

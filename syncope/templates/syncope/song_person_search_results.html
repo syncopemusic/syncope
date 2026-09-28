@@ -9,4 +9,11 @@
     {% else %}
         <p>No matching persons found.</p>
     {% endif %}
+    {% if search_q %}
+        <div class="search-result-row">
+            <button type="submit" class="btn btn-primary" formnovalidate
+                    formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url new_person_url_name url_username %}&next={{ next|urlencode }}"
+                    title="Add new {{ label }}">+ New {{ label }}</button>
+        </div>
+    {% endif %}
 {% endif %}

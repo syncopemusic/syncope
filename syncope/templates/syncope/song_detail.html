@@ -19,50 +19,51 @@
 {% url 'syncope:song_list' url_username as song_list_url %}
 
 <table class="table-detail">
-    <tr><th>Song ID</th><td>{{ song.internal_id|default:"-" }}</td></tr>
+    {% if song.internal_id %}<tr><th>Song ID</th><td>{{ song.internal_id }}</td></tr>{% endif %}
+    {% if song.composer %}
     <tr><th>Composer</th><td>
-        {% if song.composer %}
-            <a href="{%  url 'syncope:org_member_detail' url_username song.composer.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.composer }}</a>
-        {% else %}
-            -
-        {% endif %}
+        <a href="{%  url 'syncope:org_member_detail' url_username song.composer.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.composer }}</a>
     </td></tr>
-    <tr><th>Poet</th><td>
-        {% if song.poet %}
-            <a href="{%  url 'syncope:org_member_detail' url_username song.poet.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.poet }}</a>
-        {% else %}
-            -
-        {% endif %}
-    </td></tr>
-    <tr><th>Translator</th><td>
-        {% if song.translator %}
-            <a href="{%  url 'syncope:org_member_detail' url_username song.translator.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.translator }}</a>
-        {% else %}
-            -
-        {% endif %}
-    </td></tr>
+    {% endif %}
+    {% if song.arranger %}
     <tr><th>Arranger</th><td>
-        {% if song.arranger %}
-            <a href="{%  url 'syncope:org_member_detail' url_username song.arranger.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.arranger }}</a>
-        {% else %}
-            -
-        {% endif %}
+        <a href="{%  url 'syncope:org_member_detail' url_username song.arranger.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.arranger }}</a>
     </td></tr>
-    <tr><th>Origin</th><td>{{ song.origin|default:"-" }}</td></tr>
-    <tr><th>Type</th><td>{{ song.group }}</td></tr>
-    <tr><th>Year</th><td>{{ song.year|default:"-" }}</td></tr>
-    <tr><th>Voices</th><td>{{ song.number_of_voices|default:"-" }}</td></tr>
-    <tr><th>Pages</th><td>{{ song.number_of_pages|default:"-" }}</td></tr>
-    <tr><th>Copies</th><td>{{ song.number_of_copies|default:"-" }}</td></tr>
+    {% endif %}
+    {% if song.poet %}
+    <tr><th>Poet</th><td>
+        <a href="{%  url 'syncope:org_member_detail' url_username song.poet.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.poet }}</a>
+    </td></tr>
+    {% endif %}
+    {% if song.translator %}
+    <tr><th>Translator</th><td>
+        <a href="{%  url 'syncope:org_member_detail' url_username song.translator.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.translator }}</a>
+    </td></tr>
+    {% endif %}
+    {% if song.origin %}<tr><th>Origin</th><td>{{ song.origin }}</td></tr>{% endif %}
+    {% if song.group %}<tr><th>Type</th><td>{{ song.group }}</td></tr>{% endif %}
+    {% if song.year %}<tr><th>Year</th><td>{{ song.year }}</td></tr>{% endif %}
+    {% if song.number_of_voices %}<tr><th>Voices</th><td>{{ song.number_of_voices }}</td></tr>{% endif %}
+    {% if song.number_of_pages %}<tr><th>Pages</th><td>{{ song.number_of_pages }}</td></tr>{% endif %}
+    {% if song.number_of_copies %}<tr><th>Copies</th><td>{{ song.number_of_copies }}</td></tr>{% endif %}
+    {% if song.keywords %}
     <tr>
         <th>Keywords</th>
-        <td>{{ song.keywords|default:"-" }}</td>
+        <td>{{ song.keywords }}</td>
     </tr>
+    {% endif %}
+    {% if song.languagecode %}
     <tr>
         <th>Language</th>
-        <td>{{ song.languagecode|default:"-" }}</td>
+        <td>{{ song.languagecode }}</td>
     </tr>
+    {% endif %}
 </table>
+
+{% if song.additional_notes %}
+<h3>Additional Notes</h3>
+<p>{{ song.additional_notes|linebreaksbr }}</p>
+{% endif %}
 
 {% if song_resources or related_song_resources or can_manage %}
 <div class="section-header">
@@ -77,6 +78,7 @@
     <h3>Quotes</h3>
     {% if can_manage %}<a href="{% url 'syncope:song_quotes' url_username song.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
+{% if song.quotes.all %}
 <div class="table-container">
 <table class="table">
     <thead>
@@ -102,10 +104,6 @@
 </table>
 </div>
 {% endif %}
-
-{% if song.additional_notes %}
-<h3>Additional Notes</h3>
-<p>{{ song.additional_notes|linebreaksbr }}</p>
 {% endif %}
 
 {% if song.lyrics or song.lyricstranslation_set.all or can_manage %}

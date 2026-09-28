@@ -46,14 +46,15 @@
 
 <div id="add-guests" style="max-width:42rem;">
     <h3>Add guest</h3>
-    <p style="position:relative;">
-        <input type="text" id="guest-search-input" value="{{ search_q }}" placeholder="Search by name" style="max-width:100%; width:100%; box-sizing:border-box;">
-        <span class="search-spinner" id="guest-search-spinner"></span>
-    </p>
-    <p style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+    <p class="search-form">
+        <span style="position:relative; flex:1; min-width:200px;">
+            <input type="text" id="guest-search-input" value="{{ search_q }}" placeholder="Search by name" style="width:100%; box-sizing:border-box;">
+            <span class="search-spinner" id="guest-search-spinner"></span>
+        </span>
         <button type="button" id="guest-search-clear" class="btn btn-secondary">Clear</button>
+    </p>
+    <p>
         <span id="guest-search-count" class="result-count"></span>
-        <a href="{% url 'syncope:org_member_new' url_username %}?auto_add_project={{ project.pk }}&next={% url 'syncope:project_participants_edit' url_username project.pk %}" class="btn btn-primary" title="Create new person">+ Add</a>
     </p>
     <div id="guest-search-results">
         {% include "syncope/project_guest_search_results.html" %}

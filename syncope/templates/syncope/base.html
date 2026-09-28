@@ -122,6 +122,30 @@
     {% block extra_js %}{% endblock %}
 
     <script>
+        // Native "required field" popups are easy to miss on mobile, so replace them with a
+        // persistent inline message next to the field, reusing the existing .error styling.
+        document.addEventListener('invalid', function (e) {
+            const field = e.target;
+            if (!field.parentElement) return;
+            e.preventDefault();
+            let msg = field.parentElement.querySelector('.field-error');
+            if (!msg) {
+                msg = document.createElement('small');
+                msg.className = 'error field-error';
+                field.insertAdjacentElement('afterend', msg);
+            }
+            msg.textContent = field.validationMessage;
+        }, true);
+
+        document.addEventListener('input', function (e) {
+            const field = e.target;
+            if (!field.checkValidity || !field.checkValidity()) return;
+            const msg = field.parentElement?.querySelector('.field-error');
+            if (msg) msg.remove();
+        }, true);
+    </script>
+
+    <script>
         function toggleMenu(){
             const container = document.querySelector(".grid-container");
             const button = document.querySelector(".mobile-toggle");

@@ -687,7 +687,7 @@
         border-color: var(--color-text-on-accent);
         color: var(--color-text-on-accent);
         padding: var(--space-1) var(--space-2);
-        border-radius: var(--radius-lg);
+        border-radius: var(--radius-sm);
         font-size: var(--font-size-2xs);
     }
 
@@ -810,20 +810,6 @@
         color: var(--color-text-muted);
     }
 
-    /* Top-align the search box and "+ New" instead of .link-row's default vertical
-       centering, so the input's own top edge lines up with a plain label+field next
-       to it (e.g. the language select in .field-row) regardless of button height. */
-    .person-picker-row {
-        align-items: flex-start;
-    }
-
-    /* Push "+ New" to the end of its own flex line - unlike justify-content: space-between,
-       this keeps it right-aligned even when .link-row's flex-wrap sends it onto its own
-       line alone on mobile. */
-    .person-picker-new {
-        margin-inline-start: auto;
-    }
-
     .form-error,
     .error {
         color: var(--color-error-text);
@@ -846,6 +832,10 @@
         font-size: var(--font-size-md);
         flex: 1;
         min-width: 200px;
+        /* Overrides the generic `form p input[type="text"]` 480px cap (style.css below) that
+           otherwise still applies here when a .search-form row sits inside a <form>, shrinking
+           the input away from its flex-grown wrapper span and detaching the spinner from it. */
+        max-inline-size: none;
     }
 
     .form-group input[type="text"],
@@ -1173,7 +1163,7 @@
        page-local for now. */
     .search-result-row {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         gap: 0.6rem;
         padding: 0.4rem 0;
     }
@@ -1595,8 +1585,17 @@
         justify-content: flex-start;
         align-items: center;
         gap: var(--space-2);
-        margin-block-end: var(--space-4);
+        margin-block-end: var(--space-2);
         flex-wrap: wrap;
+    }
+
+    /* Sub-section dividers (h3, e.g. Resources/Quotes/Lyrics) need more
+       breathing room above - separating them from the previous section's
+       content - than below, where the h3 should sit close to its own
+       content. The page-title header (h1) isn't touched, so it keeps
+       sitting flush with the top of the content area. */
+    .section-header:has(h3) {
+        margin-block-start: var(--space-6);
     }
 
     .section-header h3,
