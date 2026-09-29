@@ -3,7 +3,8 @@
 {% block title %}Resources - {{ owner }}{% endblock %}
 {% block content %}
 
-<h1>Resources - {{ owner }}</h1>
+<h1>{% if profile %}Update Your Profile{% else %}Resources - {{ owner }}{% endif %}</h1>
+
 
 <form method="post" id="resources-form">
     {% csrf_token %}

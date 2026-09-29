@@ -1,0 +1,26 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}Username &amp; password{% endblock %}
+
+{% block content %}
+<h1>Update Your Profile</h1>
+
+<h3>Username</h3>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="username">
+    {{ username_form.as_p }}
+    <p><button type="submit" class="btn btn-primary">Change username</button></p>
+</form>
+
+<h3>Password</h3>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="password">
+    {{ password_form.as_p }}
+    <p><button type="submit" class="btn btn-primary">Change password</button></p>
+</form>
+
+{% url 'syncope:profile_detail' user.username as return_target %}
+{% include "syncope/_save_bar.html" with url=return_target %}
+{% endblock %}

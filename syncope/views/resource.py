@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.generic import View
 
-from syncope.breadcrumbs import with_origin, DEFAULT_EVENT_ORIGIN
+from syncope.breadcrumbs import event_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
 from syncope.models import (
     CustomUser, Role, Song, Event, Project, Person,
     SongResource, EventResource, ProjectResource, PersonResource, EventSongResource, Resource,
@@ -132,6 +132,7 @@ class ResourcesEditView(View):
     """
     template_name = 'syncope/resources_edit.html'
     kind = None
+    profile = False
 
     def _setup(self, username, pk):
         self.cfg = KIND_CONFIG[self.kind]
@@ -141,6 +142,8 @@ class ResourcesEditView(View):
     def _owner_detail_url(self, request, username):
         """Where Return/Save go back to - for an Event, preserves ?origin= (Attendance vs
         Events root) the same way event_meta_edit/event_songs_edit/event_attendance_edit do."""
+        if self.profile:
+            return reverse('syncope:profile_detail', kwargs={'username': username})
         url = reverse(f'syncope:{self.cfg["detail_url"]}', kwargs={'username': username, 'pk': self.owner.pk})
         if self.kind == 'event':
             url = with_origin(url, request.GET.get('origin', DEFAULT_EVENT_ORIGIN))
@@ -156,8 +159,12 @@ class ResourcesEditView(View):
         related_rows = self.cfg['related_rows'](self.owner) if self.cfg['related_rows'] else []
         setlist_options = self.cfg['setlist_options'](self.owner) if self.cfg['setlist_options'] else []
 
+        # Other kinds get their trail from breadcrumbs.PAGES; events carry the Attendance/Events origin.
+        breadcrumbs = event_breadcrumbs(request, username, self.owner, current_label='Resources')[0] if self.kind == 'event' else None
         return render(request, self.template_name, {
+            'breadcrumbs': breadcrumbs,
             'owner': self.owner,
+            'profile': self.profile,
             'own_rows': own_rows,
             'related_rows': related_rows,
             'related_column_label': self.cfg['related_column_label'],
@@ -227,7 +234,23 @@ class ResourcesEditView(View):
                     new_idx += 1
 
         messages.success(request, "Resources updated successfully!")
-        edit_url = reverse(f'syncope:{self.kind}_resources_edit', kwargs={'username': username, 'pk': pk})
+        if self.profile:
+            edit_url = reverse('syncope:profile_resources', kwargs={'username': username})
+        else:
+            edit_url = reverse(f'syncope:{self.kind}_resources_edit', kwargs={'username': username, 'pk': pk})
         if self.kind == 'event':
             edit_url = with_origin(edit_url, request.GET.get('origin', DEFAULT_EVENT_ORIGIN))
         return redirect(edit_url)
+
+
+class ProfileResourcesView(ResourcesEditView):
+    """Profile > Resources: the same editor, on the logged-in user's own personal Person."""
+    kind = 'person'
+    profile = True
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            if request.user.username != kwargs['username']:
+                return HttpResponseForbidden()
+            kwargs['pk'] = get_object_or_404(Person, user=request.user, owner__isnull=True).pk
+        return super().dispatch(request, *args, **kwargs)

@@ -9,14 +9,14 @@ from .views.event import event_attendance_search
 from .views.home import HomeView, SkillListAndCreateView
 from .views.importing import ImportHubView, ImportDashboardView, CombineProjectsView
 from .views.organization import OrganizationCreateView, OrganizationDashboard, OrganizationUpdateView, OrganizationDeleteView
-from .views.person import PersonUpdateView, OrgMemberAddView, OrgMemberEditView, PersonListView, OrgMemberDetailView, OrgMemberDeleteView, org_member_unlink, person_list_search
+from .views.person import PersonUpdateView, profile_account, ProfileDetailView, OrgMemberAddView, OrgMemberEditView, PersonListView, OrgMemberDetailView, OrgMemberDeleteView, org_member_unlink, person_list_search
 from .views.invitation import InvitationListView, InvitationCreateView, InvitationUpdateView
 from .views.organization import OrganizationCreateView, OrganizationDashboard
 from .views.project import ProjectDeleteView, ProjectCreateView, ProjectDetailView, ProjectListView
 from .views.project import ProjectMetaEditView, ProjectEventsEditView, ProjectSongsEditView, ProjectParticipantsEditView
 from .views.project import project_events_search, project_songs_search, project_guests_search
 from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongMetaEditView, SongLyricsEditView, SongQuoteView, song_list_search, song_person_search
-from .views.resource import ResourcesEditView
+from .views.resource import ResourcesEditView, ProfileResourcesView
 from .views.user_login_register import SignUp, UserLoginView, UserLogoutView
 from .views.poll import PollListView, PollCreateUpdateView, PollDetailView, PollDeleteView, PollPersonView, PollEventView, PollEventUpdateView, PollEventAttendanceView, PollPersonAttendanceView, poll_persons_search
 from .views.share import create_share_link, visit_share
@@ -31,7 +31,10 @@ urlpatterns = [
 
     path("signup/", SignUp.as_view(), name="signup"),
 
+    path("<str:username>/person/", ProfileDetailView.as_view(), name="profile_detail"),
     path("<str:username>/person/update/", PersonUpdateView.as_view(), name="person_update"),
+    path("<str:username>/person/account/", profile_account, name="profile_account"),
+    path("<str:username>/person/resources/", ProfileResourcesView.as_view(), name="profile_resources"),
     path("<str:username>/invitations/", InvitationListView.as_view(), name="invitation_list"),
     path("<str:username>/invitations/new/", InvitationCreateView.as_view(), name="invitation_new"),
     path("<str:username>/invitations/<int:pk>/", InvitationUpdateView.as_view(), name="invitation_detail"),

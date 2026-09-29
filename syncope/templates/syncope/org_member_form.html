@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static dt_tags %}
 {% block title %}{% if form.instance.pk %}Update{% else %}New Person{% endif %} {{ form.instance.first_name }} {{ form.instance.last_name }} {% endblock %}
 
 {% block content %}
@@ -23,25 +23,63 @@
     <!-- Date fields -->
 {#    <fieldset>#}
 {#        <legend>Birth Information</legend>#}
-        <p> * {{ form.birth_date.label_tag }} {{ form.birth_date }} {{ form.birth_date.errors }}</p>
+        <p>{{ form.birth_date.label_tag }} {{ form.birth_date }} {{ form.birth_date.errors }}</p>
         <p>{{ form.birth_approximate.label_tag }} {{ form.birth_approximate }}</p>
 {#    </fieldset>#}
 
 {#    <fieldset>#}
 {#        <legend>Death Information</legend>#}
-        <p> + {{ form.death_date.label_tag }} {{ form.death_date }} {{ form.death_date.errors }}</p>
+        <p>{{ form.death_date.label_tag }} {{ form.death_date }} {{ form.death_date.errors }}</p>
         <p>{{ form.death_approximate.label_tag }} {{ form.death_approximate }}</p>
 {#    </fieldset>#}
 
+
+
+    <!-- Voices (renders as native <select multiple>) -->
+    <p>{{ form.voices.label_tag }}
+        {{ form.voices }} {{ form.voices.errors }}</p>
+    <small class="form-help">Hold Ctrl/Cmd to select multiple voices</small>
+
+    <!-- Instruments (renders as native <select multiple>) -->
+    <p>{{ form.instruments.label_tag }}
+    {{ form.instruments }} {{ form.instruments.errors }}</p>
+    <small class="form-help">Hold Ctrl/Cmd to select multiple instruments</small>
+
+
+    <!-- Skills -->
+    <p>{{ form.skills.label_tag }}
+        {{ form.skills }} {{ form.skills.errors }}</p>
+
     <!-- Roles -->
+    {% if request.resolver_match.kwargs.username != user.username %}
     <p>{{ form.roles.label_tag }}
     {{ form.roles }} {{ form.roles.errors }}</p>
+    {% endif %}
 
     <!-- Membership Periods -->
     {% if period_formset %}
     {{ period_formset.management_form }}
-    <p class="form-label">Membership Periods:</p>
+    <h3>Membership Periods</h3>
+    {% if periods %}
+    <div class="table-container">
+    <table class="table table-narrow">
+        <thead>
+            <tr><th>Role</th><th>From</th><th>To</th></tr>
+        </thead>
+        <tbody>
+            {% for period in periods %}
+            <tr>
+                <td>{{ period.role }}</td>
+                <td>{% dt period.started_at "date-year" %}</td>
+                <td>{% if period.ended_at %}{% dt period.ended_at "date-year" %}{% else %}<small>Active</small>{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% endif %}
     {% for p_form in period_formset %}
+    {% if forloop.last and not p_form.instance.pk %}<h4>Add role period</h4>{% endif %}
     <p>
         {{ p_form.id }}
         {{ p_form.role.label_tag }} {{ p_form.role }}
@@ -62,21 +100,6 @@
         <p class="error">{{ period_formset.non_form_errors }}</p>
     {% endif %}
     {% endif %}
-
-    <!-- Voices (renders as native <select multiple>) -->
-    <p>{{ form.voices.label_tag }}
-        {{ form.voices }} {{ form.voices.errors }}</p>
-    <small class="form-help">Hold Ctrl/Cmd to select multiple voices</small>
-
-    <!-- Instruments (renders as native <select multiple>) -->
-    <p>{{ form.instruments.label_tag }}
-    {{ form.instruments }} {{ form.instruments.errors }}</p>
-    <small class="form-help">Hold Ctrl/Cmd to select multiple instruments</small>
-
-
-    <!-- Skills -->
-    <p>{{ form.skills.label_tag }}
-        {{ form.skills }} {{ form.skills.errors }}</p>
 
     {% if is_admin and form.instance.pk %}
     <p class="danger-zone"><a href="{% url 'syncope:org_member_delete' url_username form.instance.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger">Delete Member</a></p>

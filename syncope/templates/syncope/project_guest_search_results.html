@@ -9,8 +9,6 @@
                 </div>
             {% endfor %}
         </div>
-    {% else %}
-        <p>No matching guests found.</p>
     {% endif %}
     <div class="search-result-row">
         <a href="{% url 'syncope:org_member_new' url_username %}?auto_add_project={{ project.pk }}&next={% url 'syncope:project_participants_edit' url_username project.pk %}" class="btn btn-primary" title="Create new person">+ New person</a>

@@ -43,24 +43,24 @@
             {% if list_type in 'active inactive all' %}
             <td>
                 {% for skill in person.person.skills.all %}
-                    {{ skill.title }}
+                    <div>{{ skill.title }}</div>
                 {% empty %}
                     No skills
                 {% endfor %}
             </td>
             <td>
                 {% for singer in person.person.singer_set.all %}
-                    {{ singer.voice.name }}
+                    <div>{{ singer.voice.name }}</div>
                 {% empty %}
 
                 {% endfor %}
                 {% for instrumentalist in person.person.instrumentalist_set.all %}
-                    {{ instrumentalist.instrument.name }}
+                    <div>{{ instrumentalist.instrument.name }}</div>
                 {% empty %}
                 {% endfor %}
             </td>
             <td>{% for role in person.person.roles.all %}
-                    {{ role.title }}
+                    <div>{{ role.title }}</div>
                 {% empty %}
                     No roles
                 {% endfor %}</td>
@@ -69,20 +69,6 @@
               {% for link in person.resource_icons %} {% if forloop.first %}
                 {{ link.icon }}
                 {% endif %} {% endfor %}
-            </td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="7">
-            {% if list_type == 'active' %}No active members
-            {% elif list_type == 'inactive' %}No inactive members
-            {% elif list_type == 'others' %}No unspecified persons
-            {% elif list_type == 'all' %}No persons
-            {% elif list_type == 'composers' %}No composers yet
-            {% elif list_type == 'poets' %}No poets yet
-            {% elif list_type == 'arrangers' %}No arrangers yet
-            {% elif list_type == 'translators' %}No translators yet
-            {% endif %}
             </td>
         </tr>
         {% endfor %}

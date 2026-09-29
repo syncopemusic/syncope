@@ -29,12 +29,12 @@
                 <p class="sidebar-user">{{ user.username }}</p>
                 <ul class="menu-links">
                     <li><a href="{%  url 'syncope:home' %}" {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>Home</a></li>
-                    <li><a href="{%  url 'syncope:person_update' user.username %}" {% if request.resolver_match.url_name == 'person_update' %}class="active"{% endif %}>Update profile</a></li>
-                    <li><a href="{%  url 'syncope:invitation_list' user.username %}" {% if request.resolver_match.url_name|url_in:'invitation_list,invitation_new,invitation_detail' and url_username == user.username %}class="active"{% endif %}>Invitations{% if pending_invitations %} <span class="badge nav-badge">{{ pending_invitations }}</span>{% endif %}</a></li>
 
                     <li>
                         <p class="section-label">Private</p>
                         <ul class="org-submenu">
+                            <li><a href="{%  url 'syncope:invitation_list' user.username %}" {% if request.resolver_match.url_name|url_in:'invitation_list,invitation_new,invitation_detail' and url_username == user.username %}class="active"{% endif %}>Invitations{% if pending_invitations %} <span class="badge nav-badge">{{ pending_invitations }}</span>{% endif %}</a></li>
+                            <li><a href="{%  url 'syncope:profile_detail' user.username %}" {% if request.resolver_match.url_name|url_in:'profile_detail,person_update,profile_resources,profile_account' %}class="active"{% endif %}>Profile</a></li>
                             <li><a href="{%  url 'syncope:song_list' user.username %}" {% if request.resolver_match.url_name|url_in:'song_list,song_detail,song_new,song_meta_edit,song_lyrics_edit,song_resources_edit,song_delete,song_quotes' and url_username == user.username %}class="active"{% endif %}>Songs</a></li>
                             <li><a href="{%  url 'syncope:org_member_list_all' user.username %}" {% if request.resolver_match.url_name|url_in:'org_member_list_all,org_member_detail,org_member_new,org_member_edit,org_member_delete' and url_username == user.username %}class="active"{% endif %}>Contacts</a></li>
                         </ul>
@@ -87,7 +87,7 @@
         <main class="main">
             <div class="mobile-topbar">
                 <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
-                {% include "syncope/_breadcrumbs.html" %}
+                {% load url_tags %}{% render_breadcrumbs %}
             </div>
             <div class="main-content">
                 {% if messages %}

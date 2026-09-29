@@ -28,7 +28,9 @@
     {% endif %}
     </h1>
 
-    {% if membership and ADMIN_ROLE in membership.person.roles.all %}
+    {% if list_type == 'all' and url_username == user.username %}
+        <a href="{% url 'syncope:org_member_new' url_username %}" class="btn btn-primary" title="Add new contact">+ Add</a>
+    {% elif membership and ADMIN_ROLE in membership.person.roles.all %}
     {% if list_type == 'active' %}
         <a href="{% url 'syncope:org_member_new_member' url_username %}" class="btn btn-primary" title="Add new member">+ Add</a>
     {% elif list_type == 'composers' %}

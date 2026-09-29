@@ -35,6 +35,12 @@ class RegisterForm(UserCreationForm):
         fields = "__all__"
 
 
+class UsernameChangeForm(forms.ModelForm):
+    class Meta:
+        model = CustomUser
+        fields = ["username"]
+
+
 class PersonForm(forms.ModelForm):
     email = forms.EmailField(required=True)
     skills = forms.ModelMultipleChoiceField(
@@ -106,6 +112,18 @@ class OrganizationForm(forms.ModelForm):
         return email
 
 
+class ApproximationChoiceField(forms.ModelChoiceField):
+    """Exact date is the empty choice (None); rows 1 and 2 get readable labels."""
+    LABELS = {"1": "Month/day approx", "2": "Year approx"}
+
+    def __init__(self, **kwargs):
+        super().__init__(queryset=ApproximateDate.objects.exclude(approximation="0"),
+                         required=False, empty_label="Exact date", **kwargs)
+
+    def label_from_instance(self, obj):
+        return self.LABELS.get(obj.approximation, obj.approximation)
+
+
 class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
     VALID_PRESETS = {'composer', 'poet', 'translator', 'arranger', 'member'}
     # Person
@@ -119,22 +137,12 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
         required=False,
         widget=forms.DateInput(attrs={'type': 'date'})
     )
-    birth_approximate = forms.ModelChoiceField(
-        queryset=ApproximateDate.objects.all(),
-        required=False,
-        empty_label="Exact date",
-        label="Birth date approximation"
-    )
+    birth_approximate = ApproximationChoiceField(label="Birth date approximation")
     death_date = forms.DateField(
         required=False,
         widget=forms.DateInput(attrs={'type': 'date'})
     )
-    death_approximate = forms.ModelChoiceField(
-        queryset=ApproximateDate.objects.all(),
-        required=False,
-        empty_label="Exact date",
-        label="Death date approximation"
-    )
+    death_approximate = ApproximationChoiceField(label="Death date approximation")
     # Role checkboxes
     roles = forms.ModelMultipleChoiceField(
         queryset=Role.objects.all(),
@@ -643,10 +651,6 @@ def make_resource_form(resource_model):
 PersonResourceForm = make_resource_form(PersonResource)
 EventSongResourceForm = make_resource_form(EventSongResource)
 
-PersonResourceFormSet = inlineformset_factory(
-    Person, PersonResource, form=PersonResourceForm,
-    formset=BaseResourceFormSet, extra=1, can_delete=True,
-)
 EventSongResourceFormSet = inlineformset_factory(
     EventSong, EventSongResource, form=EventSongResourceForm,
     formset=BaseResourceFormSet, extra=1, can_delete=True,

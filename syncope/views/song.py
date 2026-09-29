@@ -17,7 +17,7 @@ from syncope.mixins import  SongOwnerMixin
 from syncope.views.drafts import DraftMixin, clear_draft
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param, safe_next_url
-from syncope.breadcrumbs import event_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
+from syncope.breadcrumbs import project_origin_breadcrumbs, event_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
 from syncope.views.resource import song_related_resource_rows
 
 
@@ -157,6 +157,10 @@ class SongDetailView(SongOwnerMixin, DetailView):
             context['breadcrumbs'] = breadcrumbs
             context['return_url'] = breadcrumbs[-2]['url']
             context['return_label'] = f"Return to {breadcrumbs[-2]['label']}"
+        elif project_trail := project_origin_breadcrumbs(self.request, self.owner_user.username, song.title):
+            context['breadcrumbs'] = project_trail[0]
+            context['return_url'] = project_trail[0][-2]['url']
+            context['return_label'] = f"Return to {project_trail[0][-2]['label']}"
         else:
             context['breadcrumbs'] = [
                 {'label': 'Songs', 'url': reverse('syncope:song_list', kwargs={'username': self.owner_user.username})},

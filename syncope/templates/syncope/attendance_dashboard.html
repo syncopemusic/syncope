@@ -91,7 +91,7 @@
                             <td class="sticky-col col-main member-name">{{ row.member }}</td>
                             {% for cell in row.attendance_cells %}
                                 {% if cell.is_ineligible %}
-                                    <td class="table-event-col-ineligible"></td>
+                                    <td></td>
                                 {% else %}
                                     <td class="table-event-col">
                                         <div class="table-cell-attendance att-type-{{ cell.attendance_type_id|default:0 }} {% if cell.is_grayed_out %}table-cell-attendance-disabled{% endif %}"

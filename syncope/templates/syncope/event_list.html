@@ -16,7 +16,7 @@
     <thead>
     <tr>
         <th class="col-num"></th>
-        <th>
+        <th style="width: 60%; white-space: normal;">
             <div class="song-title"><a href="?sort=type{% if current_sort == 'type' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Type{% if current_sort == 'type' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></div>
             <div class="song-title"><a href="?sort=date{% if current_sort == 'date' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Date{% if current_sort == 'date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></div>
         </th>
@@ -24,7 +24,7 @@
             <div class="song-title"><a href="?sort=project{% if current_sort == 'project' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Project{% if current_sort == 'project' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></div>
             <div class="song-title"><a href="?sort=location{% if current_sort == 'location' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Location{% if current_sort == 'location' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></div>
         </th>
-        <th class="col-action">Resources</th>
+        <th class="col-action" title="Resources">🔗</th>
         <th>Songs</th>
     </tr>
     </thead>
@@ -32,7 +32,7 @@
     {% for event in events %}
         <tr>
             <td class="col-num">{{ forloop.counter }}</td>
-            <td>
+            <td style="width: 60%; white-space: normal;">
                 <div class="song-title">
                     <a href="{%  url 'syncope:event_detail' url_username event.id %}?origin=events">{{ event }}</a>
                 </div>

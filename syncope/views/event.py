@@ -23,7 +23,7 @@ from syncope.views.drafts import DraftMixin
 from syncope.views.resource import event_related_resource_rows
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param
-from syncope.breadcrumbs import event_breadcrumbs, origin_root_crumb, DEFAULT_EVENT_ORIGIN
+from syncope.breadcrumbs import event_breadcrumbs, origin_root_crumbs, DEFAULT_EVENT_ORIGIN
 
 
 def is_event_admin(user, org_user):
@@ -267,6 +267,7 @@ class EventDetailView(DetailView):
         context['breadcrumbs'], context['origin_key'] = event_breadcrumbs(
             self.request, self.kwargs.get('username'), self.object
         )
+        context['return_url'] = context['breadcrumbs'][-2]['url']
         context['attendances'] = get_ordered_attendance_queryset(self.object)
         context['is_admin'] = is_event_admin(self.request.user, self.customuser)
         context['can_view_attendance'] = can_view_event_attendance(self.request.user, self.customuser)
@@ -699,8 +700,8 @@ class EventDeleteView(LoginRequiredMixin, DeleteView):
         return response
 
     def get_success_url(self):
-        root, _ = origin_root_crumb(self.request, self.kwargs.get('username'))
-        return root['url']
+        roots, _ = origin_root_crumbs(self.request, self.kwargs.get('username'))
+        return roots[-1]['url']
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

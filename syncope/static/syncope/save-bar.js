@@ -115,6 +115,7 @@ function initSaveBar({ formId, saveBarId = 'save-bar', countUnsavedChanges, befo
     function discardChanges() {
         if (countUnsavedChanges() === 0) return;
         if (!confirm('Do you want to discard changes?')) return;
+        saveBar?.classList.remove('dirty'); // so a reload-based onDiscard doesn't trip beforeunload
         onDiscard();
         sync();
         if (afterDiscard) afterDiscard();

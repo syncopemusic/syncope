@@ -36,7 +36,7 @@
 <div style="display:none;">{% csrf_token %}</div>
 
 <div class="section-header">
-    <h3>Songs</h3>
+    <h3>Songs ({{ eventsongs|length }})</h3>
     {% if is_admin %}<a href="{% url 'syncope:event_songs_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% if eventsongs %}
@@ -77,8 +77,6 @@
         </tbody>
     </table>
     </div>
-{% else %}
-    <p>No songs added yet.</p>
 {% endif %}
 
 {% if can_view_attendance %}
@@ -139,7 +137,7 @@
 
 </div>
 
-{% include "syncope/_save_bar.html" with url=breadcrumbs.0.url %}
+{% include "syncope/_save_bar.html" with url=return_url %}
 
 {% block extra_js %}
 <script>
