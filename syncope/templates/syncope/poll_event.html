@@ -8,7 +8,7 @@
 {% if editing %}
 <h1>{{ poll.title }} - Edit Date</h1>
 
-<form method="post">
+<form method="post" id="poll-event-form">
     {% csrf_token %}
     {{ form.poll }}
 
@@ -41,13 +41,10 @@
         {% if form.details.errors %}<span class="error">{{ form.details.errors }}</span>{% endif %}
     </div>
 
-    <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Save</button>
-    </div>
 </form>
 
 {% url 'syncope:poll_events' url_username poll.pk as return_target %}
-{% include "syncope/_save_bar.html" with url=return_target %}
+{% include "syncope/_save_bar.html" with form_id="poll-event-form" url=return_target %}
 
 {% else %}
 <h1>{{ poll.title }} - Dates</h1>
@@ -145,8 +142,25 @@ $(function () {
     });
 });
 </script>
-{% if not editing %}
 <script src="{% static 'syncope/save-bar.js' %}"></script>
+{% if editing %}
+<script>
+    const form = document.getElementById('poll-event-form');
+    const fieldTracker = trackFormFieldChanges(form);
+
+    const saveBarCtl = initSaveBar({
+        formId: 'poll-event-form',
+        countUnsavedChanges: fieldTracker.count,
+        onDiscard: () => {
+            form.reset();
+            fieldTracker.reset();
+        },
+    });
+
+    form.addEventListener('input', () => saveBarCtl.sync());
+    form.addEventListener('change', () => saveBarCtl.sync());
+</script>
+{% else %}
 <script>
     const datesTbody = document.getElementById('dates-tbody');
 

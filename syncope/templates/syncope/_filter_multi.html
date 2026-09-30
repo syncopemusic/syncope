@@ -1,0 +1,15 @@
+<details class="filter-sub" {% if selected %}open{% endif %}>
+    <summary>
+        <input type="checkbox" {% if selected %}checked{% endif %}>
+        <span>{{ label }}</span>
+        <svg class="filter-toggle-icon" viewBox="0 0 24 24" width="16" height="16" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+    </summary>
+    <select name="{{ name }}" multiple size="6" class="filter-sub-select">
+        {% for id, title in options %}
+        <option value="{{ id }}" {% if id in selected %}selected{% endif %}>{{ title|capfirst }}</option>
+        {% endfor %}
+    </select>
+</details>

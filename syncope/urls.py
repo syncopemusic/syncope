@@ -68,10 +68,7 @@ urlpatterns = [
     path("<str:username>/events/<int:pk>/meta/edit/", EventMetaEditView.as_view(), name="event_meta_edit"),
     path("<str:username>/events/<int:pk>/resources/edit/", ResourcesEditView.as_view(kind='event'), name="event_resources_edit"),
 
-    path("<str:username>/members/", RedirectView.as_view(pattern_name="syncope:org_member_list", permanent=False)),
-    path("<str:username>/members/active/", PersonListView.as_view(), {"list_type": "active"}, name="org_member_list"),
-    path("<str:username>/members/inactive/", PersonListView.as_view(), {"list_type": "inactive"}, name="org_member_list_inactive"),
-    path("<str:username>/members/others/", PersonListView.as_view(), {"list_type": "others"}, name="org_member_list_others"),
+    path("<str:username>/members/", PersonListView.as_view(), {"list_type": "active"}, name="org_member_list"),
     path("<str:username>/members/all/", PersonListView.as_view(), {"list_type": "all"}, name="org_member_list_all"),
     path("<str:username>/members/search/<str:list_type>/", person_list_search, name="person_list_search"),
     path("<str:username>/members/new/", OrgMemberAddView.as_view(), name="org_member_new"),

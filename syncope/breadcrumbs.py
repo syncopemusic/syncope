@@ -167,8 +167,6 @@ PAGES = {
     "poll_person_attendance": ("polls", "sub", "Attendance"),
     "poll_delete": ("polls", "sub", "Delete"),
     "org_member_list": ("members", "list", None),
-    "org_member_list_inactive": ("members", "list", "Inactive members"),
-    "org_member_list_others": ("members", "list", "Unspecified"),
     "org_member_list_all": ("members", "list", None),
     "org_member_new": ("members", "page", "New"),
     "org_member_new_member": ("members", "page", "New"),

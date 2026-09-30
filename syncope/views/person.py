@@ -11,7 +11,7 @@ from syncope.forms import UsernameChangeForm, PersonForm, MembershipPeriodFormSe
 from syncope.utils import merge_consecutive_membership_periods
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy, reverse
-from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from datetime import datetime
 from django.views.generic import ListView,  UpdateView,  DetailView, FormView
 from django.views.generic.edit import DeleteView
@@ -29,8 +29,6 @@ from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param, safe_next_url
 from syncope.breadcrumbs import PROJECT_ORIGIN_PREFIX, origin_root_crumbs, project_origin_breadcrumbs, section_crumb, event_breadcrumbs, event_song_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
 from syncope.views.drafts import DraftMixin
-
-NON_EXTERNAL_ROLES = [Role.ADMIN, Role.MEMBER, Role.SUPPORTER]
 
 SKILL_MAP = {
     'composers': Skill.COMPOSER,
@@ -111,19 +109,6 @@ def _annotate_person_queryset(queryset):
     )
 
 
-def _filter_membership_periods_by_status(org_user, status):
-    """Filter membership periods by active/inactive/all status."""
-    base_query = MembershipPeriod.objects.filter(
-        user=org_user,
-        role_id__in=NON_EXTERNAL_ROLES
-    )
-    if status == 'active':
-        return base_query.filter(ended_at__isnull=True)
-    elif status == 'inactive':
-        return base_query.filter(ended_at__isnull=False)
-    return base_query
-
-
 def _apply_person_sort(queryset, request):
     """Apply sorting to person querysets based on GET parameters."""
     sort_field_map = {
@@ -140,23 +125,75 @@ def _apply_person_sort(queryset, request):
     return queryset.order_by(*fields)
 
 
-def _apply_person_list_type_filter(queryset, list_type, org_user):
-    """Apply the active/inactive/others/all/skill-based filter branch for a person list."""
-    if list_type in ('active', 'inactive'):
-        periods = _filter_membership_periods_by_status(org_user, list_type)
-        queryset = queryset.filter(person__membership_period__in=periods).distinct()
-    elif list_type == 'others':
-        ever_member_ids = MembershipPeriod.objects.filter(
-            user=org_user, role_id__in=NON_EXTERNAL_ROLES
-        ).values_list('person_id', flat=True)
-        queryset = queryset.exclude(person_id__in=ever_member_ids)
-        queryset = queryset.exclude(person__skills__id__in=SKILL_MAP.values()).distinct()
-    elif list_type == 'all':
-        pass
-    else:
-        skill_id = SKILL_MAP[list_type]
-        queryset = queryset.filter(person__skills__id=skill_id).distinct()
+def _apply_person_list_type_filter(queryset, list_type):
+    """Narrow a skill list (composers/poets/...) to that skill; 'active' and 'all' need no branch."""
+    if list_type in SKILL_MAP:
+        queryset = queryset.filter(person__skills__id=SKILL_MAP[list_type]).distinct()
     return queryset
+
+
+FILTER_STATUSES = ('active', 'past', 'all')
+FILTER_MULTI_KEYS = {'skill': PersonSkill, 'voice': Singer, 'instrument': Instrumentalist}
+
+
+def _parse_person_filters(GET, is_admin):
+    """Clean the filter GET params; non-admins only get 'active' members, never supporters."""
+    filters = {}
+    for key in ('member', 'supporter'):
+        value = GET.get(key)
+        if value in FILTER_STATUSES and (is_admin or key == 'member'):
+            filters[key] = value if is_admin else 'active'
+    for key in FILTER_MULTI_KEYS:
+        ids = [int(v) for v in GET.getlist(key) if v.isdigit()]
+        if ids:
+            filters[key] = ids
+    return filters
+
+
+def _apply_person_filters(queryset, filters, org_user):
+    """AND every active filter. Uses subqueries so the sort annotations' joins are unaffected."""
+    for key, role in (('member', Role.MEMBER), ('supporter', Role.SUPPORTER)):
+        status = filters.get(key)
+        if not status:
+            continue
+        periods = MembershipPeriod.objects.filter(user=org_user, role_id=role)
+        if status != 'all':
+            periods = periods.filter(ended_at__isnull=(status == 'active'))
+        queryset = queryset.filter(person_id__in=periods.values('person_id'))
+    for key, model in FILTER_MULTI_KEYS.items():
+        for value_id in filters.get(key, []):
+            queryset = queryset.filter(person_id__in=model.objects.filter(
+                **{f'{key}_id': value_id}).values('person_id'))
+    return queryset
+
+
+def _person_filter_context(filters, is_admin):
+    return {
+        'filters': filters,
+        'filter_qs': urlencode({**filters, 'f': 1}, doseq=True),
+        'filter_is_admin': is_admin,
+        'filter_skills': Skill.objects.order_by('id').values_list('id', 'title'),
+        'filter_voices': Voice.objects.order_by('id').values_list('id', 'name'),
+        'filter_instruments': Instrument.objects.order_by('id').values_list('id', 'name'),
+    }
+
+
+def _request_person_filters(request, username, list_type):
+    """Filters from the form ('f' marks a submitted form); the active list starts with Member: Active."""
+    is_admin = AccessControl.has_permission(request.user, 'delete', username)
+    if list_type == 'active' and 'f' not in request.GET:
+        return {'member': 'active'}, is_admin
+    return _parse_person_filters(request.GET, is_admin), is_admin
+
+
+def _filtered_person_queryset(request, org_user, list_type, filters):
+    """Visible persons, narrowed by search, list type and filter, sorted."""
+    visible_memberships = AccessControl.get_visible_members(request.user, org_user)
+
+    queryset = _build_person_queryset(visible_memberships, request.GET.get('q', '').strip())
+    queryset = _apply_person_list_type_filter(queryset, list_type)
+    queryset = _apply_person_filters(queryset, filters, org_user)
+    return _apply_person_sort(_annotate_person_queryset(queryset), request)
 
 
 @method_decorator(login_required, name='dispatch')
@@ -283,17 +320,17 @@ class PersonUpdateView(DraftMixin, UpdateView):
 
 @method_decorator(login_required, name='dispatch')
 class PersonListView(ListView):
-    """Shows members (active/inactive) or persons with song skills (composers/poets/arrangers/translators)."""
+    """Shows members or persons with song skills (composers/poets/arrangers/translators)."""
     template_name = "syncope/person_list.html"
     context_object_name = "persons"
     organization = None
 
     def dispatch(self, request, *args, **kwargs):
         list_type = kwargs.get('list_type')
-        valid_types = {'active', 'inactive', 'others', 'all'} | set(SKILL_MAP.keys())
+        valid_types = {'active', 'all'} | set(SKILL_MAP.keys())
         if list_type not in valid_types:
             raise Http404
-        if list_type in ('others', 'all'):
+        if list_type == 'all':
             url_username = kwargs.get('username')
             if not AccessControl.has_permission(request.user, 'delete', url_username):
                 return HttpResponseForbidden()
@@ -305,16 +342,8 @@ class PersonListView(ListView):
         self.organization = get_object_or_404(CustomUser, username=url_username)
 
     def get_queryset(self):
-        list_type = self.kwargs["list_type"]
-        url_username = self.kwargs["username"]
-        org_user = get_object_or_404(CustomUser, username=url_username)
-        visible_memberships = AccessControl.get_visible_members(self.request.user, url_username)
-
-        q = self.request.GET.get('q', '').strip()
-        queryset = _build_person_queryset(visible_memberships, q)
-        queryset = _apply_person_list_type_filter(queryset, list_type, org_user)
-
-        return _apply_person_sort(_annotate_person_queryset(queryset), self.request)
+        self.filters, self.is_admin = _request_person_filters(self.request, self.kwargs["username"], self.kwargs["list_type"])
+        return _filtered_person_queryset(self.request, self.organization, self.kwargs["list_type"], self.filters)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -325,6 +354,7 @@ class PersonListView(ListView):
         context["q"] = self.request.GET.get('q', '')
         context["current_sort"] = self.request.GET.get('sort', 'name')
         context["reverse"] = self.request.GET.get('reverse', 'false') == 'true'
+        context.update(_person_filter_context(self.filters, self.is_admin))
 
         context['person_detail_url_name'] = _DETAIL_URL_NAMES.get(list_type, 'syncope:org_member_detail')
         context['person_edit_url_name'] = _EDIT_URL_NAMES.get(list_type, 'syncope:org_member_edit')
@@ -337,25 +367,21 @@ class PersonListView(ListView):
 
 @login_required
 def person_list_search(request, username, list_type):
-    valid_types = {'active', 'inactive', 'others', 'all'} | set(SKILL_MAP.keys())
+    valid_types = {'active', 'all'} | set(SKILL_MAP.keys())
     if list_type not in valid_types:
         raise Http404
-    if list_type in ('others', 'all'):
+    if list_type == 'all':
         if not AccessControl.has_permission(request.user, 'delete', username):
             return HttpResponseForbidden()
 
-    org_user = get_object_or_404(CustomUser, username=username)
-    visible_memberships = AccessControl.get_visible_members(request.user, username)
-
-    q = request.GET.get('q', '').strip()
-    queryset = _build_person_queryset(visible_memberships, q)
-    queryset = _apply_person_list_type_filter(queryset, list_type, org_user)
-    persons = _apply_person_sort(_annotate_person_queryset(queryset), request)
+    filters, is_admin = _request_person_filters(request, username, list_type)
+    persons = _filtered_person_queryset(request, get_object_or_404(CustomUser, username=username), list_type, filters)
 
     for person in persons:
         person.resource_icons = resource_icon_list(person.person.person_resource.all())
 
     return render(request, 'syncope/person_list_results.html', {
+        **_person_filter_context(filters, is_admin),
         'persons': persons,
         'list_type': list_type,
         'url_username': username,

@@ -70,7 +70,7 @@
                 <td class="sticky-col"></td>
                 <td></td>
                 {% for total in event_totals %}
-                <td>{{ total.yes }}{% if total.maybe %}({{ total.maybe }}){% endif %}</td>
+                <td class="table-event-col">{{ total.yes }}{% if total.maybe %}({{ total.maybe }}){% endif %}</td>
                 {% endfor %}
                 <td class="col-main"><strong>{{ grand_yes }}{% if grand_maybe %}({{ grand_maybe }}){% endif %}</strong></td>
                 <td class="col-main"><strong>{{ grand_percentage|floatformat:0 }}%</strong></td>

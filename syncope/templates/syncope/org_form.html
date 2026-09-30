@@ -1,16 +1,19 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 
 {% block title %}{% if object %}Edit Organization{% else %}Create Organization{% endif %}{% endblock %}
 
 {% block content %}
 
 <h1>{% if object %}Edit {{ object.name }}{% else %}New Organization{% endif %}</h1>
-<form method="post">
+<form method="post" id="org-form">
   {% csrf_token %}
   {{ form.as_p }}
+  {% if not object %}
   <div class="form-actions">
-    <button type="submit" class="btn btn-primary">{% if object %}Save{% else %}Create{% endif %}</button>
+    <button type="submit" class="btn btn-primary">Create</button>
   </div>
+  {% endif %}
   {% if object %}
   <p class="danger-zone"><a href="{% url 'syncope:org_delete' object.user.username %}" class="btn btn-danger">Delete Organization</a></p>
   {% endif %}
@@ -18,7 +21,24 @@
 
 {% if object %}
 {% url 'syncope:org_dashboard' object.user.username as return_target %}
-{% include "syncope/_save_bar.html" with url=return_target %}
+{% include "syncope/_save_bar.html" with form_id="org-form" url=return_target %}
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>
+    const form = document.getElementById('org-form');
+    const fieldTracker = trackFormFieldChanges(form);
+
+    const saveBarCtl = initSaveBar({
+        formId: 'org-form',
+        countUnsavedChanges: fieldTracker.count,
+        onDiscard: () => {
+            form.reset();
+            fieldTracker.reset();
+        },
+    });
+
+    form.addEventListener('input', () => saveBarCtl.sync());
+    form.addEventListener('change', () => saveBarCtl.sync());
+</script>
 {% endif %}
 
 {% endblock %}

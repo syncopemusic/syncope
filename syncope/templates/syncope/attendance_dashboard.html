@@ -88,7 +88,7 @@
                         {% for row in group.items %}
                         <tr {% if forloop.first and not forloop.parentloop.first %}class="group-start"{% endif %}>
                             <td class="col-num">{{ row.index }}</td>
-                            <td class="sticky-col col-main member-name">{{ row.member }}</td>
+                            <td class="sticky-col col-main">{{ row.member }}</td>
                             {% for cell in row.attendance_cells %}
                                 {% if cell.is_ineligible %}
                                     <td></td>
@@ -114,7 +114,7 @@
                         <td class="col-num"></td>
                         <td class="sticky-col"></td>
                         {% for total in event_totals %}
-                            <td>{{ total.present }}/{{ total.total }}</td>
+                            <td class="table-event-col">{{ total.present }}/{{ total.total }}</td>
                         {% endfor %}
                         <td class="col-main"><strong>{{ grand_present }}/{{ grand_total }}</strong></td>
                         <td class="col-main"><strong>{{ grand_percentage|floatformat:0 }}%</strong></td>

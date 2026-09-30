@@ -1,11 +1,12 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 
 {% block title %}{% if form.instance.pk %}Edit{% else %}New{% endif %} title{% endblock %}
 
 {% block content %}
 <h1>{% if form.instance.pk %}Edit{% else %}New{% endif %} Poll title</h1>
 
-<form method="post">
+<form method="post" id="poll-form">
     {% csrf_token %}
 
     <div class="form-group">
@@ -27,9 +28,11 @@
     </div>
     {% endif %}
 
+    {% if not form.instance.pk %}
     <div class="form-actions">
-        <button type="submit" class="btn btn-primary">{% if form.instance.pk %}Save{% else %}Create{% endif %}</button>
+        <button type="submit" class="btn btn-primary">Create</button>
     </div>
+    {% endif %}
     {% if form.instance.pk %}
     <p class="danger-zone"><a href="{% url 'syncope:poll_delete' url_username poll.pk %}" class="btn btn-danger">Delete Poll</a></p>
     {% endif %}
@@ -40,5 +43,26 @@
 {% else %}
 {% url 'syncope:poll_list' url_username as return_target %}
 {% endif %}
+{% if form.instance.pk %}
+{% include "syncope/_save_bar.html" with form_id="poll-form" url=return_target %}
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>
+    const form = document.getElementById('poll-form');
+    const fieldTracker = trackFormFieldChanges(form);
+
+    const saveBarCtl = initSaveBar({
+        formId: 'poll-form',
+        countUnsavedChanges: fieldTracker.count,
+        onDiscard: () => {
+            form.reset();
+            fieldTracker.reset();
+        },
+    });
+
+    form.addEventListener('input', () => saveBarCtl.sync());
+    form.addEventListener('change', () => saveBarCtl.sync());
+</script>
+{% else %}
 {% include "syncope/_save_bar.html" with url=return_target %}
+{% endif %}
 {% endblock %}

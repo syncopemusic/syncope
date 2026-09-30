@@ -2,9 +2,7 @@
 {% load static %}
 {% block title %}
 {% if list_type == 'all' and url_username == user.username %}Personal Contacts
-{% elif list_type == 'active' %}Active Members
-{% elif list_type == 'inactive' %}Inactive Members
-{% elif list_type == 'others' %}Unspecified
+{% elif list_type == 'active' %}Members
 {% elif list_type == 'all' %}All Persons
 {% elif list_type == 'composers' %}Composers
 {% elif list_type == 'poets' %}Poets
@@ -17,9 +15,7 @@
 <div class="section-header">
     <h1>
     {% if list_type == 'all' and url_username == user.username %}Personal Contacts
-    {% elif list_type == 'active' %}Active Members
-    {% elif list_type == 'inactive' %}Inactive Members
-    {% elif list_type == 'others' %}Unspecified
+    {% elif list_type == 'active' %}Members
     {% elif list_type == 'all' %}All Persons
     {% elif list_type == 'composers' %}Composers
     {% elif list_type == 'poets' %}Poets
@@ -53,6 +49,39 @@
     <button type="button" id="person-search-clear" class="btn btn-secondary">Clear</button>
 </p>
 
+<details class="filter-panel" {% if filters %}open{% endif %}>
+    <summary>
+        Filter
+        <svg class="filter-toggle-icon" viewBox="0 0 24 24" width="18" height="18" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+    </summary>
+    <form method="get" class="filter-form" id="person-filter-form">
+        <input type="hidden" name="f" value="1">
+        <div class="filter-row">
+            {% include "syncope/_filter_status.html" with name="member" label="Member" selected=filters.member %}
+        </div>
+        <div class="filter-row">
+            {% include "syncope/_filter_multi.html" with name="skill" label="Skill" options=filter_skills selected=filters.skill %}
+        </div>
+        <div class="filter-row">
+            {% include "syncope/_filter_multi.html" with name="voice" label="Voice" options=filter_voices selected=filters.voice %}
+        </div>
+        <div class="filter-row">
+            {% include "syncope/_filter_multi.html" with name="instrument" label="Instrument" options=filter_instruments selected=filters.instrument %}
+        </div>
+        {% if filter_is_admin %}
+        <div class="filter-row">
+            {% include "syncope/_filter_status.html" with name="supporter" label="Supporter" selected=filters.supporter %}
+        </div>
+        {% endif %}
+        <div class="filter-row filter-row-actions">
+            <a href="?" class="btn btn-primary filter-reset">Reset</a>
+        </div>
+    </form>
+</details>
+
 <div id="person-list-results">
     {% include "syncope/person_list_results.html" %}
 </div>
@@ -60,12 +89,54 @@
 {% block extra_js %}
 <script src="{% static 'syncope/search-box.js' %}"></script>
 <script>
-    initLiveSearch({
-        input: document.getElementById('person-search-input'),
+    const filterForm = document.getElementById('person-filter-form');
+    const searchInput = document.getElementById('person-search-input');
+    let sort = '{{ current_sort }}';
+    let reverse = '{{ reverse|yesno:"true,false" }}';
+    const search = initLiveSearch({
+        input: searchInput,
         spinner: document.getElementById('person-search-spinner'),
         results: document.getElementById('person-list-results'),
         clearBtn: document.getElementById('person-search-clear'),
-        buildUrl: query => `{% url 'syncope:person_list_search' url_username list_type %}?q=${encodeURIComponent(query)}&sort={{ current_sort }}&reverse={{ reverse|yesno:"true,false" }}`,
+        buildUrl: query => {
+            const params = new URLSearchParams(new FormData(filterForm));
+            params.set('q', query);
+            params.set('sort', sort);
+            params.set('reverse', reverse);
+            history.replaceState(null, '', `?${params}`);  // keep the page URL shareable and reload-safe
+            return `{% url 'syncope:person_list_search' url_username list_type %}?${params}`;
+        },
+    });
+    // Checkbox shows/enables its select (disabled selects are not submitted); any change re-runs the search.
+    filterForm.addEventListener('change', e => {
+        const toggle = e.target.dataset.toggle;
+        const sub = e.target.closest('.filter-sub');
+        if (sub) {
+            // Nested list: checkbox mirrors "anything selected"; ticking opens, unticking clears and closes.
+            const box = sub.querySelector('input[type=checkbox]');
+            const select = sub.querySelector('select');
+            if (e.target === box) {
+                sub.open = box.checked;
+                if (!box.checked) select.selectedIndex = -1;
+            } else {
+                box.checked = select.selectedOptions.length > 0;
+            }
+        } else if (toggle) {
+            const select = filterForm.elements[toggle];
+            select.hidden = select.disabled = !e.target.checked;
+        }
+        search.run(searchInput.value);
+    });
+    filterForm.addEventListener('submit', e => e.preventDefault());
+    // Sortable headers reload only the results: take sort/reverse from the clicked link.
+    document.getElementById('person-list-results').addEventListener('click', e => {
+        const link = e.target.closest('.sortable-header');
+        if (!link) return;
+        e.preventDefault();
+        const params = new URL(link.href).searchParams;
+        sort = params.get('sort');
+        reverse = params.get('reverse') || 'false';
+        search.run(searchInput.value);
     });
 </script>
 {% endblock %}

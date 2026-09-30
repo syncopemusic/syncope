@@ -5,23 +5,23 @@
     <tr>
         <th class="col-num"></th>
         <th class="sticky-col col-main">
-            <a href="?q={{ q }}&sort=name{% if current_sort == 'name' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
+            <a href="?q={{ q }}&{{ filter_qs }}&sort=name{% if current_sort == 'name' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
                 Name {% if current_sort == 'name' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
         <th class="col-main">
-            <a href="?q={{ q }}&sort=email{% if current_sort == 'email' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
+            <a href="?q={{ q }}&{{ filter_qs }}&sort=email{% if current_sort == 'email' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
                 Email {% if current_sort == 'email' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
-        {% if list_type in 'active inactive all' %}
+        {% if list_type in 'active all' %}
         <th>
-            <a href="?q={{ q }}&sort=skill{% if current_sort == 'skill' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
+            <a href="?q={{ q }}&{{ filter_qs }}&sort=skill{% if current_sort == 'skill' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
                 Skill {% if current_sort == 'skill' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
         <th>
-            <a href="?q={{ q }}&sort=voice_instrument{% if current_sort == 'voice_instrument' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
+            <a href="?q={{ q }}&{{ filter_qs }}&sort=voice_instrument{% if current_sort == 'voice_instrument' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
                 Voice/Instrument {% if current_sort == 'voice_instrument' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
             </a>
         </th>
@@ -40,7 +40,7 @@
                 </a>
             </td>
             <td class="col-main">{{ person.person.email }}</td>
-            {% if list_type in 'active inactive all' %}
+            {% if list_type in 'active all' %}
             <td>
                 {% for skill in person.person.skills.all %}
                     <div>{{ skill.title }}</div>

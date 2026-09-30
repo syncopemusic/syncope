@@ -1,6 +1,8 @@
 # permissions.py
 
-from .models import Organization, Role, Person, CustomUser, Membership, Song, PersonRole
+from django.db.models import Q
+
+from .models import Organization, Role, Person, CustomUser, Membership, MembershipPeriod, Song, PersonRole
 
 
 class AccessControl:
@@ -259,66 +261,51 @@ class AccessControl:
     @classmethod
     def get_visible_members(cls, auth_user, url_username):
         """
-        Get memberships visible to a user within an organization.
-        Args:
-            auth_user: CustomUser viewing the member list
-            organization: Organization to get members from
-        Returns: QuerySet of Membership objects the user can see
-        Visibility rules:
-            - ADMIN: Can see all members
-            - MEMBER: Can see only ADMIN and MEMBER roles
-            - SUPPORTER: Can see only ADMIN roles
-            - EXTERNAL: Cannot see any members
+        Memberships of an organization visible to a user, by membership periods.
+        Viewer's role = highest role among their active periods in the org.
+            - ADMIN: everyone (incl. past members and supporters)
+            - MEMBER: active admins and members, plus externals
+            - SUPPORTER: active admins, plus externals
+            - EXTERNAL / none: nobody
+        Externals = persons who never held admin/member/supporter in the org.
         """
-
-        # Normalize url_username to a string
         if isinstance(url_username, CustomUser):
-            org_username_str = url_username.username
             url_user = url_username
         else:
-            org_username_str = url_username
-            try:
-                url_user = CustomUser.objects.get(username=url_username)
-            except CustomUser.DoesNotExist:
-
+            url_user = cls.get_username(url_username)
+            if url_user is None:
                 return Membership.objects.none()
 
-
-        # Get memberships for this organization
         memberships = Membership.objects.filter(
             user=url_user
         ).select_related("person").prefetch_related("person__roles")
 
+        if auth_user.is_authenticated and auth_user == url_user:
+            return memberships
 
-        # PASS THE STRING to get_org_roles
-        viewer_roles = cls.get_org_roles(auth_user, org_username_str)
+        auth_person = cls.get_auth_person(auth_user)
+        viewer_role_ids = set(MembershipPeriod.objects.filter(
+            user=url_user, person__owner=auth_person, ended_at__isnull=True,
+        ).values_list('role_id', flat=True)) if auth_person else set()
 
-        if not viewer_roles.exists():
-
-            return Membership.objects.none()
-
-        viewer_role_ids = set(viewer_roles.values_list('id', flat=True))
-
-        # ADMIN sees everyone
         if Role.ADMIN in viewer_role_ids:
             return memberships
 
-        # MEMBER sees ADMIN and MEMBER roles only
         if Role.MEMBER in viewer_role_ids:
-            filtered = memberships.filter(
-                person__roles__id__in=[Role.ADMIN, Role.MEMBER]
-            ).distinct()
-            return filtered
+            visible_roles = [Role.ADMIN, Role.MEMBER]
+        elif Role.SUPPORTER in viewer_role_ids:
+            visible_roles = [Role.ADMIN]
+        else:
+            return Membership.objects.none()
 
-        # SUPPORTER sees ADMIN roles only
-        if Role.SUPPORTER in viewer_role_ids:
-            filtered = memberships.filter(
-                person__roles__id=Role.ADMIN
-            ).distinct()
-            return filtered
-
-
-        return Membership.objects.none()
+        periods = MembershipPeriod.objects.filter(user=url_user)
+        active = periods.filter(role_id__in=visible_roles, ended_at__isnull=True)
+        ever_non_external = periods.filter(
+            role_id__in=[Role.ADMIN, Role.MEMBER, Role.SUPPORTER])
+        return memberships.filter(
+            Q(person_id__in=active.values('person_id')) |
+            ~Q(person_id__in=ever_non_external.values('person_id'))
+        )
 
     @classmethod
     def can_view_song(cls, auth_user, song):

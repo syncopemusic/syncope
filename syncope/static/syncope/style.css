@@ -151,6 +151,14 @@
         font-family: var(--font-heading);
     }
 
+    strong {
+        font-weight: 500;
+    }
+
+    button, input, select, textarea {
+        font-family: inherit;
+    }
+
     a {
         color: var(--color-primary);
         text-decoration: none;
@@ -273,7 +281,7 @@
         background-color: var(--color-primary);
         color: var(--color-text-on-accent);
         font-size: var(--font-size-2xs);
-        font-weight: 600;
+        font-weight: 500;
         padding: 1px 6px;
         margin-inline-start: var(--space-1);
     }
@@ -1110,7 +1118,7 @@
         align-items: center;
         line-height: 0.7;
         padding: 0.5rem 0.4rem;
-        font-weight: 700;
+        font-weight: 500;
         font-size: 1.1rem;
     }
     .drag-handle:active { cursor: grabbing; }
@@ -1255,6 +1263,7 @@
         align-items: baseline;
         gap: 0.5rem;
         font-size: var(--font-size-sm);
+        font-weight: 400;
         color: var(--color-text-muted);
     }
     .song-meta { white-space: nowrap; color: var(--color-text-muted); }
@@ -1305,6 +1314,17 @@
     /* Width no longer needed here - the base .table default (width:1%,
        above) already shrinks this to content; only the tighter padding
        for matrix density remains. */
+    /* Names here are plain text, not links, so they'd miss the 500 that
+       `.table a` gives list-table names. */
+    .table-matrix tbody td.sticky-col {
+        font-weight: 500;
+    }
+
+    /* Total / % columns: centered under their headers. */
+    .table-matrix :is(th, td).col-main:not(.sticky-col) {
+        text-align: center;
+    }
+
     .table-matrix .col-num {
         padding-inline: var(--space-1);
     }
@@ -1330,6 +1350,13 @@
         inline-size: var(--table-matrix-size);
         text-align: center;
         position: relative;
+    }
+
+    /* `.table tbody td { text-align: inherit }` (0,1,2) outranks the plain
+       class above, so body cells need the extra specificity to actually
+       center under their (absolutely centered) date header. */
+    .table-matrix tbody .table-event-col {
+        text-align: center;
     }
 
     /* poll_attendance.html's headers hold multi-line plain text (event type,
@@ -1363,8 +1390,20 @@
         font-size: var(--font-size-2xs);
     }
 
-    .table-event-header-strong {
-        font-weight: 700;
+    /* Non-rehearsal events: inverted (light) date button; plain-text
+       headers (no button) are underlined instead. */
+    .table-event-header-strong .btn-ghost {
+        background-color: var(--color-surface);
+        border-color: var(--color-surface);
+        color: var(--color-text);
+    }
+
+    .table-event-header-strong .btn-ghost:hover {
+        background-color: var(--color-bg-subtle);
+    }
+
+    .table-event-header-strong:not(:has(.btn-ghost)) {
+        text-decoration: underline;
     }
 
     .table-cell-attendance {
@@ -1406,7 +1445,7 @@
        classes to the <tr>; this one only adds the extra bold weight the
        matrix variant wants. */
     .table-row-total td {
-        font-weight: 600;
+        font-weight: 500;
     }
 
     .table-comment {
@@ -1450,7 +1489,7 @@
         border-radius: var(--radius-sm);
     }
 
-    .filter-panel summary {
+    .filter-panel > summary {
         cursor: pointer;
         font-weight: 500;
         min-height: 44px;
@@ -1461,11 +1500,11 @@
         -webkit-tap-highlight-color: transparent;
     }
 
-    .filter-panel summary::-webkit-details-marker {
+    .filter-panel > summary::-webkit-details-marker {
         display: none;
     }
 
-    .filter-panel[open] summary {
+    .filter-panel[open] > summary {
         margin-block-end: var(--space-2);
     }
 
@@ -1474,7 +1513,7 @@
         flex-shrink: 0;
     }
 
-    .filter-panel[open] .filter-toggle-icon {
+    .filter-panel[open] > summary .filter-toggle-icon {
         transform: rotate(90deg);
     }
 
@@ -1519,6 +1558,47 @@
         box-sizing: border-box;
     }
 
+    .filter-field select {
+        font-size: var(--font-size-md);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+    }
+
+    /* nested collapsible list of checkboxes (skill / voice / instrument) */
+    .filter-sub summary {
+        cursor: pointer;
+        font-size: var(--font-size-xs);
+        color: var(--color-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.25em; /* one space character, same as the Member/Supporter labels */
+        list-style: none;
+    }
+
+    .filter-sub summary .filter-toggle-icon {
+        margin-inline-start: 0.4rem;
+    }
+
+    .filter-sub summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .filter-sub[open] > summary .filter-toggle-icon {
+        transform: rotate(90deg);
+    }
+
+    .filter-sub-select {
+        display: block;
+        min-inline-size: 12rem;
+        margin-block: var(--space-1);
+        font-size: var(--font-size-md);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+    }
+
     .filter-dates input {
         inline-size: 150px;
     }
@@ -1543,11 +1623,11 @@
     }
 
     @media (min-width: 769px) {
-        .filter-panel summary {
+        .filter-panel > summary {
             justify-content: flex-start;
         }
 
-        .filter-toggle-icon {
+        .filter-panel > summary .filter-toggle-icon {
             order: -1;
             margin-inline-end: 0.4rem;
         }
@@ -1631,7 +1711,7 @@
     .badge-danger {
         background-color: var(--color-danger);
         color: var(--color-text-on-accent);
-        font-weight: 700;
+        font-weight: 500;
     }
 
     .badge-circle {

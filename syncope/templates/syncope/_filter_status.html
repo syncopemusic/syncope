@@ -1,0 +1,8 @@
+<label class="filter-field"><span class="filter-label"><input type="checkbox" data-toggle="{{ name }}" {% if selected %}checked{% endif %}> {{ label }}</span>
+    <select name="{{ name }}" {% if not selected %}hidden disabled{% endif %}>
+        <option value="active" {% if selected == 'active' %}selected{% endif %}>Active</option>
+        {% if filter_is_admin %}
+        <option value="past" {% if selected == 'past' %}selected{% endif %}>Past</option>
+        <option value="all" {% if selected == 'all' %}selected{% endif %}>All</option>
+        {% endif %}
+    </select></label>
