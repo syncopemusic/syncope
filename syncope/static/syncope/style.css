@@ -1566,16 +1566,20 @@
 
     /* nested collapsible list of checkboxes (skill / voice / instrument) */
     .filter-sub summary {
-        cursor: pointer;
         font-size: var(--font-size-xs);
         color: var(--color-text-muted);
         text-transform: uppercase;
         letter-spacing: 0.03em;
         display: flex;
         align-items: center;
-        justify-content: flex-start;
         gap: 0.25em; /* one space character, same as the Member/Supporter labels */
         list-style: none;
+        pointer-events: none; /* only the checkbox opens/closes the list */
+    }
+
+    .filter-sub summary input {
+        pointer-events: auto;
+        cursor: pointer;
     }
 
     .filter-sub summary .filter-toggle-icon {
@@ -1851,5 +1855,66 @@
         .btn {
             min-height: 44px;
         }
+    }
+}
+
+@layer layout {
+    /* Anonymous pages have no sidebar; login/signup (.auth) are also centered. */
+    .grid-container.no-sidebar {
+        grid-template-columns: 1fr;
+        grid-template-areas: "main";
+    }
+
+    .auth .main-content {
+        margin: auto;
+        width: min(100%, 24rem);
+        justify-content: center;
+    }
+
+    .auth-switch {
+        text-align: center;
+        padding-block-start: 40px; /* one extra button height between the submit and switch buttons */
+    }
+
+    .pw-field {
+        position: relative;
+        display: block;
+    }
+    .pw-field > input {
+        inline-size: 100%;
+        padding-inline-end: 2.5rem;
+        box-sizing: border-box;
+    }
+    .pw-eye {
+        position: absolute;
+        inset-block: 0;
+        inset-inline-end: 0;
+        padding-inline: var(--space-3);
+        border: 0;
+        background: none;
+        cursor: pointer;
+        opacity: 0.5;
+    }
+    .pw-eye[aria-pressed="true"] {
+        opacity: 1;
+    }
+
+    /* Password strength bar: colour runs red -> orange -> yellow -> teal -> blue (width + label carry it too, not colour alone). */
+    .pw-meter {
+        block-size: 8px;
+        border-radius: 4px;
+        background: var(--color-border, #ddd);
+        overflow: hidden;
+    }
+    .pw-meter > span {
+        display: block;
+        block-size: 100%;
+        transition: width var(--transition-fast), background-color var(--transition-fast);
+    }
+
+    /* Header card gets the same bottom spacing a .card-grid has, so the h3 after it
+       sits at the same distance as the h3 after a card row. */
+    .dash-head {
+        margin-block-end: var(--space-5);
     }
 }

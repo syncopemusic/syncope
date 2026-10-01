@@ -209,7 +209,8 @@ class AttendanceDashboardView(View):
             'url_username': username,
         }
 
-        return render(request, self.template_name, context)
+        template = 'syncope/_attendance_table.html' if request.GET.get('partial') else self.template_name
+        return render(request, template, context)
 
     def post(self, request, username):
         """Handle bulk attendance updates."""

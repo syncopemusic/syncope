@@ -1,0 +1,54 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}{{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="card dash-head">
+    {% if person.first_name or person.last_name %}
+        <h2>{{ person.first_name }} {{ person.last_name }}</h2>
+        <p><a href="{% url 'syncope:profile_detail' user.username %}" class="btn btn-secondary">View profile</a></p>
+    {% else %}
+        <h2>{{ user.username }}</h2>
+        <p><a href="{% url 'syncope:person_update' user.username %}" class="btn btn-secondary">Complete your profile</a></p>
+    {% endif %}
+</div>
+
+<h3>Organizations</h3>
+<div class="card-grid">
+    {% for membership in org_memberships %}
+        {% with org=membership.user.organizations.first %}
+        {% if org %}
+        <div class="card">
+            <h3>{{ org.name }}</h3>
+            <p>{{ membership.person.roles.all|join:", " }}</p>
+            <a href="{% url 'syncope:org_dashboard' membership.user.username %}" class="btn btn-secondary">View organization</a>
+        </div>
+        {% endif %}
+        {% endwith %}
+    {% endfor %}
+    <div class="card">
+        <h3>Make your own organization</h3>
+        <a href="{% url 'syncope:org_new' %}" class="btn btn-primary">+ Create</a>
+    </div>
+</div>
+
+<h3>Personal</h3>
+<div class="card-grid">
+    <div class="card">
+        <h3>Invitations</h3>
+        <a href="{% url 'syncope:invitation_list' user.username %}" class="btn btn-secondary">View invitations{% if pending_invitations %} <span class="badge nav-badge">{{ pending_invitations }}</span>{% endif %}</a>
+    </div>
+    <div class="card">
+        <h3>Songs</h3>
+        <a href="{% url 'syncope:song_list' user.username %}" class="btn btn-secondary">Browse songs</a>
+    </div>
+    <div class="card">
+        <h3>Contacts</h3>
+        <a href="{% url 'syncope:org_member_list_all' user.username %}" class="btn btn-secondary">View contacts</a>
+    </div>
+    <div class="card">
+        <h3>Events</h3>
+        <a href="{% url 'syncope:event_list' user.username %}" class="btn btn-secondary">View events</a>
+    </div>
+</div>
+{% endblock %}

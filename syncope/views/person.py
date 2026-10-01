@@ -137,11 +137,11 @@ FILTER_MULTI_KEYS = {'skill': PersonSkill, 'voice': Singer, 'instrument': Instru
 
 
 def _parse_person_filters(GET, is_admin):
-    """Clean the filter GET params; non-admins only get 'active' members, never supporters."""
+    """Clean the filter GET params; non-admins only get 'active' members/admins, never supporters."""
     filters = {}
-    for key in ('member', 'supporter'):
+    for key in ('member', 'supporter', 'admin'):
         value = GET.get(key)
-        if value in FILTER_STATUSES and (is_admin or key == 'member'):
+        if value in FILTER_STATUSES and (is_admin or key != 'supporter'):
             filters[key] = value if is_admin else 'active'
     for key in FILTER_MULTI_KEYS:
         ids = [int(v) for v in GET.getlist(key) if v.isdigit()]
@@ -152,7 +152,7 @@ def _parse_person_filters(GET, is_admin):
 
 def _apply_person_filters(queryset, filters, org_user):
     """AND every active filter. Uses subqueries so the sort annotations' joins are unaffected."""
-    for key, role in (('member', Role.MEMBER), ('supporter', Role.SUPPORTER)):
+    for key, role in (('member', Role.MEMBER), ('supporter', Role.SUPPORTER), ('admin', Role.ADMIN)):
         status = filters.get(key)
         if not status:
             continue
@@ -178,11 +178,9 @@ def _person_filter_context(filters, is_admin):
     }
 
 
-def _request_person_filters(request, username, list_type):
-    """Filters from the form ('f' marks a submitted form); the active list starts with Member: Active."""
+def _request_person_filters(request, username):
+    """Filters from the URL; the fresh-load default (Member: Active) is added by a redirect in the list view."""
     is_admin = AccessControl.has_permission(request.user, 'delete', username)
-    if list_type == 'active' and 'f' not in request.GET:
-        return {'member': 'active'}, is_admin
     return _parse_person_filters(request.GET, is_admin), is_admin
 
 
@@ -330,6 +328,11 @@ class PersonListView(ListView):
         valid_types = {'active', 'all'} | set(SKILL_MAP.keys())
         if list_type not in valid_types:
             raise Http404
+        if list_type == 'active' and 'f' not in request.GET:
+            # Fresh load: make the default filter explicit in the URL.
+            params = request.GET.copy()
+            params.update({'f': 1, 'member': 'active'})
+            return redirect(f'{request.path}?{params.urlencode()}')
         if list_type == 'all':
             url_username = kwargs.get('username')
             if not AccessControl.has_permission(request.user, 'delete', url_username):
@@ -342,7 +345,7 @@ class PersonListView(ListView):
         self.organization = get_object_or_404(CustomUser, username=url_username)
 
     def get_queryset(self):
-        self.filters, self.is_admin = _request_person_filters(self.request, self.kwargs["username"], self.kwargs["list_type"])
+        self.filters, self.is_admin = _request_person_filters(self.request, self.kwargs["username"])
         return _filtered_person_queryset(self.request, self.organization, self.kwargs["list_type"], self.filters)
 
     def get_context_data(self, **kwargs):
@@ -374,7 +377,7 @@ def person_list_search(request, username, list_type):
         if not AccessControl.has_permission(request.user, 'delete', username):
             return HttpResponseForbidden()
 
-    filters, is_admin = _request_person_filters(request, username, list_type)
+    filters, is_admin = _request_person_filters(request, username)
     persons = _filtered_person_queryset(request, get_object_or_404(CustomUser, username=username), list_type, filters)
 
     for person in persons:
@@ -403,7 +406,10 @@ class OrgMemberDetailView(DetailView):
     has_edit_permission = False
 
     def get_queryset(self):
-        return Person.objects.select_related("owner__user")
+        qs = Person.objects.select_related("owner__user")
+        if self.kwargs.get("username"):
+            qs = qs.filter(memberships__user=self.customuser)
+        return qs
 
     def dispatch(self, request, *args, **kwargs):
         """Handle permission checking before processing the request."""
@@ -854,7 +860,7 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
         )
 
 
-        self.person = get_object_or_404(Person, pk=self.kwargs["pk"])
+        self.person = get_object_or_404(Person, pk=self.kwargs["pk"], memberships__user=self.customuser)
 
 
         viewer_role = AccessControl.get_org_roles(

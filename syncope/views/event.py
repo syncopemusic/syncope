@@ -138,7 +138,7 @@ class EventCreateView(DraftMixin, CreateView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        # kwargs['username'] = self.request.user
+        kwargs['user'] = self.customuser or self.request.user
         return kwargs
 
     def get_form(self, form_class=None):
@@ -146,6 +146,7 @@ class EventCreateView(DraftMixin, CreateView):
         # Name and most other fields are optional (see EventForm); a start date is the one
         # thing we actually need up front to auto-generate a name and seed attendance.
         form.fields['started_at'].required = True
+        form.fields['started_at'].label = 'Start date hour *'
         return form
 
     def get_initial(self):

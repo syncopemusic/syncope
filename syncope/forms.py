@@ -11,16 +11,30 @@ from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q, Count
 
 
+# first URL segments that would collide with a /<username>/ route
+RESERVED_USERNAMES = {"home", "login", "logout", "signup", "skill", "organization", "share", "accounts", "admin"}
+
+
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = CustomUser
         fields = ("email", "username",)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["password2"].help_text = ""
 
     def clean_email(self):
         email = self.cleaned_data.get("email")
         if email and CustomUser.objects.filter(email=email).exists():
             raise forms.ValidationError("An account with this email already exists.")
         return email
+
+    def clean_username(self):
+        username = self.cleaned_data.get("username")
+        if username and username.lower() in RESERVED_USERNAMES:
+            raise forms.ValidationError("This username is reserved.")
+        return username
 
 
 class CustomUserChangeForm(UserChangeForm):
@@ -368,12 +382,11 @@ class EventForm(forms.ModelForm):
             'additional_notes': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Personal notes'}),
         }
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Order projects by start date (most recent first)
-        qs = Project.objects.all() if user is None else Project.objects.filter(user=user)
-        self.fields['project'].queryset = qs.order_by('-start_date').distinct()
+        self.fields['project'].queryset = Project.objects.filter(user=user).order_by('-start_date')
 
         # Pre-select "rehearsal" event type and remove empty option
         rehearsal_event_type = EventType.objects.get(pk=EventType.REHEARSAL)

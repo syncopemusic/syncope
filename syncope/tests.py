@@ -309,3 +309,31 @@ class ResourcesEditOtherKindsRenderTests(TestCase):
             detail_url = reverse(f"syncope:{detail_name}", kwargs={"username": "org", "pk": pk})
             response = self.client.get(edit_url)
             self.assertContains(response, f'href="{detail_url}"', msg_prefix=url_name)
+
+
+class LoginByDefaultTests(TestCase):
+    fixtures = ["syncope/fixture_role.json"]
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(username="me", email="me@example.com", password="pw12345")
+        Person.objects.create(user=self.user, email=self.user.email, first_name="Me", last_name="Self")
+
+    def test_anonymous_redirected_to_login(self):
+        response = self.client.get(reverse("syncope:song_list", kwargs={"username": "me"}))
+        self.assertRedirects(response, "/login/?next=/me/songs/")
+
+    def test_auth_pages_public(self):
+        for name in ("syncope:login", "syncope:signup"):
+            self.assertEqual(self.client.get(reverse(name)).status_code, 200)
+
+    def test_home_forwards_to_user_dashboard(self):
+        self.client.login(username="me", password="pw12345")
+        dashboard = reverse("syncope:org_dashboard", kwargs={"username": "me"})
+        self.assertRedirects(self.client.get(reverse("syncope:home")), dashboard)
+        self.assertContains(self.client.get(dashboard), "Make your own organization")
+
+    def test_reserved_username_rejected(self):
+        from syncope.forms import CustomUserCreationForm
+        form = CustomUserCreationForm({"email": "x@example.com", "username": "home",
+                                       "password1": "pw-12345-xyz", "password2": "pw-12345-xyz"})
+        self.assertIn("username", form.errors)

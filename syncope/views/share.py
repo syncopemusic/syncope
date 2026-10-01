@@ -1,4 +1,5 @@
 import secrets
+from django.contrib.auth.decorators import login_not_required
 from django.db import IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import redirect, get_object_or_404
@@ -89,6 +90,7 @@ def create_share_link(request):
     })
 
 
+@login_not_required
 def visit_share(request, share_id):
     """
     Public endpoint to visit a shared link.

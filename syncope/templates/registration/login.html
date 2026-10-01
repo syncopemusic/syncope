@@ -1,13 +1,14 @@
 {% extends "syncope/base.html" %}
 {% block title %}Login{% endblock %}
+{% block grid_class %}auth{% endblock %}
 {% block content %}
-<h2>Login</h2>
+<h1>Login</h1>
 <form method="post">
   {% csrf_token %}
   {{ form.as_p }}
   <div class="form-actions">
-    <button type="submit" class="btn btn-primary">Login</button>
+    <button type="submit" class="btn btn-primary">Log in</button>
   </div>
 </form>
-<p><a href="{% url 'syncope:signup' %}" class="btn btn-link">Sign up form</a></p>
+<p class="auth-switch">Don't have an account yet? <a href="{% url 'syncope:signup' %}" class="btn btn-secondary">Sign up</a></p>
 {% endblock %}

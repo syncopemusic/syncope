@@ -112,7 +112,7 @@ KIND_CONFIG = {
         'resource_model': PersonResource,
         'fk_name': 'person',
         'related_name': 'person_resource',
-        'get_owner': lambda owner_user, pk: get_object_or_404(Person, pk=pk),
+        'get_owner': lambda owner_user, pk: get_object_or_404(Person, pk=pk, memberships__user=owner_user),
         'can_edit': _person_can_edit,
         'detail_url': 'org_member_detail',
         'related_rows': None,

@@ -4,7 +4,6 @@
 
 {% block content %}
 <h1>New event</h1>
-<p><small>Only a start date is required - you can add songs and manage attendance from the event page after creating it.</small></p>
 <form method="post">
     {% csrf_token %}
     <input type="hidden" name="draft_key" value="{{ draft_key }}">

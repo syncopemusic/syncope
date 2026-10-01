@@ -76,8 +76,11 @@
             {% include "syncope/_filter_status.html" with name="supporter" label="Supporter" selected=filters.supporter %}
         </div>
         {% endif %}
+        <div class="filter-row">
+            {% include "syncope/_filter_status.html" with name="admin" label="Admin" selected=filters.admin %}
+        </div>
         <div class="filter-row filter-row-actions">
-            <a href="?" class="btn btn-primary filter-reset">Reset</a>
+            <a href="?f=0"class="btn btn-primary filter-reset">Reset</a>
         </div>
     </form>
 </details>
@@ -115,12 +118,11 @@
             // Nested list: checkbox mirrors "anything selected"; ticking opens, unticking clears and closes.
             const box = sub.querySelector('input[type=checkbox]');
             const select = sub.querySelector('select');
-            if (e.target === box) {
-                sub.open = box.checked;
-                if (!box.checked) select.selectedIndex = -1;
-            } else {
-                box.checked = select.selectedOptions.length > 0;
-            }
+            if (e.target === box && !box.checked) select.selectedIndex = -1;
+            else if (e.target !== box) box.checked = select.selectedOptions.length > 0;
+            sub.open = box.checked;
+            const count = select.selectedOptions.length;
+            sub.querySelector('.filter-count').textContent = count ? `(${count})` : '';
         } else if (toggle) {
             const select = filterForm.elements[toggle];
             select.hidden = select.disabled = !e.target.checked;

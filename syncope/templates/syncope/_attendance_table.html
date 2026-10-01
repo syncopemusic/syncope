@@ -1,0 +1,60 @@
+{% load dt_tags %}
+<div class="table-container">
+    <table class="table table-matrix table-grouped">
+        <thead>
+            <tr>
+                <th class="col-num"></th>
+                <th class="sticky-col col-main">Member</th>
+                {% for event in events %}
+                    <th class="table-event-col">
+                        <div class="table-event-header {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}">
+                            <a href="{%  url 'syncope:event_detail' url_username event.id %}?origin=attendance"
+                                class="btn btn-ghost" title="{{ event }}">
+                                {% dt event.started_at "date" %}
+                            </a>
+                        </div>
+                    </th>
+                {% endfor %}
+                <th class="col-main">Total</th>
+                <th class="col-main">%</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for group in grouped_dashboard_data %}
+                {% for row in group.items %}
+                <tr {% if forloop.first and not forloop.parentloop.first %}class="group-start"{% endif %}>
+                    <td class="col-num">{{ row.index }}</td>
+                    <td class="sticky-col col-main">{{ row.member }}</td>
+                    {% for cell in row.attendance_cells %}
+                        {% if cell.is_ineligible %}
+                            <td></td>
+                        {% else %}
+                            <td class="table-event-col">
+                                <div class="table-cell-attendance att-type-{{ cell.attendance_type_id|default:0 }} {% if cell.is_grayed_out %}table-cell-attendance-disabled{% endif %}"
+                                    data-type-id="{{ cell.attendance_type_id|default:0 }}"
+                                    {% if not cell.is_grayed_out %}onclick="cycleAttendance(this)"{% endif %}>
+                                    <input type="hidden"
+                                           name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
+                                           value="{{ cell.attendance_type_id|default:0 }}">
+                                    <span class="att-icon"></span>
+                                </div>
+                            </td>
+                        {% endif %}
+                    {% endfor %}
+                    <td class="col-main">{{ row.total_present }}/{{ row.total_events }}</td>
+                    <td class="col-main">{{ row.percentage|floatformat:0 }}%</td>
+                </tr>
+                {% endfor %}
+            {% endfor %}
+            <tr class="totals-row table-row-total">
+                <td class="col-num"></td>
+                <td class="sticky-col"></td>
+                {% for total in event_totals %}
+                    <td class="table-event-col">{{ total.present }}/{{ total.total }}</td>
+                {% endfor %}
+                <td class="col-main"><strong>{{ grand_present }}/{{ grand_total }}</strong></td>
+                <td class="col-main"><strong>{{ grand_percentage|floatformat:0 }}%</strong></td>
+            </tr>
+        </tbody>
+    </table>
+</div>

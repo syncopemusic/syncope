@@ -45,6 +45,13 @@ class OrganizationDashboard(TemplateView):
     def dispatch(self, request, *args, **kwargs):
         url_username = self.kwargs["username"]
 
+        # a personal account has no Organization row: its dashboard is the user's home
+        if request.user.is_authenticated and request.user.username == url_username \
+                and not Organization.objects.filter(user=request.user).exists():
+            self.template_name = "syncope/user_dashboard.html"
+            self.organization = None
+            return TemplateView.dispatch(self, request, *args, **kwargs)
+
         self.organization = get_object_or_404(
             Organization,
             user__username=url_username
@@ -62,6 +69,8 @@ class OrganizationDashboard(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        if self.organization is None:
+            return context  # user dashboard: the context processor already supplies everything
         context["organization"] = self.organization
         context["url_username"] = self.kwargs["username"]
         context["is_admin"] = self.viewer_roles.filter(id=Role.ADMIN).exists()

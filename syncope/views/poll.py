@@ -1,7 +1,7 @@
 from django.views.generic import ListView, DetailView, UpdateView, View, DeleteView
 from django.shortcuts import get_object_or_404, render, redirect
 from django.utils.decorators import method_decorator
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, login_not_required
 from django.contrib import messages
 from django.urls import reverse
 from django.http import HttpResponseForbidden, HttpResponseRedirect
@@ -302,6 +302,7 @@ class PollEventUpdateView(PollAdminMixin, UpdateView):
         })
 
 
+@method_decorator(login_not_required, name="dispatch")
 class PollPersonAttendanceView(View):
     """Public view - individual person fills in attendance via organization/poll/person pks."""
     template_name = "syncope/poll_attendance.html"
@@ -368,6 +369,7 @@ class PollPersonAttendanceView(View):
         return redirect('syncope:poll_person_attendance', username=username, pk=pk, person_pk=person_pk)
 
 
+@method_decorator(login_not_required, name="dispatch")
 class PollEventAttendanceView(View):
     """Public view - all poll persons list attendance per event slot."""
     template_name = "syncope/poll_attendance.html"
@@ -444,6 +446,7 @@ class PollEventAttendanceView(View):
         return redirect('syncope:poll_attendance', username=username, pk=pk)
 
 
+@method_decorator(login_not_required, name="dispatch")
 class PollDetailView(DetailView):
     model = Poll
     template_name = "syncope/poll_detail.html"

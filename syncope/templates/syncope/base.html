@@ -18,30 +18,28 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <div class="grid-container">
+    <div class="grid-container{% if not user.is_authenticated %} no-sidebar{% endif %} {% block grid_class %}{% endblock %}">
+        {% if user.is_authenticated %}
         <nav class="sidebar" id="sidebar">
             <a href="{% url 'syncope:home' %}" class="sidebar-header">
                 <img src="{% static 'syncope/images/sitelogo.png' %}" alt="" class="sidebar-logo">
                 <p class="sidebar-brand">Syncope</p>
             </a>
-            {% if user.is_authenticated %}
-                {% load url_tags %}
-                <p class="sidebar-user">{{ user.username }}</p>
-                <ul class="menu-links">
-                    <li><a href="{%  url 'syncope:home' %}" {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>Home</a></li>
+            {% load url_tags %}
+            <ul class="menu-links">
+                <li class="org-item {% if url_username == user.username %}active{% endif %}">
+                    <a href="{% url 'syncope:org_dashboard' user.username %}" {% if request.resolver_match.url_name == 'org_dashboard' and url_username == user.username %}class="active"{% endif %}>{{ user.username }}</a>
+                    <ul class="org-submenu">
+                        <li><a href="{%  url 'syncope:invitation_list' user.username %}" {% if request.resolver_match.url_name|url_in:'invitation_list,invitation_new,invitation_detail' and url_username == user.username %}class="active"{% endif %}>Invitations{% if pending_invitations %} <span class="badge nav-badge">{{ pending_invitations }}</span>{% endif %}</a></li>
+                        <li><a href="{%  url 'syncope:profile_detail' user.username %}" {% if request.resolver_match.url_name|url_in:'profile_detail,person_update,profile_resources,profile_account' %}class="active"{% endif %}>Profile</a></li>
+                        <li><a href="{%  url 'syncope:song_list' user.username %}" {% if request.resolver_match.url_name|url_in:'song_list,song_detail,song_new,song_meta_edit,song_lyrics_edit,song_resources_edit,song_delete,song_quotes' and url_username == user.username %}class="active"{% endif %}>Songs</a></li>
+                        <li><a href="{%  url 'syncope:org_member_list_all' user.username %}" {% if request.resolver_match.url_name|url_in:'org_member_list_all,org_member_detail,org_member_new,org_member_edit,org_member_delete' and url_username == user.username %}class="active"{% endif %}>Contacts</a></li>
+                        <li><a href="{%  url 'syncope:event_list' user.username %}" {% if url_username == user.username and request.resolver_match.url_name|url_in:'event_list,event_detail,event_new,event_delete,event_meta_edit,event_songs_edit,event_attendance_edit,self_attendance_update' %}class="active"{% endif %}>Events</a></li>
+                    </ul>
+                </li>
 
                     <li>
-                        <p class="section-label">Private</p>
-                        <ul class="org-submenu">
-                            <li><a href="{%  url 'syncope:invitation_list' user.username %}" {% if request.resolver_match.url_name|url_in:'invitation_list,invitation_new,invitation_detail' and url_username == user.username %}class="active"{% endif %}>Invitations{% if pending_invitations %} <span class="badge nav-badge">{{ pending_invitations }}</span>{% endif %}</a></li>
-                            <li><a href="{%  url 'syncope:profile_detail' user.username %}" {% if request.resolver_match.url_name|url_in:'profile_detail,person_update,profile_resources,profile_account' %}class="active"{% endif %}>Profile</a></li>
-                            <li><a href="{%  url 'syncope:song_list' user.username %}" {% if request.resolver_match.url_name|url_in:'song_list,song_detail,song_new,song_meta_edit,song_lyrics_edit,song_resources_edit,song_delete,song_quotes' and url_username == user.username %}class="active"{% endif %}>Songs</a></li>
-                            <li><a href="{%  url 'syncope:org_member_list_all' user.username %}" {% if request.resolver_match.url_name|url_in:'org_member_list_all,org_member_detail,org_member_new,org_member_edit,org_member_delete' and url_username == user.username %}class="active"{% endif %}>Contacts</a></li>
-                        </ul>
-                    </li>
-
-                    <li>
-                        <p class="section-label">Orgs</p>
+                        <p class="section-label">Organizations</p>
                         <ul class="org-list">
                             {% for membership in memberships %}
                                 {% with org=membership.user.organizations.first %}
@@ -65,7 +63,7 @@
                                     {% endif %}
                                 {% endwith %}
                             {% empty %}
-                                <li class="org-empty">No orgs yet</li>
+                                <li class="org-empty">No organizations yet</li>
                             {% endfor %}
                         </ul>
                     </li>
@@ -76,17 +74,12 @@
                         <button type="submit" class="btn btn-secondary btn-block">Log out</button>
                     </form>
                 </div>
-            {% else %}
-                <div class="sidebar-footer sidebar-guest-links">
-                    <a href="{%  url 'syncope:signup' %}" class="btn btn-primary btn-block">Signup</a>
-                    <a href="{%  url 'syncope:login' %}" class="btn btn-secondary btn-block">Login</a>
-                </div>
-            {% endif %}
-        </nav>
+                </nav>
+        {% endif %}
 
         <main class="main">
             <div class="mobile-topbar">
-                <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
+                {% if user.is_authenticated %}<button class="mobile-toggle" onclick="toggleMenu()">☰</button>{% endif %}
                 {% load url_tags %}{% render_breadcrumbs %}
             </div>
             <div class="main-content">
@@ -149,6 +142,7 @@
         function toggleMenu(){
             const container = document.querySelector(".grid-container");
             const button = document.querySelector(".mobile-toggle");
+            if (!button) return;
 
             if (window.innerWidth < 769) {
                 const isOpen = container.classList.toggle("menu-visible");
@@ -160,6 +154,7 @@
         window.addEventListener("resize", function() {
             const container = document.querySelector(".grid-container");
             const button = document.querySelector(".mobile-toggle");
+            if (!button) return;
             if (window.innerWidth > 768) {
                 container.classList.remove("menu-visible");
                 button.textContent = "☰";
