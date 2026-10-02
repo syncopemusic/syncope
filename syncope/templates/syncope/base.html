@@ -13,6 +13,7 @@
 
 
     <script src="{% static 'syncope/jquery-3.7.1.min.js' %}"></script>
+    <script src="{% static 'syncope/ui.js' %}"></script>
 
 
     {% block extra_css %}{% endblock %}
@@ -69,7 +70,7 @@
                     </li>
                 </ul>
                 <div class="sidebar-footer">
-                    <form method="post" action="{% url 'logout' %}" onclick="return confirm('You want to log out?')">
+                    <form method="post" action="{% url 'logout' %}" data-confirm="You want to log out?">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-secondary btn-block">Log out</button>
                     </form>
@@ -79,7 +80,7 @@
 
         <main class="main">
             <div class="mobile-topbar">
-                {% if user.is_authenticated %}<button class="mobile-toggle" onclick="toggleMenu()">☰</button>{% endif %}
+                {% if user.is_authenticated %}<button class="mobile-toggle">☰</button>{% endif %}
                 {% load url_tags %}{% render_breadcrumbs %}
             </div>
             <div class="main-content">
@@ -147,9 +148,10 @@
             if (window.innerWidth < 769) {
                 const isOpen = container.classList.toggle("menu-visible");
                 button.textContent = isOpen ? "✕" : "☰";
-                button.classList.toggle("is-open", isOpen);
             }
         }
+
+        document.querySelector(".mobile-toggle")?.addEventListener("click", toggleMenu);
 
         window.addEventListener("resize", function() {
             const container = document.querySelector(".grid-container");
@@ -158,7 +160,6 @@
             if (window.innerWidth > 768) {
                 container.classList.remove("menu-visible");
                 button.textContent = "☰";
-                button.classList.remove("is-open");
             }
         });
     </script>

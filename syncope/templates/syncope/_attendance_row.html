@@ -1,11 +1,11 @@
-<tr data-attendance-id="{{ attendance.pk }}" data-person-id="{{ attendance.person_id }}">
+<tr data-id="{{ attendance.pk }}" data-person-id="{{ attendance.person_id }}">
     <td class="col-num">{{ forloop.counter }}</td>
     <td class="col-main">{{ attendance.person.first_name }} {{ attendance.person.last_name }}</td>
     <td>
-        <span class="attendance-chip"
+        <span class="chip attendance-chip"
               data-attendance-id="{{ attendance.pk }}"
               data-type-id="{{ attendance.attendance_type_id|default:0 }}"
-              {% if is_admin %}onclick="cycleAttendance(this)"{% endif %}>
+              {% if is_admin %}data-cycle{% endif %}>
             <span class="att-icon"></span> <span class="att-label"></span>
         </span>
         {% if is_admin %}

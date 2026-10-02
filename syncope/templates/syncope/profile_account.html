@@ -24,3 +24,6 @@
 {% url 'syncope:profile_detail' user.username as return_target %}
 {% include "syncope/_save_bar.html" with url=return_target %}
 {% endblock %}
+{% block extra_js %}
+{% include "syncope/_password_meter.html" with pw1="id_new_password1" pw2="id_new_password2" %}
+{% endblock %}

@@ -254,3 +254,9 @@ class ProfileResourcesView(ResourcesEditView):
                 return HttpResponseForbidden()
             kwargs['pk'] = get_object_or_404(Person, user=request.user, owner__isnull=True).pk
         return super().dispatch(request, *args, **kwargs)
+
+    def _setup(self, username, pk):
+        # the personal Person has no org membership, so skip the memberships filter in KIND_CONFIG
+        self.cfg = KIND_CONFIG[self.kind]
+        self.owner_user = get_object_or_404(CustomUser, username=username)
+        self.owner = get_object_or_404(Person, pk=pk, user=self.owner_user, owner__isnull=True)

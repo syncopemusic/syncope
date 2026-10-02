@@ -32,23 +32,27 @@
         </tbody>
     </table>
     </div>
+    <div class="form-group">
+        {{ formset.non_form_errors }}
+        {% for form in formset %}{{ form.errors }}{% endfor %}
+    </div>
     <template id="empty-quote-row">
         {% with form=formset.empty_form %}{% include "syncope/_quote_row.html" %}{% endwith %}
     </template>
 
-    <div id="add-quote" style="max-width:42rem;">
+    <div id="add-quote" class="narrow">
         <h3>Add Quote</h3>
         <div class="form-group">
             <label for="new-quote-word">Quote</label>
-            <input type="text" id="new-quote-word" style="width:100%; box-sizing:border-box;">
+            <input type="text" id="new-quote-word">
         </div>
         <div class="form-group">
             <label for="new-quote-bar-number">Bar Number</label>
-            <input type="text" id="new-quote-bar-number" style="width:100%; box-sizing:border-box;">
+            <input type="text" id="new-quote-bar-number">
         </div>
         <div class="form-group">
             <label for="new-quote-date">Date</label>
-            <input type="date" id="new-quote-date" style="width:100%; box-sizing:border-box;">
+            <input type="date" id="new-quote-date">
         </div>
         {% include "syncope/_person_picker.html" with field=formset.empty_form.person field_name="person" label="Person" current=None new_person_url_name="syncope:org_member_new" %}
         <p><button type="button" id="add-quote-btn" class="btn btn-primary">+ Add</button></p>
@@ -62,15 +66,16 @@
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script>
     const quotesTbody = document.getElementById('quotes-tbody');
-    let dirty = false;
+    const hadErrors = {% if formset.is_bound and formset.total_error_count %}true{% else %}false{% endif %};
 
     const saveBarCtl = initSaveBar({
         formId: 'song-quotes-form',
-        countUnsavedChanges: () => dirty ? 1 : 0,
+        countUnsavedChanges: () => quotesTbody.querySelectorAll('tr.staged-add, tr.pending-remove').length || (hadErrors ? 1 : 0),
         onDiscard: () => window.location.reload(),
     });
 
     document.querySelectorAll('.person-picker').forEach(wirePersonPicker);
+    saveBarCtl.sync();
 
     const newWordInput = document.getElementById('new-quote-word');
     const newBarInput = document.getElementById('new-quote-bar-number');
@@ -81,7 +86,12 @@
 
     document.getElementById('add-quote-btn').addEventListener('click', function() {
         const word = newWordInput.value.trim();
-        if (!word) return;
+        if (!word) {
+            newWordInput.setCustomValidity('Enter the quote text');
+            newWordInput.reportValidity();
+            newWordInput.setCustomValidity('');
+            return;
+        }
 
         const totalFormsInput = document.getElementById('id_quotes-TOTAL_FORMS');
         const index = parseInt(totalFormsInput.value, 10);
@@ -113,7 +123,6 @@
         newDateInput.value = '';
         newPersonField.value = '';
         newPersonInput.value = '';
-        dirty = true;
         saveBarCtl.sync();
     });
 
@@ -128,7 +137,6 @@
             row.querySelector('[name$="-DELETE"]').checked = true;
             removeBtn.disabled = true;
         }
-        dirty = true;
         saveBarCtl.sync();
     });
 </script>

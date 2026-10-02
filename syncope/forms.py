@@ -11,6 +11,19 @@ from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q, Count
 
 
+class HtmlDateInput(forms.DateInput):
+    """Native <input type="date">; the single date widget for every form."""
+    input_type = 'date'
+
+
+class HtmlDateTimeInput(forms.DateTimeInput):
+    """Native <input type="datetime-local">; the single date+time widget for every form."""
+    input_type = 'datetime-local'
+
+    def __init__(self, attrs=None, format='%Y-%m-%dT%H:%M'):
+        super().__init__(attrs, format)
+
+
 # first URL segments that would collide with a /<username>/ route
 RESERVED_USERNAMES = {"home", "login", "logout", "signup", "skill", "organization", "share", "accounts", "admin"}
 
@@ -54,6 +67,14 @@ class UsernameChangeForm(forms.ModelForm):
         model = CustomUser
         fields = ["username"]
 
+    password = forms.CharField(label="Current password", widget=forms.PasswordInput)
+
+    def clean_password(self):
+        password = self.cleaned_data["password"]
+        if not self.instance.check_password(password):
+            raise forms.ValidationError("Incorrect password.")
+        return password
+
 
 class PersonForm(forms.ModelForm):
     email = forms.EmailField(required=True)
@@ -89,8 +110,8 @@ class PersonForm(forms.ModelForm):
             "death_approximate",
         ]
         widgets = {
-            "birth_date": forms.DateInput(attrs={'type': 'date'}),
-            "death_date": forms.DateInput(attrs={'type': 'date'}),
+            "birth_date": HtmlDateInput(),
+            "death_date": HtmlDateInput(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -149,12 +170,12 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
     # Date fields
     birth_date = forms.DateField(
         required=False,
-        widget=forms.DateInput(attrs={'type': 'date'})
+        widget=HtmlDateInput()
     )
     birth_approximate = ApproximationChoiceField(label="Birth date approximation")
     death_date = forms.DateField(
         required=False,
-        widget=forms.DateInput(attrs={'type': 'date'})
+        widget=HtmlDateInput()
     )
     death_approximate = ApproximationChoiceField(label="Death date approximation")
     # Role checkboxes
@@ -230,7 +251,7 @@ class QuoteForm(forms.ModelForm):
         widgets = {
             'word': forms.TextInput(attrs={'placeholder': 'Quote text'}),
             'bar_number': forms.TextInput(attrs={'placeholder': '43'}),
-            'date': forms.DateInput(attrs={'type': 'date'}),
+            'date': HtmlDateInput(),
             'person': forms.HiddenInput(),
         }
 
@@ -341,8 +362,8 @@ class ProjectForm(forms.ModelForm):
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
             'details': forms.Textarea(attrs={'rows': 6}),
-            'start_date': forms.DateInput(attrs={'type': 'date'}),
-            'end_date': forms.DateInput(attrs={'type': 'date'}),
+            'start_date': HtmlDateInput(),
+            'end_date': HtmlDateInput(),
         }
 
     def __init__(self, *args, user=None, **kwargs):
@@ -374,8 +395,8 @@ class EventForm(forms.ModelForm):
             'additional_notes': 'Personal notes',
         }
         widgets = {
-            'started_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
-            'ended_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+            'started_at': HtmlDateTimeInput(),
+            'ended_at': HtmlDateTimeInput(),
             'location': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Venue / address'}),
             'description': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Description'}),
             'producers': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Organizers'}),
@@ -675,8 +696,8 @@ class MembershipPeriodForm(forms.ModelForm):
         model = MembershipPeriod
         fields = ['role', 'started_at', 'ended_at']
         widgets = {
-            'started_at': forms.DateInput(attrs={'type': 'date'}),
-            'ended_at': forms.DateInput(attrs={'type': 'date'}),
+            'started_at': HtmlDateInput(),
+            'ended_at': HtmlDateInput(),
         }
 
     def __init__(self, *args, user=None, person=None, **kwargs):
@@ -802,8 +823,8 @@ class PollEventForm(forms.ModelForm):
         ]
         widgets = {
             'poll': forms.HiddenInput(),
-            'started_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
-            'ended_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+            'started_at': HtmlDateTimeInput(),
+            'ended_at': HtmlDateTimeInput(),
             'location': forms.Textarea(attrs={'rows': 2}),
             'details': forms.Textarea(attrs={'rows': 2}),
         }
@@ -833,7 +854,7 @@ class InvitationForm(forms.ModelForm):
         model = Invitation
         fields = ['existing_person', 'copy_details', 'expires_at']
         widgets = {
-            "expires_at": forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+            "expires_at": HtmlDateTimeInput(),
         }
 
     def __init__(self, *args, customuser, **kwargs):

@@ -146,6 +146,7 @@ PAGES = {
     "song_lyrics_edit": ("songs", "sub", "Lyrics"),
     "song_resources_edit": ("songs", "sub", "Resources"),
     "song_quotes": ("songs", "sub", "Quotes"),
+    "song_events_edit": ("songs", "sub", "Events"),
     "song_delete": ("songs", "sub", "Delete"),
     "project_list": ("projects", "list", None),
     "project_new": ("projects", "page", "New"),

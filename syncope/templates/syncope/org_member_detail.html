@@ -13,7 +13,7 @@
     </h1>
     <a href="{{ person_edit_url }}" class="btn btn-secondary">Edit</a>
 </div>
-<div class="visually-hidden">{% csrf_token %}</div>
+<div hidden>{% csrf_token %}</div>
 
 {% if person_data %}
 <table class="table-detail">
@@ -64,7 +64,7 @@
 {% if composed_songs %}
 <h3>Composed Songs</h3>
 <div class="table-container">
-<table class="table table-narrow">
+<table class="table">
   <thead>
   <tr>
     <th class="col-num"></th>
@@ -89,7 +89,7 @@
 {% if written_songs %}
 <h3>Written Songs</h3>
 <div class="table-container">
-<table class="table table-narrow">
+<table class="table">
   <thead>
   <tr>
     <th class="col-num"></th>
@@ -112,7 +112,7 @@
 {% if arranged_songs %}
 <h3>Arranged Songs</h3>
 <div class="table-container">
-<table class="table table-narrow">
+<table class="table">
   <thead>
   <tr>
     <th class="col-num"></th>
@@ -135,7 +135,7 @@
 {% if translation_pairs %}
 <h3>Translations</h3>
 <div class="table-container">
-<table class="table table-narrow">
+<table class="table">
   <thead>
   <tr>
     <th class="col-num"></th>
@@ -173,7 +173,7 @@
 {% if member_projects %}
 <h3>Projects</h3>
 <div class="table-container">
-<table class="table table-narrow">
+<table class="table">
   <thead>
   <tr>
     <th class="col-num"></th>
@@ -200,65 +200,9 @@
 {% include "syncope/_save_bar.html" with url=return_url|default:member_list_url %}
 
 {% block extra_js %}
+<script src="{% static 'syncope/share.js' %}"></script>
 <script>
-function createShareHandler(btn, resultSpan, shareData) {
-    return function () {
-        btn.disabled = true;
-        if (resultSpan) resultSpan.textContent = 'Copying...';
-
-        fetch('/share/create/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            },
-            body: JSON.stringify(shareData),
-        })
-        .then(function(response) {
-            if (!response.ok) throw new Error('Request failed');
-            return response.json();
-        })
-        .then(function(data) {
-            const shareUrl = window.location.origin + '/' + data.share_id + '/';
-
-            // Copy to clipboard
-            navigator.clipboard.writeText(shareUrl).then(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link copied:\n' + shareUrl);
-                }
-            }).catch(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link:\n' + shareUrl);
-                }
-            });
-        })
-        .catch(function() {
-            if (resultSpan) {
-                resultSpan.textContent = 'Failed';
-            } else {
-                alert('Failed to generate share link');
-            }
-        })
-        .finally(function() {
-            btn.disabled = false;
-        });
-    };
-}
-
-const shareBtn = document.getElementById('share-btn');
-if (shareBtn) {
-    shareBtn.addEventListener('click', createShareHandler(
-        shareBtn,
-        document.getElementById('share-result'),
-        { type: 'person', id: {{ person.pk }} }
-    ));
-}
+initShareButton({ type: 'person', id: {{ person.pk }} });
 </script>
 {% endblock %}
 

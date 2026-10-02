@@ -37,7 +37,7 @@
     {% if importable_fields %}
     <div>
         <h3>Available fields</h3>
-        <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
+        <div class="link-row">
             {% for field in importable_fields %}
             <span class="badge {% if field in required_fields %}badge-danger{% endif %}">
                 {{ field }}

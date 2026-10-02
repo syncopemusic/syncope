@@ -2,41 +2,14 @@
 {% load static dt_tags %}
 {% block title %}Attendance - {% event_label event %}{% endblock %}
 
-{% block extra_css %}
-<style>
-    .attendance-chip {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.3rem;
-        padding: 0.25rem 0.6rem;
-        border-radius: var(--radius-sm);
-        cursor: pointer;
-        user-select: none;
-        font-size: var(--font-size-md);
-        line-height: 1;
-        width: 7.5rem;
-    }
-    tr.type-changed {
-        background-color: var(--color-warning-bg);
-    }
-
-    @media (max-width: 768px) {
-        #attendance-content {
-            padding-bottom: 4rem;
-        }
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 
 <h1>Attendance - {% event_label event %}</h1>
 
-<div id="attendance-content">
+<div>
     <form method="post" id="attendance-form">
         {% csrf_token %}
-        <div class="table-container">
+        <div class="table-container narrow">
             <table class="table">
                 <thead>
                     <tr>
@@ -49,20 +22,19 @@
                 <tbody id="attendance-tbody">
                     {% for attendance in attendances %}
                         {% include "syncope/_attendance_row.html" %}
-                    {% empty %}
-                    <tr id="no-attendance-row"><td colspan="4">No attendance records yet.</td></tr>
                     {% endfor %}
+                    <tr class="empty-row"><td colspan="4">No attendance records yet.</td></tr>
                 </tbody>
             </table>
         </div>
     </form>
 
     {% if is_admin %}
-    <div id="add-participants" style="max-width:42rem;">
+    <div id="add-participants" class="narrow">
         <h3>Add participant</h3>
         <p class="search-form">
-            <span style="position:relative; flex:1; min-width:200px;">
-                <input type="text" id="participant-search-input" value="{{ search_q }}" placeholder="Search by name, voice, or instrument" style="width:100%; box-sizing:border-box;">
+            <span class="search-field">
+                <input type="text" id="participant-search-input" value="{{ search_q }}" placeholder="Search by name, voice, or instrument">
                 <span class="search-spinner" id="participant-search-spinner"></span>
             </span>
             <button type="button" id="participant-search-clear" class="btn btn-secondary">Clear</button>
@@ -70,9 +42,9 @@
         <p>
             <span id="participant-search-count" class="result-count"></span>
         </p>
-        <p style="display:flex; align-items:center; gap:0.5rem; margin-top:1rem;">
+        <p class="link-row">
             <span>Attendance:</span>
-            <span class="attendance-chip" id="add-type-chip" data-type-id="1" onclick="cycleAddType(this)">
+            <span class="chip attendance-chip" id="add-type-chip" data-type-id="1" data-cycle="add">
                 <span class="att-icon"></span> <span class="att-label"></span>
             </span>
             <input type="hidden" id="add-type-hidden" value="1">
@@ -92,8 +64,8 @@
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/staged-list.js' %}"></script>
 <script>
-    const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
     const attendanceTbody = document.getElementById('attendance-tbody');
     const attendanceTypes = [
         {% for at in attendance_types %}{ id: {{ at.pk }}, name: "{{ at.name|escapejs }}" },{% endfor %}
@@ -101,236 +73,69 @@
     const CYCLE_ORDER = attendanceTypes.map(t => t.id);
     const ICONS = { 0: '?', 1: '✓', 2: '💼', 3: '🤒', 4: '🏖' };
 
-    function countUnsavedChanges() {
-        let count = 0;
-        attendanceTbody.querySelectorAll('tr[data-attendance-id]').forEach(row => {
-            if (row.classList.contains('pending-remove')) { count++; return; }
-            const chip = row.querySelector('.attendance-chip');
-            if (chip && chip.dataset.typeId !== row.dataset.originalTypeId) count++;
-        });
-        count += attendanceTbody.querySelectorAll('tr.staged-add').length;
-        return count;
-    }
-
-    const saveBarCtl = initSaveBar({
-        formId: 'attendance-form',
-        countUnsavedChanges,
-        beforeSync: renderSelectedChips,
-        onDiscard: () => {
-            attendanceTbody.querySelectorAll('tr.staged-add').forEach(row => row.remove());
-            attendanceTbody.querySelectorAll('tr[data-attendance-id]').forEach(row => {
-                row.classList.remove('pending-remove', 'type-changed');
-                row.querySelector('.pending-remove-input')?.remove();
-                const removeBtn = row.querySelector('.btn-remove');
-                if (removeBtn) { removeBtn.textContent = '×'; removeBtn.title = 'Remove from event'; }
-                const chip = row.querySelector('.attendance-chip');
-                const originalTypeId = row.dataset.originalTypeId;
-                if (chip && originalTypeId !== undefined) {
-                    chip.dataset.typeId = originalTypeId;
-                    paintChip(chip);
-                }
-                const hidden = row.querySelector(`input[type=hidden][name="type_${row.dataset.attendanceId}"]`);
-                if (hidden && originalTypeId !== undefined) hidden.value = originalTypeId;
-            });
-            if (!attendanceTbody.querySelector('tr[data-attendance-id]') && !document.getElementById('no-attendance-row')) {
-                attendanceTbody.insertAdjacentHTML('beforeend', '<tr id="no-attendance-row"><td colspan="4">No attendance records yet.</td></tr>');
-            }
-        },
-        afterDiscard: () => runParticipantSearch(participantSearchInput ? participantSearchInput.value : ''),
-    });
-
-    function typeMeta(id) {
-        const t = attendanceTypes.find(t => t.id === id);
-        return { label: t ? t.name : 'TBD', icon: ICONS[id] || '' };
-    }
-
     function paintChip(chip) {
         const id = parseInt(chip.dataset.typeId, 10);
-        const meta = typeMeta(id);
+        const t = attendanceTypes.find(t => t.id === id);
         attendanceTypes.forEach(t => chip.classList.remove(`att-type-${t.id}`));
         chip.classList.add(`att-type-${id}`);
-        chip.querySelector('.att-icon').textContent = meta.icon;
-        chip.querySelector('.att-label').textContent = meta.label;
-        chip.title = meta.label;
+        chip.querySelector('.att-icon').textContent = ICONS[id] || '';
+        chip.querySelector('.att-label').textContent = chip.title = t ? t.name : 'TBD';
     }
+    const paintAllChips = () => document.querySelectorAll('.attendance-chip').forEach(paintChip);
 
-    function initAllChips() {
-        attendanceTbody.querySelectorAll('.attendance-chip').forEach(paintChip);
-    }
+    // existing rows remember their saved type so a changed chip counts as an unsaved change
+    const savedRows = () => Array.from(attendanceTbody.querySelectorAll('tr[data-id]'));
+    savedRows().forEach(row => { row.dataset.originalTypeId = row.querySelector('.attendance-chip')?.dataset.typeId ?? '0'; });
 
-    function snapshotOriginalTypes() {
-        attendanceTbody.querySelectorAll('tr[data-attendance-id]').forEach(row => {
-            row.dataset.originalTypeId = row.querySelector('.attendance-chip')?.dataset.typeId ?? '0';
-        });
-    }
-
-    function removeEmptyRow() {
-        document.getElementById('no-attendance-row')?.remove();
-    }
-
-    function cycleAttendance(chip) {
-        const cur = parseInt(chip.dataset.typeId, 10);
-        const next = CYCLE_ORDER[(CYCLE_ORDER.indexOf(cur) + 1) % CYCLE_ORDER.length];
+    // chip click: the add-type chip above the search just picks a type, row chips also stage a type change
+    document.addEventListener('click', e => {
+        const chip = e.target.closest('[data-cycle]');
+        if (!chip) return;
+        const next = CYCLE_ORDER[(CYCLE_ORDER.indexOf(parseInt(chip.dataset.typeId, 10)) + 1) % CYCLE_ORDER.length];
         chip.dataset.typeId = next;
         paintChip(chip);
+        if (chip.dataset.cycle === 'add') { document.getElementById('add-type-hidden').value = next; return; }
         const row = chip.closest('tr');
-        const hidden = row.querySelector('input[type=hidden][data-role="add-type"]')
-            || row.querySelector(`input[type=hidden][name="type_${row.dataset.attendanceId}"]`);
+        const hidden = row.querySelector('input[data-role="add-type"]') || row.querySelector(`input[name="type_${row.dataset.id}"]`);
         if (hidden) hidden.value = next;
-        if (row.dataset.originalTypeId !== undefined) {
-            row.classList.toggle('type-changed', String(next) !== row.dataset.originalTypeId);
-        }
-        saveBarCtl.sync();
-    }
-
-    function cycleAddType(chip) {
-        const cur = parseInt(chip.dataset.typeId, 10);
-        const next = CYCLE_ORDER[(CYCLE_ORDER.indexOf(cur) + 1) % CYCLE_ORDER.length];
-        chip.dataset.typeId = next;
-        paintChip(chip);
-        document.getElementById('add-type-hidden').value = next;
-    }
-
-    function toggleRemove(row) {
-        const pk = row.dataset.attendanceId;
-        if (!pk) return;
-        const btn = row.querySelector('.btn-remove');
-        const pending = row.classList.toggle('pending-remove');
-        if (pending) {
-            row.insertAdjacentHTML('beforeend', `<input type="hidden" class="pending-remove-input" name="remove_${pk}" value="1">`);
-            btn.textContent = '↺';
-            btn.title = 'Undo removal';
-        } else {
-            row.querySelector('.pending-remove-input')?.remove();
-            btn.textContent = '×';
-            btn.title = 'Remove from event';
-        }
-        saveBarCtl.sync();
-    }
-
-    attendanceTbody.addEventListener('click', function(e) {
-        const removeBtn = e.target.closest('.btn-remove');
-        if (!removeBtn) return;
-        const row = removeBtn.closest('tr');
-        if (row.classList.contains('staged-add')) {
-            row.remove();
-            saveBarCtl.sync();
-            runParticipantSearch(participantSearchInput.value);
-            return;
-        }
-        toggleRemove(row);
+        if (row.dataset.originalTypeId !== undefined) row.classList.toggle('type-changed', String(next) !== row.dataset.originalTypeId);
+        stagedList.sync();
     });
 
-    function suppressEnterSubmit(input) {
-        if (!input) return;
-        input.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') e.preventDefault();
-        });
-    }
-
-    function escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
-
-    function buildStagedRow(personId, personLabel, typeId) {
-        const tr = document.createElement('tr');
-        tr.className = 'staged-add';
-        tr.dataset.personId = personId;
-        tr.innerHTML = `
+    const stagedList = initStagedList({
+        formId: 'attendance-form',
+        tbodyId: 'attendance-tbody',
+        addField: 'add_person',
+        prefix: 'participant',
+        excludeKey: 'personId',
+        searchUrl: "{% url 'syncope:event_attendance_search' url_username event.pk %}",
+        buildRow: (btn, info) => `
             <td></td>
-            <td>${escapeHtml(personLabel)}</td>
+            <td>${info}</td>
             <td>
-                <span class="attendance-chip" data-type-id="${typeId}" onclick="cycleAttendance(this)">
+                <span class="chip attendance-chip" data-type-id="${document.getElementById('add-type-hidden').value}" data-cycle>
                     <span class="att-icon"></span> <span class="att-label"></span>
                 </span>
-                <input type="hidden" name="add_person" value="${personId}">
-                <input type="hidden" data-role="add-type" name="add_type_${personId}" value="${typeId}">
+                <input type="hidden" name="add_person" value="${btn.dataset.id}">
+                <input type="hidden" data-role="add-type" name="add_type_${btn.dataset.id}" value="${document.getElementById('add-type-hidden').value}">
             </td>
-            <td><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>
-        `;
-        return tr;
-    }
-
-    function currentPersonIds() {
-        return Array.from(attendanceTbody.querySelectorAll('tr[data-person-id]')).map(tr => tr.dataset.personId);
-    }
-
-    const participantSearchInput = document.getElementById('participant-search-input');
-    const participantSearchResults = document.getElementById('participant-search-results');
-    const participantSearchCount = document.getElementById('participant-search-count');
-    const selectedParticipantsChips = document.getElementById('selected-participants-chips');
-    let participantSearchTimeout;
-
-    function renderSelectedChips() {
-        if (!selectedParticipantsChips) return;
-        const addedCount = attendanceTbody.querySelectorAll('tr.staged-add').length;
-        const unsaved = countUnsavedChanges();
-        if (!unsaved) {
-            selectedParticipantsChips.innerHTML = '';
-            return;
-        }
-        const summary = addedCount
-            ? `Selected (${addedCount}) - ${unsaved} unsaved change${unsaved === 1 ? '' : 's'}`
-            : `${unsaved} unsaved change${unsaved === 1 ? '' : 's'}`;
-        selectedParticipantsChips.innerHTML = `<p><strong>${summary}</strong></p>`;
-    }
-
-    const participantSearchSpinner = document.getElementById('participant-search-spinner');
-
-    function beginParticipantSpinner() {
-        participantSearchSpinner.classList.add('is-active');
-    }
-
-    function endParticipantSpinner() {
-        participantSearchSpinner.classList.remove('is-active');
-    }
-
-    function runParticipantSearch(query) {
-        const exclude = currentPersonIds().join(',');
-        const url = `{% url 'syncope:event_attendance_search' url_username event.pk %}?q=${encodeURIComponent(query)}&exclude=${encodeURIComponent(exclude)}`;
-        fetch(url).then(r => r.text()).then(html => {
-            endParticipantSpinner();
-            participantSearchResults.innerHTML = html;
-            relocateResultCount(participantSearchResults, participantSearchCount);
-        });
-    }
-
-    if (participantSearchInput) {
-        participantSearchInput.addEventListener('input', function() {
-            clearTimeout(participantSearchTimeout);
-            beginParticipantSpinner();
-            participantSearchTimeout = setTimeout(() => runParticipantSearch(this.value), 1000);
-        });
-        suppressEnterSubmit(participantSearchInput);
-    }
-
-    document.getElementById('participant-search-clear')?.addEventListener('click', function() {
-        clearTimeout(participantSearchTimeout);
-        participantSearchInput.value = '';
-        participantSearchResults.innerHTML = '';
-        runParticipantSearch('');
+            <td><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>`,
+        extraCount: () => savedRows().filter(row => !row.classList.contains('pending-remove')
+            && row.querySelector('.attendance-chip').dataset.typeId !== row.dataset.originalTypeId).length,
+        afterChange: n => {
+            paintAllChips();
+            const added = attendanceTbody.querySelectorAll('tr.staged-add').length;
+            const changes = `${n} unsaved change${n === 1 ? '' : 's'}`;
+            const box = document.getElementById('selected-participants-chips');
+            if (box) box.innerHTML = n ? `<p><strong>${added ? `Selected (${added}) - ${changes}` : changes}</strong></p>` : '';
+        },
+        onDiscardExtra: () => savedRows().forEach(row => {
+            row.classList.remove('type-changed');
+            const chip = row.querySelector('.attendance-chip');
+            chip.dataset.typeId = row.dataset.originalTypeId;
+            const hidden = row.querySelector(`input[name="type_${row.dataset.id}"]`);
+            if (hidden) hidden.value = row.dataset.originalTypeId;
+        }),
     });
-
-    participantSearchResults?.addEventListener('click', function(e) {
-        const btn = e.target.closest('.btn-secondary');
-        if (!btn) return;
-        const row = btn.closest('.search-result-row');
-        const personId = btn.dataset.id;
-        const label = row?.querySelector('.result-label')?.textContent.trim() || personId;
-        const typeId = document.getElementById('add-type-hidden').value;
-        removeEmptyRow();
-        attendanceTbody.appendChild(buildStagedRow(personId, label, typeId));
-        initAllChips();
-        row?.remove();
-        saveBarCtl.sync();
-    });
-
-    relocateResultCount(participantSearchResults, participantSearchCount);
-
-    paintChip(document.getElementById('add-type-chip'));
-    initAllChips();
-    snapshotOriginalTypes();
 </script>
 {% endblock %}

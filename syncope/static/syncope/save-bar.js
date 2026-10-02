@@ -9,12 +9,17 @@ function trackFormFieldChanges(form) {
         return (el.type === 'checkbox' || el.type === 'radio') ? el.checked : el.value;
     }
 
+    // A page re-rendered with server errors already holds unsaved input, so it starts dirty.
+    let hasErrors = false;
+
     function snapshot() {
         original.clear();
         changed.clear();
+        hasErrors = false;
         Array.from(form.elements).forEach(el => { if (el.name) original.set(el, valueOf(el)); });
     }
     snapshot();
+    hasErrors = !!form.querySelector('.errorlist');
 
     form.addEventListener('input', function (e) {
         if (!original.has(e.target)) return;
@@ -27,7 +32,7 @@ function trackFormFieldChanges(form) {
         else changed.delete(e.target);
     });
 
-    return { count: () => changed.size, reset: snapshot };
+    return { count: () => changed.size || (hasErrors ? 1 : 0), reset: snapshot };
 }
 
 // Pointer-based drag-to-reorder for a tbody's rows via a `.drag-handle` cell (mouse and touch
@@ -89,6 +94,9 @@ function initDragReorder(tbody, { rowSelector = 'tr', onDrop } = {}) {
 function initSaveBar({ formId, saveBarId = 'save-bar', countUnsavedChanges, beforeSync, onDiscard, afterDiscard }) {
     const saveBar = document.getElementById(saveBarId);
     const form = document.getElementById(formId);
+    const cleanActions = document.getElementById('clean-actions');
+    const dirtyActions = document.getElementById('dirty-actions');
+    const dirtyNote = saveBar?.querySelector('.dirty-note');
 
     function sync() {
         if (beforeSync) beforeSync();
@@ -96,12 +104,9 @@ function initSaveBar({ formId, saveBarId = 'save-bar', countUnsavedChanges, befo
         const n = countUnsavedChanges();
         const dirty = n > 0;
         saveBar.classList.toggle('dirty', dirty);
-        const cleanActions = document.getElementById('clean-actions');
-        const dirtyActions = document.getElementById('dirty-actions');
-        if (cleanActions) cleanActions.style.display = dirty ? 'none' : '';
-        if (dirtyActions) dirtyActions.style.display = dirty ? '' : 'none';
-        const note = saveBar.querySelector('.dirty-note');
-        if (note) note.textContent = dirty ? `${n} unsaved change${n === 1 ? '' : 's'}` : '';
+        if (cleanActions) cleanActions.hidden = dirty;
+        if (dirtyActions) dirtyActions.hidden = !dirty;
+        if (dirtyNote) dirtyNote.textContent = dirty ? `${n} unsaved change${n === 1 ? '' : 's'}` : '';
     }
 
     let formSubmitting = false;

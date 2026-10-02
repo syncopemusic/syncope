@@ -15,7 +15,7 @@ from .views.organization import OrganizationCreateView, OrganizationDashboard
 from .views.project import ProjectDeleteView, ProjectCreateView, ProjectDetailView, ProjectListView
 from .views.project import ProjectMetaEditView, ProjectEventsEditView, ProjectSongsEditView, ProjectParticipantsEditView
 from .views.project import project_events_search, project_songs_search, project_guests_search
-from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongMetaEditView, SongLyricsEditView, SongQuoteView, song_list_search, song_person_search
+from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongMetaEditView, SongLyricsEditView, SongQuoteView, SongEventsEditView, song_events_search, song_list_search, song_person_search
 from .views.resource import ResourcesEditView, ProfileResourcesView
 from .views.user_login_register import SignUp, UserLoginView, UserLogoutView
 from .views.poll import PollListView, PollCreateUpdateView, PollDetailView, PollDeleteView, PollPersonView, PollEventView, PollEventUpdateView, PollEventAttendanceView, PollPersonAttendanceView, poll_persons_search
@@ -115,6 +115,8 @@ urlpatterns = [
     path("<str:username>/songs/persons/search/<str:field>/", song_person_search, name="song_person_search"),
     path("<str:username>/songs/<int:pk>/delete/", SongDeleteView.as_view(), name="song_delete"),
     path("<str:username>/songs/<int:pk>/quotes/", SongQuoteView.as_view(), name="song_quotes"),
+    path("<str:username>/songs/<int:pk>/events/edit/", SongEventsEditView.as_view(), name="song_events_edit"),
+    path("<str:username>/songs/<int:pk>/events/edit/search/", song_events_search, name="song_events_search"),
     path('<str:username>/attendance/', AttendanceDashboardView.as_view(), name='attendance'),
     path('<str:username>/attendance/quick-new/', quick_add_rehearsal, name='quick_new_rehearsal'),
     path("skill/", SkillListAndCreateView.as_view(), name="skill"),

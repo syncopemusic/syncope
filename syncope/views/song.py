@@ -7,10 +7,12 @@ from django.db.models import Q, Exists, OuterRef, Count, Max
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from syncope.models import Song, EventType, CustomUser, Person
-from syncope.models import Event, EventSong, Project
+from syncope.models import Event, EventSong, EventSongResource, Project
 from syncope.forms import SongMetaForm, SongLyricsForm, SONG_PERSON_FIELD_SKILLS, SONG_PERSON_FIELD_META
 from syncope.forms import QuoteFormSet, LyricsTranslationFormSet
 from syncope.mixins import  SongOwnerMixin
@@ -501,3 +503,64 @@ class SongLyricsEditView(SongOwnerMixin, View):
         return render(request, self.template_name, self._context(song, username, form=form, translation_formset=tf))
 
 
+
+
+def _manageable_song(request, username, pk):
+    song = get_object_or_404(Song, pk=pk, user__username=username)
+    if not AccessControl.can_manage_song(request.user, song):
+        raise PermissionDenied
+    return song
+
+
+@login_required
+def song_events_search(request, username, pk):
+    """AJAX event search for the song's add-event picker; `exclude` hides events staged but not yet saved."""
+    song = _manageable_song(request, username, pk)
+    search_q = request.GET.get('q', '')
+    exclude_ids = [int(x) for x in request.GET.get('exclude', '').split(',') if x.isdigit()]
+    results = Event.objects.filter(user=song.user, name__icontains=search_q).exclude(
+        eventsong__song=song
+    ).exclude(pk__in=exclude_ids).order_by('-started_at') if search_q else []
+    return render(request, 'syncope/song_event_search_results.html', {
+        'event_results': results,
+        'search_q': search_q,
+    })
+
+
+@method_decorator(login_required, name='dispatch')
+class SongEventsEditView(View):
+    """Events subpage: events this song is played at, plus a live search to add it to more."""
+    template_name = 'syncope/song_events_edit.html'
+
+    def get(self, request, username, pk):
+        song = _manageable_song(request, username, pk)
+        return render(request, self.template_name, {
+            'song': song,
+            'events': Event.objects.filter(eventsong__song=song).order_by('-started_at').distinct(),
+            'url_username': username,
+            'search_q': request.GET.get('q', ''),
+        })
+
+    def post(self, request, username, pk):
+        song = _manageable_song(request, username, pk)
+        with transaction.atomic():
+            remove_ids = {
+                event_pk for event_pk in EventSong.objects.filter(song=song).values_list('event_id', flat=True)
+                if request.POST.get(f'remove_{event_pk}') == '1'
+            }
+            if remove_ids:
+                # EventSongResource.event_song is on_delete=PROTECT - clear resources first.
+                removed = EventSong.objects.filter(song=song, event_id__in=remove_ids)
+                EventSongResource.objects.filter(event_song__in=removed).delete()
+                removed.delete()
+
+            eligible_ids = set(
+                Event.objects.filter(user=song.user).exclude(eventsong__song=song).values_list('pk', flat=True)
+            )
+            add_ids = {int(v) for v in request.POST.getlist('add_event') if v.isdigit()} & eligible_ids
+            for event in Event.objects.filter(pk__in=add_ids):
+                next_order = (event.eventsong_set.aggregate(Max('order'))['order__max'] or 0) + 1
+                EventSong.objects.create(event=event, song=song, order=next_order, encore=False)
+
+        messages.success(request, "Events updated successfully!")
+        return redirect('syncope:song_events_edit', username=username, pk=song.pk)

@@ -36,19 +36,18 @@
                     <button type="button" class="btn btn-remove" title="Remove from project">&times;</button>
                 </td>
             </tr>
-            {% empty %}
-            <tr id="no-participants-row"><td colspan="3">No participants yet.</td></tr>
             {% endfor %}
+            <tr class="empty-row"><td colspan="3">No participants yet.</td></tr>
         </tbody>
     </table>
     </div>
 </form>
 
-<div id="add-guests" style="max-width:42rem;">
+<div id="add-guests" class="narrow">
     <h3>Add guest</h3>
     <p class="search-form">
-        <span style="position:relative; flex:1; min-width:200px;">
-            <input type="text" id="guest-search-input" value="{{ search_q }}" placeholder="Search by name" style="width:100%; box-sizing:border-box;">
+        <span class="search-field">
+            <input type="text" id="guest-search-input" value="{{ search_q }}" placeholder="Search by name">
             <span class="search-spinner" id="guest-search-spinner"></span>
         </span>
         <button type="button" id="guest-search-clear" class="btn btn-secondary">Clear</button>
@@ -66,127 +65,14 @@
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/staged-list.js' %}"></script>
 <script>
-    const participantsTbody = document.getElementById('participants-tbody');
-
-    function removeEmptyRow() {
-        document.getElementById('no-participants-row')?.remove();
-    }
-
-    function escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
-
-    function countUnsavedChanges() {
-        return participantsTbody.querySelectorAll('tr.staged-add, tr.pending-remove').length;
-    }
-
-    const saveBarCtl = initSaveBar({
+    initStagedList({
         formId: 'participants-form',
-        countUnsavedChanges,
-        onDiscard: () => {
-            participantsTbody.querySelectorAll('tr.staged-add').forEach(row => row.remove());
-            participantsTbody.querySelectorAll('tr.pending-remove').forEach(row => {
-                row.classList.remove('pending-remove');
-                row.querySelector('.pending-remove-input')?.remove();
-                const btn = row.querySelector('.btn-remove');
-                if (btn) { btn.textContent = '×'; btn.title = 'Remove from project'; }
-            });
-            if (!participantsTbody.querySelector('tr[data-id]') && !document.getElementById('no-participants-row')) {
-                participantsTbody.insertAdjacentHTML('beforeend', '<tr id="no-participants-row"><td colspan="3">No participants yet.</td></tr>');
-            }
-        },
-        afterDiscard: () => runGuestSearch(guestSearchInput ? guestSearchInput.value : ''),
+        tbodyId: 'participants-tbody',
+        addField: 'add_guest',
+        prefix: 'guest',
+        searchUrl: "{% url 'syncope:project_guests_search' url_username project.pk %}",
     });
-
-    function toggleRemove(row) {
-        const pk = row.dataset.id;
-        if (!pk) return;
-        const btn = row.querySelector('.btn-remove');
-        const pending = row.classList.toggle('pending-remove');
-        if (pending) {
-            row.insertAdjacentHTML('beforeend', `<input type="hidden" class="pending-remove-input" name="remove_${pk}" value="1">`);
-            btn.textContent = '↺';
-            btn.title = 'Undo removal';
-        } else {
-            row.querySelector('.pending-remove-input')?.remove();
-            btn.textContent = '×';
-            btn.title = 'Remove from project';
-        }
-        saveBarCtl.sync();
-    }
-
-    participantsTbody.addEventListener('click', function(e) {
-        const removeBtn = e.target.closest('.btn-remove');
-        if (!removeBtn) return;
-        const row = removeBtn.closest('tr');
-        if (row.classList.contains('staged-add')) {
-            row.remove();
-            saveBarCtl.sync();
-            runGuestSearch(guestSearchInput.value);
-            return;
-        }
-        toggleRemove(row);
-    });
-
-    function currentParticipantIds() {
-        return Array.from(participantsTbody.querySelectorAll('tr[data-id]')).map(tr => tr.dataset.id);
-    }
-
-    const guestSearchInput = document.getElementById('guest-search-input');
-    const guestSearchResults = document.getElementById('guest-search-results');
-    const guestSearchCount = document.getElementById('guest-search-count');
-    let guestSearchTimeout;
-    const guestSearchSpinner = document.getElementById('guest-search-spinner');
-
-    function runGuestSearch(query) {
-        guestSearchSpinner.classList.add('is-active');
-        const url = `{% url 'syncope:project_guests_search' url_username project.pk %}?q=${encodeURIComponent(query)}&exclude=${encodeURIComponent(currentParticipantIds().join(','))}`;
-        fetch(url).then(r => r.text()).then(html => {
-            guestSearchSpinner.classList.remove('is-active');
-            guestSearchResults.innerHTML = html;
-            relocateResultCount(guestSearchResults, guestSearchCount);
-        });
-    }
-
-    if (guestSearchInput) {
-        guestSearchInput.addEventListener('input', function() {
-            clearTimeout(guestSearchTimeout);
-            guestSearchSpinner.classList.add('is-active');
-            guestSearchTimeout = setTimeout(() => runGuestSearch(this.value), 1000);
-        });
-        guestSearchInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') e.preventDefault();
-        });
-    }
-
-    document.getElementById('guest-search-clear')?.addEventListener('click', function() {
-        clearTimeout(guestSearchTimeout);
-        guestSearchInput.value = '';
-        runGuestSearch('');
-    });
-
-    guestSearchResults?.addEventListener('click', function(e) {
-        const btn = e.target.closest('.btn-secondary');
-        if (!btn) return;
-        const row = btn.closest('.search-result-row');
-        const label = row?.querySelector('.result-label')?.textContent.trim() || btn.dataset.id;
-        removeEmptyRow();
-        const tr = document.createElement('tr');
-        tr.className = 'staged-add';
-        tr.dataset.id = btn.dataset.id;
-        tr.innerHTML = `
-            <td class="col-num"></td>
-            <td class="col-main">${escapeHtml(label)}<input type="hidden" name="add_guest" value="${btn.dataset.id}"></td>
-            <td class="col-action"><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>
-        `;
-        participantsTbody.appendChild(tr);
-        row.remove();
-        saveBarCtl.sync();
-    });
-
-    relocateResultCount(guestSearchResults, guestSearchCount);
 </script>
 {% endblock %}

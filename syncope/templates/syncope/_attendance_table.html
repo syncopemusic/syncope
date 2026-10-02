@@ -32,7 +32,7 @@
                             <td class="table-event-col">
                                 <div class="table-cell-attendance att-type-{{ cell.attendance_type_id|default:0 }} {% if cell.is_grayed_out %}table-cell-attendance-disabled{% endif %}"
                                     data-type-id="{{ cell.attendance_type_id|default:0 }}"
-                                    {% if not cell.is_grayed_out %}onclick="cycleAttendance(this)"{% endif %}>
+                                    {% if not cell.is_grayed_out %}data-cycle{% endif %}>
                                     <input type="hidden"
                                            name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
                                            value="{{ cell.attendance_type_id|default:0 }}">

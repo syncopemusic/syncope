@@ -1,10 +1,10 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}Events - {{ project.title }}{% endblock %}
+{% block title %}Events - {{ song.title }}{% endblock %}
 
 {% block content %}
 
-<h1>Events - {{ project.title }}</h1>
+<h1>Events - {{ song.title }}</h1>
 
 <form method="post" id="events-form">
     {% csrf_token %}
@@ -24,13 +24,11 @@
                 <td class="col-main">
                     <div class="song-title">
                         {{ event }}
-                        {% if event.resource_count > 0 %} - &#128279;{% endif %}
-                        {% if event.event_song_resource_count > 0 %}&#127925;{% endif %}
                     </div>
                     <div class="song-subline">{% include "syncope/_event_daterange.html" with no_date_text="-" %}</div>
                 </td>
                 <td class="col-action">
-                    <button type="button" class="btn btn-remove" title="Remove from project">&times;</button>
+                    <button type="button" class="btn btn-remove" title="Remove event">&times;</button>
                 </td>
             </tr>
             {% endfor %}
@@ -49,15 +47,14 @@
     <p class="link-row">
         <button type="button" id="event-search-clear" class="btn btn-secondary">Clear</button>
         <span id="event-search-count" class="result-count"></span>
-        <a href="{% url 'syncope:event_new' url_username %}?project={{ project.pk }}&next={% url 'syncope:project_events_edit' url_username project.pk %}" class="btn btn-primary" title="Create new event">+ Add</a>
     </p>
     <div id="event-search-results">
-        {% include "syncope/project_event_search_results.html" %}
+        {% include "syncope/song_event_search_results.html" %}
     </div>
 </div>
 
-{% url 'syncope:project_detail' url_username project.pk as project_detail_url %}
-{% include "syncope/_save_bar.html" with form_id="events-form" url=project_detail_url %}
+{% url 'syncope:song_detail' url_username song.pk as song_detail_url %}
+{% include "syncope/_save_bar.html" with form_id="events-form" url=song_detail_url %}
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script src="{% static 'syncope/search-box.js' %}"></script>
@@ -68,7 +65,7 @@
         tbodyId: 'events-tbody',
         addField: 'add_event',
         prefix: 'event',
-        searchUrl: "{% url 'syncope:project_events_search' url_username project.pk %}",
+        searchUrl: "{% url 'syncope:song_events_search' url_username song.pk %}",
     });
 </script>
 {% endblock %}

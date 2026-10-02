@@ -2,20 +2,7 @@
 {% load static dt_tags %}
 {% block title %}Attendance{% endblock %}
 {% block content %}
-<style>
-.attendance-dashboard {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-.attendance-dashboard h2 { margin: 0; }
-.attendance-add-rehearsal {
-    display: flex;
-    justify-content: flex-end;
-}
-</style>
-
-<div class="attendance-dashboard">
+<div class="stack">
     <h1>Attendance</h1>
 
     <details class="filter-panel" {% if request.GET.start_date or request.GET.end_date or request.GET.event_limit %}open{% endif %}>
@@ -32,19 +19,19 @@
                     <label class="filter-field">
                         <span class="filter-label">From</span>
                         <input type="date" name="start_date" value="{{ request.GET.start_date }}"
-                               onchange="document.getElementById('event_limit_input').value='';">
+                               data-clear="#event_limit_input">
                     </label>
                     <label class="filter-field">
                         <span class="filter-label">To</span>
                         <input type="date" name="end_date" value="{{ request.GET.end_date }}"
-                               onchange="document.getElementById('event_limit_input').value='';">
+                               data-clear="#event_limit_input">
                     </label>
                 </div>
                 <label class="filter-field filter-field-limit">
                     <span class="filter-label">or event limit</span>
                     <input type="number" id="event_limit_input" name="event_limit"
                            value="{{ request.GET.event_limit|default:3 }}" min="1" max="50"
-                           onchange="this.form.start_date.value=''; this.form.end_date.value='';">
+                           data-clear="[name=start_date], [name=end_date]">
                 </label>
             </div>
             <div class="filter-row filter-row-actions">
@@ -53,7 +40,7 @@
         </form>
     </details>
 
-    <form method="post" action="{%  url 'syncope:quick_new_rehearsal' username=url_username %}" class="attendance-add-rehearsal">
+    <form method="post" action="{%  url 'syncope:quick_new_rehearsal' username=url_username %}" class="link-row link-row-end">
         {% csrf_token %}
         <button type="submit" class="btn btn-primary" title="Add rehearsal now">+ Add Rehearsal</button>
     </form>
@@ -116,6 +103,11 @@ function cycleAttendance(cell) {
     paintCell(cell, next);
     saveBarCtl.sync();
 }
+
+document.addEventListener('click', e => {
+    const cell = e.target.closest('[data-cycle]');
+    if (cell) cycleAttendance(cell);
+});
 
 function initCells() {
     document.querySelectorAll('.table-cell-attendance[data-type-id]').forEach(cell => {

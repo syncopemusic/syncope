@@ -9,7 +9,7 @@
 <form method="post" id="persons-form">
     {% csrf_token %}
     <div class="table-container">
-        <table class="table table-grouped table-narrow">
+        <table class="table table-grouped">
             <thead>
                 <tr>
                     <th class="col-num"></th>
@@ -20,7 +20,7 @@
             <tbody id="persons-tbody">
                 {% for group in grouped_poll_persons %}
                 {% for pp in group.items %}
-                <tr data-poll-person-id="{{ pp.pk }}" data-person-id="{{ pp.person_id }}" {% if forloop.first and not forloop.parentloop.first %}class="group-start"{% endif %}>
+                <tr data-id="{{ pp.pk }}" data-person-id="{{ pp.person_id }}" {% if forloop.first and not forloop.parentloop.first %}class="group-start"{% endif %}>
                     <td class="col-num">{{ pp.index }}</td>
                     <td class="col-main">
                         <div>{{ pp.person.first_name }} {{ pp.person.last_name }}</div>
@@ -36,20 +36,19 @@
                         {% if is_admin %}<button type="button" class="btn btn-remove" title="Remove from poll">×</button>{% endif %}
                     </td>
                 </tr>
-                {% empty %}
-                <tr id="no-persons-row"><td colspan="3">No persons added yet.</td></tr>
                 {% endfor %}
                 {% endfor %}
+                <tr class="empty-row"><td colspan="3">No persons added yet.</td></tr>
             </tbody>
         </table>
     </div>
 
     {% if is_admin %}
-    <div id="add-participants" style="max-width:42rem;">
+    <div id="add-participants" class="narrow">
         <h3>Add participant</h3>
         <p class="search-form">
-            <span style="position:relative; flex:1; min-width:200px;">
-                <input type="text" id="participant-search-input" placeholder="Search by name, role, skill, voice, instrument" style="width:100%; box-sizing:border-box;">
+            <span class="search-field">
+                <input type="text" id="participant-search-input" placeholder="Search by name, role, skill, voice, instrument">
                 <span class="search-spinner" id="participant-search-spinner"></span>
             </span>
             <button type="button" id="participant-search-clear" class="btn btn-secondary">Clear</button>
@@ -69,141 +68,15 @@
 {% block extra_js %}
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/staged-list.js' %}"></script>
 <script>
-    const personsTbody = document.getElementById('persons-tbody');
-
-    function countUnsavedChanges() {
-        let count = 0;
-        personsTbody.querySelectorAll('tr[data-poll-person-id]').forEach(row => {
-            if (row.classList.contains('pending-remove')) count++;
-        });
-        count += personsTbody.querySelectorAll('tr.staged-add').length;
-        return count;
-    }
-
-    function removeEmptyRow() {
-        document.getElementById('no-persons-row')?.remove();
-    }
-
-    const saveBarCtl = initSaveBar({
+    initStagedList({
         formId: 'persons-form',
-        countUnsavedChanges,
-        onDiscard: () => {
-            personsTbody.querySelectorAll('tr.staged-add').forEach(row => row.remove());
-            personsTbody.querySelectorAll('tr[data-poll-person-id]').forEach(row => {
-                row.classList.remove('pending-remove');
-                row.querySelector('.pending-remove-input')?.remove();
-                const btn = row.querySelector('.btn-remove');
-                if (btn) { btn.textContent = '×'; btn.title = 'Remove from poll'; }
-            });
-            if (!personsTbody.querySelector('tr[data-poll-person-id]') && !personsTbody.querySelector('tr.staged-add') && !document.getElementById('no-persons-row')) {
-                personsTbody.insertAdjacentHTML('beforeend', '<tr id="no-persons-row"><td colspan="3">No persons added yet.</td></tr>');
-            }
-        },
-        afterDiscard: () => runParticipantSearch(participantSearchInput ? participantSearchInput.value : ''),
+        tbodyId: 'persons-tbody',
+        addField: 'add_person',
+        prefix: 'participant',
+        excludeKey: 'personId',
+        searchUrl: "{% url 'syncope:poll_persons_search' url_username poll.pk %}",
     });
-
-    function toggleRemove(row) {
-        const pk = row.dataset.pollPersonId;
-        if (!pk) return;
-        const btn = row.querySelector('.btn-remove');
-        const pending = row.classList.toggle('pending-remove');
-        if (pending) {
-            row.insertAdjacentHTML('beforeend', `<input type="hidden" class="pending-remove-input" name="remove_${pk}" value="1">`);
-            btn.textContent = '↺';
-            btn.title = 'Undo removal';
-        } else {
-            row.querySelector('.pending-remove-input')?.remove();
-            btn.textContent = '×';
-            btn.title = 'Remove from poll';
-        }
-        saveBarCtl.sync();
-    }
-
-    personsTbody.addEventListener('click', function (e) {
-        const btn = e.target.closest('.btn-remove');
-        if (!btn) return;
-        const row = btn.closest('tr');
-        if (row.classList.contains('staged-add')) {
-            row.remove();
-            saveBarCtl.sync();
-            runParticipantSearch(participantSearchInput.value);
-            return;
-        }
-        toggleRemove(row);
-    });
-
-    function escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
-
-    function buildStagedPersonRow(personId, personLabel) {
-        const tr = document.createElement('tr');
-        tr.className = 'staged-add';
-        tr.dataset.personId = personId;
-        tr.innerHTML = `
-            <td></td>
-            <td>${escapeHtml(personLabel)}</td>
-            <td><input type="hidden" name="add_person" value="${personId}"><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>
-        `;
-        return tr;
-    }
-
-    function currentPersonIds() {
-        return Array.from(personsTbody.querySelectorAll('tr[data-person-id]')).map(tr => tr.dataset.personId);
-    }
-
-    const participantSearchInput = document.getElementById('participant-search-input');
-    const participantSearchResults = document.getElementById('participant-search-results');
-    const participantSearchCount = document.getElementById('participant-search-count');
-    const participantSearchSpinner = document.getElementById('participant-search-spinner');
-    let participantSearchTimeout;
-
-    function beginParticipantSpinner() { participantSearchSpinner.classList.add('is-active'); }
-    function endParticipantSpinner() { participantSearchSpinner.classList.remove('is-active'); }
-
-    function runParticipantSearch(query) {
-        const exclude = currentPersonIds().join(',');
-        const url = `{% url 'syncope:poll_persons_search' url_username poll.pk %}?q=${encodeURIComponent(query)}&exclude=${encodeURIComponent(exclude)}`;
-        fetch(url).then(r => r.text()).then(html => {
-            endParticipantSpinner();
-            participantSearchResults.innerHTML = html;
-            relocateResultCount(participantSearchResults, participantSearchCount);
-        });
-    }
-
-    if (participantSearchInput) {
-        participantSearchInput.addEventListener('input', function () {
-            clearTimeout(participantSearchTimeout);
-            beginParticipantSpinner();
-            participantSearchTimeout = setTimeout(() => runParticipantSearch(this.value), 1000);
-        });
-        participantSearchInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') e.preventDefault();
-        });
-    }
-
-    document.getElementById('participant-search-clear')?.addEventListener('click', function () {
-        clearTimeout(participantSearchTimeout);
-        participantSearchInput.value = '';
-        participantSearchResults.innerHTML = '';
-        runParticipantSearch('');
-    });
-
-    participantSearchResults?.addEventListener('click', function (e) {
-        const btn = e.target.closest('.btn-secondary');
-        if (!btn) return;
-        const row = btn.closest('.search-result-row');
-        const personId = btn.dataset.id;
-        const label = row?.querySelector('.result-label')?.textContent.trim() || personId;
-        removeEmptyRow();
-        personsTbody.appendChild(buildStagedPersonRow(personId, label));
-        row?.remove();
-        saveBarCtl.sync();
-    });
-
-    relocateResultCount(participantSearchResults, participantSearchCount);
 </script>
 {% endblock %}

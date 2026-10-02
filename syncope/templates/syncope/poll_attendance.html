@@ -3,65 +3,6 @@
 
 {% block title %}{{ poll.title }} - Attendance{% endblock %}
 
-{% block extra_css %}
-<style>
-    .matrix-card-grid {
-        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-        margin-block-end: var(--space-5);
-    }
-
-    .matrix-card-title {
-        margin: 0 0 var(--space-2);
-        font-size: var(--font-size-md);
-    }
-
-    .matrix-card-field {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: var(--space-2);
-        padding-block: var(--space-1);
-        border-block-end: 1px solid var(--color-border-subtle);
-    }
-
-    .matrix-card-field:last-child {
-        border-block-end: none;
-    }
-
-    .matrix-card-label {
-        color: var(--color-text-muted);
-        font-size: var(--font-size-sm);
-        flex-shrink: 0;
-    }
-
-    .matrix-card-value {
-        text-align: end;
-    }
-
-    .matrix-card-strong .matrix-card-title {
-        font-weight: 500;
-    }
-
-    .matrix-card-field .table-comment-input {
-        flex: 1;
-    }
-
-    .poll-answer-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.3rem;
-        padding: 0.25rem 0.6rem;
-        border-radius: var(--radius-sm);
-        cursor: pointer;
-        user-select: none;
-        font-size: var(--font-size-md);
-        line-height: 1;
-        width: 7.5rem;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 
 <div class="section-header">
@@ -85,42 +26,42 @@
     {% csrf_token %}
     <input type="hidden" name="save_participant" value="{{ table_rows.0.person.id }}">
 
-    <div class="card-grid matrix-card-grid">
+    <div class="card-grid card-grid-wide">
         {% for cell in table_rows.0.event_cells %}
-        <div class="card matrix-card {% if cell.event.event_type.id != 1 %}matrix-card-strong{% endif %}">
-            <h3 class="matrix-card-title">{{ cell.event }}</h3>
-            <div class="matrix-card-field">
-                <span class="matrix-card-label">Date</span>
-                <span class="matrix-card-value">
+        <div class="card {% if cell.event.event_type.id != 1 %}card-strong{% endif %}">
+            <h3 class="card-title">{{ cell.event }}</h3>
+            <div class="card-field">
+                <span class="card-label">Date</span>
+                <span class="card-value">
                     {% if cell.event.same_date %}{% dt cell.event.started_at "date-dow" %}{% else %}{% dt cell.event.started_at "date-dow" %} - {% dt cell.event.ended_at "date-dow" %}{% endif %}
                 </span>
             </div>
-            <div class="matrix-card-field">
-                <span class="matrix-card-label">Time</span>
-                <span class="matrix-card-value">{% dt cell.event.started_at "time" %} - {% dt cell.event.ended_at "time" %}</span>
+            <div class="card-field">
+                <span class="card-label">Time</span>
+                <span class="card-value">{% dt cell.event.started_at "time" %} - {% dt cell.event.ended_at "time" %}</span>
             </div>
-            <div class="matrix-card-field">
-                <span class="matrix-card-label">Location</span>
-                <span class="matrix-card-value">{% if cell.event.location %}{{ cell.event.location }}{% else %}<em>-</em>{% endif %}</span>
+            <div class="card-field">
+                <span class="card-label">Location</span>
+                <span class="card-value">{% if cell.event.location %}{{ cell.event.location }}{% else %}<em>-</em>{% endif %}</span>
             </div>
-            <div class="matrix-card-field">
-                <span class="matrix-card-label">Details</span>
-                <span class="matrix-card-value">{% if cell.event.details %}{{ cell.event.details }}{% else %}<em>-</em>{% endif %}</span>
+            <div class="card-field">
+                <span class="card-label">Details</span>
+                <span class="card-value">{% if cell.event.details %}{{ cell.event.details }}{% else %}<em>-</em>{% endif %}</span>
             </div>
-            <div class="matrix-card-field">
-                <span class="matrix-card-label">Attendance</span>
-                <span class="poll-answer-btn"
+            <div class="card-field">
+                <span class="card-label">Attendance</span>
+                <span class="chip poll-answer-btn"
                       data-type-id="{{ cell.attendance_type_id }}"
                       data-original-type-id="{{ cell.attendance_type_id }}"
-                      onclick="cyclePollAnswer(this)">
+                      data-cycle>
                     <span class="poll-answer-icon"></span> <span class="poll-answer-label"></span>
                 </span>
                 <input type="hidden"
                        name="attendance_{{ cell.event.id }}_{{ cell.person.id }}"
                        value="{{ cell.attendance_type_id }}">
             </div>
-            <div class="matrix-card-field">
-                <span class="matrix-card-label">Note</span>
+            <div class="card-field">
+                <span class="card-label">Note</span>
                 <input type="text"
                        name="comment_{{ cell.event.id }}_{{ cell.person.id }}"
                        class="table-comment-input"
@@ -136,6 +77,7 @@
 {% include "syncope/_save_bar.html" with form_id="poll-attendance-form" url=return_target %}
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
+<script src="{% static 'syncope/share.js' %}"></script>
 <script>
 const POLL_ANSWER_TYPES = [
     { id: 1, icon: '✓', label: 'Yes' },
@@ -168,6 +110,11 @@ function cyclePollAnswer(btn) {
     saveBarCtl.sync();
 }
 
+document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-cycle]');
+    if (btn) cyclePollAnswer(btn);
+});
+
 function countUnsavedChanges() {
     let count = 0;
     document.querySelectorAll('.poll-answer-btn').forEach(btn => {
@@ -196,63 +143,7 @@ document.querySelectorAll('.poll-answer-btn').forEach(paintPollAnswer);
 form.addEventListener('input', () => saveBarCtl.sync());
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Share button handler
-    function createShareHandler(btn, resultSpan, shareData) {
-        return function () {
-            btn.disabled = true;
-            if (resultSpan) resultSpan.textContent = 'Copying...';
-
-            fetch('/share/create/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                },
-                body: JSON.stringify(shareData),
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Request failed');
-                return response.json();
-            })
-            .then(data => {
-                const shareUrl = window.location.origin + '/' + data.share_id + '/';
-                navigator.clipboard.writeText(shareUrl).then(() => {
-                    if (resultSpan) {
-                        resultSpan.textContent = 'Copied';
-                        setTimeout(() => { resultSpan.textContent = ''; }, 3000);
-                    } else {
-                        alert('Share link copied:\n' + shareUrl);
-                    }
-                }).catch(() => {
-                    if (resultSpan) {
-                        resultSpan.textContent = 'Copied';
-                        setTimeout(() => { resultSpan.textContent = ''; }, 3000);
-                    } else {
-                        alert('Share link:\n' + shareUrl);
-                    }
-                });
-            })
-            .catch(() => {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Failed';
-                } else {
-                    alert('Failed to generate share link');
-                }
-            })
-            .finally(() => {
-                btn.disabled = false;
-            });
-        };
-    }
-
-    const shareBtn = document.getElementById('share-btn');
-    if (shareBtn) {
-        shareBtn.addEventListener('click', createShareHandler(
-            shareBtn,
-            document.getElementById('share-result'),
-            { type: 'poll_person', id: {{ viewing_as.pk|default:"null" }} }
-        ));
-    }
+    initShareButton({ type: 'poll_person', id: {{ viewing_as.pk|default:"null" }} });
 });
 </script>
 

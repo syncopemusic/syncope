@@ -12,7 +12,7 @@
     {% csrf_token %}
 
     <div class="lyrics-columns">
-        <div class="lyrics-card">
+        <div>
             <h3>Lyrics</h3>
             {% include "syncope/_person_picker.html" with field=form.poet field_name="poet" label="Poet" current=song.poet new_person_url_name="syncope:org_member_new_poet" %}
             <div class="form-group">
@@ -27,7 +27,7 @@
             </div>
         </div>
 
-        <div class="translations-column">
+        <div>
             <div class="section-header">
                 <h3>Translations</h3>
                 {% if can_manage %}<button type="button" id="add-translation-btn" class="btn btn-primary">+ Add</button>{% endif %}
@@ -74,6 +74,7 @@
 
     form.addEventListener('input', () => saveBarCtl.sync());
     form.addEventListener('change', () => saveBarCtl.sync());
+    saveBarCtl.sync();
 
     document.querySelectorAll('.person-picker').forEach(wirePersonPicker);
 

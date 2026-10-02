@@ -9,36 +9,34 @@
     {% csrf_token %}
 
     <!-- Existing fields -->
-    <p>{{ form.first_name.label_tag }} {{ form.first_name }}</p>
-    <p>{{ form.last_name.label_tag }} {{ form.last_name }}</p>
-    <p>{{ form.email.label_tag }} {{ form.email }}</p>
-    <p>{{ form.phone.label_tag }} {{ form.phone }}</p>
-    <p>{{ form.address.label_tag }} {{ form.address }}</p>
+    <p>{{ form.first_name.label_tag }} {{ form.first_name }} {{ form.first_name.errors }}</p>
+    <p>{{ form.last_name.label_tag }} {{ form.last_name }} {{ form.last_name.errors }}</p>
+    <p>{{ form.email.label_tag }} {{ form.email }} {{ form.email.errors }}</p>
+    <p>{{ form.phone.label_tag }} {{ form.phone }} {{ form.phone.errors }}</p>
+    <p>{{ form.address.label_tag }} {{ form.address }} {{ form.address.errors }}</p>
     <!-- Date fields -->
-    <p>{{ form.birth_date.label_tag }} {{ form.birth_date }}</p>
+    <p>{{ form.birth_date.label_tag }} {{ form.birth_date }} {{ form.birth_date.errors }}</p>
     {% if form.birth_approximate %}
-    <p>{{ form.birth_approximate.label_tag }} {{ form.birth_approximate }}</p>
+    <p>{{ form.birth_approximate.label_tag }} {{ form.birth_approximate }} {{ form.birth_approximate.errors }}</p>
     {% endif %}
     {% if form.death_date %}
-    <p>{{ form.death_date.label_tag }} {{ form.death_date }}</p>
+    <p>{{ form.death_date.label_tag }} {{ form.death_date }} {{ form.death_date.errors }}</p>
     {% endif %}
     {% if form.death_approximate %}
-    <p>{{ form.death_approximate.label_tag }} {{ form.death_approximate }}</p>
+    <p>{{ form.death_approximate.label_tag }} {{ form.death_approximate }} {{ form.death_approximate.errors }}</p>
     {% endif %}
 
     <!-- Voices (renders as native <select multiple>) -->
     <p>{{ form.voices.label_tag }}
-        {{ form.voices }}</p>
-    <small class="form-help">Hold Ctrl/Cmd to select multiple voices</small>
+        {{ form.voices }} {{ form.voices.errors }}</p>
 
     <!-- Instruments (renders as native <select multiple>) -->
     <p>{{ form.instruments.label_tag }}
-    {{ form.instruments }}</p>
-    <small class="form-help">Hold Ctrl/Cmd to select multiple instruments</small>
+    {{ form.instruments }} {{ form.instruments.errors }}</p>
 
     <!-- Skills -->
     <p>{{ form.skills.label_tag }}
-        {{ form.skills }}</p>
+        {{ form.skills }} {{ form.skills.errors }}</p>
 
 </form>
 
@@ -48,18 +46,19 @@
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script>
     const form = document.getElementById('person-form');
-    let formDirty = false;
+    const fieldTracker = trackFormFieldChanges(form);
 
     const saveBarCtl = initSaveBar({
         formId: 'person-form',
-        countUnsavedChanges: () => formDirty ? 1 : 0,
+        countUnsavedChanges: fieldTracker.count,
         onDiscard: () => {
             form.reset();
-            formDirty = false;
+            fieldTracker.reset();
         },
     });
 
-    form.addEventListener('input', () => { formDirty = true; saveBarCtl.sync(); });
-    form.addEventListener('change', () => { formDirty = true; saveBarCtl.sync(); });
+    saveBarCtl.sync();
+    form.addEventListener('input', () => saveBarCtl.sync());
+    form.addEventListener('change', () => saveBarCtl.sync());
 </script>
 {% endblock %}

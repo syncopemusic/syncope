@@ -38,12 +38,10 @@
     <!-- Voices (renders as native <select multiple>) -->
     <p>{{ form.voices.label_tag }}
         {{ form.voices }} {{ form.voices.errors }}</p>
-    <small class="form-help">Hold Ctrl/Cmd to select multiple voices</small>
 
     <!-- Instruments (renders as native <select multiple>) -->
     <p>{{ form.instruments.label_tag }}
     {{ form.instruments }} {{ form.instruments.errors }}</p>
-    <small class="form-help">Hold Ctrl/Cmd to select multiple instruments</small>
 
 
     <!-- Skills -->
@@ -62,7 +60,7 @@
     <h3>Membership Periods</h3>
     {% if periods %}
     <div class="table-container">
-    <table class="table table-narrow">
+    <table class="table">
         <thead>
             <tr><th>Role</th><th>From</th><th>To</th></tr>
         </thead>
@@ -88,7 +86,7 @@
         <small class="form-help">{{ p_form.ended_at.help_text }}</small>
         {% if p_form.instance.pk %}
             <input type="checkbox" name="{{ p_form.DELETE.html_name }}" id="{{ p_form.DELETE.auto_id }}"
-                   onclick="return confirm('Delete this period? Press Save to confirm.');">
+                   data-confirm="Delete this period? Press Save to confirm.">
             <small class="form-help">Delete</small>
         {% endif %}
         {% if p_form.errors %}<small class="error">{{ p_form.errors }}</small>{% endif %}
@@ -107,7 +105,7 @@
 </form>
 
 {% if is_linked and can_unlink %}
-<form method="post" action="{% url 'syncope:org_member_unlink' url_username form.instance.pk %}" class="inline-form danger-zone" onclick="return confirm('Unlink this member from their account? They will lose access associated with this connection.')">
+<form method="post" action="{% url 'syncope:org_member_unlink' url_username form.instance.pk %}" class="inline-form danger-zone" data-confirm="Unlink this member from their account? They will lose access associated with this connection.">
     {% csrf_token %}
     <button type="submit" class="btn btn-danger">Unlink</button>
 </form>
@@ -131,5 +129,6 @@
 
     form.addEventListener('input', () => saveBarCtl.sync());
     form.addEventListener('change', () => saveBarCtl.sync());
+    saveBarCtl.sync();
 </script>
 {% endblock %}

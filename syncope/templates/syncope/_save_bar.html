@@ -3,10 +3,10 @@
     <span id="clean-actions">
         <a href="{{ url }}" class="btn btn-primary">Return</a>
     </span>
-    <span id="dirty-actions" style="display:none;">
+    <span id="dirty-actions" class="save-bar-dirty" hidden>
         <button type="submit" form="{{ form_id }}" id="save-submit-btn" class="btn btn-primary">Save</button>
         <span class="dirty-note"></span>
-        <button type="button" id="discard-btn" class="btn btn-secondary">Discard</button>
+        <button type="button" id="discard-btn" class="btn btn-secondary save-bar-discard">Discard</button>
     </span>
     {% else %}
     <a href="{{ url }}" class="btn btn-primary">Return</a>

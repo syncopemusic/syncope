@@ -20,7 +20,7 @@
             {% if editable %}<td class="drag-handle-cell"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span></td>{% endif %}
             <td class="col-num">{{ forloop.counter }}</td>
             <td>{{ row.icon }}</td>
-            <td class="col-main"><a href="{{ row.share_url|default:row.url }}" target="_blank" rel="noopener noreferrer">{{ row.url }}</a></td>
+            <td class="col-main">{% if editable %}{{ row.url }}{% else %}<a href="{{ row.share_url|default:row.url }}" target="_blank" rel="noopener noreferrer">{{ row.url }}</a>{% endif %}</td>
             <td class="col-main">{{ row.desc }}</td>
             {% if related_column_label %}<td>-</td>{% endif %}
             {% if editable %}
@@ -38,13 +38,13 @@
             {% if editable %}<td class="drag-handle-cell"></td>{% endif %}
             <td class="col-num"></td>
             <td>{{ row.icon }}</td>
-            <td class="col-main"><a href="{{ row.share_url|default:row.url }}" target="_blank" rel="noopener noreferrer">{{ row.url }}</a></td>
+            <td class="col-main">{% if editable %}{{ row.url }}{% else %}<a href="{{ row.share_url|default:row.url }}" target="_blank" rel="noopener noreferrer">{{ row.url }}</a>{% endif %}</td>
             <td class="col-main">{{ row.desc }}</td>
             <td>
                 {% if row.related_type == 'event' %}
-                    <a href="{% url 'syncope:event_detail' url_username row.related_obj.pk %}">{{ row.related_obj }} ({% dt row.related_obj.started_at "date-year" %})</a>
+                    {% if editable %}{{ row.related_obj }} ({% dt row.related_obj.started_at "date-year" %}){% else %}<a href="{% url 'syncope:event_detail' url_username row.related_obj.pk %}">{{ row.related_obj }} ({% dt row.related_obj.started_at "date-year" %})</a>{% endif %}
                 {% elif row.related_type == 'song' %}
-                    <a href="{% url 'syncope:song_detail' url_username row.related_obj.pk %}">{{ row.related_obj.title }}</a>
+                    {% if editable %}{{ row.related_obj.title }}{% else %}<a href="{% url 'syncope:song_detail' url_username row.related_obj.pk %}">{{ row.related_obj.title }}</a>{% endif %}
                 {% endif %}
             </td>
             {% if editable %}<td></td>{% endif %}

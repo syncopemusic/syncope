@@ -993,15 +993,17 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
         return context
 
     def form_valid(self, form):
+        pf = MembershipPeriodFormSet(
+            self.request.POST, instance=self.person, prefix='periods',
+            user=self.customuser, person=self.person,
+            queryset=MembershipPeriod.objects.filter(person=self.person, user=self.customuser),
+        )
+        if not pf.is_valid():
+            # get_context_data rebuilds the formset from POST, so the period errors show on the page.
+            return self.render_to_response(self.get_context_data(form=form))
         with transaction.atomic():
             # 1. save period formset
-            pf = MembershipPeriodFormSet(
-                self.request.POST, instance=self.person, prefix='periods',
-                user=self.customuser, person=self.person,
-                queryset=MembershipPeriod.objects.filter(person=self.person, user=self.customuser),
-            )
-            if pf.is_valid():
-                pf.save()
+            pf.save()
 
             # 2. update person info
             self._update_person_info(form)
@@ -1257,6 +1259,7 @@ def profile_account(request, username):
     action = request.POST.get("action")
     username_form = UsernameChangeForm(request.POST if action == "username" else None, instance=request.user)
     password_form = PasswordChangeForm(request.user, request.POST if action == "password" else None)
+    password_form.fields["new_password2"].help_text = ""
     if username_form.is_bound and username_form.is_valid():
         user = username_form.save()
         messages.success(request, "Username updated.")
@@ -1280,6 +1283,9 @@ class ProfileDetailView(OrgMemberDetailView):
         if request.user.is_authenticated and request.user.username != kwargs["username"]:
             return HttpResponseForbidden()
         return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return Person.objects.select_related("owner__user")  # personal Person has no org membership to filter on
 
     def get_object(self, queryset=None):
         return get_object_or_404(self.get_queryset(), user=self.request.user, owner__isnull=True)

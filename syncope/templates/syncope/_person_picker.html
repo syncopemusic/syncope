@@ -2,8 +2,8 @@
     <label>{{ label }}</label>
     {{ field }}
     <div class="link-row">
-        <p style="position:relative; flex: 1 1 auto; margin: 0;">
-            <input type="text" class="person-picker-input" value="{{ current|default:'' }}" placeholder="Search {{ label }}" autocomplete="off" style="width:100%; box-sizing:border-box;">
+        <p class="search-field">
+            <input type="text" class="person-picker-input" value="{{ current|default:'' }}" placeholder="Search {{ label }}" autocomplete="off">
             <span class="search-spinner person-picker-spinner"></span>
         </p>
     </div>

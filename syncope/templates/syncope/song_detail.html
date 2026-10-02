@@ -14,7 +14,7 @@
     </h1>
     {% if can_manage %}<a href="{%  url 'syncope:song_meta_edit' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
-<div class="visually-hidden">{% csrf_token %}</div>
+<div hidden>{% csrf_token %}</div>
 
 {% url 'syncope:song_list' url_username as song_list_url %}
 
@@ -112,14 +112,28 @@
     {% if can_manage %}<a href="{% url 'syncope:song_lyrics_edit' url_username song.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% if song.lyrics %}<div>{{ song.lyrics|linebreaks }}</div>{% endif %}
+<div class="stack">
 {% for t in song.lyricstranslation_set.all %}
-    <h4>{{ t.languagecode }}{% if t.translator %} - {{ t.translator }}{% endif %}</h4>
-    <div>{{ t.translation|linebreaks }}</div>
+    <details class="filter-panel">
+        <summary>
+            <span>{{ t.languagecode }}{% if t.translator %} - {{ t.translator }}{% endif %}</span>
+            <svg class="filter-toggle-icon" viewBox="0 0 24 24" width="18" height="18" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </summary>
+        <div>{{ t.translation|linebreaks }}</div>
+    </details>
 {% endfor %}
+</div>
 {% endif %}
 
+{% if events or can_manage %}
+<div class="section-header">
+    <h3>Events ({{ events|length }})</h3>
+    {% if can_manage %}<a href="{% url 'syncope:song_events_edit' url_username song.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
 {% if events %}
-<h3>Events ({{ events|length }})</h3>
 <div class="table-container">
 <table id="events-table" class="table">
     <thead>
@@ -146,10 +160,12 @@
 </table>
 </div>
 {% endif %}
+{% endif %}
 
 {% include "syncope/_save_bar.html" with url=return_url|default:song_list_url %}
 
 {% block extra_js %}
+<script src="{% static 'syncope/share.js' %}"></script>
 <script>
 (function () {
     // Sort events table
@@ -187,57 +203,7 @@
         function (a, b, asc) { return asc ? a.localeCompare(b) : b.localeCompare(a); }
     );
 
-    // Share button
-    function createShareHandler(btn, resultSpan, shareData) {
-        return function () {
-            btn.disabled = true;
-            if (resultSpan) resultSpan.textContent = 'Copying...';
-            fetch('/share/create/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                },
-                body: JSON.stringify(shareData),
-            })
-            .then(function (response) {
-                if (!response.ok) throw new Error('Request failed');
-                return response.json();
-            })
-            .then(function (data) {
-                var shareUrl = window.location.origin + '/' + data.share_id + '/';
-                navigator.clipboard.writeText(shareUrl).then(function () {
-                    if (resultSpan) {
-                        resultSpan.textContent = 'Copied';
-                        setTimeout(function () { resultSpan.textContent = ''; }, 3000);
-                    } else {
-                        alert('Share link copied:\n' + shareUrl);
-                    }
-                }).catch(function () {
-                    if (resultSpan) {
-                        resultSpan.textContent = 'Copied';
-                        setTimeout(function () { resultSpan.textContent = ''; }, 3000);
-                    } else {
-                        alert('Share link:\n' + shareUrl);
-                    }
-                });
-            })
-            .catch(function () {
-                if (resultSpan) resultSpan.textContent = 'Failed';
-                else alert('Failed to generate share link');
-            })
-            .finally(function () { btn.disabled = false; });
-        };
-    }
-
-    var shareBtn = document.getElementById('share-btn');
-    if (shareBtn) {
-        shareBtn.addEventListener('click', createShareHandler(
-            shareBtn,
-            document.getElementById('share-result'),
-            { type: 'song', id: {{ song.pk }} }
-        ));
-    }
+    initShareButton({ type: 'song', id: {{ song.pk }} });
 }());
 </script>
 {% endblock %}

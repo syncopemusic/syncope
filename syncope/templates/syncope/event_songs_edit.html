@@ -2,41 +2,15 @@
 {% load static dt_tags %}
 {% block title %}Songs - {% event_label event %}{% endblock %}
 
-{% block extra_css %}
-<style>
-    .song-index { text-align: center; width: 1.3rem; padding-inline: 0; }
-    .song-title { font-weight: 500; overflow-wrap: break-word; }
-    .song-subline {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: 0.5rem;
-        font-size: var(--font-size-sm);
-        color: var(--color-text-muted);
-        overflow-wrap: break-word;
-    }
-    .song-meta { white-space: nowrap; color: var(--color-text-muted); }
-    .song-resources { text-align: center; width: 1.4rem; padding-inline: 0; }
-    .song-actions { white-space: nowrap; text-align: center; width: 2.2rem; padding-inline-start: 0; }
-    tr.row-moved { background-color: var(--color-info-bg); }
-
-    @media (max-width: 768px) {
-        #songs-content {
-            padding-bottom: 4rem;
-        }
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 
 <h1>Songs - {% event_label event %}</h1>
 
-<div id="songs-content">
+<div>
     <form method="post" id="songs-form">
         {% csrf_token %}
         <input type="hidden" id="song-order-input" name="song_order" value="">
-        <div class="table-container" style="max-width:42rem;">
+        <div class="table-container narrow">
             <table class="table songs-table">
                 <thead>
                     <tr>
@@ -50,22 +24,21 @@
                 <tbody id="songs-tbody">
                     {% for eventsong in eventsongs %}
                         {% include "syncope/_song_row.html" %}
-                    {% empty %}
-                    <tr id="no-songs-row"><td colspan="{% if is_admin %}5{% else %}4{% endif %}">No songs added yet.</td></tr>
                     {% endfor %}
+                    <tr class="empty-row"><td colspan="{% if is_admin %}5{% else %}4{% endif %}">No songs added yet.</td></tr>
                 </tbody>
             </table>
         </div>
     </form>
 
     {% if is_admin %}
-    <div id="add-songs" style="max-width:42rem;">
+    <div id="add-songs" class="narrow">
         <h3>Add song</h3>
-        <p style="position:relative;">
-            <input type="text" id="song-search-input" value="{{ song_search_q }}" placeholder="Search by ID, title, composer, or keywords" style="max-width:100%; width:100%; box-sizing:border-box;">
+        <p class="search-field">
+            <input type="text" id="song-search-input" value="{{ song_search_q }}" placeholder="Search by ID, title, composer, or keywords">
             <span class="search-spinner" id="song-search-spinner"></span>
         </p>
-        <p style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+        <p class="link-row">
             <button type="button" id="song-search-clear" class="btn btn-secondary">Clear</button>
             <span id="song-search-count" class="result-count"></span>
             <button type="submit" form="songs-form" name="action" value="new_song" class="btn btn-primary" title="Save current changes and create a new song">+ Add</button>
@@ -84,214 +57,41 @@
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/staged-list.js' %}"></script>
 <script>
     const songsTbody = document.getElementById('songs-tbody');
-    const songOrderInput = document.getElementById('song-order-input');
+    const songRows = () => Array.from(songsTbody.querySelectorAll('tr.song-row'));
+    const keptIds = () => songRows().filter(r => r.dataset.id && !r.classList.contains('pending-remove')).map(r => r.dataset.id);
+    const originalOrder = keptIds();
+    // existing rows in their current order vs. the order they were rendered in (staged and removed rows ignored)
+    const expectedOrder = () => originalOrder.filter(pk => keptIds().includes(pk));
 
-    function escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str == null ? '' : str;
-        return div.innerHTML;
-    }
-
-    function suppressEnterSubmit(input) {
-        if (!input) return;
-        input.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') e.preventDefault();
-        });
-    }
-
-    function removeEmptyRow() {
-        document.getElementById('no-songs-row')?.remove();
-    }
-
-    function renumberSongs() {
-        Array.from(songsTbody.querySelectorAll('tr.song-row')).forEach((row, i) => {
-            const cell = row.querySelector('.song-index');
-            if (cell) cell.textContent = i + 1;
-        });
-    }
-
-    function currentExistingOrder() {
-        return Array.from(songsTbody.querySelectorAll('tr.song-row[data-eventsong-id]'))
-            .filter(row => !row.classList.contains('pending-remove'))
-            .map(row => row.dataset.eventsongId);
-    }
-
-    let originalOrderList = [];
-    function snapshotOriginalOrder() {
-        originalOrderList = currentExistingOrder();
-    }
-
-    function orderChanged() {
-        const current = currentExistingOrder();
-        const currentSet = new Set(current);
-        const expected = originalOrderList.filter(pk => currentSet.has(pk));
-        return current.some((pk, i) => pk !== expected[i]);
-    }
-
-    function paintRowMoved() {
-        const current = currentExistingOrder();
-        const currentSet = new Set(current);
-        const expected = originalOrderList.filter(pk => currentSet.has(pk));
-        const expectedIndex = new Map(expected.map((pk, i) => [pk, i]));
-        current.forEach((pk, i) => {
-            const row = songsTbody.querySelector(`tr[data-eventsong-id="${pk}"]`);
-            if (row) row.classList.toggle('row-moved', expectedIndex.get(pk) !== i);
-        });
-    }
-
-    function updateSongOrderField() {
-        const tokens = Array.from(songsTbody.querySelectorAll('tr.song-row'))
-            .filter(row => !row.classList.contains('pending-remove'))
-            .map(row => row.classList.contains('staged-add') ? `new-${row.dataset.songId}` : `es-${row.dataset.eventsongId}`);
-        songOrderInput.value = tokens.join(',');
-    }
-
-    function countUnsavedChanges() {
-        let count = songsTbody.querySelectorAll('tr.staged-add').length;
-        count += songsTbody.querySelectorAll('tr.pending-remove').length;
-        if (orderChanged()) count += 1;
-        return count;
-    }
-
-    const saveBarCtl = initSaveBar({
+    const stagedList = initStagedList({
         formId: 'songs-form',
-        countUnsavedChanges,
-        beforeSync: () => { renumberSongs(); updateSongOrderField(); paintRowMoved(); },
-        onDiscard: () => {
-            songsTbody.querySelectorAll('tr.staged-add').forEach(row => row.remove());
-            songsTbody.querySelectorAll('tr.pending-remove').forEach(row => {
-                row.classList.remove('pending-remove');
-                row.querySelector('.pending-remove-input')?.remove();
-                const btn = row.querySelector('.btn-remove');
-                if (btn) { btn.textContent = '×'; btn.title = 'Remove from event'; }
-            });
-            originalOrderList.forEach(pk => {
-                const row = songsTbody.querySelector(`tr[data-eventsong-id="${pk}"]`);
-                if (row) songsTbody.appendChild(row);
-            });
-            if (!songsTbody.querySelector('tr.song-row') && !document.getElementById('no-songs-row')) {
-                songsTbody.insertAdjacentHTML('beforeend', `<tr id="no-songs-row"><td colspan="{% if is_admin %}5{% else %}4{% endif %}">No songs added yet.</td></tr>`);
-            }
-        },
-        afterDiscard: () => runSongSearch(songSearchInput ? songSearchInput.value : ''),
-    });
-
-    initDragReorder(songsTbody, { rowSelector: 'tr.song-row', onDrop: () => saveBarCtl.sync() });
-
-    // --- Remove / undo ---
-    function toggleRemove(row) {
-        const pk = row.dataset.eventsongId;
-        if (!pk) return;
-        const btn = row.querySelector('.btn-remove');
-        const pending = row.classList.toggle('pending-remove');
-        if (pending) {
-            row.insertAdjacentHTML('beforeend', `<input type="hidden" class="pending-remove-input" name="remove_${pk}" value="1">`);
-            btn.textContent = '↺';
-            btn.title = 'Undo removal';
-        } else {
-            row.querySelector('.pending-remove-input')?.remove();
-            btn.textContent = '×';
-            btn.title = 'Remove from event';
-        }
-        saveBarCtl.sync();
-    }
-
-    songsTbody.addEventListener('click', function(e) {
-        const removeBtn = e.target.closest('.btn-remove');
-        if (!removeBtn) return;
-        const row = removeBtn.closest('tr');
-        if (row.classList.contains('staged-add')) {
-            row.remove();
-            saveBarCtl.sync();
-            runSongSearch(songSearchInput.value);
-            return;
-        }
-        toggleRemove(row);
-    });
-
-    // --- Search / staged add ---
-    function buildStagedSongRow(id, title, composer, arranger, resources, internalId) {
-        const tr = document.createElement('tr');
-        tr.className = 'song-row staged-add';
-        tr.dataset.songId = id;
-        const subline = composer ? escapeHtml(composer) : (arranger ? escapeHtml(arranger) : '<small>No composer</small>');
-        const meta = internalId ? `<small class="song-meta">#${escapeHtml(internalId)}</small>` : '';
-        tr.innerHTML = `
+        tbodyId: 'songs-tbody',
+        addField: 'add_song',
+        prefix: 'song',
+        queryParam: 'song_q',
+        excludeKey: 'songId',
+        rowClass: 'song-row',
+        searchUrl: "{% url 'syncope:event_songs_search' url_username event.pk %}",
+        buildRow: (btn, info) => `
             <td class="drag-handle-cell"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span></td>
             <td class="song-index"></td>
-            <td class="song-cell col-main">
-                <div class="song-title">${escapeHtml(title)}</div>
-                <div class="song-subline"><span>${subline}</span>${meta}</div>
-            </td>
-            <td class="song-resources" title="Event resources for song">${escapeHtml(resources || '0')}</td>
-            <td class="song-actions"><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>
-        `;
-        return tr;
-    }
-
-    function currentSongIds() {
-        return Array.from(songsTbody.querySelectorAll('tr.song-row'))
-            .map(row => row.dataset.songId)
-            .filter(Boolean);
-    }
-
-    const songSearchInput = document.getElementById('song-search-input');
-    const songSearchResults = document.getElementById('song-search-results');
-    const songSearchCount = document.getElementById('song-search-count');
-    let songSearchTimeout;
-
-    const songSearchSpinner = document.getElementById('song-search-spinner');
-
-    function beginSongSpinner() {
-        songSearchSpinner.classList.add('is-active');
-    }
-
-    function endSongSpinner() {
-        songSearchSpinner.classList.remove('is-active');
-    }
-
-    function runSongSearch(query) {
-        const exclude = currentSongIds().join(',');
-        const url = `{% url 'syncope:event_songs_search' url_username event.pk %}?song_q=${encodeURIComponent(query)}&exclude=${encodeURIComponent(exclude)}`;
-        fetch(url).then(r => r.text()).then(html => {
-            endSongSpinner();
-            songSearchResults.innerHTML = html;
-            relocateResultCount(songSearchResults, songSearchCount);
-        });
-    }
-
-    if (songSearchInput) {
-        songSearchInput.addEventListener('input', function() {
-            clearTimeout(songSearchTimeout);
-            beginSongSpinner();
-            songSearchTimeout = setTimeout(() => runSongSearch(this.value), 1000);
-        });
-        suppressEnterSubmit(songSearchInput);
-    }
-
-    document.getElementById('song-search-clear')?.addEventListener('click', function() {
-        clearTimeout(songSearchTimeout);
-        songSearchInput.value = '';
-        songSearchResults.innerHTML = '';
-        runSongSearch('');
+            <td class="col-main">${info}</td>
+            <td class="song-resources" title="Event resources for song">${escapeHtml(btn.dataset.resources || '0')}</td>
+            <td class="song-actions"><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>`,
+        extraCount: () => (keptIds().some((pk, i) => pk !== expectedOrder()[i]) ? 1 : 0),
+        afterChange: () => {
+            songRows().forEach((row, i) => { row.querySelector('.song-index').textContent = i + 1; });
+            document.getElementById('song-order-input').value = songRows()
+                .filter(r => !r.classList.contains('pending-remove'))
+                .map(r => r.classList.contains('staged-add') ? `new-${r.dataset.songId}` : `es-${r.dataset.id}`).join(',');
+            const expected = expectedOrder();
+            keptIds().forEach((pk, i) => songsTbody.querySelector(`tr[data-id="${pk}"]`).classList.toggle('row-moved', pk !== expected[i]));
+        },
+        onDiscardExtra: () => originalOrder.forEach(pk => songsTbody.appendChild(songsTbody.querySelector(`tr[data-id="${pk}"]`))),
     });
-
-    songSearchResults?.addEventListener('click', function(e) {
-        const btn = e.target.closest('.btn-secondary');
-        if (!btn) return;
-        const row = btn.closest('.search-result-row');
-        removeEmptyRow();
-        songsTbody.appendChild(buildStagedSongRow(
-            btn.dataset.id, btn.dataset.title, btn.dataset.composer, btn.dataset.arranger, btn.dataset.resources, btn.dataset.internalId
-        ));
-        row?.remove();
-        saveBarCtl.sync();
-    });
-
-    relocateResultCount(songSearchResults, songSearchCount);
-    snapshotOriginalOrder();
-    saveBarCtl.sync();
+    initDragReorder(songsTbody, { rowSelector: 'tr.song-row', onDrop: stagedList.sync });
 </script>
 {% endblock %}

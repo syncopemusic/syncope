@@ -2,22 +2,6 @@
 {% load static dt_tags %}
 {% block title %}Details - {% event_label object %}{% endblock %}
 
-{% block extra_css %}
-<style>
-    @media (max-width: 768px) {
-        #event-meta-form {
-            padding-block-end: 4rem;
-        }
-    }
-
-    @media (min-width: 769px) {
-        .save-bar {
-            margin-block-start: 2rem;
-        }
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 
 {% if messages %}
@@ -75,5 +59,6 @@
 
     form.addEventListener('input', () => saveBarCtl.sync());
     form.addEventListener('change', () => saveBarCtl.sync());
+    saveBarCtl.sync();
 </script>
 {% endblock %}

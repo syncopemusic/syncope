@@ -1,11 +1,4 @@
-/* =====================================================
-   Design tokens & fonts
-   To restyle the app (colors, fonts, spacing, buttons), edit
-   the values below - see docs/FRONTEND_GUIDE.md for the guide.
-
-   Custom properties and @font-face stay unlayered (outside @layer) so they
-   remain universally available regardless of cascade layer order below.
-   ===================================================== */
+/* Tokens & fonts: edit :root to restyle (docs/FRONTEND_GUIDE.md); both stay unlayered. */
 /* latin-ext */
 @font-face {
   font-family: 'EB Garamond';
@@ -24,15 +17,25 @@
   src: url("fonts/eb-garamond-latin.woff2") format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
-
+/* latin-ext */
 @font-face {
-    font-family: "Inter";
-    src: url("fonts/inter-latin.woff2") format("woff2");
-    font-weight: 400 500;
-    font-style: normal;
-    font-display: swap;
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url("fonts/inter-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
-
+/* latin */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url("fonts/inter-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* Theme seeds: bg, surface, text, primary, danger, ink, fonts, attendance-0..4. Rules use tokens, never raw values. */
 :root {
     /* Color */
     --color-bg: #f4f1ea;
@@ -48,16 +51,17 @@
     --color-primary-hover: #a8895e;
     --color-danger: #c0392b;
 
-    /* Shared outline used by the outline-based focus idiom (links, buttons,
-       interactive table cells). Text form fields intentionally use a
-       different idiom - see the comment above a:focus-visible below. */
+    /* Outline focus idiom for links, buttons and cells; text fields use the box-shadow idiom instead. */
     --focus-ring: 2px solid var(--color-primary);
     --focus-ring-offset: 2px;
 
-    /* Dedicated dark-surface color for the sidebar and other dark UI chrome
-       (table headers) - kept separate from --color-text so a "text" token
-       never doubles as a background. */
+    /* Dark chrome (sidebar, table headers); not --color-text so text is never a background. */
     --color-ink: #3e3a34;
+    --ink-fg: color-mix(in srgb, var(--color-text-on-accent) 85%, transparent);
+    --ink-fg-muted: color-mix(in srgb, var(--color-text-on-accent) 70%, transparent);
+    --ink-fg-faint: color-mix(in srgb, var(--color-text-on-accent) 50%, transparent);
+    --ink-line: color-mix(in srgb, var(--color-text-on-accent) 10%, transparent);
+    --ink-active: color-mix(in srgb, var(--color-text-on-accent) 20%, transparent);
 
     --color-success-bg: #e8f5e9;
     --color-success-border: #c8e6c9;
@@ -72,9 +76,7 @@
     --color-info-border: #bbdefb;
     --color-info-text: #0c5460;
 
-    /* Attendance status colors, keyed by the real AttendanceType pk (0=TBD, 1=Present,
-       2=Work/School, 3=Illness, 4=Private/Vacation). Shared by the per-event attendance
-       subpage's status chips and the poll/dashboard attendance matrices. */
+    /* Attendance colours by AttendanceType pk (0 TBD, 1 Present, 2 Work, 3 Illness, 4 Private); keep order. */
     --color-attendance-0: #dfe6e9;
     --color-attendance-1: #c8f7c5;
     --color-attendance-2: #ffeaa7;
@@ -88,7 +90,9 @@
     --font-size-xs: 0.8rem;
     --font-size-sm: 0.85rem;
     --font-size-md: 0.9rem;
+    --font-size-lg: 1.1rem;
     --font-size-xl: 1.5rem;
+    --tracking-caps: 0.04em;
 
     /* Spacing */
     --space-1: 4px;
@@ -102,21 +106,23 @@
     --radius-sm: 6px;
     --radius-md: 10px;
     --radius-lg: 999px;
-    --shadow-sm: 0 1px 3px rgba(44, 42, 40, 0.08);
-    --shadow-md: 0 2px 8px rgba(44, 42, 40, 0.1);
+    --shadow-sm: 0 1px 3px color-mix(in srgb, var(--color-text) 8%, transparent);
+    --shadow-md: 0 2px 8px color-mix(in srgb, var(--color-text) 10%, transparent);
     --transition-fast: 0.2s ease;
     --sidebar-width: 250px;
+    --field-max: 480px;
+    --content-narrow: 42rem;
+    --content-max: 1200px;
+    --tap-target: 44px;
+    --state-fade: 0.55;
+    --save-bar-clearance: 4rem;
 
     /* Stacking */
     --z-sticky: 1;
     --z-mobile-topbar: 1001;
     --z-mobile-drawer: 1000;
 
-    /* Matrix/pivot table sizing (attendance grids) - one shared dimension
-       replacing the three divergent hardcoded values that used to live in
-       poll_detail.html/poll_attendance.html/attendance_dashboard.html. Used
-       as a floor for event columns (poll_attendance.html's headers hold
-       multi-line text and need to grow past it) and as the fixed chip size. */
+    /* Attendance grid cell size: event-column floor and chip size. */
     --table-matrix-size: 2.5rem;
 }
 
@@ -126,7 +132,7 @@
     }
 }
 
-@layer reset, base, layout, components, utilities;
+@layer reset, base, layout, components, state, utilities;
 
 @layer reset {
     * {
@@ -136,6 +142,11 @@
     body {
         margin: 0;
     }
+
+    /* The hidden attribute always wins over component display rules. */
+    [hidden] {
+        display: none !important;
+    }
 }
 
 @layer base {
@@ -143,7 +154,7 @@
         font-family: var(--font-body);
         color: var(--color-text);
         background-color: var(--color-bg);
-        background-image: radial-gradient(rgba(44, 42, 40, 0.05) 1px, transparent 1px);
+        background-image: radial-gradient(color-mix(in srgb, var(--color-text) 5%, transparent) 1px, transparent 1px);
         background-size: 6px 6px;
     }
 
@@ -170,14 +181,8 @@
         text-decoration: underline;
     }
 
-    /* Two focus idioms by design: outline+:focus-visible here for click-to-activate
-       controls (keyboard-only ring), box-shadow ring+:focus for text fields (ring on
-       any focus, since users are about to type) - see .form-group input:focus etc.
-       in the Forms section. Don't merge them. */
-    a:focus-visible,
-    input:focus-visible,
-    select:focus-visible,
-    textarea:focus-visible {
+    /* Two focus idioms, don't merge: outline on :focus-visible, box-shadow on text-field :focus. */
+    :where(a, button, input, select, textarea, summary, [tabindex], .btn, .table-cell-attendance):focus-visible {
         outline: var(--focus-ring);
         outline-offset: var(--focus-ring-offset);
     }
@@ -188,14 +193,14 @@
         display: grid;
         grid-template-columns: var(--sidebar-width) 1fr;
         grid-template-areas: "sidebar main";
-        min-height: 100vh;
+        min-height: 100dvh;
         transition: grid-template-columns var(--transition-fast);
     }
 
     .sidebar {
         grid-area: sidebar;
         background-color: var(--color-ink);
-        color: rgba(255, 255, 255, 0.85);
+        color: var(--ink-fg);
         padding: 0;
         overflow-y: auto;
         transition: transform var(--transition-fast);
@@ -207,7 +212,7 @@
         display: block;
         padding: var(--space-5) var(--space-4) var(--space-4);
         text-align: center;
-        border-block-end: 1px solid rgba(255, 255, 255, 0.1);
+        border-block-end: 1px solid var(--ink-line);
         margin-block-end: var(--space-3);
         text-decoration: none;
     }
@@ -222,15 +227,6 @@
         font-size: var(--font-size-xl);
         color: var(--color-text-on-accent);
         margin: var(--space-1) 0 0;
-    }
-
-    .sidebar-user {
-        padding-inline: var(--space-4);
-        padding-block-end: var(--space-3);
-        font-size: var(--font-size-sm);
-        color: rgba(255, 255, 255, 0.6);
-        border-block-end: 1px solid rgba(255, 255, 255, 0.08);
-        margin: 0 0 var(--space-2);
     }
 
     .main {
@@ -255,7 +251,7 @@
     }
 
     .menu-links a {
-        color: rgba(255, 255, 255, 0.8);
+        color: var(--ink-fg);
         text-decoration: none;
         padding: var(--space-2) var(--space-3);
         border-radius: var(--radius-sm);
@@ -264,19 +260,19 @@
     }
 
     .menu-links a:hover {
-        background-color: rgba(255, 255, 255, 0.1);
+        background-color: var(--ink-line);
         color: var(--color-text-on-accent);
     }
 
     .menu-links a.active,
-    .org-submenu a.active {
+    .org-submenu a.active,
+    .org-item.active > a {
         font-weight: 500;
-        background-color: rgba(255, 255, 255, 0.2);
+        background-color: var(--ink-active);
         color: var(--color-text-on-accent);
     }
 
-    /* .nav-badge composes with .badge (@layer components) for the pill shape -
-       this just overrides color/size/spacing for the dark sidebar. */
+    /* Pill from .badge; colour and size overridden for the dark sidebar. */
     .nav-badge {
         background-color: var(--color-primary);
         color: var(--color-text-on-accent);
@@ -291,9 +287,7 @@
         padding: var(--space-3) var(--space-3) var(--space-1);
         font-size: var(--font-size-2xs);
         font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: rgba(255, 255, 255, 0.4);
+        color: var(--ink-fg-faint);
     }
 
     .org-list {
@@ -304,12 +298,6 @@
         margin-block-end: var(--space-1);
     }
 
-    .org-item.active > a {
-        background-color: rgba(255, 255, 255, 0.2);
-        color: var(--color-text-on-accent);
-    }
-
-
     .org-submenu {
         padding-inline-start: var(--space-4);
         margin-block-start: 2px;
@@ -318,18 +306,18 @@
     .org-submenu a {
         font-size: var(--font-size-sm);
         padding: 0.35rem var(--space-3);
-        color: rgba(255, 255, 255, 0.65);
+        color: var(--ink-fg-muted);
     }
 
     .org-empty {
         padding: var(--space-2) var(--space-3);
-        color: rgba(255, 255, 255, 0.5);
+        color: var(--ink-fg-faint);
         font-size: var(--font-size-sm);
     }
 
     .sidebar-footer {
         padding: var(--space-3) var(--space-4);
-        border-block-start: 1px solid rgba(255, 255, 255, 0.08);
+        border-block-start: 1px solid var(--ink-line);
         margin-block-start: auto;
     }
 
@@ -337,17 +325,8 @@
         display: inline;
     }
 
-    .sidebar-guest-links {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--space-2);
-        border-block-start: none;
-        margin-block-start: 0;
-    }
-
     .main-content {
-        padding: 2rem;
+        padding: var(--space-6);
         overflow-y: auto;
         display: flex;
         flex-direction: column;
@@ -355,11 +334,7 @@
         min-width: 0;
     }
 
-    /* Pages whose <h1> sits inside .section-header lose the browser's default
-       h1 top margin (.section-header h1 { margin: 0 }), while plain <h1>s
-       elsewhere keep it - making page headers sit at different heights purely
-       by accident of markup. Zero it everywhere so every page's first heading
-       lines up regardless of whether it's wrapped in .section-header. */
+    /* Zero the first h1's top margin so headings align whether or not they sit in .section-header. */
     .main-content h1:first-of-type {
         margin-block-start: 0;
     }
@@ -369,7 +344,7 @@
     }
 
     .footer {
-        padding: 1.5rem 2.5rem;
+        padding: var(--space-5) 2.5rem;
         font-size: var(--font-size-sm);
         color: var(--color-text-muted);
     }
@@ -380,11 +355,11 @@
         inline-size: 60px;
         block-size: 1.5px;
         background: var(--color-primary);
-        margin-block-end: 1rem;
+        margin-block-end: var(--space-4);
     }
 
     .footer-info {
-        max-inline-size: 1200px;
+        max-inline-size: var(--content-max);
     }
 
     .mobile-toggle {
@@ -399,7 +374,7 @@
 
     .mobile-topbar:has(.breadcrumbs) {
         display: block;
-        padding: 0.75rem 2rem 0;
+        padding: var(--space-3) var(--space-6) 0;
     }
 
     .mobile-topbar .breadcrumbs {
@@ -415,11 +390,11 @@
         .mobile-topbar {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: var(--space-2);
             position: sticky;
             top: 0;
             z-index: var(--z-mobile-topbar);
-            padding: 0.5rem 1rem;
+            padding: var(--space-2) var(--space-4);
             background-color: var(--color-surface);
             border-block-end: 1px solid var(--color-border-subtle);
         }
@@ -446,23 +421,23 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            font-size: 1.15rem;
-            margin: 0.5rem 0;
+            font-size: var(--font-size-lg);
+            margin: var(--space-2) 0;
         }
 
         .main-content {
-            padding: 1rem;
+            padding: var(--space-4);
         }
 
         .footer {
-            padding: 1rem;
+            padding: var(--space-4);
         }
 
         .sidebar {
             position: fixed;
             top: 0;
             left: 0;
-            height: 100vh;
+            height: 100dvh;
             width: var(--sidebar-width);
             transform: translateX(-100%);
             z-index: var(--z-mobile-drawer);
@@ -482,19 +457,7 @@
             color: var(--color-text-muted);
         }
 
-        .mobile-toggle:focus-visible {
-            outline: var(--focus-ring);
-            outline-offset: var(--focus-ring-offset);
-        }
-
-        .mobile-toggle.is-open {
-            color: var(--color-text-muted);
-        }
-
-        /* With the drawer open, the topbar's own bar must get out of the way instead of
-           painting over the sidebar's logo/brand row (it has a higher z-index so it wins
-           the paint order otherwise) - hide its background/breadcrumbs and pull the toggle
-           itself out to float above the drawer, on the right, clear of the sidebar's width. */
+        /* Drawer open: the topbar steps aside and the toggle floats above the drawer. */
         .grid-container.menu-visible .mobile-topbar {
             background-color: transparent;
             border-block-end-color: transparent;
@@ -513,6 +476,65 @@
             pointer-events: auto;
         }
     }
+
+    /* Anonymous pages: no sidebar; .auth also centers. */
+    .grid-container.no-sidebar {
+        grid-template-columns: 1fr;
+        grid-template-areas: "main";
+    }
+
+    .auth .main-content {
+        margin: auto;
+        width: min(100%, 24rem);
+        justify-content: center;
+    }
+
+    .auth-switch {
+        text-align: center;
+        padding-block-start: 40px; /* one extra button height between the submit and switch buttons */
+    }
+
+    .pw-field {
+        position: relative;
+        display: block;
+        max-inline-size: var(--field-max);
+    }
+    .pw-field > input {
+        inline-size: 100%;
+        padding-inline-end: 2.5rem;
+    }
+    .pw-eye {
+        position: absolute;
+        inset-block: 0;
+        inset-inline-end: 0;
+        padding-inline: var(--space-3);
+        border: 0;
+        background: none;
+        cursor: pointer;
+        opacity: 0.5;
+    }
+    .pw-eye[aria-pressed="true"] {
+        opacity: 1;
+    }
+
+    /* Password strength bar: red to blue; width and label carry the level too. */
+    .pw-meter {
+        max-inline-size: var(--field-max);
+        block-size: 8px;
+        border-radius: 4px;
+        background: var(--color-border);
+        overflow: hidden;
+    }
+    .pw-meter > span {
+        display: block;
+        block-size: 100%;
+        transition: width var(--transition-fast), background-color var(--transition-fast);
+    }
+
+    /* Same bottom spacing as .card-grid so the next h3 sits level. */
+    .dash-head {
+        margin-block-end: var(--space-5);
+    }
 }
 
 @layer components {
@@ -521,11 +543,11 @@
         bottom: 0;
         background-color: var(--color-bg-subtle);
         border-block-start: 1px solid var(--color-border);
-        padding: 0.75rem 1rem;
-        margin-block-start: 1rem;
+        padding: var(--space-3) var(--space-4);
+        margin-block-start: var(--space-4);
         display: flex;
         align-items: center;
-        gap: 1rem;
+        gap: var(--space-4);
     }
 
     .save-bar.dirty {
@@ -538,11 +560,8 @@
         color: var(--color-warning-text);
     }
 
-    /* Two known ID selectors (#dirty-actions / #discard-btn) live in
-       _save_bar.html and are driven by save-bar.js via getElementById -
-       left as IDs rather than converted to classes to avoid touching that
-       shared JS/partial pair, which is out of scope for this pass. */
-    #dirty-actions {
+    /* IDs are hooks for save-bar.js. */
+    .save-bar-dirty {
         display: contents;
     }
 
@@ -554,8 +573,19 @@
             z-index: var(--z-sticky);
         }
 
-        #discard-btn {
+        .save-bar-discard {
             margin-inline-start: auto;
+        }
+
+        /* Keep content clear of the fixed save bar. */
+        .main-content:has(.save-bar) {
+            padding-block-end: var(--save-bar-clearance);
+        }
+    }
+
+    @media (min-width: 769px) {
+        .save-bar {
+            margin-block-start: var(--space-6);
         }
     }
 
@@ -615,7 +645,7 @@
 
     .breadcrumbs li + li::before {
         content: "›";
-        margin: 0 0.4rem;
+        margin: 0 var(--space-2);
         color: var(--color-border);
     }
 
@@ -655,11 +685,6 @@
         text-decoration: none;
     }
 
-    .btn:focus-visible {
-        outline: var(--focus-ring);
-        outline-offset: var(--focus-ring-offset);
-    }
-
     .btn:disabled,
     .btn[disabled] {
         opacity: 0.6;
@@ -686,32 +711,31 @@
         background-color: var(--color-bg-subtle);
     }
 
-    /* .btn-secondary assumes a light surface (border/text/background made for that) -
-       override for the dark sidebar so Login/Logout stay visible. */
+    /* .btn-secondary is for light surfaces; restyled for the dark sidebar. */
     .sidebar .btn-secondary {
         background-color: var(--color-ink);
-        border-color: rgba(255, 255, 255, 0.3);
-        color: rgba(255, 255, 255, 0.75);
+        border-color: var(--ink-active);
+        color: var(--ink-fg-muted);
     }
 
     .sidebar .btn-secondary:hover {
-        background-color: rgba(255, 255, 255, 0.1);
+        background-color: var(--ink-line);
         color: var(--color-text-on-accent);
     }
 
-    /* Transparent button for use on dark surfaces (e.g. the matrix table's
-       thead) where .btn-secondary's light background would clash. */
+    /* Transparent button for dark surfaces (e.g. the matrix thead). */
     .btn-ghost {
         background-color: transparent;
         border-color: var(--color-text-on-accent);
         color: var(--color-text-on-accent);
-        padding: var(--space-1) var(--space-2);
+        padding-block: var(--space-1);
+        padding-inline: var(--space-2);
         border-radius: var(--radius-sm);
         font-size: var(--font-size-2xs);
     }
 
     .btn-ghost:hover {
-        background-color: rgba(255, 255, 255, 0.15);
+        background-color: var(--ink-line);
     }
 
     .btn-danger {
@@ -725,16 +749,17 @@
         color: var(--color-text-on-accent);
     }
 
-    /* Wraps a standalone, page-level destructive action (Delete, Unlink - not a
-       table-row Remove, which stays compact) that sits below a primary action
-       like Save, so it reads as a separate "danger zone" instead of crowding it.
-       Change the margin here to adjust the gap everywhere this class is used. */
+    /* Page-level destructive action below a primary action (Delete, Unlink); sets the gap. */
     .danger-zone {
         margin-block-start: calc(var(--space-6) * 2);
     }
 
-    .btn-link {
+    .btn-link,
+    .btn-remove {
         background: none;
+    }
+
+    .btn-link {
         color: var(--color-primary);
     }
 
@@ -749,18 +774,15 @@
     }
 
     .btn-remove {
-        background: none;
         color: var(--color-text-muted);
     }
 
     .btn-remove:hover {
-        background: none;
         color: var(--color-danger);
         text-decoration: underline;
     }
 
-    /* Row of grouped secondary actions (e.g. a poll/event page's "Edit title | Edit people | ..."
-       admin links) - distinct from .form-actions, which is specifically for a form's submit/cancel pair. */
+    /* Group of secondary actions (e.g. "Edit title | Edit people"); not a form submit/cancel pair. */
     .link-row {
         display: flex;
         align-items: center;
@@ -768,43 +790,32 @@
         flex-wrap: wrap;
     }
 
-    /* Feedback text next to a #share-btn (Copying.../Copied/Failed) - see FRONTEND_GUIDE.md. */
+    .link-row-end {
+        justify-content: flex-end;
+    }
+
+    /* Vertical rhythm for a column of blocks. */
+    .stack {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+    /* Feedback text next to #share-btn (Copying/Copied/Failed). */
     .share-result {
         margin-inline-start: var(--space-1);
         font-size: var(--font-size-sm);
         color: var(--color-text-muted);
     }
 
-    /* Floating variant of .share-result, positioned relative to a share button
-       inside a table cell instead of inline after it. */
-    .share-result-floating {
-        position: absolute;
-        top: 50%;
-        left: 100%;
-        transform: translateY(-50%);
-        white-space: nowrap;
-        font-size: var(--font-size-sm);
-        z-index: 10;
-        background: var(--color-surface);
-        padding: 2px 4px;
-        border-radius: var(--radius-sm);
-        box-shadow: var(--shadow-sm);
-    }
-
-    /* Button row for form submit/cancel pairs: secondary/cancel left, primary right
-       (DOM order drives this - put the cancel link/button before the primary one).
-       Capped at the same 480px as the form fields above it (see
-       .form-group input etc.) so on desktop the buttons sit at the form's own
-       right edge, not stretched out to the full page width. On mobile the row
-       drops that cap and spreads to the full screen width (cancel far left,
-       primary far right) - see the 768px media query. */
+    /* Form submit/cancel row: cancel first in the DOM (left), primary right; capped at --field-max. */
     .form-actions {
         display: flex;
         justify-content: flex-end;
         align-items: center;
         gap: var(--space-3);
         margin-block-start: var(--space-4);
-        max-inline-size: 480px;
+        max-inline-size: var(--field-max);
     }
 
     @media (max-width: 768px) {
@@ -820,7 +831,6 @@
     }
 
     .form-group label,
-    .form-label,
     form p label {
         display: block;
         margin-block-end: var(--space-1);
@@ -829,7 +839,6 @@
         color: var(--color-text-muted);
     }
 
-    .form-error,
     .error {
         color: var(--color-error-text);
         font-size: var(--font-size-sm);
@@ -843,42 +852,21 @@
         flex-wrap: wrap;
     }
 
-    .search-form input[type="text"] {
-        padding: var(--space-2) var(--space-3);
-        border: 1.5px solid var(--color-border);
+    /* Compact controls (filters, table notes): thin border; size/padding set per component. */
+    :where(.filter-field input, .filter-field select, .filter-sub-select, .table-comment-input) {
+        border: 1px solid var(--color-border);
         border-radius: var(--radius-sm);
-        font-family: var(--font-body);
         font-size: var(--font-size-md);
-        flex: 1;
-        min-width: 200px;
-        /* Overrides the generic `form p input[type="text"]` 480px cap (style.css below) that
-           otherwise still applies here when a .search-form row sits inside a <form>, shrinking
-           the input away from its flex-grown wrapper span and detaching the spinner from it. */
-        max-inline-size: none;
     }
 
-    .form-group input[type="text"],
-    .form-group input[type="email"],
-    .form-group input[type="password"],
-    .form-group input[type="url"],
-    .form-group input[type="number"],
-    .form-group input[type="date"],
-    .form-group input[type="tel"],
-    .form-group input[type="search"],
-    .form-group select,
-    .form-group textarea,
-    form p input[type="text"],
-    form p input[type="email"],
-    form p input[type="password"],
-    form p input[type="url"],
-    form p input[type="number"],
-    form p input[type="date"],
-    form p input[type="tel"],
-    form p input[type="search"],
-    form p select,
-    form p textarea {
+    /* One field recipe for every text-like control inside a form paragraph, .form-group or .search-field. */
+    :where(.form-group, form p, .search-field) :is(
+        input:is([type="text"], [type="email"], [type="password"], [type="url"], [type="number"], [type="date"], [type="datetime-local"], [type="time"], [type="tel"], [type="search"]),
+        select,
+        textarea
+    ) {
         inline-size: 100%;
-        max-inline-size: 480px;
+        max-inline-size: var(--field-max);
         padding: var(--space-2) var(--space-3);
         border: 1.5px solid var(--color-border);
         border-radius: var(--radius-sm);
@@ -889,15 +877,21 @@
         transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     }
 
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus,
-    form p input:focus,
-    form p select:focus,
-    form p textarea:focus {
+    :where(.form-group, form p, .search-field) :is(input, select, textarea):focus {
         outline: none;
         border-color: var(--color-primary);
         box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+    }
+
+    /* Wrapper for a live-search input; positions the spinner and keeps the input full width. */
+    .search-field {
+        position: relative;
+        flex: 0 1 var(--field-max);
+        min-inline-size: 200px;
+    }
+
+    .link-row > .search-field {
+        margin: 0;
     }
 
     .form-group textarea {
@@ -906,47 +900,29 @@
     }
 
     .form-help,
-    .form-group .helptext,
-    form p .helptext {
+    :where(.form-group, form p) .helptext {
         margin: var(--space-1) 0 0;
         font-size: var(--font-size-xs);
         color: var(--color-text-muted);
     }
 
-    .form-group ul.errorlist,
-    form p ul.errorlist {
+    :where(.form-group, form p) ul.errorlist {
         list-style: none;
         margin: var(--space-1) 0 0;
         padding: 0;
     }
 
-    .form-group ul.errorlist li,
-    form p ul.errorlist li {
+    :where(.form-group, form p) ul.errorlist li {
         color: var(--color-error-text);
         font-size: var(--font-size-sm);
     }
 
+    /* Mobile: these long-text fields collapse to one line and grow with content (needs field-sizing). */
     @media (max-width: 768px) {
-        textarea[name="location"],
-        textarea[name="description"],
-        textarea[name="details"],
-        textarea[name="producers"],
-        textarea[name="additional_notes"] {
-            height: 2.2em;
-            min-height: 2.2em;
-            max-height: 2.2em;
-            resize: vertical;
+        textarea:is([name="location"], [name="description"], [name="details"], [name="producers"], [name="additional_notes"]) {
+            field-sizing: content;
+            max-block-size: 8lh;
             overflow-y: auto;
-        }
-
-        textarea[name="location"]:not(:placeholder-shown),
-        textarea[name="description"]:not(:placeholder-shown),
-        textarea[name="details"]:not(:placeholder-shown),
-        textarea[name="producers"]:not(:placeholder-shown),
-        textarea[name="additional_notes"]:not(:placeholder-shown) {
-            height: 4.4em;
-            min-height: 4.4em;
-            max-height: 4.4em;
         }
     }
 
@@ -961,9 +937,50 @@
 
     .card-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(var(--card-min, 220px), 1fr));
         gap: var(--space-4);
         margin-block-end: var(--space-5);
+    }
+
+    .card-grid-wide {
+        --card-min: 260px;
+    }
+
+    .card-title {
+        margin: 0 0 var(--space-2);
+        font-size: var(--font-size-md);
+    }
+
+    .card-strong .card-title {
+        font-weight: 500;
+    }
+
+    /* Label/value row inside a card. */
+    .card-field {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-2);
+        padding-block: var(--space-1);
+        border-block-end: 1px solid var(--color-border-subtle);
+    }
+
+    .card-field:last-child {
+        border-block-end: none;
+    }
+
+    .card-field .table-comment-input {
+        flex: 1;
+    }
+
+    .card-label {
+        color: var(--color-text-muted);
+        font-size: var(--font-size-sm);
+        flex-shrink: 0;
+    }
+
+    .card-value {
+        text-align: end;
     }
 
     /* Lyrics edit page: lyrics + translations side by side on desktop, stacked on mobile. */
@@ -984,28 +1001,18 @@
         margin-block-end: var(--space-4);
     }
 
-    .translation-panel.pending-remove {
-        background-color: var(--color-warning-bg);
-        opacity: 0.55;
-    }
-
-    .translation-panel.pending-remove .translation-summary-text {
-        text-decoration: line-through;
-    }
-
     .translation-panel .translation-remove {
         align-self: flex-end;
     }
 
-    /* --- Tables ---
-       One component, reused by every data table in the app. `.table` is the
-       block; `.table-detail`/`.table-grouped`/`.totals-row`/`.table-narrow`
-       are its existing modifiers (kept as-is - used across 15+ templates);
-       `.table-matrix` + its `.table-event-*`/`.table-cell-*` elements below are the one shared
-       definition for the three attendance/pivot grids (poll_detail.html,
-       poll_attendance.html, attendance_dashboard.html), replacing what used
-       to be three separate, diverging page-local <style> blocks. */
-    /* No rows -> no header (also covers staged-add rows appearing in resources_edit) */
+    /* Uppercase caption style shared by section labels, table headers and filter labels. */
+    :where(.section-label, .table thead th, .table tbody th.sticky-col, .table-detail tr th, .filter-label, .filter-sub summary) {
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-caps);
+    }
+
+    /* --- Tables --- one .table component with modifiers; .table-matrix is the attendance grid variant. */
+    /* No rows, no header. */
     .table:not(:has(tbody tr)) thead {
         display: none;
     }
@@ -1021,13 +1028,15 @@
         font-size: var(--font-size-sm);
         overflow: hidden;
 
+        /* Up to 3 columns: stay narrow. 4 or more: spread across the page. */
+        &:not(:has(thead th:nth-child(4))) {
+            max-inline-size: var(--content-narrow);
+        }
+
         & thead th {
             position: sticky;
             inset-block-start: 0;
-            /* One tier above .sticky-col's z-index (--z-sticky) - both are
-               position:sticky, and tbody comes after thead in the DOM, so at
-               equal z-index a scrolled-under row's sticky name/title column
-               would paint over the header instead of staying beneath it. */
+            /* One above .sticky-col so scrolled rows never paint over the header. */
             z-index: calc(var(--z-sticky) + 1);
             padding: var(--space-2);
             background-color: var(--color-ink);
@@ -1035,8 +1044,6 @@
             font-size: var(--font-size-2xs);
             font-weight: 500;
             text-align: start;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
         }
 
         & tbody td,
@@ -1047,23 +1054,13 @@
             text-align: inherit;
         }
 
-        /* Row-header th's living in tbody (e.g. poll_attendance.html's
-           "Attendance"/"Note" rows) aren't covered by the thead th rule
-           above, so they'd otherwise be the only unstyled labels in the
-           table. */
-        & tbody th.sticky-col {
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
 
         & tbody tr:last-child td,
         & tbody tr:last-child th {
             border-block-end: none;
         }
 
-        /* Matches syncope-compare's rgba(244, 241, 234, 0.4) exactly -
-           --color-bg is that same #f4f1ea, so this is the same color, not
-           just visually close. */
+        /* Zebra stripe: --color-bg at 40%. */
         & tbody tr:nth-child(even) {
             --row-tint: var(--color-bg) 40%;
             background-color: color-mix(in srgb, var(--color-bg) 40%, transparent);
@@ -1078,19 +1075,13 @@
             font-weight: 500;
         }
 
-        /* A link never overrides the header's own text color - it always
-           inherits it. Enforced once here so every header link (sortable or
-           not) is automatically legible against the dark header background,
-           instead of relying on each template remembering to opt in with
-           .sortable-header. */
+        /* Header links always inherit the header text colour. */
         & thead th a {
             color: inherit;
             text-decoration: none;
         }
 
-        /* Mobile-first: compact by default, roomier once the table's own
-           wrapper (.table-container, container-type: inline-size below) has
-           space - replaces the old page-level max-width:768px th/td override. */
+        /* Compact by default, roomier when the .table-container is wide. */
         @container (min-inline-size: 36rem) {
             font-size: var(--font-size-md);
 
@@ -1105,9 +1096,7 @@
         }
     }
 
-    /* Shared by every drag-to-reorder table (event songs, resources, ...) -
-       one definition so the handle and the dragging-row highlight look and
-       behave the same everywhere. */
+    /* Shared by every drag-to-reorder table. */
     .drag-handle-cell { width: 2.2rem; text-align: center; padding-inline: 0; }
     .drag-handle {
         cursor: grab;
@@ -1117,27 +1106,19 @@
         flex-direction: column;
         align-items: center;
         line-height: 0.7;
-        padding: 0.5rem 0.4rem;
+        padding: var(--space-2);
         font-weight: 500;
-        font-size: 1.1rem;
+        font-size: var(--font-size-lg);
     }
     .drag-handle:active { cursor: grabbing; }
-    tr.dragging { opacity: 0.6; background-color: var(--color-info-bg); }
 
-    /* Shrink every column to its content by default (the classic
-       width:1% + nowrap trick for auto-layout tables) so a table never
-       stretches its narrow columns (numbering, dates, single buttons) just
-       because there's leftover viewport width. Wrapped in :where() so this
-       has zero specificity - any existing sizing rule below (.table-event-col,
-       .song-index, etc.) or .col-main (utilities layer) wins automatically
-       without needing to out-specify this default. */
+    /* Shrink columns to content; zero specificity so any sizing rule or .col-main wins. */
     :where(.table) :where(thead th, tbody td) {
         width: 1%;
         white-space: nowrap;
     }
 
-    /* Replaces the hand-copied "first row of group" inline style
-       ({% if forloop.first and not forloop.parentloop.first %}style="border-top:3px solid #333"{% endif %}) */
+    /* Divider above a group's first row and total rows. */
     .table-grouped tbody tr.group-start td,
     .totals-row td {
         border-block-start: 2px solid var(--color-border);
@@ -1162,34 +1143,14 @@
         color: var(--color-text-muted);
         font-size: var(--font-size-sm);
         text-align: start;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
     }
 
-    .table-narrow {
-        max-inline-size: 700px;
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 3rem 1rem;
-        color: var(--color-text-muted);
-        font-size: var(--font-size-md);
-    }
-
-    /* --- Editable list rows (search / staged / pending-remove) ---
-       The one shared definition for the "search-result row + spinner +
-       staged/pending-remove table row" pattern, reusable anywhere a page
-       needs a debounced-search-to-add-a-row list (currently
-       event_attendance_edit.html and event_songs_edit.html). Replaces what
-       used to be two page-local <style> blocks that had drifted into
-       near-duplicates of each other. Add/remove button styling stays
-       page-local for now. */
+    /* --- Editable list rows: search result row, spinner, staged/pending table rows --- */
     .search-result-row {
         display: flex;
         align-items: center;
-        gap: 0.6rem;
-        padding: 0.4rem 0;
+        gap: var(--space-2);
+        padding: var(--space-2) 0;
     }
     .search-result-info { flex: 1; min-width: 0; }
 
@@ -1216,26 +1177,13 @@
         }
     }
 
-    tr.staged-add,
-    tr.pending-remove {
-        background-color: var(--color-warning-bg);
-    }
-    tr.pending-remove td {
-        text-decoration: line-through;
-        opacity: 0.55;
-    }
-
     /* --- Event detail page --- */
     .event-title { margin-block-end: 0.25em; }
-    /* Title + copy-link button stay same-row, button right beside the text,
-       at every width (desktop and mobile) - reused by event_detail.html,
-       poll_detail.html, project_detail.html, song_detail.html and
-       org_member_detail.html's h1. */
+    /* Title + copy-link button stay on one row at every width. */
     .main-content h1.event-title {
         display: flex;
         align-items: baseline;
         flex-wrap: wrap;
-        justify-content: flex-start;
         gap: var(--space-2);
     }
     .share-controls {
@@ -1243,7 +1191,6 @@
         align-items: center;
         flex-shrink: 0;
     }
-    .event-summary,
     .poll-summary {
         margin-block: 0.25em;
         font-size: var(--font-size-md);
@@ -1255,27 +1202,26 @@
     }
     .dt-short { display: none; }
 
-    .song-index { text-align: center; vertical-align: middle; width: 1.5rem; }
-    .song-title { font-weight: 500; }
+    .song-index { width: 1.5rem; }
+    .song-title { font-weight: 500; overflow-wrap: break-word; }
     .song-subline {
         display: flex;
         justify-content: space-between;
         align-items: baseline;
-        gap: 0.5rem;
+        gap: var(--space-2);
         font-size: var(--font-size-sm);
         font-weight: 400;
         color: var(--color-text-muted);
+        overflow-wrap: break-word;
     }
     .song-meta { white-space: nowrap; color: var(--color-text-muted); }
-    .dt-range { white-space: nowrap; }
-    .song-encore { text-align: center; }
 
-    .songs-table td, .songs-table th { padding: 0.3rem 0.25rem; }
+    /* Edit-page table: narrow fixed columns; the extra class beats .table's cell padding. */
+    .songs-table .song-index { width: 1.3rem; padding-inline: 0; }
+    .songs-table .song-resources { text-align: center; width: 1.4rem; padding-inline: 0; }
+    .songs-table .song-actions { text-align: center; width: 2.2rem; padding-inline-start: 0; }
 
     @media (max-width: 768px) {
-        #event-detail-content {
-            padding-block-end: 4rem;
-        }
         .dt-full { display: none; }
         .dt-short { display: inline; }
 
@@ -1293,29 +1239,7 @@
     }
 
     /* --- Matrix/pivot tables (attendance grids) --- */
-    /* Only the rotated-label headers (poll_detail.html, attendance_dashboard.html)
-       need extra height - poll_attendance.html's plain multi-line text headers
-       don't use .table-event-header, so :has() scopes this to just them.
-       Without it, the rotated text's height (its pre-rotation WIDTH - a
-       transform doesn't change layout size) exceeds the header row's normal
-       height and pokes out past the dark background.
-
-       vertical-align MUST be middle, not bottom: rotation happens around the
-       element's own center, so bottom-aligning it first (positioning by its
-       small pre-rotation height) leaves that center off the cell's true
-       middle - the rotated result then sits low and partly outside the
-       cell, clipping its leading character. Centering first keeps the
-       rotation symmetric within the cell. */
-    .table-matrix thead th:has(.table-event-header) {
-        block-size: 4.5rem;
-        vertical-align: middle;
-    }
-
-    /* Width no longer needed here - the base .table default (width:1%,
-       above) already shrinks this to content; only the tighter padding
-       for matrix density remains. */
-    /* Names here are plain text, not links, so they'd miss the 500 that
-       `.table a` gives list-table names. */
+    /* Names are plain text, not links, so they miss .table a's weight. */
     .table-matrix tbody td.sticky-col {
         font-weight: 500;
     }
@@ -1329,69 +1253,38 @@
         padding-inline: var(--space-1);
     }
 
-    /* Rows should only be as tall as the attendance button itself - .table's
-       generic tbody td padding otherwise pads every matrix row well past the
-       button's fixed size. Scoped with :has() so it only touches cells that
-       actually hold the button (not the comment/note row or label columns). */
+    /* Matrix rows only as tall as the attendance cell (:has() limits it to cells holding one). */
     .table-matrix tbody td:has(.table-cell-attendance) {
         padding-block: 0;
     }
 
-    /* Fixed, not min: a CSS transform (used by .table-event-header's rotation
-       below) doesn't shrink an element's LAYOUT box, only its rendered
-       appearance - so a rotated date header's natural (unrotated) text width
-       still drives auto table-layout sizing unless every cell in the column
-       agrees on one fixed width. A min-inline-size here let each rotated
-       column size itself independently off its own unrotated text length,
-       producing uneven, misaligned columns between header and body.
-       position:relative anchors .table-event-header's absolute centering
-       below - harmless on cells that don't contain it. */
+    /* Fixed width so every date column lines up; centred in both header and body. */
     .table-event-col {
         inline-size: var(--table-matrix-size);
-        text-align: center;
-        position: relative;
     }
 
-    /* `.table tbody td { text-align: inherit }` (0,1,2) outranks the plain
-       class above, so body cells need the extra specificity to actually
-       center under their (absolutely centered) date header. */
-    .table-matrix tbody .table-event-col {
+    .table-matrix :is(thead th, tbody td).table-event-col {
         text-align: center;
     }
 
-    /* poll_attendance.html's headers hold multi-line plain text (event type,
-       date, time, location, details), not a rotated label - they need to
-       grow past the fixed size above. Add alongside .table-event-col on
-       every <th>/<td> in that template's columns (all agreeing on the same
-       width keeps header/body aligned, same principle as above). */
-    .table-event-col-text {
-        inline-size: auto;
-        min-inline-size: 5rem;
-    }
-
-    /* Wraps a rotated date/label inside a matrix <th> (poll_detail.html,
-       attendance_dashboard.html). poll_attendance.html's transposed header
-       rows use .table-event-col directly without this wrapper, since their
-       labels are stacked plain text, not rotated. */
-    /* Absolutely positioned and centered on its own cell, then rotated in
-       place - this both perfectly centers the rotated label over the icon
-       column below it (centering via text-align/overflow on an inline box
-       drifted off-center in practice) and takes the label fully out of
-       normal flow, so its pre-rotation text width can never again push the
-       column wider than --table-matrix-size no matter how long a date
-       string gets. The header cell's own block-size:4.5rem still reserves
-       the vertical room the rotated text needs. */
+    /* Rotated date label in a matrix <th>: vertical text read bottom-to-top. */
     .table-event-header {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-90deg);
+        display: inline-block;
+        vertical-align: middle;
+        writing-mode: vertical-rl;
+        rotate: 180deg;
         white-space: nowrap;
         font-size: var(--font-size-2xs);
     }
 
-    /* Non-rehearsal events: inverted (light) date button; plain-text
-       headers (no button) are underlined instead. */
+    /* Rotated button: inline axis is vertical, so min-inline-size = equal height for every date. */
+    .table-event-header .btn-ghost {
+        min-inline-size: 4.5rem;
+        justify-content: center;
+        line-height: 1.2;
+    }
+
+    /* Non-rehearsal events: light date button; plain-text headers underlined. */
     .table-event-header-strong .btn-ghost {
         background-color: var(--color-surface);
         border-color: var(--color-surface);
@@ -1414,7 +1307,7 @@
         block-size: var(--table-matrix-size);
         margin-inline: auto;
         border-radius: var(--radius-sm);
-        font-size: 1.1rem;
+        font-size: var(--font-size-lg);
         cursor: pointer;
         user-select: none;
         transition: transform var(--transition-fast), box-shadow var(--transition-fast);
@@ -1425,13 +1318,7 @@
         box-shadow: var(--shadow-sm);
     }
 
-    .table-cell-attendance:focus-visible {
-        outline: var(--focus-ring);
-        outline-offset: var(--focus-ring-offset);
-    }
-
-    /* Read-only matrix cells (poll_detail.html's votes summary - nothing to
-       click there) drop the pointer/hover-lift affordance. */
+    /* Read-only matrix cells: no pointer or hover lift. */
     .table-cell-attendance-static {
         cursor: default;
     }
@@ -1441,15 +1328,28 @@
         box-shadow: none;
     }
 
-    /* Composes with .totals-row (which supplies the border) - add both
-       classes to the <tr>; this one only adds the extra bold weight the
-       matrix variant wants. */
+    /* Clickable status pill (attendance/poll edit pages); colour comes from .att-type-N. */
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-1);
+        inline-size: 7.5rem;
+        padding: var(--space-1) var(--space-2);
+        border-radius: var(--radius-sm);
+        font-size: var(--font-size-md);
+        line-height: 1;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    /* Use with .totals-row (border); adds bold. */
     .table-row-total td {
         font-weight: 500;
     }
 
     .table-comment {
-        font-size: 0.65rem;
+        font-size: var(--font-size-2xs);
         color: var(--color-text-muted);
         overflow-wrap: anywhere;
     }
@@ -1458,8 +1358,6 @@
         inline-size: 100%;
         font-size: var(--font-size-xs);
         padding: var(--space-1);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-sm);
     }
 
     .legend {
@@ -1471,19 +1369,17 @@
         align-items: center;
     }
 
-    /* Sizing only - hover/cursor neutralizing is .table-cell-attendance-static's
-       job; legend chips carry both classes. */
+    /* Legend chips: sizing only; add .table-cell-attendance-static to drop the hover. */
     .legend .table-cell-attendance {
         inline-size: auto;
         block-size: auto;
         padding: 2px 6px;
     }
 
-    /* Collapsible date-range / event-limit filter panel above
-       attendance_dashboard.html's matrix table. */
+    /* Collapsible date-range / event-limit filter panel. */
     .filter-panel {
         margin: 0;
-        padding: 0.4rem 0.75rem;
+        padding: var(--space-2) var(--space-3);
         background-color: var(--color-bg-subtle);
         border: 1px solid var(--color-border);
         border-radius: var(--radius-sm);
@@ -1492,7 +1388,7 @@
     .filter-panel > summary {
         cursor: pointer;
         font-weight: 500;
-        min-height: 44px;
+        min-height: var(--tap-target);
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -1540,36 +1436,22 @@
     .filter-field {
         display: flex;
         flex-direction: column;
-        gap: 0.2rem;
+        gap: var(--space-1);
         font-size: var(--font-size-xs);
     }
 
     .filter-label {
         color: var(--color-text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
     }
 
     .filter-field input {
-        padding: 0.45rem 0.5rem;
-        font-size: var(--font-size-md);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-sm);
-        box-sizing: border-box;
-    }
-
-    .filter-field select {
-        font-size: var(--font-size-md);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-sm);
+        padding: var(--space-2);
     }
 
     /* nested collapsible list of checkboxes (skill / voice / instrument) */
     .filter-sub summary {
         font-size: var(--font-size-xs);
         color: var(--color-text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
         display: flex;
         align-items: center;
         gap: 0.25em; /* one space character, same as the Member/Supporter labels */
@@ -1583,7 +1465,7 @@
     }
 
     .filter-sub summary .filter-toggle-icon {
-        margin-inline-start: 0.4rem;
+        margin-inline-start: var(--space-2);
     }
 
     .filter-sub summary::-webkit-details-marker {
@@ -1598,9 +1480,6 @@
         display: block;
         min-inline-size: 12rem;
         margin-block: var(--space-1);
-        font-size: var(--font-size-md);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-sm);
     }
 
     .filter-dates input {
@@ -1619,10 +1498,6 @@
     .filter-row-actions .btn-primary,
     .filter-row-actions .filter-reset {
         flex: 0 0 auto;
-        text-align: center;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
         justify-content: center;
     }
 
@@ -1633,18 +1508,18 @@
 
         .filter-panel > summary .filter-toggle-icon {
             order: -1;
-            margin-inline-end: 0.4rem;
+            margin-inline-end: var(--space-2);
         }
     }
 
     @media (max-width: 768px) {
         .filter-panel {
-            padding: 0.2rem 0.6rem;
+            padding: var(--space-1) var(--space-2);
         }
 
         .filter-dates {
             flex: 1 1 auto;
-            gap: 0.4rem;
+            gap: var(--space-2);
         }
 
         .filter-dates .filter-field {
@@ -1676,18 +1551,13 @@
 
     .section-header {
         display: flex;
-        justify-content: flex-start;
         align-items: center;
         gap: var(--space-2);
         margin-block-end: var(--space-2);
         flex-wrap: wrap;
     }
 
-    /* Sub-section dividers (h3, e.g. Resources/Quotes/Lyrics) need more
-       breathing room above - separating them from the previous section's
-       content - than below, where the h3 should sit close to its own
-       content. The page-title header (h1) isn't touched, so it keeps
-       sitting flush with the top of the content area. */
+    /* h3 sub-sections get space above, tight below; the page h1 stays flush. */
     .section-header:has(h3) {
         margin-block-start: var(--space-6);
     }
@@ -1704,7 +1574,7 @@
         color: var(--color-text-muted);
         font-size: var(--font-size-xs);
         font-weight: 500;
-        border-radius: 999px;
+        border-radius: var(--radius-lg);
     }
 
     .badge-primary {
@@ -1715,119 +1585,24 @@
     .badge-danger {
         background-color: var(--color-danger);
         color: var(--color-text-on-accent);
-        font-weight: 500;
     }
 
     .badge-circle {
-        border-radius: 999px;
         font-size: var(--font-size-xl);
-        padding: 0.5rem 0.75rem;
-    }
-}
-
-@layer utilities {
-    /* .visually-hidden here is a hard display:none (not the accessible-but-present
-       clip technique) - only used on CSRF-only wrapper divs with no meaningful content. */
-    .visually-hidden {
-        display: none;
+        padding: var(--space-2) var(--space-3);
     }
 
-    .inline-form {
-        display: inline;
-    }
-
-    .text-muted {
-        color: var(--color-text-muted);
-    }
-
-    .result-count {
-        color: var(--color-text-muted);
-        margin: 0.25rem 0 0.5rem;
-    }
-
-    /* overflow-y: auto + max-height make this the table's real vertical
-       scroll container, the same way overflow-x already makes it the real
-       horizontal one for .sticky-col. Without a bounded height here, the
-       page scrolls instead of this box, and .table's sticky thead has no
-       actual scrolling ancestor to pin against - it never visibly sticks. */
+    /* Real scroll container so .table's sticky thead has something to pin against. */
     .table-container {
         overflow: auto;
-        max-height: calc(100vh - 4rem);
+        max-height: calc(100dvh - 4rem);
         container-type: inline-size;
     }
 
     @media (max-width: 768px) {
         .table-container {
-            padding-block-end: 4rem;
+            padding-block-end: var(--save-bar-clearance);
         }
-    }
-
-    /* Pinning only - no width cap/ellipsis truncation. Titles and names
-       must never be cut off; a sticky column just grows to fit its content
-       (still nowrap by default, from .table's base rule) instead.
-
-       Background derives from --row-tint (set by .table's tbody tr:hover /
-       tr:nth-child(even) rules) mixed into an opaque surface color, instead
-       of a flat color - .sticky-col's background must stay opaque so
-       scrolled-under content doesn't show through the frozen column, but it
-       still needs to visually track the row's current hover/stripe state.
-       Reading --row-tint here means there's one source of truth for that
-       state instead of duplicate per-state override rules to keep in sync. */
-    .sticky-col {
-        position: sticky;
-        left: 0;
-        background-color: color-mix(in srgb, var(--row-tint, transparent 0%), var(--color-surface));
-        z-index: var(--z-sticky);
-    }
-
-    /* .sticky-col's own background-color would otherwise beat .table's dark
-       header background too - utilities always outranks components by layer
-       order regardless of specificity. Restore the dark header here, in the
-       same layer as .sticky-col, with enough specificity to win.
-
-       z-index needs the same override: this corner cell is both the sticky
-       header AND the sticky column, so it must outrank plain header cells
-       (stuck to top only) and plain .sticky-col body cells (stuck to left
-       only) alike, or a scrolled row's name/title cell paints over it. */
-    .table thead th.sticky-col {
-        background-color: var(--color-ink);
-        z-index: calc(var(--z-sticky) + 2);
-    }
-
-    /* See the --color-attendance-* token comment above for the pk mapping. */
-    .att-type-0 { background-color: var(--color-attendance-0); }
-    .att-type-1 { background-color: var(--color-attendance-1); }
-    .att-type-2 { background-color: var(--color-attendance-2); }
-    .att-type-3 { background-color: var(--color-attendance-3); }
-    .att-type-4 { background-color: var(--color-attendance-4); }
-
-    /* Suppresses the att-type-N status color for a disabled matrix cell.
-       Deliberately placed in @layer utilities (not components, where
-       .table-cell-attendance itself lives) so it shares a layer with
-       .att-type-N above and can win on source order/specificity - a rule in
-       @layer components can never outrank one in @layer utilities regardless
-       of specificity, since utilities is declared later in the layer order. */
-    .table-cell-attendance-disabled {
-        background-color: var(--color-surface);
-        color: var(--color-text);
-        pointer-events: none;
-        cursor: default;
-    }
-
-    /* Also covers .col-action - a non-numbering narrow column (e.g. a single
-       action button) that shouldn't be labeled "num" but wants the same
-       right alignment. */
-    .col-num,
-    .col-action {
-        text-align: right;
-    }
-
-    /* Opts a table's one "main content" column (title/name/description)
-       back into growing to fill the space every other column now shrinks
-       away from by default (see .table's width:1% rule). */
-    .col-main {
-        width: 100%;
-        white-space: normal;
     }
 
     .sortable-header {
@@ -1838,83 +1613,115 @@
     .sortable-header:hover {
         text-decoration: underline;
     }
+}
 
-    /* Generic selectors for Django's default CheckboxSelectMultiple/RadioSelect
-       output (no custom widget template this round - see FRONTEND_GUIDE.md). */
+@layer state {
+    /* Row/panel states toggled by JS: warning = staged/changed/pending, info = moved/dragging. */
+    .staged-add,
+    .pending-remove,
+    .type-changed {
+        background-color: var(--color-warning-bg);
+    }
+
+    .row-moved,
+    .dragging {
+        background-color: var(--color-info-bg);
+    }
+
+    .dragging,
+    .translation-panel.pending-remove,
+    tr.pending-remove td {
+        opacity: var(--state-fade);
+    }
+
+    tr.pending-remove td,
+    .pending-remove .translation-summary-text {
+        text-decoration: line-through;
+    }
+
+    /* Pin only, never truncate; opaque bg tracks the row's --row-tint (hover/stripe). */
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        background-color: color-mix(in srgb, var(--row-tint, transparent 0%), var(--color-surface));
+        z-index: var(--z-sticky);
+    }
+
+    /* Corner cell (sticky header + column): restore dark bg, outrank both. */
+    .table thead th.sticky-col {
+        background-color: var(--color-ink);
+        z-index: calc(var(--z-sticky) + 2);
+    }
+
+    /* Attendance pk -> colour; see --color-attendance-* tokens. */
+    .att-type-0 { background-color: var(--color-attendance-0); }
+    .att-type-1 { background-color: var(--color-attendance-1); }
+    .att-type-2 { background-color: var(--color-attendance-2); }
+    .att-type-3 { background-color: var(--color-attendance-3); }
+    .att-type-4 { background-color: var(--color-attendance-4); }
+
+    /* Disabled matrix cell drops its att-type colour (same layer, later in source). */
+    .table-cell-attendance-disabled {
+        background-color: var(--color-surface);
+        color: var(--color-text);
+        pointer-events: none;
+        cursor: default;
+    }
+}
+
+@layer utilities {
+    .inline-form {
+        display: inline;
+    }
+
+    .list-plain {
+        margin: 0;
+        padding-inline-start: 0;
+        list-style: none;
+    }
+
+    .narrow {
+        max-inline-size: var(--content-narrow);
+    }
+
+    .text-muted {
+        color: var(--color-text-muted);
+    }
+
+    .result-count {
+        color: var(--color-text-muted);
+        margin: var(--space-1) 0 var(--space-2);
+    }
+
+    /* .col-action: narrow non-numeric column (e.g. one button), same alignment. */
+    .col-num,
+    .col-action {
+        text-align: right;
+    }
+
+    /* The one column that grows; every other column shrinks to content (.table width:1%). */
+    .col-main {
+        width: 100%;
+        white-space: normal;
+    }
+
+    /* Django default CheckboxSelectMultiple/RadioSelect output. */
     input[type="checkbox"],
     input[type="radio"] {
         margin-inline-end: var(--space-1);
     }
 
-    @media (max-width: 768px) {
+    /* Touch devices: comfortable tap height. */
+    @media (pointer: coarse) {
         input[type="date"],
+        input[type="datetime-local"],
+        input[type="time"],
         input[type="number"],
         input[type="text"],
         input[type="email"],
         input[type="password"],
         .btn {
-            min-height: 44px;
+            min-height: var(--tap-target);
         }
-    }
-}
-
-@layer layout {
-    /* Anonymous pages have no sidebar; login/signup (.auth) are also centered. */
-    .grid-container.no-sidebar {
-        grid-template-columns: 1fr;
-        grid-template-areas: "main";
-    }
-
-    .auth .main-content {
-        margin: auto;
-        width: min(100%, 24rem);
-        justify-content: center;
-    }
-
-    .auth-switch {
-        text-align: center;
-        padding-block-start: 40px; /* one extra button height between the submit and switch buttons */
-    }
-
-    .pw-field {
-        position: relative;
-        display: block;
-    }
-    .pw-field > input {
-        inline-size: 100%;
-        padding-inline-end: 2.5rem;
-        box-sizing: border-box;
-    }
-    .pw-eye {
-        position: absolute;
-        inset-block: 0;
-        inset-inline-end: 0;
-        padding-inline: var(--space-3);
-        border: 0;
-        background: none;
-        cursor: pointer;
-        opacity: 0.5;
-    }
-    .pw-eye[aria-pressed="true"] {
-        opacity: 1;
-    }
-
-    /* Password strength bar: colour runs red -> orange -> yellow -> teal -> blue (width + label carry it too, not colour alone). */
-    .pw-meter {
-        block-size: 8px;
-        border-radius: 4px;
-        background: var(--color-border, #ddd);
-        overflow: hidden;
-    }
-    .pw-meter > span {
-        display: block;
-        block-size: 100%;
-        transition: width var(--transition-fast), background-color var(--transition-fast);
-    }
-
-    /* Header card gets the same bottom spacing a .card-grid has, so the h3 after it
-       sits at the same distance as the h3 after a card row. */
-    .dash-head {
-        margin-block-end: var(--space-5);
     }
 }

@@ -2,22 +2,6 @@
 {% load static %}
 {% block title %}Details - {{ object.title }}{% endblock %}
 
-{% block extra_css %}
-<style>
-    @media (max-width: 768px) {
-        #project-meta-form {
-            padding-block-end: 4rem;
-        }
-    }
-
-    @media (min-width: 769px) {
-        .save-bar {
-            margin-block-start: 2rem;
-        }
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 
 {% if messages %}
@@ -63,5 +47,6 @@
 
     form.addEventListener('input', () => saveBarCtl.sync());
     form.addEventListener('change', () => saveBarCtl.sync());
+    saveBarCtl.sync();
 </script>
 {% endblock %}

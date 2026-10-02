@@ -42,8 +42,8 @@
 </div>
 
 <p class="search-form">
-    <span style="position:relative; flex:1; min-width:200px;">
-        <input type="text" id="person-search-input" value="{{ q }}" placeholder="Search by name, skill, voice, instrument" style="width:100%; box-sizing:border-box;">
+    <span class="search-field">
+        <input type="text" id="person-search-input" value="{{ q }}" placeholder="Search by name, skill, voice, instrument">
         <span class="search-spinner" id="person-search-spinner"></span>
     </span>
     <button type="button" id="person-search-clear" class="btn btn-secondary">Clear</button>
@@ -80,7 +80,7 @@
             {% include "syncope/_filter_status.html" with name="admin" label="Admin" selected=filters.admin %}
         </div>
         <div class="filter-row filter-row-actions">
-            <a href="?f=0"class="btn btn-primary filter-reset">Reset</a>
+            <a href="?f=0" class="btn btn-primary filter-reset">Reset</a>
         </div>
     </form>
 </details>

@@ -15,30 +15,30 @@
     <div class="form-group">
         <label for="{{ form.event_type.id_for_label }}">{{ form.event_type.label }}</label>
         {{ form.event_type }}
-        {% if form.event_type.errors %}<span class="error">{{ form.event_type.errors }}</span>{% endif %}
+        {{ form.event_type.errors }}
     </div>
 
     <div class="form-group">
         <label for="{{ form.started_at.id_for_label }}">{{ form.started_at.label }}</label>
         {{ form.started_at }}
-        {% if form.started_at.errors %}<span class="error">{{ form.started_at.errors }}</span>{% endif %}
+        {{ form.started_at.errors }}
     </div>
     <div class="form-group">
         <label for="{{ form.ended_at.id_for_label }}">{{ form.ended_at.label }}</label>
         {{ form.ended_at }}
-        {% if form.ended_at.errors %}<span class="error">{{ form.ended_at.errors }}</span>{% endif %}
+        {{ form.ended_at.errors }}
     </div>
 
     <div class="form-group">
         <label for="{{ form.location.id_for_label }}">{{ form.location.label }}</label>
         {{ form.location }}
-        {% if form.location.errors %}<span class="error">{{ form.location.errors }}</span>{% endif %}
+        {{ form.location.errors }}
     </div>
 
     <div class="form-group">
         <label for="{{ form.details.id_for_label }}">{{ form.details.label }}</label>
         {{ form.details }}
-        {% if form.details.errors %}<span class="error">{{ form.details.errors }}</span>{% endif %}
+        {{ form.details.errors }}
     </div>
 
 </form>
@@ -88,7 +88,7 @@
     </div>
 
     {% if is_admin %}
-    <div id="add-date" style="max-width:42rem;">
+    <div id="add-date" class="narrow">
         <h3>Add date</h3>
         <div class="form-group">
             <label for="{{ form.event_type.id_for_label }}">{{ form.event_type.label }}</label>
@@ -159,6 +159,7 @@ $(function () {
 
     form.addEventListener('input', () => saveBarCtl.sync());
     form.addEventListener('change', () => saveBarCtl.sync());
+    saveBarCtl.sync();
 </script>
 {% else %}
 <script>

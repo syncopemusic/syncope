@@ -1,4 +1,4 @@
-<tr class="quote-row" data-id="{{ form.instance.pk }}">
+<tr data-id="{{ form.instance.pk }}">
     {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
     <td class="col-num">{{ forloop.counter }}</td>
     <td class="col-main">

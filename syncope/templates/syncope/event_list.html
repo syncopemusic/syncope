@@ -55,7 +55,7 @@
             <td>
                 {% with songs=event.eventsong_set.all|dictsort:"order" %}
                     {% if songs %}
-                        <ul style="margin: 0; padding-left: 0; list-style: none;">
+                        <ul class="list-plain">
                             {% for event_song in songs %}
                                 <li><small class="song-meta">{{ forloop.counter }}.</small> <a href="{%  url 'syncope:song_detail' url_username event_song.song.pk %}">{{ event_song.song.title }}</a></li>
                             {% endfor %}

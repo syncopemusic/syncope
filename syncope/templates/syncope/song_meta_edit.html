@@ -48,10 +48,10 @@
 <script>
     const form = document.getElementById('song-meta-form');
     const fieldTracker = trackFormFieldChanges(form);
-    // A new song has nothing saved yet, and returning from a "+ New X" draft
-    // round trip pre-fills fields at render time - either way the DOM-at-load
-    // snapshot below isn't a reliable "nothing changed" baseline, so force dirty.
-    const forceDirty = {% if not object or request.GET.draft_key %}true{% else %}false{% endif %};
+    // Returning from a "+ New X" draft round trip pre-fills fields at render time, so the
+    // DOM-at-load snapshot isn't a reliable "nothing changed" baseline there: force dirty.
+    // A plain new song starts clean and becomes dirty when a field changes.
+    const forceDirty = {% if request.GET.draft_key %}true{% else %}false{% endif %};
 
     const saveBarCtl = initSaveBar({
         formId: 'song-meta-form',

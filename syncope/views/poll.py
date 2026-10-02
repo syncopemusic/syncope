@@ -264,7 +264,8 @@ class PollEventView(PollAdminMixin, View):
 
         if skipped:
             messages.warning(request, f"{skipped} date(s) couldn't be saved and were skipped.")
-        messages.success(request, "Dates updated successfully!")
+        else:
+            messages.success(request, "Dates updated successfully!")
         return redirect('syncope:poll_events', username=username, pk=pk)
 
 

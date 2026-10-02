@@ -81,6 +81,28 @@ class ProjectStagedEditTests(TestCase):
         event.refresh_from_db()
         self.assertIsNone(event.project_id)
 
+    def test_song_events_edit_add_remove_and_search(self):
+        song = Song.objects.create(user=self.org_user, title="Test Song")
+        other = Song.objects.create(user=self.org_user, title="Other Song")
+        event_type = EventType.objects.create(name="Rehearsal")
+        event = Event.objects.create(user=self.org_user, name="Test Event", event_type=event_type)
+        EventSong.objects.create(event=event, song=other, order=1)
+        kwargs = {"username": "org", "pk": song.pk}
+        url = reverse("syncope:song_events_edit", kwargs=kwargs)
+        search = reverse("syncope:song_events_search", kwargs=kwargs)
+
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.assertContains(self.client.get(search, {"q": "Test"}), f'data-id="{event.pk}"')
+
+        self.client.post(url, {"add_event": [str(event.pk)]})
+        self.assertEqual(EventSong.objects.get(event=event, song=song).order, 2)
+        self.assertNotContains(self.client.get(search, {"q": "Test"}), f'data-id="{event.pk}"')
+        self.assertContains(self.client.get(reverse("syncope:song_detail", kwargs=kwargs)), "Test Event")
+
+        self.client.post(url, {f"remove_{event.pk}": "1"})
+        self.assertFalse(EventSong.objects.filter(event=event, song=song).exists())
+        self.assertTrue(EventSong.objects.filter(event=event, song=other).exists())
+
     def test_add_guest_and_remove_auto_member(self):
         guest = Person.objects.create(first_name="Gia", last_name="Guest")
         MembershipPeriod.objects.create(
@@ -97,6 +119,31 @@ class ProjectStagedEditTests(TestCase):
 
         self.client.post(url, {f"remove_{member.pk}": "1"})
         self.assertIn(member, self.project.excluded_members.all())
+
+
+class OrgMemberEditInvalidPeriodTests(TestCase):
+    """A membership period that fails validation must block the whole save, not be dropped silently."""
+
+    fixtures = ["syncope/fixture_role.json"]
+
+    def test_invalid_period_re_renders_and_saves_nothing(self):
+        org = CustomUser.objects.create_user(username="org", email="org@example.com", password="pw12345")
+        Person.objects.create(user=org, email=org.email, first_name="Org", last_name="Owner")
+        person = Person.objects.create(first_name="Mia", last_name="Member")
+        Membership.objects.create(user=org, person=person)
+        self.client.login(username="org", password="pw12345")
+        url = reverse("syncope:org_member_edit", kwargs={"username": "org", "pk": person.pk})
+
+        response = self.client.post(url, {
+            "first_name": "Changed", "last_name": "Member",
+            "periods-TOTAL_FORMS": "1", "periods-INITIAL_FORMS": "0",
+            "periods-0-role": str(Role.MEMBER), "periods-0-started_at": "2021-01-01", "periods-0-ended_at": "2020-01-01",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "End date must be after start date.")
+        person.refresh_from_db()
+        self.assertEqual(person.first_name, "Mia")
 
 
 class SongSubpageTests(TestCase):
@@ -179,7 +226,7 @@ class SongSubpageTests(TestCase):
         self.assertEqual(self.song.lyrics, "La la la")
         self.assertEqual(self.song.languagecode_id, language.pk)
         self.assertRedirects(
-            response, reverse("syncope:song_detail", kwargs={"username": "org", "pk": self.song.pk})
+            response, reverse("syncope:song_lyrics_edit", kwargs={"username": "org", "pk": self.song.pk})
         )
 
 

@@ -13,48 +13,5 @@
 <p class="auth-switch">Already have an account? <a href="{% url 'syncope:login' %}" class="btn btn-secondary">Log in</a></p>
 {% endblock %}
 {% block extra_js %}
-<script>
-  const pw = document.getElementById("id_password1");
-  pw.insertAdjacentHTML("afterend",
-    '<div><div class="pw-meter"><span id="pw-bar"></span></div><small id="pw-label"></small></div>');
-  const labels = ["Very weak", "Weak", "Fair", "Good", "Strong"];
-  const colors = ["#d32f2f", "#f57c00", "#fbc02d", "#26a69a", "#1976d2"];
-  const pw2 = document.getElementById("id_password2");
-  pw2.insertAdjacentHTML("afterend", '<small id="pw-match" aria-live="polite"></small>');
-  const checkMatch = () => {
-    const ok = pw2.value && pw2.value === pw.value;
-    const el = document.getElementById("pw-match");
-    el.textContent = ok ? "\u2713 Passwords match" : "";
-    el.style.color = "#1976d2";
-  };
-  const eyes = [pw, pw2].map(input => {
-    const wrap = document.createElement("span");
-    wrap.className = "pw-field";
-    const eye = document.createElement("button");
-    eye.type = "button";
-    eye.className = "pw-eye";
-    eye.textContent = "\u{1F441}";
-    eye.setAttribute("aria-label", "Show passwords");
-    eye.setAttribute("aria-pressed", "false");
-    input.before(wrap);
-    wrap.append(input, eye);
-    return eye;
-  });
-  eyes.forEach(eye => eye.addEventListener("click", () => {
-    const show = pw.type === "password";
-    pw.type = pw2.type = show ? "text" : "password";
-    eyes.forEach(e => e.setAttribute("aria-pressed", show));
-  }));
-  pw2.addEventListener("input", checkMatch);
-  pw.addEventListener("input", checkMatch);
-  pw.addEventListener("input", () => {
-    const v = pw.value;
-    const score = v ? [v.length >= 8, v.length >= 12, /[a-z]/.test(v) && /[A-Z]/.test(v),
-      /\d/.test(v) && /[^A-Za-z0-9]/.test(v)].filter(Boolean).length : 0;
-    const bar = document.getElementById("pw-bar");
-    bar.style.width = v ? (score + 1) * 20 + "%" : "0";
-    bar.style.backgroundColor = colors[score];
-    document.getElementById("pw-label").textContent = v ? labels[score] : "";
-  });
-</script>
+{% include "syncope/_password_meter.html" with pw1="id_password1" pw2="id_password2" %}
 {% endblock %}

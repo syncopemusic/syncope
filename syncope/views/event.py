@@ -460,7 +460,8 @@ def event_song_resources_save(request, org_user, event, eventsong_pk):
         save_event_song_resources(eventsong, formset, org_user)
         messages.success(request, "Song resources updated.")
     else:
-        messages.error(request, "Please fix errors in the song's resources.")
+        problems = list(formset.non_form_errors()) + [msg for f in formset.errors for errs in f.values() for msg in errs]
+        messages.error(request, "Please fix errors in the song's resources: " + "; ".join(problems))
     songs_url = reverse('syncope:event_songs_edit', kwargs={'username': org_user.username, 'pk': event.pk})
     return redirect(f"{songs_url}#song-{eventsong.pk}")
 
