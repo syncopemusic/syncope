@@ -1,29 +1,52 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 
-{% block title %}Username &amp; password{% endblock %}
+{% block title %}Username & Password{% endblock %}
 
 {% block content %}
-<h1>Update Your Profile</h1>
+<h1>Username & Password</h1>
 
-<h3>Username</h3>
-<form method="post">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="username">
-    {{ username_form.as_p }}
-    <p><button type="submit" class="btn btn-primary">Change username</button></p>
-</form>
-
-<h3>Password</h3>
-<form method="post">
+<h3>Change Password</h3>
+<form method="post" id="password-form">
     {% csrf_token %}
     <input type="hidden" name="action" value="password">
     {{ password_form.as_p }}
-    <p><button type="submit" class="btn btn-primary">Change password</button></p>
+</form>
+
+<h3>Change Username</h3>
+<form method="post" id="username-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="username">
+    {{ username_form.as_p }}
 </form>
 
 {% url 'syncope:profile_detail' user.username as return_target %}
-{% include "syncope/_save_bar.html" with url=return_target %}
+{% include "syncope/_save_bar.html" with form_id="password-form" url=return_target %}
 {% endblock %}
 {% block extra_js %}
+<script src="{% static 'syncope/save-bar.js' %}"></script>
 {% include "syncope/_password_meter.html" with pw1="id_new_password1" pw2="id_new_password2" %}
+<script>
+    // Two independent forms, one save bar: Save submits whichever form has changes.
+    const forms = [document.getElementById('password-form'), document.getElementById('username-form')];
+    const trackers = forms.map(trackFormFieldChanges);
+    const saveBtn = document.getElementById('save-submit-btn');
+    const ctl = initSaveBar({
+        formId: 'password-form',
+        countUnsavedChanges: () => trackers.reduce((n, t) => n + t.count(), 0),
+        beforeSync: () => {
+            const i = trackers.findIndex(t => t.count() > 0);
+            saveBtn.setAttribute('form', forms[Math.max(i, 0)].id);
+        },
+        onDiscard: () => forms.forEach((f, i) => { f.reset(); trackers[i].reset(); }),
+    });
+    // ui.js reads data-confirm at submit time, so keep it in step with the typed name.
+    const nameInput = document.getElementById('id_username');
+    const askName = () => forms[1].dataset.confirm =
+        `Are you sure you want to change your username from {{ user.username|escapejs }} to ${nameInput.value}?`;
+    nameInput.addEventListener('input', askName);
+    askName();
+    ctl.sync();
+    forms.forEach(f => ['input', 'change'].forEach(ev => f.addEventListener(ev, ctl.sync)));
+</script>
 {% endblock %}

@@ -5,7 +5,7 @@
 <h1>Sign Up</h1>
 <form method="post">
   {% csrf_token %}
-  {{ form.as_p }}
+  {% include "syncope/_form_fields.html" %}
   <div class="form-actions">
     <button type="submit" class="btn btn-primary">Sign up</button>
   </div>

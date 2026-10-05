@@ -126,6 +126,7 @@
             if (!msg) {
                 msg = document.createElement('small');
                 msg.className = 'error field-error';
+                msg.dataset.js = '';
                 field.insertAdjacentElement('afterend', msg);
             }
             msg.textContent = field.validationMessage;
@@ -134,7 +135,7 @@
         document.addEventListener('input', function (e) {
             const field = e.target;
             if (!field.checkValidity || !field.checkValidity()) return;
-            const msg = field.parentElement?.querySelector('.field-error');
+            const msg = field.parentElement?.querySelector('.field-error[data-js]');
             if (msg) msg.remove();
         }, true);
     </script>

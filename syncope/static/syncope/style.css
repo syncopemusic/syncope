@@ -840,8 +840,11 @@
     }
 
     .error {
-        color: var(--color-error-text);
+        color: var(--color-danger);
         font-size: var(--font-size-sm);
+    }
+    .field-error {
+        display: block;
     }
 
     .search-form {
@@ -903,7 +906,7 @@
     :where(.form-group, form p) .helptext {
         margin: var(--space-1) 0 0;
         font-size: var(--font-size-xs);
-        color: var(--color-text-muted);
+        color: var(--color-text);
     }
 
     :where(.form-group, form p) ul.errorlist {
@@ -912,8 +915,14 @@
         padding: 0;
     }
 
-    :where(.form-group, form p) ul.errorlist li {
-        color: var(--color-error-text);
+    :where(.form-group, form p) ul.errorlist li,
+    .pw-bad {
+        color: var(--color-danger);
+    }
+    :where(.form-group, form p) ul.errorlist li,
+    .pw-bad,
+    #pw-label,
+    #pw-match {
         font-size: var(--font-size-sm);
     }
 

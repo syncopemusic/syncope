@@ -4,7 +4,7 @@ from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.contrib.auth.views import LoginView, LogoutView
 from django.views.generic import CreateView
-from syncope.forms import CustomUserCreationForm
+from syncope.forms import CustomUserCreationForm, LoginForm
 from syncope.models import Person
 
 @method_decorator(login_not_required, name='dispatch')
@@ -36,4 +36,5 @@ class UserLogoutView(LogoutView):
 
 class UserLoginView(LoginView):
     template_name = "registration/login.html"
+    authentication_form = LoginForm
     redirect_authenticated_user = True

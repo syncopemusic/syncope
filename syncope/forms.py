@@ -1,6 +1,7 @@
 from django import forms
 import datetime
-from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm, UserChangeForm
 from django.utils import timezone
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
     PollAttendance, Invitation
@@ -45,9 +46,27 @@ class CustomUserCreationForm(UserCreationForm):
 
     def clean_username(self):
         username = self.cleaned_data.get("username")
+        if username and CustomUser.objects.filter(username=username).exists():
+            raise forms.ValidationError("User already exists.")
         if username and username.lower() in RESERVED_USERNAMES:
             raise forms.ValidationError("This username is reserved.")
         return username
+
+
+class LoginForm(AuthenticationForm):
+    def clean(self):
+        username = self.cleaned_data.get("username")
+        password = self.cleaned_data.get("password")
+        if username and password:
+            User = get_user_model()
+            user = User._default_manager.filter(**{User.USERNAME_FIELD: username}).first()
+            if user is None:
+                self.add_error("username", "Invalid username.")
+            elif not user.check_password(password):
+                self.add_error("password", "Wrong password.")
+            else:
+                return super().clean()  # authenticates, handles inactive users
+        return self.cleaned_data
 
 
 class CustomUserChangeForm(UserChangeForm):
@@ -66,6 +85,7 @@ class UsernameChangeForm(forms.ModelForm):
     class Meta:
         model = CustomUser
         fields = ["username"]
+        labels = {"username": "New username"}
 
     password = forms.CharField(label="Current password", widget=forms.PasswordInput)
 

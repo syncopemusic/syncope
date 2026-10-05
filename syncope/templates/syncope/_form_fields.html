@@ -1,0 +1,10 @@
+{# Like form.as_p, but errors sit under the input in the same style as the JS "required" messages. #}
+{% for field in form %}
+<p>
+  {{ field.label_tag }}
+  {{ field }}
+  {% for e in field.errors %}<small class="error field-error">{{ e }}</small>{% endfor %}
+  {% if field.help_text %}<span class="helptext">{{ field.help_text|safe }}</span>{% endif %}
+</p>
+{% endfor %}
+{% for e in form.non_field_errors %}<small class="error">{{ e }}</small>{% endfor %}

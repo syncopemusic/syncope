@@ -133,7 +133,7 @@ PAGES = {
     "profile_detail": ("profile", "list", None),
     "person_update": ("profile", "page", "Details"),
     "profile_resources": ("profile", "page", "Resources"),
-    "profile_account": ("profile", "page", "Username & password"),
+    "profile_account": ("profile", "page", "Username & Password"),
     "invitation_list": ("invitations", "list", None),
     "invitation_new": ("invitations", "page", "New"),
     "invitation_detail": ("invitations", "detail", None),
