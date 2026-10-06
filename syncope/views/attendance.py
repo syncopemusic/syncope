@@ -2,12 +2,12 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.contrib import messages
-from datetime import timedelta
+from datetime import date, datetime, time, timedelta
 from django.utils import timezone
 from django.views.generic import View
 from django.db.models import Count, Q
 from django.shortcuts import redirect
-from syncope.utils import group_by_section
+from syncope.utils import group_by_section, parse_date_query, parse_filters
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -15,7 +15,41 @@ from django.views.decorators.http import require_POST
 from collections import defaultdict
 from syncope.models import CustomUser, Person, Role
 from syncope.models import Event, Attendance, AttendanceType, EventType, MembershipPeriod
+from syncope.models import Instrument, Instrumentalist, Singer, Voice
 from syncope.permissions import AccessControl
+
+
+def _local(day, at):
+    return timezone.make_aware(datetime.combine(day, at))
+
+
+def _parse_event_filters(GET):
+    """Event filters from the query string. `f` marks a submitted form (absent param = unchecked);
+    without it the defaults apply: last 30 days up to today, no type or limit (empty type list = all types)."""
+    submitted = 'f' in GET
+
+    def day(key, default):
+        try:
+            return date.fromisoformat(GET[key]) if submitted else default
+        except (KeyError, ValueError):
+            return None
+
+    try:
+        limit = min(max(int(GET.get('event_limit', '')), 1), 50)
+    except ValueError:
+        limit = None
+    types = [int(t) for t in GET.getlist('event_type') if t.isdigit()]
+    today = timezone.localdate()
+    return {
+        'start_date': day('start_date', today - timedelta(days=30)),
+        'end_date': day('end_date', today),
+        'event_limit': limit,
+        'event_type': types,
+        # q: a date (q_period) narrows the event columns, any other text the member rows
+        'q': (q := GET.get('q', '').strip()),
+        'q_period': parse_date_query(q),
+        **parse_filters(GET, {'voice': 'multi', 'instrument': 'multi'}),  # member rows, like the members page
+    }
 
 
 @method_decorator(login_required, name="dispatch")
@@ -81,93 +115,62 @@ class AttendanceDashboardView(View):
             'person_skill__skill',
         )
 
-    def _fetch_events(self, event_limit, start_date, end_date, include_prefetch=True):
+    def _fetch_events(self, filters, include_prefetch=True):
         """
-        Fetch and organize events for display.
-        Returns (events list, editable_event_id, grayed_out_event_ids)
+        Fetch events matching the filters (see _parse_event_filters), oldest first.
+        Returns (events list, editable_event_id, grayed_out_event_ids).
 
-        Filter logic:
-        - If start_date AND end_date: use date range, return all events in range
-        - Otherwise: show one future event (if available), one present event (current or most recent past), and all other past events
-        - Only one event is editable (either current event or most recent past)
+        Only one event is editable: the ongoing one, else the most recent past one.
+        Other past events are grayed out (skipped on POST).
         """
         now = timezone.now()
-
-        # Build base query with optimization
-        base_query = Event.objects.filter(
-            user=self.org_user
-        ).select_related('event_type')
-
+        events_qs = Event.objects.filter(user=self.org_user).select_related('event_type')
         if include_prefetch:
-            base_query = base_query.prefetch_related(
-                'attendance_set__person',
-                'attendance_set__attendance_type'
-            )
+            events_qs = events_qs.prefetch_related('attendance_set__person', 'attendance_set__attendance_type')
 
-        # Apply date filters if provided
-        if start_date and end_date:
-            base_query = base_query.filter(
-                started_at__date__gte=start_date,
-                started_at__date__lte=end_date
-            )
+        if filters['start_date']:
+            events_qs = events_qs.filter(started_at__gte=_local(filters['start_date'], time(0, 1)))
+        if filters['end_date']:
+            events_qs = events_qs.filter(started_at__lte=_local(filters['end_date'], time.max))
+        if filters['event_type']:
+            events_qs = events_qs.filter(event_type_id__in=filters['event_type'])
+        if filters['q_period']:
+            events_qs = events_qs.filter(started_at__date__gte=filters['q_period'][0], started_at__date__lt=filters['q_period'][1])
 
-        # Split into past and future events
-        past_qs = base_query.filter(started_at__lt=now).order_by('-started_at')
-        future_qs = base_query.filter(started_at__gte=now).order_by('started_at')
+        events_qs = events_qs.order_by('-started_at')
+        if filters['event_limit']:
+            events_qs = events_qs[:filters['event_limit']]
+        events = list(reversed(events_qs))
 
-        # Fetch events: date range takes all, otherwise show simplified view
-        if start_date and end_date:
-            # Date range mode: fetch all events in range
-            past_events = list(past_qs)
-            future_events = list(future_qs)
-        else:
-            # Simplified mode: one future event, limited past events
-            future_events = list(future_qs[:1])
-            past_events = list(past_qs[:event_limit])
-
-        # Final list: oldest past → most recent past → soonest future
-        events = list(reversed(past_events)) + future_events
-
-        # Determine which event is editable: current event or most recent past
-        editable_event = None
-
-        # First, check if there's a current event (started but not finished)
-        current_event = base_query.filter(
-            started_at__lte=now,
-            ended_at__gt=now
-        ).first()
-
-        if current_event:
-            editable_event = current_event
-        elif past_events:
-            editable_event = past_events[0]  # Most recent past event
-
+        editable_event = (
+            next((e for e in events if e.ended_at and e.started_at <= now < e.ended_at), None)
+            or next((e for e in reversed(events) if e.started_at < now), None)
+        )
         editable_event_id = editable_event.id if editable_event else None
 
-        # Mark non-editable past events as grayed out (for POST skip logic)
-        grayed_out_event_ids = set()
         for event in events:
-            if event.started_at < now and event.id != editable_event_id:
-                grayed_out_event_ids.add(event.id)
-                event.is_grayed_out = True
-            else:
-                event.is_grayed_out = False
+            event.is_grayed_out = event.started_at < now and event.id != editable_event_id
+        grayed_out_event_ids = {e.id for e in events if e.is_grayed_out}
 
         return events, editable_event_id, grayed_out_event_ids
 
     def get(self, request, username):
-        # Get date range from query params or default to last 3 events
-        event_limit = int(request.GET.get('event_limit') or 3)
-        start_date = request.GET.get('start_date')
-        end_date = request.GET.get('end_date')
-
-        # Fetch and organize events
-        events, editable_event_id, grayed_out_event_ids = self._fetch_events(
-            event_limit, start_date, end_date, include_prefetch=True
-        )
+        filters = _parse_event_filters(request.GET)
+        events, editable_event_id, grayed_out_event_ids = self._fetch_events(filters, include_prefetch=True)
 
         # Get members active during the displayed events' date range
         members = self._get_members_for_events(events)
+        for key, model in (('voice', Singer), ('instrument', Instrumentalist)):
+            for value_id in filters.get(key, []):
+                members = members.filter(pk__in=model.objects.filter(**{f'{key}_id': value_id}).values('person_id'))
+        if filters['q'] and not filters['q_period']:
+            q = filters['q']
+            members = members.filter(
+                Q(pk__in=Person.objects.matching_name(q))
+                | Q(pk__in=Person.objects.filter(
+                    Q(singer__voice__name__icontains=q) | Q(instrumentalist__instrument__name__icontains=q)
+                ).values('pk'))
+            )
 
         # Get membership windows for per-event eligibility checks
         windows = self._get_membership_windows(members)
@@ -207,6 +210,11 @@ class AttendanceDashboardView(View):
             'grand_total': grand_total,
             'grand_percentage': grand_percentage,
             'url_username': username,
+            'filters': filters,
+            'filter_total': sum(bool(filters.get(k)) for k in ('start_date', 'end_date', 'event_limit', 'event_type', 'voice', 'instrument')),
+            'filter_event_types': EventType.objects.order_by('id').values_list('id', 'name'),
+            'filter_voices': Voice.objects.order_by('id').values_list('id', 'name'),
+            'filter_instruments': Instrument.objects.order_by('id').values_list('id', 'name'),
         }
 
         template = 'syncope/_attendance_table.html' if request.GET.get('partial') else self.template_name
@@ -216,13 +224,8 @@ class AttendanceDashboardView(View):
         """Handle bulk attendance updates."""
         with transaction.atomic():
             # Get all events and members being displayed
-            event_limit = int(request.GET.get('event_limit') or 3)
-            start_date = request.GET.get('start_date')
-            end_date = request.GET.get('end_date')
-
-            # Fetch and organize events (no prefetch needed for POST)
             events, editable_event_id, grayed_out_event_ids = self._fetch_events(
-                event_limit, start_date, end_date, include_prefetch=False
+                _parse_event_filters(request.GET), include_prefetch=False
             )
 
             members = self._get_members_for_events(events)
@@ -269,7 +272,10 @@ class AttendanceDashboardView(View):
                     if not self._is_member_active_on(windows, member.id, event_date):
                         continue
 
-                    type_id = submitted_types.get((event.id, member.id), AttendanceType.TBD)
+                    # Rows hidden by the member search are not submitted: leave them untouched.
+                    type_id = submitted_types.get((event.id, member.id))
+                    if type_id is None:
+                        continue
                     if type_id not in VALID_TYPE_IDS:
                         type_id = AttendanceType.TBD
 

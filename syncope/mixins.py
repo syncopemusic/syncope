@@ -12,6 +12,31 @@ from django.views.generic import DetailView
 from .models import CustomUser
 from .models import Event, Attendance, EventSong
 from .views.drafts import DraftMixin as BaseDraftMixin
+from .utils import YES_NO, filter_qs, parse_filters
+
+
+class ListFilterMixin:
+    """Filter panel for a list view. Set filter_spec (see parse_filters) and implement apply_filters; the page and its
+    *ListSearchView subclass then share the filtering. filter_options() adds the panel's option lists to the context."""
+    filter_spec = {}
+    with_filter_options = True  # False on the *ListSearchView subclasses: their results partial has no panel
+
+    def get_filters(self):
+        return parse_filters(self.request.GET, self.filter_spec)
+
+    def apply_filters(self, queryset, filters):
+        return queryset
+
+    def filter_options(self):
+        return {}
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        filters = self.get_filters()
+        if self.with_filter_options:
+            context.update(self.filter_options())
+        context.update(filters=filters, filter_qs=filter_qs(filters), filter_yes_no=YES_NO)
+        return context
 
 
 class SongOwnerMixin:

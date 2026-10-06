@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load static filter_tags %}
 
 {% block title %}Events{% endblock %}
 
@@ -11,62 +12,53 @@
     {% endif %}
 </div>
 
-<div class="table-container">
-<table class="table">
-    <thead>
-    <tr>
-        <th class="col-num"></th>
-        <th style="width: 60%; white-space: normal;">
-            <div class="song-title"><a href="?sort=type{% if current_sort == 'type' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Type{% if current_sort == 'type' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></div>
-            <div class="song-title"><a href="?sort=date{% if current_sort == 'date' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Date{% if current_sort == 'date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></div>
-        </th>
-        <th class="col-main">
-            <div class="song-title"><a href="?sort=project{% if current_sort == 'project' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Project{% if current_sort == 'project' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></div>
-            <div class="song-title"><a href="?sort=location{% if current_sort == 'location' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Location{% if current_sort == 'location' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></div>
-        </th>
-        <th class="col-action" title="Resources">🔗</th>
-        <th>Songs</th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for event in events %}
-        <tr>
-            <td class="col-num">{{ forloop.counter }}</td>
-            <td style="width: 60%; white-space: normal;">
-                <div class="song-title">
-                    <a href="{%  url 'syncope:event_detail' url_username event.id %}?origin=events">{{ event }}</a>
-                </div>
-                <div class="song-subline">
-                    {% include "syncope/_event_daterange.html" %}
-                </div>
-            </td>
-            <td class="col-main">
-                <div class="song-title">{% if event.project %}<a href="{%  url 'syncope:project_detail' url_username event.project.id %}">{{ event.project }}</a>{% else %}-{% endif %}</div>
-                <div class="song-subline">{{ event.location|default:"-" }}</div>
-            </td>
-            <td class="song-meta col-action">
-              {% if event.resource_count > 0 %}
-                <span title="Event resources">🔗{{ event.resource_count }}</span>
-              {% endif %}
-              {% if event.event_song_resource_count > 0 %}
-                <span title="Song resources">🎵{{ event.event_song_resource_count }}</span>
-              {% endif %}
-            </td>
-            <td>
-                {% with songs=event.eventsong_set.all|dictsort:"order" %}
-                    {% if songs %}
-                        <ul class="list-plain">
-                            {% for event_song in songs %}
-                                <li><small class="song-meta">{{ forloop.counter }}.</small> <a href="{%  url 'syncope:song_detail' url_username event_song.song.pk %}">{{ event_song.song.title }}</a></li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}-{% endif %}
-                {% endwith %}
-            </td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
+{% include "syncope/_search_box.html" with prefix="event-list" q=q placeholder="Search by name, type, project, location, song, or date (2025, 3.2025, 5.3.2025)" %}
+
+{% filter_panel "event-filter-form" %}
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="start" label="From" type="date" value=filters.start|date:"Y-m-d" %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="end" label="To" type="date" value=filters.end|date:"Y-m-d" %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="type" label="Event type" options=filter_types selected=filters.type %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="project" label="Project" options=filter_projects selected=filters.project %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_choice.html" with name="has_songs" label="Has songs" options=filter_yes_no selected=filters.has_songs %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_choice.html" with name="has_resources" label="Has resources" options=filter_yes_no selected=filters.has_resources %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_choice.html" with name="guests" label="Guests" options=filter_yes_no selected=filters.guests %}
+</div>
+{% endfilter_panel %}
+
+<div id="event-list-results">
+    {% include "syncope/event_list_results.html" %}
 </div>
 
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/filter-form.js' %}"></script>
+<script>
+    const filterForm = document.getElementById('event-filter-form');
+    const searchInput = document.getElementById('event-list-search-input');
+    const search = initLiveSearch({
+        input: searchInput,
+        spinner: document.getElementById('event-list-search-spinner'),
+        results: document.getElementById('event-list-results'),
+        clearBtn: document.getElementById('event-list-search-clear'),
+        searchUrl: "{% url 'syncope:event_list_search' url_username %}",
+        filterForm,
+    });
+    initFilterForm(filterForm, () => search.run(searchInput.value));
+</script>
 {% endblock %}

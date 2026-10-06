@@ -3,6 +3,7 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from datetime import date
+from django.utils import timezone
 from django.db import transaction
 from django.views.generic import ListView, CreateView, UpdateView, DetailView, View
 from django.views.generic.edit import DeleteView
@@ -17,7 +18,8 @@ from syncope.models import Event, EventType, Project, EventSongResource
 from syncope.forms import ProjectForm
 from syncope.forms import AddEventToProjectForm
 from syncope.forms import AddSongToProjectForm, AddGuestToProjectForm
-from syncope.utils import resource_icon_list
+from syncope.utils import resource_icon_list, q_filter, date_overlap_q, match_pk, filter_period
+from syncope.mixins import ListFilterMixin
 from syncope.permissions import AccessControl
 from syncope.views.drafts import DraftMixin
 
@@ -153,8 +155,15 @@ def project_guests_search(request, org_user, project):
     })
 
 
+def _project_period_q(d0, d1):
+    """Projects whose own date range, or any of whose events, touches [d0, d1)."""
+    return (date_overlap_q('start_date', 'end_date', d0, d1, dt=False)
+            | date_overlap_q('events__started_at', 'events__ended_at', d0, d1))
+
+
 @method_decorator(login_required, name="dispatch")
-class ProjectListView(LoginRequiredMixin, ListView):
+class ProjectListView(ListFilterMixin, LoginRequiredMixin, ListView):
+    filter_spec = {'start': 'date', 'end': 'date', 'status': ('upcoming', 'ongoing', 'past')}
     model = Project
     template_name = 'syncope/project_list.html'
     context_object_name = 'projects'
@@ -184,9 +193,14 @@ class ProjectListView(LoginRequiredMixin, ListView):
         url_username = self.kwargs.get('username')
         org_user = get_object_or_404(CustomUser, username=url_username)
         sort_field, _, _ = self._get_sort_field()
+        projects = q_filter(
+            Project.objects.filter(user=org_user), self.request.GET.get('q', ''),
+            ['title', 'description', 'details', 'events__name'],
+            period_q=_project_period_q,
+        )
+        projects = self.apply_filters(projects, self.get_filters())
         return (
-            Project.objects
-            .filter(user=org_user)
+            projects
             .annotate(
                 num_main_events=Count(
                     'events',
@@ -204,13 +218,35 @@ class ProjectListView(LoginRequiredMixin, ListView):
             .order_by(sort_field)
         )
 
+    def apply_filters(self, projects, filters):
+        if period := filter_period(filters):
+            projects = match_pk(projects, _project_period_q(*period))
+        today = timezone.localdate()
+        status = filters.get('status')
+        if status == 'upcoming':
+            projects = projects.filter(start_date__gt=today)
+        elif status == 'ongoing':
+            projects = projects.filter(Q(end_date__gte=today) | Q(end_date__isnull=True), start_date__lte=today)
+        elif status == 'past':
+            projects = projects.filter(end_date__lt=today)
+        return projects
+
+    def filter_options(self):
+        return {'filter_statuses': (('upcoming', 'Upcoming'), ('ongoing', 'Ongoing'), ('past', 'Past'))}
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.kwargs.get('username')
+        context['q'] = self.request.GET.get('q', '')
         _, sort, reverse = self._get_sort_field()
         context['current_sort'] = sort
         context['reverse'] = reverse
         return context
+
+
+class ProjectListSearchView(ProjectListView):
+    template_name = 'syncope/project_list_results.html'
+    with_filter_options = False
 
 
 @method_decorator(login_required, name="dispatch")

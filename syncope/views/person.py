@@ -26,7 +26,7 @@ from syncope.models import CustomUser, Organization, Person, Membership, Role, S
 from syncope.models import Attendance, AttendanceType, Event, EventType, Voice, Instrument,  Project, LyricsTranslation, PersonResource, Resource, Song
 from syncope.models import Poll, PollPerson
 from syncope.permissions import AccessControl
-from syncope.utils import resource_icon_list, add_query_param, safe_next_url
+from syncope.utils import resource_icon_list, add_query_param, safe_next_url, parse_filters, filter_qs
 from syncope.breadcrumbs import PROJECT_ORIGIN_PREFIX, origin_root_crumbs, project_origin_breadcrumbs, section_crumb, event_breadcrumbs, event_song_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
 from syncope.views.drafts import DraftMixin
 
@@ -35,6 +35,16 @@ SKILL_MAP = {
     'poets': Skill.POET,
     'arrangers': Skill.ARRANGER,
     'translators': Skill.TRANSLATOR,
+}
+
+# list_type -> (page title, add-button url name, add-button label)
+LIST_INFO = {
+    'active': ('Members', 'syncope:org_member_new_member', 'member'),
+    'all': ('All Persons', None, None),
+    'composers': ('Composers', 'syncope:org_member_new_composer', 'composer'),
+    'poets': ('Poets', 'syncope:org_member_new_poet', 'poet'),
+    'arrangers': ('Arrangers', 'syncope:org_member_new_arranger', 'arranger'),
+    'translators': ('Translators', 'syncope:org_member_new_translator', 'translator'),
 }
 
 CONTEXT_TYPE_LIST_MAP = {
@@ -143,11 +153,7 @@ def _parse_person_filters(GET, is_admin):
         value = GET.get(key)
         if value in FILTER_STATUSES and (is_admin or key != 'supporter'):
             filters[key] = value if is_admin else 'active'
-    for key in FILTER_MULTI_KEYS:
-        ids = [int(v) for v in GET.getlist(key) if v.isdigit()]
-        if ids:
-            filters[key] = ids
-    return filters
+    return {**filters, **parse_filters(GET, dict.fromkeys(FILTER_MULTI_KEYS, 'multi'))}
 
 
 def _apply_person_filters(queryset, filters, org_user):
@@ -170,7 +176,7 @@ def _apply_person_filters(queryset, filters, org_user):
 def _person_filter_context(filters, is_admin):
     return {
         'filters': filters,
-        'filter_qs': urlencode({**filters, 'f': 1}, doseq=True),
+        'filter_qs': filter_qs(filters),
         'filter_is_admin': is_admin,
         'filter_skills': Skill.objects.order_by('id').values_list('id', 'title'),
         'filter_voices': Voice.objects.order_by('id').values_list('id', 'name'),
@@ -352,6 +358,10 @@ class PersonListView(ListView):
         context = super().get_context_data(**kwargs)
         list_type = self.kwargs["list_type"]
         context["list_type"] = list_type
+        is_own_contacts = list_type == 'all' and self.kwargs["username"] == self.request.user.username
+        info = ('Personal Contacts', 'syncope:org_member_new', 'contact') if is_own_contacts else LIST_INFO[list_type]
+        context["is_own_contacts"] = is_own_contacts
+        context["list_title"], context["add_url_name"], context["add_label"] = info
         context["organization"] = self.organization
         context["url_username"] = self.kwargs["username"]
         context["q"] = self.request.GET.get('q', '')
@@ -1260,6 +1270,7 @@ def profile_account(request, username):
     username_form = UsernameChangeForm(request.POST if action == "username" else None, instance=request.user)
     password_form = PasswordChangeForm(request.user, request.POST if action == "password" else None)
     password_form.fields["new_password2"].help_text = ""
+    password_form.fields["old_password"].widget.attrs["autocomplete"] = "new-password"  # stop browser autofill
     if username_form.is_bound and username_form.is_valid():
         user = username_form.save()
         messages.success(request, "Username updated.")

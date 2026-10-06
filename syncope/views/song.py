@@ -11,14 +11,14 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
-from syncope.models import Song, EventType, CustomUser, Person
+from syncope.models import Song, EventType, CustomUser, Person, LanguageCode, LyricsTranslation
 from syncope.models import Event, EventSong, EventSongResource, Project
 from syncope.forms import SongMetaForm, SongLyricsForm, SONG_PERSON_FIELD_SKILLS, SONG_PERSON_FIELD_META
 from syncope.forms import QuoteFormSet, LyricsTranslationFormSet
-from syncope.mixins import  SongOwnerMixin
+from syncope.mixins import ListFilterMixin, SongOwnerMixin
 from syncope.views.drafts import DraftMixin, clear_draft
 from syncope.permissions import AccessControl
-from syncope.utils import resource_icon_list, add_query_param, safe_next_url
+from syncope.utils import resource_icon_list, add_query_param, safe_next_url, filter_period, in_period_q, yes_no
 from syncope.breadcrumbs import project_origin_breadcrumbs, event_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
 from syncope.views.resource import song_related_resource_rows
 
@@ -66,6 +66,35 @@ def _annotate_song_queryset(qs, owner_user):
     )
 
 
+SONG_FILTER_SPEC = {
+    'start': 'date', 'end': 'date', 'language': 'codes', 'composer': 'multi', 'poet': 'multi', 'arranger': 'multi',
+    'has_resources': ('yes', 'no'), 'performed': ('yes', 'no'),
+}
+
+
+def _apply_song_filters(qs, filters):
+    """AND of the filter panel (OR inside a multi-select). Runs after the annotations it reads."""
+    if period := filter_period(filters):
+        qs = qs.filter(pk__in=EventSong.objects.filter(in_period_q('event__started_at', *period)).values('song_id'))
+    if 'language' in filters:  # original language or any translation
+        codes = filters['language']
+        qs = qs.filter(Q(languagecode__in=codes) | Q(pk__in=LyricsTranslation.objects.filter(
+            languagecode__in=codes).values('song_id')))
+    for role in ('composer', 'poet', 'arranger'):
+        if role in filters:
+            qs = qs.filter(**{f'{role}_id__in': filters[role]})
+    for key, has in (('has_resources', Q(has_direct_resources__gt=0) | Q(has_event_resources__gt=0)),
+                     ('performed', Q(concert_count__gt=0) | Q(performance_count__gt=0))):
+        if key in filters:
+            qs = yes_no(qs, filters[key], has)
+    return qs
+
+
+def _song_people_options(owner_user, role):
+    people = Person.objects.filter(**{f'{role}_songs__user': owner_user}).distinct().order_by('last_name', 'first_name')
+    return [(p.pk, f'{p.last_name} {p.first_name}') for p in people]
+
+
 def _apply_song_sort(qs, request):
     """Apply column sorting shared by the song list page and its AJAX search."""
     sort = request.GET.get('sort', 'id')
@@ -89,7 +118,8 @@ def _apply_song_sort(qs, request):
 
 
 @method_decorator(login_required, name='dispatch')
-class SongListView(SongOwnerMixin, ListView):
+class SongListView(ListFilterMixin, SongOwnerMixin, ListView):
+    filter_spec = SONG_FILTER_SPEC
     model = Song
     template_name = "syncope/song_list.html"
     context_object_name = "songs"
@@ -98,10 +128,20 @@ class SongListView(SongOwnerMixin, ListView):
     def get_queryset(self):
         qs = AccessControl.can_view_song_list(self.request.user, self.owner_user)
         qs = _build_song_queryset(qs, self.request.GET.get('q', ''))
-        qs = _annotate_song_queryset(qs, self.owner_user)
+        qs = _apply_song_filters(_annotate_song_queryset(qs, self.owner_user), self.get_filters())
         qs = _apply_song_sort(qs, self.request)
         return qs.select_related('composer', 'poet', 'arranger').prefetch_related('song_resource__resource')
 
+    def filter_options(self):
+        codes = LanguageCode.objects.filter(
+            Q(song__user=self.owner_user) | Q(lyricstranslation__song__user=self.owner_user)
+        ).distinct().order_by('pk').values_list('pk', 'pk')
+        return {
+            'filter_languages': codes,
+            'filter_composers': _song_people_options(self.owner_user, 'composed'),
+            'filter_poets': _song_people_options(self.owner_user, 'written'),
+            'filter_arrangers': _song_people_options(self.owner_user, 'arranged'),
+        }
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -114,24 +154,9 @@ class SongListView(SongOwnerMixin, ListView):
         return context
 
 
-@login_required
-def song_list_search(request, username):
-    owner_user = get_object_or_404(CustomUser, username=username)
-    qs = AccessControl.can_view_song_list(request.user, owner_user)
-    q = request.GET.get('q', '')
-    qs = _build_song_queryset(qs, q)
-    qs = _annotate_song_queryset(qs, owner_user)
-    qs = _apply_song_sort(qs, request)
-    songs = qs.select_related('composer', 'poet', 'arranger').prefetch_related('song_resource__resource')
-    for song in songs:
-        song.resource_icons = resource_icon_list(song.song_resource.all())
-    return render(request, 'syncope/song_list_results.html', {
-        'songs': songs,
-        'url_username': username,
-        'q': q,
-        'current_sort': request.GET.get('sort', 'id'),
-        'reverse': request.GET.get('reverse', 'false') == 'true',
-    })
+class SongListSearchView(SongListView):
+    template_name = 'syncope/song_list_results.html'
+    with_filter_options = False
 
 
 @method_decorator(login_required, name='dispatch')

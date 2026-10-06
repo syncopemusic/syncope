@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load dt_tags %}
+{% load static filter_tags %}
 {% block title %}Invitations{% endblock %}
 
 {% block content %}
@@ -12,75 +12,45 @@
     {% endif %}
 </div>
 
-<h3>Pending Invitations</h3>
-<div class="table-container">
-<table class="table">
-    <thead>
-    <tr>
-        <th class="col-num"></th>
-        <th><a href="?pending_sort=date{% if pending_sort == 'date' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}" class="sortable-header">Date{% if pending_sort == 'date' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?pending_sort=type{% if pending_sort == 'type' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}" class="sortable-header">Type{% if pending_sort == 'type' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th class="col-main"><a href="?pending_sort=sent_by{% if pending_sort == 'sent_by' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}" class="sortable-header">Sender{% if pending_sort == 'sent_by' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?pending_sort=admin{% if pending_sort == 'admin' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}" class="sortable-header">Admin involved{% if pending_sort == 'admin' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th class="col-main"><a href="?pending_sort=received_by{% if pending_sort == 'received_by' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}" class="sortable-header">Recipient{% if pending_sort == 'received_by' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?pending_sort=status{% if pending_sort == 'status' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}" class="sortable-header">Status{% if pending_sort == 'status' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?pending_sort=expires{% if pending_sort == 'expires' and not pending_reverse %}&pending_reverse=true{% endif %}{% if history_sort %}&history_sort={{ history_sort }}{% endif %}{% if history_reverse %}&history_reverse=true{% endif %}" class="sortable-header">Expires{% if pending_sort == 'expires' %}{% if not pending_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th></th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for invitation in pending_list %}
-        <tr>
-            <td class="col-num">{{ forloop.counter }}</td>
-            <td>{% dt invitation.created_at "date-year" %}</td>
-            <td>{{ invitation.invitation_type }}</td>
-            <td class="col-main">{{ invitation.sender }}</td>
-            <td>{% if invitation.admin_involved %}{{ invitation.admin_involved }}{% else %}?{% endif %}</td>
-            <td class="col-main">{{ invitation.recipient }}</td>
-            <td>{{ invitation.status }}</td>
-            <td>{% if invitation.expires_at %}{% dt invitation.expires_at "datetime" %}{% else %}-{% endif %}</td>
-            <td><a href="{% url 'syncope:invitation_detail' url_username invitation.pk %}">View</a></td>
-        </tr>
-    {% empty %}
-        <tr><td colspan="9">No pending invitations.</td></tr>
-    {% endfor %}
-    </tbody>
-</table>
-</div>
+{% include "syncope/_search_box.html" with prefix="invitation-list" q=q placeholder="Search by sender, recipient, admin, type, status, or date (2025, 3.2025, 5.3.2025)" %}
 
-<h3>History</h3>
-<div class="table-container">
-<table class="table">
-    <thead>
-    <tr>
-        <th class="col-num"></th>
-        <th><a href="?history_sort=date{% if history_sort == 'date' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}" class="sortable-header">Date{% if history_sort == 'date' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?history_sort=type{% if history_sort == 'type' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}" class="sortable-header">Type{% if history_sort == 'type' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th class="col-main"><a href="?history_sort=sent_by{% if history_sort == 'sent_by' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}" class="sortable-header">Sender{% if history_sort == 'sent_by' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?history_sort=admin{% if history_sort == 'admin' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}" class="sortable-header">Admin involved{% if history_sort == 'admin' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th class="col-main"><a href="?history_sort=received_by{% if history_sort == 'received_by' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}" class="sortable-header">Recipient{% if history_sort == 'received_by' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?history_sort=status{% if history_sort == 'status' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}" class="sortable-header">Status{% if history_sort == 'status' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?history_sort=expires{% if history_sort == 'expires' and not history_reverse %}&history_reverse=true{% endif %}{% if pending_sort %}&pending_sort={{ pending_sort }}{% endif %}{% if pending_reverse %}&pending_reverse=true{% endif %}" class="sortable-header">Expires{% if history_sort == 'expires' %}{% if not history_reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th></th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for invitation in history_invitations %}
-        <tr>
-            <td class="col-num">{{ forloop.counter }}</td>
-            <td>{% dt invitation.created_at "date-year" %}</td>
-            <td>{{ invitation.invitation_type }}</td>
-            <td class="col-main">{{ invitation.sender }}</td>
-            <td>{% if invitation.admin_involved %}{{ invitation.admin_involved }}{% else %}?{% endif %}</td>
-            <td class="col-main">{{ invitation.recipient }}</td>
-            <td>{{ invitation.status }}</td>
-            <td>{% if invitation.expires_at %}{% dt invitation.expires_at "datetime" %}{% else %}-{% endif %}</td>
-            <td><a href="{% url 'syncope:invitation_detail' url_username invitation.pk %}">View</a></td>
-        </tr>
-    {% empty %}
-        <tr><td colspan="9">No resolved invitations.</td></tr>
-    {% endfor %}
-    </tbody>
-</table>
+{% filter_panel "invitation-filter-form" %}
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="type" label="Type" options=filter_types selected=filters.type %}
 </div>
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="status" label="Status" options=filter_statuses selected=filters.status %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_choice.html" with name="direction" label="Direction" options=filter_directions selected=filters.direction %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="start" label="Created from" type="date" value=filters.start|date:"Y-m-d" %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="end" label="Created to" type="date" value=filters.end|date:"Y-m-d" %}
+</div>
+{% endfilter_panel %}
+
+<div id="invitation-list-results">
+    {% include "syncope/invitation_list_results.html" %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/filter-form.js' %}"></script>
+<script>
+    const filterForm = document.getElementById('invitation-filter-form');
+    const searchInput = document.getElementById('invitation-list-search-input');
+    const search = initLiveSearch({
+        input: searchInput,
+        spinner: document.getElementById('invitation-list-search-spinner'),
+        results: document.getElementById('invitation-list-results'),
+        clearBtn: document.getElementById('invitation-list-search-clear'),
+        searchUrl: "{% url 'syncope:invitation_list_search' url_username %}",
+        filterForm,
+    });
+    initFilterForm(filterForm, () => search.run(searchInput.value));
+</script>
 {% endblock %}

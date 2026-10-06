@@ -775,11 +775,19 @@
 
     .btn-remove {
         color: var(--color-text-muted);
+        border: 2px solid var(--color-danger);
     }
 
     .btn-remove:hover {
         color: var(--color-danger);
         text-decoration: underline;
+    }
+
+    /* Wide screens: the x / undo glyph is swapped for a word (JS keeps writing the glyph). */
+    @media (min-width: 769px) {
+        .btn-remove { font-size: 0; }
+        .btn-remove::after { content: "Delete"; font-size: var(--font-size-md); }
+        .pending-remove .btn-remove::after { content: "Undo"; }
     }
 
     /* Group of secondary actions (e.g. "Edit title | Edit people"); not a form submit/cancel pair. */
@@ -892,6 +900,10 @@
         flex: 0 1 var(--field-max);
         min-inline-size: 200px;
     }
+
+    /* Top-of-page list search: fills the row instead of capping at --field-max. */
+    .search-field-wide { flex: 1 1 auto; }
+    .search-field-wide input { max-inline-size: none; }
 
     .link-row > .search-field {
         margin: 0;
@@ -1179,6 +1191,26 @@
     }
     .search-spinner.is-active { opacity: 1; }
     @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+    /* Inline × (placed inside .search-field by initLiveSearch); input gets right padding so text clears it. */
+    .search-clear {
+        position: absolute;
+        top: 50%;
+        right: 0.3rem;
+        transform: translateY(-50%);
+        inline-size: 1.75rem;
+        block-size: 1.75rem;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--color-text-muted);
+        font-size: var(--font-size-lg, 1.25rem);
+        line-height: 1;
+        cursor: pointer;
+    }
+    .search-clear:hover { color: var(--color-text); }
+    .search-clear[hidden] { display: none; }
+    .search-field:has(.search-clear) input { padding-inline-end: 2.25rem; }
+    .search-spinner { right: 2.25rem; }
     @media (min-width: 769px) {
         .search-spinner {
             right: auto;
@@ -1348,8 +1380,21 @@
         border-radius: var(--radius-sm);
         font-size: var(--font-size-md);
         line-height: 1;
-        cursor: pointer;
+        cursor: default;
         user-select: none;
+    }
+
+    /* Only chips that cycle on click look clickable; plain chips are read-only. */
+    .chip[data-cycle] {
+        cursor: pointer;
+        outline: 2px solid var(--color-primary);
+        outline-offset: -2px;
+        transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .chip[data-cycle]:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
     }
 
     /* Use with .totals-row (border); adds bold. */
@@ -1422,6 +1467,10 @@
         transform: rotate(90deg);
     }
 
+    .filter-panel[open] .filter-total {
+        display: none;
+    }
+
     .filter-form {
         display: flex;
         flex-direction: column;
@@ -1436,11 +1485,6 @@
         align-items: end;
     }
 
-    .filter-dates {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-2);
-    }
 
     .filter-field {
         display: flex;
@@ -1449,12 +1493,49 @@
         font-size: var(--font-size-xs);
     }
 
+    .filter-label,
+    .filter-sub summary label {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+    }
+
     .filter-label {
         color: var(--color-text-muted);
     }
 
+    /* Date input with its Today button beside it, indented under the checkbox like the other inputs. */
+    .filter-input-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin-inline-start: var(--filter-indent);
+    }
+
+    .filter-today {
+        padding-block: var(--space-1); /* otherwise a plain .btn-secondary, like the Clear button */
+    }
+
     .filter-field input {
         padding: var(--space-2);
+    }
+
+    /* Checkbox box has a fixed width so inputs below can line up with the label text. */
+    .filter-form {
+        --filter-indent: calc(1rem + var(--space-1));
+    }
+
+    .filter-form input[type="checkbox"] {
+        margin: 0;
+        inline-size: 1rem;
+        block-size: 1rem;
+        padding: 0;
+    }
+
+    .filter-field > select,
+    .filter-field > input:not([type="checkbox"]),
+    .filter-sub-select {
+        margin-inline-start: var(--filter-indent);
     }
 
     /* nested collapsible list of checkboxes (skill / voice / instrument) */
@@ -1465,24 +1546,16 @@
         align-items: center;
         gap: 0.25em; /* one space character, same as the Member/Supporter labels */
         list-style: none;
-        pointer-events: none; /* only the checkbox opens/closes the list */
+        pointer-events: none; /* only the checkbox label opens/closes the list */
     }
 
-    .filter-sub summary input {
+    .filter-sub summary label {
         pointer-events: auto;
         cursor: pointer;
     }
 
-    .filter-sub summary .filter-toggle-icon {
-        margin-inline-start: var(--space-2);
-    }
-
     .filter-sub summary::-webkit-details-marker {
         display: none;
-    }
-
-    .filter-sub[open] > summary .filter-toggle-icon {
-        transform: rotate(90deg);
     }
 
     .filter-sub-select {
@@ -1491,24 +1564,9 @@
         margin-block: var(--space-1);
     }
 
-    .filter-dates input {
-        inline-size: 150px;
-    }
 
-    .filter-field-limit input {
-        inline-size: 90px;
-    }
 
-    .filter-row-actions {
-        gap: var(--space-3);
-        align-items: stretch;
-    }
 
-    .filter-row-actions .btn-primary,
-    .filter-row-actions .filter-reset {
-        flex: 0 0 auto;
-        justify-content: center;
-    }
 
     @media (min-width: 769px) {
         .filter-panel > summary {
@@ -1526,35 +1584,11 @@
             padding: var(--space-1) var(--space-2);
         }
 
-        .filter-dates {
-            flex: 1 1 auto;
-            gap: var(--space-2);
-        }
 
-        .filter-dates .filter-field {
-            flex: 1 1 45%;
-            min-width: 0;
-        }
 
-        .filter-dates input {
-            inline-size: auto;
-            min-width: 0;
-        }
 
-        .filter-field-limit {
-            margin-inline-start: auto;
-            text-align: end;
-        }
 
-        .filter-field-limit input {
-            inline-size: 80px;
-            text-align: end;
-        }
 
-        .filter-row-actions .btn-primary,
-        .filter-row-actions .filter-reset {
-            flex: 1 1 0;
-        }
 
     }
 
@@ -1734,3 +1768,5 @@
         }
     }
 }
+
+.filter-count { color: var(--color-text-muted); font-size: var(--font-size-xs); }

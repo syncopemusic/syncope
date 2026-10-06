@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static filter_tags %}
 {% block title %}Songs{% endblock %}
 {% block content %}
 
@@ -8,13 +8,34 @@
     <a href="{%  url 'syncope:song_new' url_username %}" class="btn btn-primary" title="Add new song into archive">+ Add</a>
 </div>
 
-<p class="search-form">
-    <span class="search-field">
-        <input type="text" id="song-list-search-input" value="{{ q }}" placeholder="Search by ID, title, composer, arranger, poet, origin, keywords, language">
-        <span class="search-spinner" id="song-list-search-spinner"></span>
-    </span>
-    <button type="button" id="song-list-search-clear" class="btn btn-secondary">Clear</button>
-</p>
+{% include "syncope/_search_box.html" with prefix="song-list" q=q placeholder="Search by ID, title, composer, arranger, poet, origin, keywords, language" %}
+
+{% filter_panel "song-filter-form" %}
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="start" label="Played from" type="date" value=filters.start|date:"Y-m-d" %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="end" label="Played to" type="date" value=filters.end|date:"Y-m-d" %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="language" label="Language" options=filter_languages selected=filters.language %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="composer" label="Composer" options=filter_composers selected=filters.composer %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="poet" label="Poet" options=filter_poets selected=filters.poet %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="arranger" label="Arranger" options=filter_arrangers selected=filters.arranger %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_choice.html" with name="has_resources" label="Has resources" options=filter_yes_no selected=filters.has_resources %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_choice.html" with name="performed" label="Performed" options=filter_yes_no selected=filters.performed %}
+</div>
+{% endfilter_panel %}
 
 <div id="song-list-results">
     {% include "syncope/song_list_results.html" %}
@@ -22,14 +43,19 @@
 
 {% block extra_js %}
 <script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/filter-form.js' %}"></script>
 <script>
-    initLiveSearch({
-        input: document.getElementById('song-list-search-input'),
+    const filterForm = document.getElementById('song-filter-form');
+    const searchInput = document.getElementById('song-list-search-input');
+    const search = initLiveSearch({
+        input: searchInput,
         spinner: document.getElementById('song-list-search-spinner'),
         results: document.getElementById('song-list-results'),
         clearBtn: document.getElementById('song-list-search-clear'),
-        buildUrl: query => `{% url 'syncope:song_list_search' url_username %}?q=${encodeURIComponent(query)}`,
+        searchUrl: "{% url 'syncope:song_list_search' url_username %}",
+        filterForm,
     });
+    initFilterForm(filterForm, () => search.run(searchInput.value));
 </script>
 {% endblock %}
 

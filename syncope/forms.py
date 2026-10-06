@@ -86,8 +86,13 @@ class UsernameChangeForm(forms.ModelForm):
         model = CustomUser
         fields = ["username"]
         labels = {"username": "New username"}
+        widgets = {"username": forms.TextInput(attrs={"autocomplete": "off"})}
 
-    password = forms.CharField(label="Current password", widget=forms.PasswordInput)
+    password = forms.CharField(label="Current password", widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.initial["username"] = ""  # "New username" starts empty, not prefilled from the instance
 
     def clean_password(self):
         password = self.cleaned_data["password"]

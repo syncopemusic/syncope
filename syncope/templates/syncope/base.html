@@ -166,20 +166,29 @@
     </script>
 
     <script>
-      document.addEventListener('DOMContentLoaded', function () {
-        const formatters = {
-          'date':      new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }),
-          'date-year': new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
-          'time':      new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }),
-          'datetime':  new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-          'date-dow':  new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
-          'datetime-dow-full':  new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-          'datetime-dow-short': new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-        };
-        document.querySelectorAll('[data-dt]').forEach(function (el) {
+      // Formats [data-dt] spans in the user's locale/timezone; call again on ajax-loaded HTML.
+      const formatters = {
+        'date':      new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }),
+        'date-year': new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
+        'time':      new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }),
+        'datetime':  new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        'date-dow':  new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
+        'datetime-dow-full':  new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        'datetime-dow-short': new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      };
+      function formatDates(root) {
+        root.querySelectorAll('[data-dt]').forEach(function (el) {
           const fmt = formatters[el.dataset.dtFmt];
           if (fmt) el.textContent = fmt.format(new Date(el.dataset.dt));
         });
+        // Tooltip: given title, then the full date on a new line.
+        root.querySelectorAll('[data-dt-title]').forEach(function (el) {
+          const iso = el.querySelector('[data-dt]').dataset.dt;
+          el.title = el.dataset.dtTitle + '\n' + formatters['datetime-dow-full'].format(new Date(iso));
+        });
+      }
+      document.addEventListener('DOMContentLoaded', function () {
+        formatDates(document);
 
         document.querySelectorAll('.remove-event-form').forEach(function (form) {
           form.addEventListener('submit', function (e) {

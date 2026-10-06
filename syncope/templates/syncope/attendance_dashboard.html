@@ -5,37 +5,41 @@
 <div class="stack">
     <h1>Attendance</h1>
 
-    <details class="filter-panel" {% if request.GET.start_date or request.GET.end_date or request.GET.event_limit %}open{% endif %}>
+    <p class="search-form">
+        <span class="search-field search-field-wide">
+            <input type="text" id="attendance-search-input" name="q" form="attendance-filter-form" value="{{ filters.q }}" placeholder="Search by member, voice, instrument, or date (2025, 3.2025, 5.3.2025)">
+            <span class="search-spinner" id="attendance-search-spinner"></span>
+        </span>
+        <button type="button" id="attendance-search-clear" class="btn btn-secondary">Clear</button>
+    </p>
+
+    <details class="filter-panel">
         <summary>
-            Filter
+            <span>Filter <span class="filter-total" id="filter-total">{% if filter_total %}({{ filter_total }}){% endif %}</span></span>
             <svg class="filter-toggle-icon" viewBox="0 0 24 24" width="18" height="18" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
         </summary>
         <form method="get" class="filter-form" id="attendance-filter-form">
+            <input type="hidden" name="f" value="1">
             <div class="filter-row">
-                <div class="filter-dates">
-                    <label class="filter-field">
-                        <span class="filter-label">From</span>
-                        <input type="date" name="start_date" value="{{ request.GET.start_date }}"
-                               data-clear="#event_limit_input">
-                    </label>
-                    <label class="filter-field">
-                        <span class="filter-label">To</span>
-                        <input type="date" name="end_date" value="{{ request.GET.end_date }}"
-                               data-clear="#event_limit_input">
-                    </label>
-                </div>
-                <label class="filter-field filter-field-limit">
-                    <span class="filter-label">or event limit</span>
-                    <input type="number" id="event_limit_input" name="event_limit"
-                           value="{{ request.GET.event_limit|default:3 }}" min="1" max="50"
-                           data-clear="[name=start_date], [name=end_date]">
-                </label>
+                {% include "syncope/_filter_input.html" with name="start_date" label="From" type="date" value=filters.start_date|date:"Y-m-d" %}
             </div>
-            <div class="filter-row filter-row-actions">
-                <a href="?" id="attendance-filter-reset" class="btn btn-primary filter-reset">Reset</a>
+            <div class="filter-row">
+                {% include "syncope/_filter_input.html" with name="end_date" label="To" type="date" value=filters.end_date|date:"Y-m-d" %}
+            </div>
+            <div class="filter-row">
+                {% include "syncope/_filter_input.html" with name="event_limit" label="Max events" type="number" value=filters.event_limit default=3 %}
+            </div>
+            <div class="filter-row">
+                {% include "syncope/_filter_multi.html" with name="event_type" label="Event type" options=filter_event_types selected=filters.event_type %}
+            </div>
+            <div class="filter-row">
+                {% include "syncope/_filter_multi.html" with name="voice" label="Voice" options=filter_voices selected=filters.voice %}
+            </div>
+            <div class="filter-row">
+                {% include "syncope/_filter_multi.html" with name="instrument" label="Instrument" options=filter_instruments selected=filters.instrument %}
             </div>
         </form>
     </details>
@@ -58,6 +62,8 @@
 {% include "syncope/_save_bar.html" with form_id="attendance-form" url=attendance_url %}
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
+<script src="{% static 'syncope/filter-form.js' %}"></script>
+<script src="{% static 'syncope/search-box.js' %}"></script>
 <script>
 const CYCLE_ORDER = [0, 1, 2, 3, 4];
 const TYPE_META = {
@@ -122,34 +128,47 @@ document.addEventListener('DOMContentLoaded', initCells);
 // Filter changes swap only the table (totals included); the URL is kept in sync so Save reuses the filters.
 const filterForm = document.getElementById('attendance-filter-form');
 const results = document.getElementById('attendance-results');
-let applied = new URLSearchParams(new FormData(filterForm));
 let inflight;
 
+// Remembers the applied filter state so a cancelled "discard changes?" can put it back.
+const snapshot = () => Array.from(filterForm.elements, el => ({
+    el, checked: el.checked, value: el.value, hidden: el.hidden, disabled: el.disabled,
+    selected: el.options && Array.from(el.options, o => o.selected),
+}));
+let applied = snapshot();
+function restoreFilters() {
+    for (const s of applied) {
+        Object.assign(s.el, { checked: s.checked, value: s.value, hidden: s.hidden, disabled: s.disabled });
+        s.selected?.forEach((sel, i) => { s.el.options[i].selected = sel; });
+    }
+    syncFilterForm(filterForm);
+}
+
 function loadTable() {
-    const params = new URLSearchParams(new FormData(filterForm));
     const unsaved = countUnsavedChanges();
     if (unsaved && !confirm(`Discard ${unsaved} unsaved change${unsaved === 1 ? '' : 's'}?`)) {
-        for (const [name, value] of applied) filterForm.elements[name].value = value;
+        restoreFilters();
         return;
     }
-    applied = params;
+    applied = snapshot();
+    const params = new URLSearchParams(new FormData(filterForm));
     inflight?.abort();
     inflight = new AbortController();
-    fetch(`?${params}&partial=1`, { signal: inflight.signal }).then(r => r.text()).then(html => {
+    return fetch(`?${params}&partial=1`, { signal: inflight.signal }).then(r => r.text()).then(html => {
         results.innerHTML = html;
+        formatDates(results);
         history.replaceState(null, '', `?${params}`);
         initCells();
         saveBarCtl.sync();
     }).catch(e => { if (e.name !== 'AbortError') throw e; });
 }
 
-filterForm.addEventListener('change', loadTable);
-filterForm.addEventListener('submit', e => { e.preventDefault(); loadTable(); });
-document.getElementById('attendance-filter-reset').addEventListener('click', e => {
-    e.preventDefault();
-    filterForm.start_date.value = filterForm.end_date.value = '';
-    filterForm.event_limit.value = 3;
-    loadTable();
+initFilterForm(filterForm, loadTable);
+initLiveSearch({
+    input: document.getElementById('attendance-search-input'),
+    spinner: document.getElementById('attendance-search-spinner'),
+    clearBtn: document.getElementById('attendance-search-clear'),
+    onSearch: loadTable,
 });
 </script>
 

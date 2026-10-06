@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load dt_tags %}
+{% load static filter_tags %}
 
 {% block title %}Projects{% endblock %}
 
@@ -10,44 +10,41 @@
     <a href="{%  url 'syncope:project_new' url_username %}" class="btn btn-primary" title="Add new project">+ Add</a>
     {% endif %}
 </div>
-{% if projects %}
+{% include "syncope/_search_box.html" with prefix="project-list" q=q placeholder="Search by title, description, event, year or date (2025, 3.2025, 5.3.2025)" %}
 
-<div class="table-container">
-<table class="table">
-    <thead>
-    <tr>
+{% filter_panel "project-filter-form" %}
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="start" label="From" type="date" value=filters.start|date:"Y-m-d" %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="end" label="To" type="date" value=filters.end|date:"Y-m-d" %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_choice.html" with name="status" label="Status" options=filter_statuses selected=filters.status %}
+</div>
+{% endfilter_panel %}
 
-        <th class="col-num"></th>
-        <th class="col-main"><a href="?sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Title{% if current_sort == 'title' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?sort=start_date{% if current_sort == 'start_date' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Start date{% if current_sort == 'start_date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?sort=end_date{% if current_sort == 'end_date' and not reverse %}&reverse=true{% endif %}" class="sortable-header">End date{% if current_sort == 'end_date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?sort=events{% if current_sort == 'events' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Events{% if current_sort == 'events' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-
-    </tr>
-    </thead>
-    <tbody>
-    {% for project in projects %}
-        <tr>
-            <td class="col-num">{{ forloop.counter }}</td>
-
-            <td class="col-main">
-                <a href="{%  url 'syncope:project_detail' url_username project.id %}">
-                    {{ project.title }}
-                </a>
-
-            </td>
-
-            <td>{% if project.start_date %}{% dt project.start_date "date-year" %}{% else %}-{% endif %}</td>
-            <td>{% if project.end_date %}{% dt project.end_date "date-year" %}{% else %}-{% endif %}</td>
-            <td><span title="Events">{{ project.num_main_events }}</span><span title="Rehearsals">({{ project.num_rehearsals }})</span></td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
+<div id="project-list-results">
+    {% include "syncope/project_list_results.html" %}
 </div>
 
-{% else %}
-<p>No projects yet.</p>
-{% endif %}
 
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/filter-form.js' %}"></script>
+<script>
+    const filterForm = document.getElementById('project-filter-form');
+    const searchInput = document.getElementById('project-list-search-input');
+    const search = initLiveSearch({
+        input: searchInput,
+        spinner: document.getElementById('project-list-search-spinner'),
+        results: document.getElementById('project-list-results'),
+        clearBtn: document.getElementById('project-list-search-clear'),
+        searchUrl: "{% url 'syncope:project_list_search' url_username %}",
+        filterForm,
+    });
+    initFilterForm(filterForm, () => search.run(searchInput.value));
+</script>
 {% endblock %}

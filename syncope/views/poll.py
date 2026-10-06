@@ -6,14 +6,15 @@ from django.contrib import messages
 from django.urls import reverse
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.utils import timezone
 from datetime import timedelta
 from syncope.models import CustomUser, PollAttendance, Poll, PollPerson, PollEvent, PollAttendanceType, Person, Role
 from syncope.forms import PollCreateForm, PollPersonForm, PollAttendanceForm, PollEventForm
 from syncope.permissions import AccessControl
 from syncope.views.drafts import DraftMixin
-from syncope.utils import group_by_section, add_query_param
+from syncope.utils import group_by_section, add_query_param, q_filter, filter_period, in_period_q, yes_no
+from syncope.mixins import ListFilterMixin
 
 
 class PollAdminMixin:
@@ -24,7 +25,8 @@ class PollAdminMixin:
 
 
 @method_decorator(login_required, name="dispatch")
-class PollListView(ListView):
+class PollListView(ListFilterMixin, ListView):
+    filter_spec = {'start': 'date', 'end': 'date', 'has_persons': ('yes', 'no')}
     model = Poll
     context_object_name = "polls"
     template_name = "syncope/poll_list.html"
@@ -52,16 +54,35 @@ class PollListView(ListView):
     def get_queryset(self):
         org_user = get_object_or_404(CustomUser, username=self.kwargs.get("username"))
         sort_field, _, _ = self._get_sort_field()
-        return Poll.objects.filter(user=org_user).select_related('user').order_by(sort_field)
+        polls = q_filter(
+            Poll.objects.filter(user=org_user), self.request.GET.get('q', ''), ['title', 'description'],
+            period_q=lambda d0, d1: in_period_q('created_at', d0, d1),
+            number_q=lambda n: Q(pk__in=Poll.objects.annotate(c=Count('poll_persons')).filter(c=n).values('pk')),
+        )
+        polls = self.apply_filters(polls.annotate(num_persons=Count('poll_persons')), self.get_filters())
+        return polls.select_related('user').order_by(sort_field)
+
+    def apply_filters(self, polls, filters):
+        if period := filter_period(filters):
+            polls = polls.filter(in_period_q('created_at', *period))
+        if 'has_persons' in filters:
+            polls = yes_no(polls, filters['has_persons'], Q(num_persons__gt=0))
+        return polls
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.kwargs.get('username')
+        context['q'] = self.request.GET.get('q', '')
         context['is_admin'] = AccessControl.has_permission(self.request.user, 'delete', self.kwargs.get('username'))
         _, sort, reverse = self._get_sort_field()
         context['current_sort'] = sort
         context['reverse'] = reverse
         return context
+
+
+class PollListSearchView(PollListView):
+    template_name = "syncope/poll_list_results.html"
+    with_filter_options = False
 
 
 @method_decorator(login_required, name="dispatch")

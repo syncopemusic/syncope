@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load dt_tags %}
+{% load static filter_tags %}
 
 {% block title %}Polls{% endblock %}
 
@@ -11,30 +11,39 @@
     {% endif %}
 </div>
 
+{% include "syncope/_search_box.html" with prefix="poll-list" q=q placeholder="Search by title, description, date (2025, 3.2025, 5.3.2025), number of persons" %}
 
-
-{% if polls %}
-<div class="table-container">
-<table class="table">
-    <thead>
-    <tr>
-        <th class="col-num"><a href="?sort=id{% if current_sort == 'id' and not reverse %}&reverse=true{% endif %}" class="sortable-header">{% if current_sort == 'id' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}</a></th>
-        <th class="col-main"><a href="?sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Title{% if current_sort == 'title' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?sort=updated{% if current_sort == 'updated' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Updated{% if current_sort == 'updated' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for poll in polls %}
-    <tr>
-        <td class="col-num">{{ forloop.counter }}</td>
-        <td class="col-main"><a href="{% url 'syncope:poll_detail' url_username poll.pk %}">{{ poll.title }}</a></td>
-        <td>{% dt poll.updated_at "datetime" %}</td>
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
+{% filter_panel "poll-filter-form" %}
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="start" label="Created from" type="date" value=filters.start|date:"Y-m-d" %}
 </div>
-{% else %}
-<p>No polls yet.</p>
-{% endif %}
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="end" label="Created to" type="date" value=filters.end|date:"Y-m-d" %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_choice.html" with name="has_persons" label="Has persons" options=filter_yes_no selected=filters.has_persons %}
+</div>
+{% endfilter_panel %}
+
+<div id="poll-list-results">
+    {% include "syncope/poll_list_results.html" %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/filter-form.js' %}"></script>
+<script>
+    const filterForm = document.getElementById('poll-filter-form');
+    const searchInput = document.getElementById('poll-list-search-input');
+    const search = initLiveSearch({
+        input: searchInput,
+        spinner: document.getElementById('poll-list-search-spinner'),
+        results: document.getElementById('poll-list-results'),
+        clearBtn: document.getElementById('poll-list-search-clear'),
+        searchUrl: "{% url 'syncope:poll_list_search' url_username %}",
+        filterForm,
+    });
+    initFilterForm(filterForm, () => search.run(searchInput.value));
+</script>
 {% endblock %}

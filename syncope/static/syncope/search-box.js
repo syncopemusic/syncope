@@ -5,17 +5,30 @@ function relocateResultCount(results, countTarget) {
     count?.remove();
 }
 
-function initLiveSearch({ input, spinner, results, clearBtn, buildUrl, countTarget }) {
+// searchUrl: list-page endpoint, queried with the page's own query string (keeps sorting) plus q.
+// filterForm: its fields replace the page's filter params, and the shareable page URL is kept in sync.
+// onSearch(query), if given, replaces the default fetch-into-results (pages that reload their own view).
+function initLiveSearch({ input, spinner, results, clearBtn, buildUrl, searchUrl, filterForm, countTarget, onSearch }) {
     if (!input) return;
     let timeout;
+    buildUrl ??= q => {
+        const params = new URLSearchParams(location.search);
+        if (filterForm) {
+            Array.from(filterForm.elements, el => el.name).forEach(name => params.delete(name));
+            new FormData(filterForm).forEach((value, name) => params.append(name, value));
+        }
+        params.set('q', q);
+        if (filterForm) history.replaceState(null, '', `?${params}`);
+        return `${searchUrl}?${params}`;
+    };
 
     function run(query) {
         spinner.classList.add('is-active');
-        fetch(buildUrl(query)).then(r => r.text()).then(html => {
-            spinner.classList.remove('is-active');
+        const done = onSearch ? Promise.resolve(onSearch(query)) : fetch(buildUrl(query)).then(r => r.text()).then(html => {
             results.innerHTML = html;
             relocateResultCount(results, countTarget);
         });
+        return done.finally(() => spinner.classList.remove('is-active'));
     }
 
     input.addEventListener('input', function() {
@@ -26,11 +39,21 @@ function initLiveSearch({ input, spinner, results, clearBtn, buildUrl, countTarg
     input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') e.preventDefault();
     });
-    clearBtn?.addEventListener('click', function() {
-        clearTimeout(timeout);
-        input.value = '';
-        run('');
-    });
+    if (clearBtn) {
+        // Existing "Clear" buttons become an inline × inside the field, shown only while it has text.
+        Object.assign(clearBtn, { className: 'search-clear', textContent: '×', ariaLabel: 'Clear search' });
+        input.after(clearBtn);
+        const sync = () => { clearBtn.hidden = !input.value; };
+        input.addEventListener('input', sync);
+        clearBtn.addEventListener('click', function() {
+            clearTimeout(timeout);
+            input.value = '';
+            sync();
+            input.focus();
+            run('');
+        });
+        sync();
+    }
 
     relocateResultCount(results, countTarget);
     return { run };

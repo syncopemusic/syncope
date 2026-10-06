@@ -7,7 +7,8 @@ from django.utils import timezone
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, UpdateView,  DetailView, View
 from django.views.generic.edit import DeleteView
-from django.db.models import Min, Case, When, Value, IntegerField, Prefetch, Count
+from django.db.models import Min, Case, When, Value, IntegerField, Prefetch, Count, Exists, OuterRef, Q
+from django.db.models.functions import TruncDate
 from django.shortcuts import redirect
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
@@ -17,12 +18,14 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.http import url_has_allowed_host_and_scheme
 from syncope.models import CustomUser, Person, Role, Song
 from syncope.models import Event, EventSong, Attendance, AttendanceType, EventSongResource, Resource
+from syncope.models import EventType, MembershipPeriod, Project
+from syncope.mixins import ListFilterMixin
 from syncope.forms import EventForm, AddAttendanceForm
 from syncope.forms import AddSongToEventForm, EventSongResourceFormSet
 from syncope.views.drafts import DraftMixin
 from syncope.views.resource import event_related_resource_rows
 from syncope.permissions import AccessControl
-from syncope.utils import resource_icon_list, add_query_param
+from syncope.utils import resource_icon_list, add_query_param, q_filter, date_overlap_q, filter_period, match_pk, yes_no
 from syncope.breadcrumbs import event_breadcrumbs, origin_root_crumbs, DEFAULT_EVENT_ORIGIN
 
 
@@ -188,8 +191,26 @@ class EventCreateView(DraftMixin, CreateView):
             "pk": self.object.pk
         })
 
+def _present_names_q(q):
+    """Events at which someone matching the name q was marked present."""
+    return Q(pk__in=Attendance.objects.filter(
+        attendance_type_id=AttendanceType.PRESENT, person__in=Person.objects.matching_name(q)
+    ).values('event_id'))
+
+
+def _guest_event_ids(owner):
+    """Events with a present attendee who had no active MEMBER period in the org on the event date."""
+    member = MembershipPeriod.objects.filter(
+        user=owner, role_id=Role.MEMBER, person=OuterRef('person'), started_at__lte=OuterRef('event_date'),
+    ).filter(Q(ended_at__gte=OuterRef('event_date')) | Q(ended_at__isnull=True))
+    return (Attendance.objects.filter(attendance_type_id=AttendanceType.PRESENT, event__user=owner)
+            .annotate(event_date=TruncDate('event__started_at')).filter(~Exists(member)).values('event_id'))
+
+
 @method_decorator(login_required, name="dispatch")
-class EventListView(ListView):
+class EventListView(ListFilterMixin, ListView):
+    filter_spec = {'start': 'date', 'end': 'date', 'type': 'multi', 'project': 'multi',
+                   'has_songs': ('yes', 'no'), 'has_resources': ('yes', 'no'), 'guests': ('yes', 'no')}
     template_name = "syncope/event_list.html"
     context_object_name = "events"
     model = Event
@@ -208,6 +229,8 @@ class EventListView(ListView):
             'type': 'event_type__name',
             'project': 'project__title',
             'location': 'location',
+            'resources': 'event_res_n',
+            'song_resources': 'song_res_n',
         }
         sort_field = sort_field_map.get(sort, 'started_at')
         if reverse:
@@ -217,24 +240,53 @@ class EventListView(ListView):
 
     def get_queryset(self):
         url_username = self.kwargs.get("username")
-        customuser = get_object_or_404(CustomUser, username=url_username)
+        self.customuser = get_object_or_404(CustomUser, username=url_username)
         sort_field, _, _ = self._get_sort_field()
-        return Event.objects.filter(user=customuser).order_by(sort_field).prefetch_related('event_resource__resource')
+        events = q_filter(
+            Event.objects.filter(user=self.customuser), self.request.GET.get('q', ''),
+            ['name', 'location', 'description', 'event_type__name', 'project__title', 'eventsong__song__title'],
+            period_q=lambda d0, d1: date_overlap_q('started_at', 'ended_at', d0, d1),
+            extra_q=_present_names_q,
+        )
+        events = events.annotate(
+            event_res_n=Count('event_resource', distinct=True),
+            song_res_n=Count('eventsong__event_song_resource', distinct=True),
+        )
+        return self.apply_filters(events, self.get_filters()).order_by(sort_field)
+
+    def apply_filters(self, events, filters):
+        if period := filter_period(filters):
+            events = match_pk(events, date_overlap_q('started_at', 'ended_at', *period))
+        if 'type' in filters:
+            events = events.filter(event_type_id__in=filters['type'])
+        if 'project' in filters:
+            events = events.filter(project_id__in=filters['project'])
+        if 'has_songs' in filters:
+            events = yes_no(events, filters['has_songs'], Q(pk__in=EventSong.objects.values('event_id')))
+        if 'guests' in filters:
+            events = yes_no(events, filters['guests'], Q(pk__in=_guest_event_ids(self.customuser)))
+        if 'has_resources' in filters:
+            events = yes_no(events, filters['has_resources'], Q(event_res_n__gt=0) | Q(song_res_n__gt=0))
+        return events
+
+    def filter_options(self):
+        return {
+            'filter_types': EventType.objects.order_by('id').values_list('id', 'name'),
+            'filter_projects': Project.objects.filter(user__username=self.kwargs['username']).values_list('id', 'title'),
+        }
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        for event in context['events']:
-            event.resource_icons = resource_icon_list(event.event_resource.all())
-            event.resource_count = event.event_resource.count()
-            event_song_resources = EventSongResource.objects.filter(
-                event_song__event=event
-            ).select_related('resource').order_by('order')
-            event.event_song_resource_icons = resource_icon_list(event_song_resources)
-            event.event_song_resource_count = event_song_resources.count()
+        context['q'] = self.request.GET.get('q', '')
         _, sort, reverse = self._get_sort_field()
         context['current_sort'] = sort
         context['reverse'] = reverse
         return context
+
+
+class EventListSearchView(EventListView):
+    template_name = 'syncope/event_list_results.html'
+    with_filter_options = False
 
 
 @method_decorator(login_required, name='dispatch')

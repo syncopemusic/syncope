@@ -16,7 +16,8 @@ from syncope.models import (
 )
 from syncope.permissions import AccessControl
 from syncope.views.drafts import DraftMixin
-from syncope.utils import bulk_copy_m2m_relations
+from syncope.utils import bulk_copy_m2m_relations, q_filter, filter_period, in_period_q
+from syncope.mixins import ListFilterMixin
 
 
 class SelectPersonInitialMixin:
@@ -49,7 +50,8 @@ class InvitationAccessMixin:
 
 # 1. Invitation List
 @method_decorator(login_required, name='dispatch')
-class InvitationListView(InvitationAccessMixin, ListView):
+class InvitationListView(ListFilterMixin, InvitationAccessMixin, ListView):
+    filter_spec = {'type': 'multi', 'status': 'multi', 'direction': ('sent', 'received'), 'start': 'date', 'end': 'date'}
     model = Invitation
     context_object_name = "invitations"
     template_name = "syncope/invitation_list.html"
@@ -80,9 +82,33 @@ class InvitationListView(InvitationAccessMixin, ListView):
         return sort_field, sort, reverse
 
     def get_queryset(self):
-        return Invitation.objects.filter(
-            Q(sender=self.customuser) | Q(recipient=self.customuser)
-        ).select_related("sender", "recipient", "invitation_type", "status", "admin_involved")
+        invitations = q_filter(
+            Invitation.objects.filter(Q(sender=self.customuser) | Q(recipient=self.customuser)),
+            self.request.GET.get('q', ''),
+            ['sender__username', 'sender__email', 'recipient__username', 'recipient__email',
+             'admin_involved__username', 'invitation_type__name', 'status__name'],
+            period_q=lambda d0, d1: in_period_q('created_at', d0, d1) | in_period_q('expires_at', d0, d1),
+        )
+        invitations = self.apply_filters(invitations, self.get_filters())
+        return invitations.select_related("sender", "recipient", "invitation_type", "status", "admin_involved")
+
+    def apply_filters(self, invitations, filters):
+        if 'type' in filters:
+            invitations = invitations.filter(invitation_type_id__in=filters['type'])
+        if 'status' in filters:
+            invitations = invitations.filter(status_id__in=filters['status'])
+        if 'direction' in filters:
+            invitations = invitations.filter(**{'sender' if filters['direction'] == 'sent' else 'recipient': self.customuser})
+        if period := filter_period(filters):
+            invitations = invitations.filter(in_period_q('created_at', *period))
+        return invitations
+
+    def filter_options(self):
+        return {
+            'filter_types': InvitationType.objects.values_list('id', 'name'),
+            'filter_statuses': InvitationStatus.objects.values_list('id', 'name'),
+            'filter_directions': (('sent', 'Sent'), ('received', 'Received')),
+        }
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -100,8 +126,14 @@ class InvitationListView(InvitationAccessMixin, ListView):
         context['history_reverse'] = history_reverse
         context['url_username'] = self.customuser.username
         context['is_org'] = Organization.objects.filter(user=self.customuser).exists()
+        context['q'] = self.request.GET.get('q', '')
 
         return context
+
+
+class InvitationListSearchView(InvitationListView):
+    template_name = "syncope/invitation_list_results.html"
+    with_filter_options = False
 
 
 # 2. Trigger: create invite

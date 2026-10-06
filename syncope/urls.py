@@ -2,7 +2,7 @@ from django.urls import path
 from django.views.generic import RedirectView
 
 from .views.attendance import AttendanceDashboardView, quick_add_rehearsal, self_attendance_update
-from .views.event import EventCreateView, EventDetailView, EventListView, EventDeleteView
+from .views.event import EventCreateView, EventDetailView, EventListView, EventListSearchView, EventDeleteView
 from .views.event import EventSongsEditView, EventAttendanceEditView, EventMetaEditView
 from .views.event import event_songs_search, event_song_resources_save
 from .views.event import event_attendance_search
@@ -10,15 +10,15 @@ from .views.home import HomeView, SkillListAndCreateView
 from .views.importing import ImportHubView, ImportDashboardView, CombineProjectsView
 from .views.organization import OrganizationCreateView, OrganizationDashboard, OrganizationUpdateView, OrganizationDeleteView
 from .views.person import PersonUpdateView, profile_account, ProfileDetailView, OrgMemberAddView, OrgMemberEditView, PersonListView, OrgMemberDetailView, OrgMemberDeleteView, org_member_unlink, person_list_search
-from .views.invitation import InvitationListView, InvitationCreateView, InvitationUpdateView
+from .views.invitation import InvitationListView, InvitationListSearchView, InvitationCreateView, InvitationUpdateView
 from .views.organization import OrganizationCreateView, OrganizationDashboard
-from .views.project import ProjectDeleteView, ProjectCreateView, ProjectDetailView, ProjectListView
+from .views.project import ProjectDeleteView, ProjectCreateView, ProjectDetailView, ProjectListView, ProjectListSearchView
 from .views.project import ProjectMetaEditView, ProjectEventsEditView, ProjectSongsEditView, ProjectParticipantsEditView
 from .views.project import project_events_search, project_songs_search, project_guests_search
-from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongMetaEditView, SongLyricsEditView, SongQuoteView, SongEventsEditView, song_events_search, song_list_search, song_person_search
+from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongMetaEditView, SongLyricsEditView, SongQuoteView, SongEventsEditView, song_events_search, SongListSearchView, song_person_search
 from .views.resource import ResourcesEditView, ProfileResourcesView
 from .views.user_login_register import SignUp, UserLoginView, UserLogoutView
-from .views.poll import PollListView, PollCreateUpdateView, PollDetailView, PollDeleteView, PollPersonView, PollEventView, PollEventUpdateView, PollEventAttendanceView, PollPersonAttendanceView, poll_persons_search
+from .views.poll import PollListView, PollListSearchView, PollCreateUpdateView, PollDetailView, PollDeleteView, PollPersonView, PollEventView, PollEventUpdateView, PollEventAttendanceView, PollPersonAttendanceView, poll_persons_search
 from .views.share import create_share_link, visit_share
 from .views.drafts import save_draft_and_go
 
@@ -36,6 +36,7 @@ urlpatterns = [
     path("<str:username>/person/account/", profile_account, name="profile_account"),
     path("<str:username>/person/resources/", ProfileResourcesView.as_view(), name="profile_resources"),
     path("<str:username>/invitations/", InvitationListView.as_view(), name="invitation_list"),
+    path("<str:username>/invitations/search/", InvitationListSearchView.as_view(), name="invitation_list_search"),
     path("<str:username>/invitations/new/", InvitationCreateView.as_view(), name="invitation_new"),
     path("<str:username>/invitations/<int:pk>/", InvitationUpdateView.as_view(), name="invitation_detail"),
     path("logout/", UserLogoutView.as_view(), name="logout"),
@@ -53,6 +54,7 @@ urlpatterns = [
     path("<str:username>/import/combine/", CombineProjectsView.as_view(), name="import_combine"),
     path("<str:username>/<str:method>/import/", ImportDashboardView.as_view(), name="import_dashboard"),
     path("<str:username>/events/", EventListView.as_view(), name="event_list"),
+    path("<str:username>/events/search/", EventListSearchView.as_view(), name="event_list_search"),
     path("<str:username>/events/new/", EventCreateView.as_view(), name="event_new"),
     path("<str:username>/events/<int:pk>/", EventDetailView.as_view(), name="event_detail"),
     path("<str:username>/events/<int:pk>/delete/", EventDeleteView.as_view(), name="event_delete"),
@@ -106,7 +108,7 @@ urlpatterns = [
     path("<str:username>/songs/persons/", RedirectView.as_view(pattern_name="syncope:org_composers_list", permanent=True)),
 
     path("<str:username>/songs/", SongListView.as_view(), name="song_list"),
-    path("<str:username>/songs/search/", song_list_search, name="song_list_search"),
+    path("<str:username>/songs/search/", SongListSearchView.as_view(), name="song_list_search"),
     path("<str:username>/songs/new/", SongCreateView.as_view(), name="song_new"),
     path("<str:username>/songs/<int:pk>/", SongDetailView.as_view(), name="song_detail"),
     path("<str:username>/songs/<int:pk>/meta/edit/", SongMetaEditView.as_view(), name="song_meta_edit"),
@@ -122,6 +124,7 @@ urlpatterns = [
     path("skill/", SkillListAndCreateView.as_view(), name="skill"),
 
     path('<str:username>/projects/', ProjectListView.as_view(), name='project_list'),
+    path('<str:username>/projects/search/', ProjectListSearchView.as_view(), name='project_list_search'),
     path('<str:username>/projects/new/', ProjectCreateView.as_view(), name='project_new'),
     path('<str:username>/projects/<int:pk>/', ProjectDetailView.as_view(), name='project_detail'),
     path('<str:username>/projects/<int:pk>/delete/', ProjectDeleteView.as_view(), name='project_delete'),
@@ -141,6 +144,7 @@ urlpatterns = [
     path("<str:username>/polls/<int:pk>/<int:person_pk>/", PollPersonAttendanceView.as_view(), name="poll_person_attendance"),
 
     path("<str:username>/polls/", PollListView.as_view(), name="poll_list"),
+    path("<str:username>/polls/search/", PollListSearchView.as_view(), name="poll_list_search"),
     path("<str:username>/polls/new/", PollCreateUpdateView.as_view(), name="poll_new"),
     path("<str:username>/polls/<int:pk>/", PollDetailView.as_view(), name="poll_detail"),
     path("<str:username>/polls/<int:pk>/update/", PollCreateUpdateView.as_view(), name="poll_update"),

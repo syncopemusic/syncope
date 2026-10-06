@@ -1,12 +1,7 @@
 <details class="filter-sub" {% if selected %}open{% endif %}>
     <summary>
-        <input type="checkbox" {% if selected %}checked{% endif %}>
-        <span>{{ label }}</span>
+        <label><input type="checkbox" {% if selected %}checked{% endif %}> {{ label }}</label>
         <span class="filter-count">{% if selected %}({{ selected|length }}){% endif %}</span>
-        <svg class="filter-toggle-icon" viewBox="0 0 24 24" width="16" height="16" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="9 18 15 12 9 6"></polyline>
-        </svg>
     </summary>
     <select name="{{ name }}" multiple size="6" class="filter-sub-select">
         {% for id, title in options %}

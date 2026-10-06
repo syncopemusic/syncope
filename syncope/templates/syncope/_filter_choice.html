@@ -1,0 +1,6 @@
+<label class="filter-field"><span class="filter-label"><input type="checkbox" data-toggle="{{ name }}" {% if selected %}checked{% endif %}> {{ label }}</span>
+    <select name="{{ name }}" {% if not selected %}hidden disabled{% endif %}>
+        {% for value, text in options %}
+        <option value="{{ value }}" {% if value == selected %}selected{% endif %}>{{ text }}</option>
+        {% endfor %}
+    </select></label>
