@@ -3,7 +3,7 @@
         <label><input type="checkbox" {% if selected %}checked{% endif %}> {{ label }}</label>
         <span class="filter-count">{% if selected %}({{ selected|length }}){% endif %}</span>
     </summary>
-    <select name="{{ name }}" multiple size="6" class="filter-sub-select">
+    <select name="{{ name }}" multiple size="{% if options|length < 6 %}{{ options|length }}{% else %}6{% endif %}" class="filter-sub-select">
         {% for id, title in options %}
         <option value="{{ id }}" {% if id in selected %}selected{% endif %}>{{ title|capfirst }}</option>
         {% endfor %}

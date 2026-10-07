@@ -1,14 +1,15 @@
 // Staged add/remove list: search results stage tr.staged-add (hidden add_*), x stages tr.pending-remove (hidden remove_<pk>).
 // Rows carry data-id (the pk posted as remove_<pk>); data-<excludeKey> is what the search excludes. Search is optional:
 // ids `<prefix>-search-{input,spinner,results,clear,count}`. An optional `tr.empty-row` shows while the list is empty.
+// rootId (default tbodyId): wider element whose rows can also be removed (e.g. a second tbody in the same table).
 // Hooks (pages that need more): buildRow(btn, info) -> cells html, extraCount() -> number, afterChange(count), onDiscardExtra().
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-function initStagedList({ formId, tbodyId, addField, prefix, searchUrl, queryParam = 'q', excludeKey = 'id', numClass = 'col-num',
+function initStagedList({ formId, tbodyId, rootId = tbodyId, addField, prefix, searchUrl, queryParam = 'q', excludeKey = 'id', numClass = 'col-num',
                           rowClass = '', buildRow, extraCount = () => 0, afterChange, onDiscardExtra }) {
-    const tbody = document.getElementById(tbodyId), emptyRow = tbody.querySelector('.empty-row');
+    const tbody = document.getElementById(tbodyId), root = document.getElementById(rootId), emptyRow = tbody.querySelector('.empty-row');
     const el = n => document.getElementById(`${prefix}-search-${n}`);
-    const count = () => tbody.querySelectorAll('tr.staged-add, tr.pending-remove').length + extraCount();
+    const count = () => root.querySelectorAll('tr.staged-add, tr.pending-remove').length + extraCount();
     const ids = () => Array.from(tbody.rows).map(tr => tr.dataset[excludeKey]).filter(Boolean);
     const refresh = () => live?.run(el('input').value);
     const mark = (row, pending) => {  // flips the pending-remove state, input and button of an existing row
@@ -28,12 +29,12 @@ function initStagedList({ formId, tbodyId, addField, prefix, searchUrl, queryPar
         },
         onDiscard: () => {
             tbody.querySelectorAll('tr.staged-add').forEach(r => r.remove());
-            tbody.querySelectorAll('tr.pending-remove').forEach(r => mark(r, false));
+            root.querySelectorAll('tr.pending-remove').forEach(r => mark(r, false));
             onDiscardExtra?.();
         },
         afterDiscard: refresh,
     });
-    tbody.addEventListener('click', e => {
+    root.addEventListener('click', e => {
         const row = e.target.closest('.btn-remove')?.closest('tr');
         if (!row) return;
         if (row.classList.contains('staged-add')) row.remove(); else mark(row, !row.classList.contains('pending-remove'));

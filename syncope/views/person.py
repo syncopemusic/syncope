@@ -4,10 +4,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
-from django.contrib.auth.forms import PasswordChangeForm
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
-from syncope.forms import UsernameChangeForm, PersonForm, MembershipPeriodFormSet
+from syncope.forms import AccountPasswordChangeForm, UsernameChangeForm, PersonForm, MembershipPeriodFormSet
 from syncope.utils import merge_consecutive_membership_periods
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy, reverse
@@ -1268,7 +1267,7 @@ def profile_account(request, username):
         return HttpResponseForbidden()
     action = request.POST.get("action")
     username_form = UsernameChangeForm(request.POST if action == "username" else None, instance=request.user)
-    password_form = PasswordChangeForm(request.user, request.POST if action == "password" else None)
+    password_form = AccountPasswordChangeForm(request.user, request.POST if action == "password" else None)
     password_form.fields["new_password2"].help_text = ""
     password_form.fields["old_password"].widget.attrs["autocomplete"] = "new-password"  # stop browser autofill
     if username_form.is_bound and username_form.is_valid():

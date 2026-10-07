@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static dt_tags %}
+{% load static dt_tags icon_tags %}
 
 {% block title %}{{ project.title }}{% endblock %}
 
@@ -127,8 +127,8 @@
                 <div>{{ event.location|default:"-" }}</div>
             </td>
             <td class="song-meta col-action">
-                {% if event.resource_count > 0 %}<span title="Event resources">🔗{{ event.resource_count }}</span>{% endif %}
-                {% if event.event_song_resource_count > 0 %}<span title="Song resources from this event">🎵{{ event.event_song_resource_count }}</span>{% endif %}
+                {% if event.resource_count > 0 %}<span title="Event resources">{% icon "link" %}{{ event.resource_count }}</span>{% endif %}
+                {% if event.event_song_resource_count > 0 %}<span title="Song resources from this event">{% icon "music" %}{{ event.event_song_resource_count }}</span>{% endif %}
             </td>
             <td>
                 {% with songs=event.eventsong_set.all|dictsort:"order" %}

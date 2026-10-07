@@ -28,7 +28,7 @@
             <select id="new-resource-setlist">
                 <option value="">Not tied to a {{ related_column_label|lower }}</option>
                 {% for opt in setlist_options %}
-                <option value="{{ opt.pk }}">Specific to: {{ opt.label }}</option>
+                <option value="{{ opt.pk }}"{% if opt.started_at %} data-dt="{{ opt.started_at|date:"c" }}" data-dt-fmt="date-year" data-dt-prefix="Specific to: {{ opt.label }} - "{% endif %}>Specific to: {{ opt.label }}{% if opt.started_at %} - {{ opt.started_at|date:"d M, Y" }}{% endif %}</option>
                 {% endfor %}
             </select>
         </div>
@@ -51,6 +51,7 @@
     const saveBarCtl = initStagedList({
         formId: 'resources-form',
         tbodyId: 'resources-own-rows',
+        rootId: 'resources',
         extraCount: () => (reordered ? 1 : 0),
         onDiscardExtra: () => window.location.reload(),
     });
@@ -97,6 +98,7 @@
         let newIdx = 0;
         ownRowsBody.querySelectorAll('tr').forEach(function(row) {
             if (row.classList.contains('pending-remove')) return;
+            if (row.dataset.id?.startsWith('es')) return;  // song/event-specific rows: removable only, not orderable
             if (row.dataset.id) {
                 tokens.push('r' + row.dataset.id);
             } else if (row.classList.contains('staged-add')) {

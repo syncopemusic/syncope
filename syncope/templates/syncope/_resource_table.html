@@ -1,4 +1,4 @@
-{% load static dt_tags %}
+{% load static dt_tags icon_tags %}
 {% with table_id=table_id|default:"resource-table" %}
 {% if rows or related_rows or editable %}
 <div class="table-container">
@@ -19,7 +19,7 @@
         <tr data-id="{{ row.pk }}">
             {% if editable %}<td class="drag-handle-cell"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span></td>{% endif %}
             <td class="col-num">{{ forloop.counter }}</td>
-            <td>{{ row.icon }}</td>
+            <td>{% icon row.icon %}</td>
             <td class="col-main">{% if editable %}{{ row.url }}{% else %}<a href="{{ row.share_url|default:row.url }}" target="_blank" rel="noopener noreferrer">{{ row.url }}</a>{% endif %}</td>
             <td class="col-main">{{ row.desc }}</td>
             {% if related_column_label %}<td>-</td>{% endif %}
@@ -34,10 +34,10 @@
     {% if related_rows %}
     <tbody>
         {% for row in related_rows %}
-        <tr>
+        <tr{% if editable %} data-id="es{{ row.pk }}"{% endif %}>
             {% if editable %}<td class="drag-handle-cell"></td>{% endif %}
-            <td class="col-num"></td>
-            <td>{{ row.icon }}</td>
+            <td class="col-num">{{ rows|length|add:forloop.counter }}</td>
+            <td>{% icon row.icon %}</td>
             <td class="col-main">{% if editable %}{{ row.url }}{% else %}<a href="{{ row.share_url|default:row.url }}" target="_blank" rel="noopener noreferrer">{{ row.url }}</a>{% endif %}</td>
             <td class="col-main">{{ row.desc }}</td>
             <td>
@@ -47,7 +47,11 @@
                     {% if editable %}{{ row.related_obj.title }}{% else %}<a href="{% url 'syncope:song_detail' url_username row.related_obj.pk %}">{{ row.related_obj.title }}</a>{% endif %}
                 {% endif %}
             </td>
-            {% if editable %}<td></td>{% endif %}
+            {% if editable %}
+            <td class="col-action">
+                <button type="button" class="btn btn-remove" title="Remove">&times;</button>
+            </td>
+            {% endif %}
         </tr>
         {% endfor %}
     </tbody>

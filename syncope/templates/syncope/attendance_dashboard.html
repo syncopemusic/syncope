@@ -67,11 +67,11 @@
 <script>
 const CYCLE_ORDER = [0, 1, 2, 3, 4];
 const TYPE_META = {
-    0: { label: 'TBD',               icon: '?',  cls: 'att-type-0' },
-    1: { label: 'Present',           icon: '✓',  cls: 'att-type-1' },
-    2: { label: 'Work',              icon: '💼', cls: 'att-type-2' },
-    3: { label: 'Illness',           icon: '🤒', cls: 'att-type-3' },
-    4: { label: 'Private',           icon: '🏖', cls: 'att-type-4' },
+    0: { label: 'TBD',               icon: 'circle-help', cls: 'att-type-0' },
+    1: { label: 'Present',           icon: 'check',       cls: 'att-type-1' },
+    2: { label: 'Work',              icon: 'briefcase',   cls: 'att-type-2' },
+    3: { label: 'Illness',           icon: 'thermometer', cls: 'att-type-3' },
+    4: { label: 'Private',           icon: 'umbrella',    cls: 'att-type-4' },
 };
 
 function paintCell(cell, typeId) {
@@ -79,7 +79,7 @@ function paintCell(cell, typeId) {
     cell.querySelector('input[type="hidden"]').value = typeId;
     Object.values(TYPE_META).forEach(m => cell.classList.remove(m.cls));
     cell.classList.add(TYPE_META[typeId].cls);
-    cell.querySelector('.att-icon').textContent = TYPE_META[typeId].icon;
+    cell.querySelector('.att-icon').innerHTML = icon(TYPE_META[typeId].icon);
     cell.title = TYPE_META[typeId].label;
 }
 
@@ -119,7 +119,7 @@ function initCells() {
     document.querySelectorAll('.table-cell-attendance[data-type-id]').forEach(cell => {
         cell.dataset.originalTypeId = cell.dataset.typeId;
         const meta = TYPE_META[parseInt(cell.dataset.typeId, 10)] || TYPE_META[0];
-        cell.querySelector('.att-icon').textContent = meta.icon;
+        cell.querySelector('.att-icon').innerHTML = icon(meta.icon);
         cell.title = meta.label;
     });
 }

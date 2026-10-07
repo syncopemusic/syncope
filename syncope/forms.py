@@ -1,7 +1,7 @@
 from django import forms
 import datetime
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm, UserChangeForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, UserCreationForm, UserChangeForm
 from django.utils import timezone
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
     PollAttendance, Invitation
@@ -29,13 +29,20 @@ class HtmlDateTimeInput(forms.DateTimeInput):
 RESERVED_USERNAMES = {"home", "login", "logout", "signup", "skill", "organization", "share", "accounts", "admin"}
 
 
+PASSWORD_MISMATCH = "Passwords don't match."
+PASSWORD_INCORRECT = "Incorrect password."
+
+
 class CustomUserCreationForm(UserCreationForm):
+    error_messages = {**UserCreationForm.error_messages, "password_mismatch": PASSWORD_MISMATCH}
+
     class Meta:
         model = CustomUser
         fields = ("email", "username",)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["password2"].label = "Confirm password"
         self.fields["password2"].help_text = ""
 
     def clean_email(self):
@@ -63,10 +70,23 @@ class LoginForm(AuthenticationForm):
             if user is None:
                 self.add_error("username", "Invalid username.")
             elif not user.check_password(password):
-                self.add_error("password", "Wrong password.")
+                self.add_error("password", PASSWORD_INCORRECT)
             else:
                 return super().clean()  # authenticates, handles inactive users
         return self.cleaned_data
+
+
+class AccountPasswordChangeForm(PasswordChangeForm):
+    error_messages = {
+        **PasswordChangeForm.error_messages,
+        "password_incorrect": PASSWORD_INCORRECT,
+        "password_mismatch": PASSWORD_MISMATCH,
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["old_password"].label = "Current password"
+        self.fields["new_password2"].label = "Confirm new password"
 
 
 class CustomUserChangeForm(UserChangeForm):
@@ -88,17 +108,15 @@ class UsernameChangeForm(forms.ModelForm):
         labels = {"username": "New username"}
         widgets = {"username": forms.TextInput(attrs={"autocomplete": "off"})}
 
-    password = forms.CharField(label="Current password", widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}))
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.initial["username"] = ""  # "New username" starts empty, not prefilled from the instance
 
-    def clean_password(self):
-        password = self.cleaned_data["password"]
-        if not self.instance.check_password(password):
-            raise forms.ValidationError("Incorrect password.")
-        return password
+    def clean_username(self):
+        username = self.cleaned_data["username"]
+        if username.lower() in RESERVED_USERNAMES:
+            raise forms.ValidationError("This username is reserved.")
+        return username
 
 
 class PersonForm(forms.ModelForm):

@@ -321,7 +321,9 @@ class EventDetailView(DetailView):
             self.request, self.kwargs.get('username'), self.object
         )
         context['return_url'] = context['breadcrumbs'][-2]['url']
-        context['attendances'] = get_ordered_attendance_queryset(self.object)
+        attendances = list(get_ordered_attendance_queryset(self.object))
+        context['attendances'] = attendances
+        context['present_count'] = sum(a.attendance_type_id == 1 for a in attendances)
         context['is_admin'] = is_event_admin(self.request.user, self.customuser)
         context['can_view_attendance'] = can_view_event_attendance(self.request.user, self.customuser)
         context['event_resources'] = resource_icon_list(

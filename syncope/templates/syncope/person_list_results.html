@@ -1,3 +1,4 @@
+{% load icon_tags %}
 <p class="result-count">{{ persons|length }} result{{ persons|length|pluralize }}</p>
 <div class="table-container">
 <table class="table">
@@ -67,7 +68,7 @@
             {% endif %}
             <td>
               {% for link in person.resource_icons %} {% if forloop.first %}
-                {{ link.icon }}
+                {% icon link.icon %}
                 {% endif %} {% endfor %}
             </td>
         </tr>

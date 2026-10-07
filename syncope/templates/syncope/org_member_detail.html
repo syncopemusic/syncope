@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static dt_tags %}
+{% load static dt_tags icon_tags %}
 {% block title %}{{ person }}{% endblock %}
 {% block content %}
 <div class="section-header">
@@ -49,7 +49,7 @@
   {% for link in person_resources %}
   <tr>
     <td class="col-num">{{ forloop.counter }}</td>
-    <td>{{ link.icon }}</td>
+    <td>{% icon link.icon %}</td>
     <td class="col-main">{{ link.desc }}</td>
     <td class="col-main"><a href="{{ link.share_url|default:link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a></td>
   </tr>

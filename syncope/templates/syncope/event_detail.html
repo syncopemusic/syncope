@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static dt_tags %}
+{% load static dt_tags icon_tags %}
 
 {% block title %}{{ event.name|default:event.event_type }}{% endblock %}
 
@@ -56,7 +56,7 @@
                 <td class="col-main">
                     <div class="song-title">
                         {% if eventsong.resource_icons %}
-                            <span title="Song has its own resources available">{{ eventsong.resource_icons.0.icon }}</span>
+                            <span title="Song has its own resources available">{% icon eventsong.resource_icons.0.icon %}</span>
                         {% endif %}
                         <a href="{% url 'syncope:song_detail' url_username eventsong.song.pk %}?from_event={{ event.pk }}&origin={{ origin_key }}">{{ eventsong.song.title }}</a>
                     </div>
@@ -81,7 +81,7 @@
 
 {% if can_view_attendance %}
 <div class="section-header">
-    <h3>Attendance</h3>
+    <h3>Attendance ({{ present_count }}/{{ attendances|length }})</h3>
     {% if is_admin %}<a href="{% url 'syncope:event_attendance_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% if attendances %}
@@ -114,7 +114,7 @@
                 </td>
                 {% endcomment %}
                 <td>
-                    {% if attendance.attendance_type_id == 1 %}✓{% elif attendance.attendance_type_id == 2 %}💼{% elif attendance.attendance_type_id == 3 %}🤒{% elif attendance.attendance_type_id == 4 %}🏖{% else %}?{% endif %}
+                    {% if attendance.attendance_type_id == 1 %}{% icon "check" %}{% elif attendance.attendance_type_id == 2 %}{% icon "briefcase" %}{% elif attendance.attendance_type_id == 3 %}{% icon "thermometer" %}{% elif attendance.attendance_type_id == 4 %}{% icon "umbrella" %}{% else %}{% icon "circle-help" %}{% endif %}
                     {{ attendance.attendance_type }}
                 </td>
             </tr>

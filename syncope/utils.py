@@ -1191,14 +1191,14 @@ def combine_event_projects(org_user, request):
         }
 
 
-RESOURCE_ICONS = {
-    'video':      '▶',
-    'audio':      '🎧',
-    'sheet':      '𝄞',
-    'wikipedia':  'Ⓦ',
-    'doc':        '📄',
-    'photo':      '📷',
-    'other':      '🔗',
+RESOURCE_ICONS = {  # icon names from templates/syncope/_icons.html
+    'video':      'play',
+    'audio':      'headphones',
+    'sheet':      'music',
+    'wikipedia':  'globe',
+    'doc':        'file-text',
+    'photo':      'image',
+    'other':      'link',
 }
 
 

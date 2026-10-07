@@ -1,3 +1,4 @@
+{% load icon_tags %}
 <p class="result-count">{{ events|length }} result{{ events|length|pluralize }}</p>
 {% if events %}
 <div class="table-container">
@@ -38,10 +39,10 @@
             </td>
             <td class="song-meta col-action">
               {% if event.event_res_n > 0 %}
-                <span title="Event resources">🔗{{ event.event_res_n }}</span>
+                <span title="Event resources">{% icon "link" %}{{ event.event_res_n }}</span>
               {% endif %}
               {% if event.song_res_n > 0 %}
-                <span title="Song resources">🎵{{ event.song_res_n }}</span>
+                <span title="Song resources">{% icon "music" %}{{ event.song_res_n }}</span>
               {% endif %}
             </td>
             <td>

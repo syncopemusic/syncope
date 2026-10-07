@@ -61,7 +61,7 @@ def event_related_resource_rows(event):
 def song_setlist_options(song):
     """(EventSong.pk, label) pairs for 'attach this new resource within event X's setlist' - Song side."""
     return [
-        {'pk': es.pk, 'label': str(es.event)}
+        {'pk': es.pk, 'label': str(es.event), 'started_at': es.event.started_at}
         for es in song.eventsong_set.select_related('event').order_by('-event__started_at')
     ]
 
@@ -180,10 +180,10 @@ class ResourcesEditView(View):
 
         own_manager = getattr(self.owner, self.cfg['related_name'])
         order_tokens = [t for t in request.POST.get('order', '').split(',') if t]
-        remove_ids = {
-            int(key[len('remove_'):]) for key in request.POST
-            if key.startswith('remove_') and request.POST[key] == '1'
-        }
+        removed = [key[len('remove_'):] for key in request.POST if key.startswith('remove_') and request.POST[key] == '1']
+        remove_ids = {int(k) for k in removed if k.isdigit()}
+        # "es<pk>": EventSongResource rows shown as related rows (Song/Event kinds only)
+        remove_es_ids = {int(k[2:]) for k in removed if k.startswith('es')} if self.cfg['related_rows'] else set()
         new_urls = request.POST.getlist('new_url')
         new_descriptions = request.POST.getlist('new_description')
         new_setlist_ids = request.POST.getlist('new_setlist_id')
@@ -191,6 +191,10 @@ class ResourcesEditView(View):
         with transaction.atomic():
             if remove_ids:
                 own_manager.filter(pk__in=remove_ids).delete()
+            if remove_es_ids:
+                EventSongResource.objects.filter(
+                    pk__in=remove_es_ids, **{f'event_song__{self.cfg["fk_name"]}': self.owner}
+                ).delete()
 
             # (resource_id, EventSong.pk_or_None) per staged addition, in submission order.
             # The EventSong pk always comes from `setlist_options` (Song side: events this song

@@ -80,10 +80,10 @@
 <script src="{% static 'syncope/share.js' %}"></script>
 <script>
 const POLL_ANSWER_TYPES = [
-    { id: 1, icon: '✓', label: 'Yes' },
-    { id: 2, icon: '(✓)', label: 'Maybe' },
-    { id: 3, icon: '✗', label: 'No' },
-    { id: 0, icon: '?', label: "Don't know" },
+    { id: 1, icon: 'check', label: 'Yes' },
+    { id: 2, icon: 'check-check', label: 'Maybe' },
+    { id: 3, icon: 'x', label: 'No' },
+    { id: 0, icon: 'circle-help', label: "Don't know" },
 ];
 const POLL_ANSWER_CYCLE_ORDER = POLL_ANSWER_TYPES.map(t => t.id);
 
@@ -96,7 +96,7 @@ function paintPollAnswer(btn) {
     const meta = pollAnswerMeta(id);
     POLL_ANSWER_TYPES.forEach(t => btn.classList.remove(`att-type-${t.id}`));
     btn.classList.add(`att-type-${id}`);
-    btn.querySelector('.poll-answer-icon').textContent = meta.icon;
+    btn.querySelector('.poll-answer-icon').innerHTML = icon(meta.icon);
     btn.querySelector('.poll-answer-label').textContent = meta.label;
     btn.title = meta.label;
 }

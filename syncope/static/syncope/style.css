@@ -372,9 +372,12 @@
         display: none;
     }
 
-    .mobile-topbar:has(.breadcrumbs) {
-        display: block;
-        padding: var(--space-3) var(--space-6) 0;
+    /* Desktop only: the :has() selector would outrank the mobile flex topbar below. */
+    @media (min-width: 769px) {
+        .mobile-topbar:has(.breadcrumbs) {
+            display: block;
+            padding: var(--space-3) var(--space-6) 0;
+        }
     }
 
     .mobile-topbar .breadcrumbs {
@@ -670,7 +673,7 @@
         gap: var(--space-1);
         padding: var(--space-2) var(--space-4);
         border-radius: var(--radius-sm);
-        border: 1.5px solid transparent;
+        border: 1px solid transparent;
         font-family: var(--font-body);
         font-size: 14px;
         font-weight: 500;
@@ -775,7 +778,7 @@
 
     .btn-remove {
         color: var(--color-text-muted);
-        border: 2px solid var(--color-danger);
+        border: 1px solid var(--color-danger);
     }
 
     .btn-remove:hover {
@@ -1384,15 +1387,17 @@
         user-select: none;
     }
 
-    /* Only chips that cycle on click look clickable; plain chips are read-only. */
-    .chip[data-cycle] {
+    /* Only chips/cells that cycle on click look clickable; plain ones are read-only. */
+    .chip[data-cycle],
+    .table-cell-attendance[data-cycle] {
         cursor: pointer;
-        outline: 2px solid var(--color-primary);
-        outline-offset: -2px;
+        outline: 1px solid var(--color-primary);
+        outline-offset: -1px;
         transition: transform var(--transition-fast), box-shadow var(--transition-fast);
     }
 
-    .chip[data-cycle]:hover {
+    .chip[data-cycle]:hover,
+    .table-cell-attendance[data-cycle]:hover {
         transform: translateY(-2px);
         box-shadow: var(--shadow-sm);
     }
@@ -1635,11 +1640,30 @@
         padding: var(--space-2) var(--space-3);
     }
 
+    /* SVG icons from the sprite: not text, so no I-beam cursor and nothing to select. */
+    .icon {
+        inline-size: 1em;
+        block-size: 1em;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        vertical-align: -0.125em;
+        pointer-events: none;
+        user-select: none;
+    }
+
     /* Real scroll container so .table's sticky thead has something to pin against. */
     .table-container {
         overflow: auto;
         max-height: calc(100dvh - 4rem);
         container-type: inline-size;
+    }
+
+    /* Narrow tables: shrink the scroll box too, so wheeling beside the table scrolls the page. */
+    .table-container:not(:has(thead th:nth-child(4))) {
+        max-inline-size: var(--content-narrow);
     }
 
     @media (max-width: 768px) {

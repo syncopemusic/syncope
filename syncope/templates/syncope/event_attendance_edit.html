@@ -71,14 +71,14 @@
         {% for at in attendance_types %}{ id: {{ at.pk }}, name: "{{ at.name|escapejs }}" },{% endfor %}
     ];
     const CYCLE_ORDER = attendanceTypes.map(t => t.id);
-    const ICONS = { 0: '?', 1: '✓', 2: '💼', 3: '🤒', 4: '🏖' };
+    const ICONS = { 0: 'circle-help', 1: 'check', 2: 'briefcase', 3: 'thermometer', 4: 'umbrella' };
 
     function paintChip(chip) {
         const id = parseInt(chip.dataset.typeId, 10);
         const t = attendanceTypes.find(t => t.id === id);
         attendanceTypes.forEach(t => chip.classList.remove(`att-type-${t.id}`));
         chip.classList.add(`att-type-${id}`);
-        chip.querySelector('.att-icon').textContent = ICONS[id] || '';
+        chip.querySelector('.att-icon').innerHTML = ICONS[id] ? icon(ICONS[id]) : '';
         chip.querySelector('.att-label').textContent = chip.title = t ? t.name : 'TBD';
     }
     const paintAllChips = () => document.querySelectorAll('.attendance-chip').forEach(paintChip);

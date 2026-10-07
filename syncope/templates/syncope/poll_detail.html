@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static dt_tags %}
+{% load static dt_tags icon_tags %}
 
 {% block title %}{{ poll.title }} votes{% endblock %}
 
@@ -96,7 +96,7 @@
                 <td class="table-event-col">
                     <span class="table-cell-attendance table-cell-attendance-static att-type-{{ cell.attendance_type_id }}"
                         title="{{ cell.attendance_label }}">
-                        {% if cell.attendance_type_id == 1 %}✓{% elif cell.attendance_type_id == 2 %}(✓){% elif cell.attendance_type_id == 3 %}✗{% elif cell.attendance_type_id == 0 %}?{% endif %}
+                        {% if cell.attendance_type_id == 1 %}{% icon "check" %}{% elif cell.attendance_type_id == 2 %}{% icon "check-check" %}{% elif cell.attendance_type_id == 3 %}{% icon "x" %}{% elif cell.attendance_type_id == 0 %}{% icon "circle-help" %}{% endif %}
                     </span>
                     {% if cell.comment %}<div class="table-comment">{{ cell.comment }}</div>{% endif %}
                 </td>
