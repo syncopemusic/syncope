@@ -44,10 +44,12 @@
         </form>
     </details>
 
+    {% if can_edit %}
     <form method="post" action="{%  url 'syncope:quick_new_rehearsal' username=url_username %}" class="link-row link-row-end">
         {% csrf_token %}
         <button type="submit" class="btn btn-primary" title="Add rehearsal now">+ Add Rehearsal</button>
     </form>
+    {% endif %}
 
     {# Main Form with Attendance Table #}
     <form method="post" id="attendance-form">
@@ -59,7 +61,7 @@
 </div>
 
 {% url 'syncope:attendance' url_username as attendance_url %}
-{% include "syncope/_save_bar.html" with form_id="attendance-form" url=attendance_url %}
+{% if can_edit %}{% include "syncope/_save_bar.html" with form_id="attendance-form" url=attendance_url %}{% endif %}
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script src="{% static 'syncope/filter-form.js' %}"></script>
@@ -71,7 +73,7 @@ const TYPE_META = {
     1: { label: 'Present',           icon: 'check',       cls: 'att-type-1' },
     2: { label: 'Work',              icon: 'briefcase',   cls: 'att-type-2' },
     3: { label: 'Illness',           icon: 'thermometer', cls: 'att-type-3' },
-    4: { label: 'Private',           icon: 'umbrella',    cls: 'att-type-4' },
+    4: { label: 'Private',           icon: 'plane',    cls: 'att-type-4' },
 };
 
 function paintCell(cell, typeId) {

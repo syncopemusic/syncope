@@ -61,13 +61,14 @@ class AttendanceDashboardView(View):
         url_username = self.kwargs.get("username")
         self.org_user = get_object_or_404(CustomUser, username=url_username)
 
-        if request.user != self.org_user:
-            has_permission = AccessControl.can_edit_event(
-                request.user, self.org_user
-            ).exists()
-
-            if not has_permission:
-                return HttpResponseForbidden("You don't have permission to view this dashboard.")
+        self.can_edit = request.user == self.org_user or AccessControl.can_edit_event(
+            request.user, self.org_user
+        ).exists()
+        # Members may look at the dashboard, only admins may change it.
+        if not self.can_edit and (request.method != 'GET' or not AccessControl.can_view_event_attendance(
+            request.user, self.org_user
+        ).exists()):
+            return HttpResponseForbidden("You don't have permission to use this dashboard.")
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -149,7 +150,7 @@ class AttendanceDashboardView(View):
         editable_event_id = editable_event.id if editable_event else None
 
         for event in events:
-            event.is_grayed_out = event.started_at < now and event.id != editable_event_id
+            event.is_grayed_out = not self.can_edit or (event.started_at < now and event.id != editable_event_id)
         grayed_out_event_ids = {e.id for e in events if e.is_grayed_out}
 
         return events, editable_event_id, grayed_out_event_ids
@@ -210,6 +211,7 @@ class AttendanceDashboardView(View):
             'grand_total': grand_total,
             'grand_percentage': grand_percentage,
             'url_username': username,
+            'can_edit': self.can_edit,
             'filters': filters,
             'filter_total': sum(bool(filters.get(k)) for k in ('start_date', 'end_date', 'event_limit', 'event_type', 'voice', 'instrument')),
             'filter_event_types': EventType.objects.order_by('id').values_list('id', 'name'),

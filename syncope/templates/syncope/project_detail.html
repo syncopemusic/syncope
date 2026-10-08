@@ -66,14 +66,14 @@
 <table class="table">
     <thead>
     <tr>
-        <th class="song-index"></th>
+        <th class="col-num"></th>
         <th class="col-main">Song</th>
     </tr>
     </thead>
     <tbody>
     {% for song in songs %}
     <tr>
-        <td class="song-index">{{ forloop.counter }}</td>
+        <td class="col-num">{{ forloop.counter }}</td>
         <td class="col-main">
             <div class="song-title">
                 <a href="{% url 'syncope:song_detail' url_username song.pk %}?origin=project-{{ project.pk }}">{{ song.title }}</a>

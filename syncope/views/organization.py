@@ -74,6 +74,8 @@ class OrganizationDashboard(TemplateView):
         context["organization"] = self.organization
         context["url_username"] = self.kwargs["username"]
         context["is_admin"] = self.viewer_roles.filter(id=Role.ADMIN).exists()
+        context["is_supporter"] = self.viewer_roles.filter(id=Role.SUPPORTER).exists()
+        context["can_view_org"] = self.viewer_roles.filter(id__in=[Role.ADMIN, Role.MEMBER]).exists()  # same rule as the side menu
 
         context["org_memberships"] = AccessControl.get_visible_members(
             self.request.user,

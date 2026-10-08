@@ -15,13 +15,10 @@
 
 {% filter_panel "poll-filter-form" %}
 <div class="filter-row">
-    {% include "syncope/_filter_input.html" with name="start" label="Created from" type="date" value=filters.start|date:"Y-m-d" %}
+    {% include "syncope/_filter_input.html" with name="start" label="From" type="date" value=filters.start|date:"Y-m-d" %}
 </div>
 <div class="filter-row">
-    {% include "syncope/_filter_input.html" with name="end" label="Created to" type="date" value=filters.end|date:"Y-m-d" %}
-</div>
-<div class="filter-row">
-    {% include "syncope/_filter_choice.html" with name="has_persons" label="Has persons" options=filter_yes_no selected=filters.has_persons %}
+    {% include "syncope/_filter_input.html" with name="end" label="To" type="date" value=filters.end|date:"Y-m-d" %}
 </div>
 {% endfilter_panel %}
 

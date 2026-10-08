@@ -2,7 +2,7 @@ from functools import wraps
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
-from datetime import date
+from datetime import date, timedelta
 from django.utils import timezone
 from django.db import transaction
 from django.views.generic import ListView, CreateView, UpdateView, DetailView, View
@@ -155,10 +155,14 @@ def project_guests_search(request, org_user, project):
     })
 
 
+def _open_range_q(d0, d1):
+    """Project dates touch [d0, d1); a missing start or end is open-ended, so dateless projects always match."""
+    return (Q(start_date__isnull=True) | Q(start_date__lt=d1)) & (Q(end_date__isnull=True) | Q(end_date__gte=d0))
+
+
 def _project_period_q(d0, d1):
-    """Projects whose own date range, or any of whose events, touches [d0, d1)."""
-    return (date_overlap_q('start_date', 'end_date', d0, d1, dt=False)
-            | date_overlap_q('events__started_at', 'events__ended_at', d0, d1))
+    """Projects whose own (open-ended) date range, or any of whose events, touches [d0, d1)."""
+    return _open_range_q(d0, d1) | date_overlap_q('events__started_at', 'events__ended_at', d0, d1)
 
 
 @method_decorator(login_required, name="dispatch")
@@ -223,12 +227,12 @@ class ProjectListView(ListFilterMixin, LoginRequiredMixin, ListView):
             projects = match_pk(projects, _project_period_q(*period))
         today = timezone.localdate()
         status = filters.get('status')
-        if status == 'upcoming':
-            projects = projects.filter(start_date__gt=today)
+        if status == 'upcoming':  # a missing date is open-ended, so dateless projects match every status
+            projects = projects.filter(Q(start_date__isnull=True) | Q(start_date__gt=today))
         elif status == 'ongoing':
-            projects = projects.filter(Q(end_date__gte=today) | Q(end_date__isnull=True), start_date__lte=today)
+            projects = projects.filter(_open_range_q(today, today + timedelta(days=1)))
         elif status == 'past':
-            projects = projects.filter(end_date__lt=today)
+            projects = projects.filter(Q(end_date__lt=today) | Q(start_date__isnull=True, end_date__isnull=True))
         return projects
 
     def filter_options(self):

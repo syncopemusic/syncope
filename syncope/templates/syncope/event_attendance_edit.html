@@ -9,7 +9,7 @@
 <div>
     <form method="post" id="attendance-form">
         {% csrf_token %}
-        <div class="table-container narrow">
+        <div class="table-container">
             <table class="table">
                 <thead>
                     <tr>
@@ -44,7 +44,7 @@
         </p>
         <p class="link-row">
             <span>Attendance:</span>
-            <span class="chip attendance-chip" id="add-type-chip" data-type-id="1" data-cycle="add">
+            <span class="btn attendance-chip" id="add-type-chip" data-type-id="1" data-cycle="add">
                 <span class="att-icon"></span> <span class="att-label"></span>
             </span>
             <input type="hidden" id="add-type-hidden" value="1">
@@ -71,7 +71,7 @@
         {% for at in attendance_types %}{ id: {{ at.pk }}, name: "{{ at.name|escapejs }}" },{% endfor %}
     ];
     const CYCLE_ORDER = attendanceTypes.map(t => t.id);
-    const ICONS = { 0: 'circle-help', 1: 'check', 2: 'briefcase', 3: 'thermometer', 4: 'umbrella' };
+    const ICONS = { 0: 'circle-help', 1: 'check', 2: 'briefcase', 3: 'thermometer', 4: 'plane' };
 
     function paintChip(chip) {
         const id = parseInt(chip.dataset.typeId, 10);
@@ -111,15 +111,15 @@
         searchUrl: "{% url 'syncope:event_attendance_search' url_username event.pk %}",
         buildRow: (btn, info) => `
             <td></td>
-            <td>${info}</td>
+            <td class="col-main song-title">${info}</td>
             <td>
-                <span class="chip attendance-chip" data-type-id="${document.getElementById('add-type-hidden').value}" data-cycle>
+                <span class="btn attendance-chip" data-type-id="${document.getElementById('add-type-hidden').value}" data-cycle>
                     <span class="att-icon"></span> <span class="att-label"></span>
                 </span>
                 <input type="hidden" name="add_person" value="${btn.dataset.id}">
                 <input type="hidden" data-role="add-type" name="add_type_${btn.dataset.id}" value="${document.getElementById('add-type-hidden').value}">
             </td>
-            <td><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>`,
+            <td><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>`,
         extraCount: () => savedRows().filter(row => !row.classList.contains('pending-remove')
             && row.querySelector('.attendance-chip').dataset.typeId !== row.dataset.originalTypeId).length,
         afterChange: n => {

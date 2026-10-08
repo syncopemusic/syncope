@@ -9,34 +9,31 @@
     {% csrf_token %}
 
     <!-- Existing fields -->
-    <p>{{ form.first_name.label_tag }} {{ form.first_name }} {{ form.first_name.errors }}</p>
-    <p>{{ form.last_name.label_tag }} {{ form.last_name }} {{ form.last_name.errors }}</p>
-    <p>{{ form.email.label_tag }} {{ form.email }} {{ form.email.errors }}</p>
-    <p>{{ form.phone.label_tag }} {{ form.phone }} {{ form.phone.errors }}</p>
-    <p>{{ form.address.label_tag }} {{ form.address }} {{ form.address.errors }}</p>
+    {% include "syncope/_field.html" with field=form.first_name %}
+    {% include "syncope/_field.html" with field=form.last_name %}
+    {% include "syncope/_field.html" with field=form.email %}
+    {% include "syncope/_field.html" with field=form.phone %}
+    {% include "syncope/_field.html" with field=form.address %}
     <!-- Date fields -->
-    <p>{{ form.birth_date.label_tag }} {{ form.birth_date }} {{ form.birth_date.errors }}</p>
+    {% include "syncope/_field.html" with field=form.birth_date %}
     {% if form.birth_approximate %}
-    <p>{{ form.birth_approximate.label_tag }} {{ form.birth_approximate }} {{ form.birth_approximate.errors }}</p>
+    {% include "syncope/_field.html" with field=form.birth_approximate %}
     {% endif %}
     {% if form.death_date %}
-    <p>{{ form.death_date.label_tag }} {{ form.death_date }} {{ form.death_date.errors }}</p>
+    {% include "syncope/_field.html" with field=form.death_date %}
     {% endif %}
     {% if form.death_approximate %}
-    <p>{{ form.death_approximate.label_tag }} {{ form.death_approximate }} {{ form.death_approximate.errors }}</p>
+    {% include "syncope/_field.html" with field=form.death_approximate %}
     {% endif %}
 
     <!-- Voices (renders as native <select multiple>) -->
-    <p>{{ form.voices.label_tag }}
-        {{ form.voices }} {{ form.voices.errors }}</p>
+    {% include "syncope/_field.html" with field=form.voices %}
 
     <!-- Instruments (renders as native <select multiple>) -->
-    <p>{{ form.instruments.label_tag }}
-    {{ form.instruments }} {{ form.instruments.errors }}</p>
+    {% include "syncope/_field.html" with field=form.instruments %}
 
     <!-- Skills -->
-    <p>{{ form.skills.label_tag }}
-        {{ form.skills }} {{ form.skills.errors }}</p>
+    {% include "syncope/_field.html" with field=form.skills %}
 
 </form>
 

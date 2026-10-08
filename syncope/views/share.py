@@ -1,7 +1,7 @@
 import secrets
 from django.contrib.auth.decorators import login_not_required
 from django.db import IntegrityError
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from syncope.models import Share, ShareVisit, Resource, Poll, PollPerson, Event, Project, Person, Song
@@ -126,9 +126,11 @@ def visit_share(request, share_id):
         username = share.project.user.username
         return redirect('syncope:project_detail', username=username, pk=share.project_id)
     elif share.person_id:
-        p = share.person
-        membership = p.memberships.first()
-        username = membership.user.username
+        membership = share.person.memberships.select_related('user').first()
+        owner = membership.user if membership else share.person.user  # no org: the person's own CustomUser
+        if owner is None:
+            raise Http404("Person has no organisation or user")
+        username = owner.username
         return redirect('syncope:org_member_detail', username=username, pk=share.person_id)
     elif share.song_id:
         username = share.song.user.username

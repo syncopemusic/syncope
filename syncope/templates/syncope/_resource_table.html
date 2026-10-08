@@ -5,9 +5,7 @@
 <table class="table" id="{{ table_id }}">
     <thead>
         <tr>
-            {% if editable %}<th class="drag-handle-cell"></th>{% endif %}
-            <th class="col-num"></th>
-            <th></th>
+            <th class="col-lead"></th>
             <th class="col-main">Resource</th>
             <th class="col-main">Description</th>
             {% if related_column_label %}<th>{{ related_column_label }}</th>{% endif %}
@@ -17,15 +15,13 @@
     <tbody id="{{ table_id }}-own-rows">
         {% for row in rows %}
         <tr data-id="{{ row.pk }}">
-            {% if editable %}<td class="drag-handle-cell"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span></td>{% endif %}
-            <td class="col-num">{{ forloop.counter }}</td>
-            <td>{% icon row.icon %}</td>
+            <td class="col-lead">{% if editable %}<span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span>{% endif %}<span class="col-num">{{ forloop.counter }}</span>{% icon row.icon %}</td>
             <td class="col-main">{% if editable %}{{ row.url }}{% else %}<a href="{{ row.share_url|default:row.url }}" target="_blank" rel="noopener noreferrer">{{ row.url }}</a>{% endif %}</td>
             <td class="col-main">{{ row.desc }}</td>
             {% if related_column_label %}<td>-</td>{% endif %}
             {% if editable %}
             <td class="col-action">
-                <button type="button" class="btn btn-remove" title="Remove">&times;</button>
+                <button type="button" class="btn btn-danger btn-remove" title="Remove">&times;</button>
             </td>
             {% endif %}
         </tr>
@@ -35,9 +31,7 @@
     <tbody>
         {% for row in related_rows %}
         <tr{% if editable %} data-id="es{{ row.pk }}"{% endif %}>
-            {% if editable %}<td class="drag-handle-cell"></td>{% endif %}
-            <td class="col-num">{{ rows|length|add:forloop.counter }}</td>
-            <td>{% icon row.icon %}</td>
+            <td class="col-lead"><span class="col-num">{{ rows|length|add:forloop.counter }}</span>{% icon row.icon %}</td>
             <td class="col-main">{% if editable %}{{ row.url }}{% else %}<a href="{{ row.share_url|default:row.url }}" target="_blank" rel="noopener noreferrer">{{ row.url }}</a>{% endif %}</td>
             <td class="col-main">{{ row.desc }}</td>
             <td>
@@ -49,7 +43,7 @@
             </td>
             {% if editable %}
             <td class="col-action">
-                <button type="button" class="btn btn-remove" title="Remove">&times;</button>
+                <button type="button" class="btn btn-danger btn-remove" title="Remove">&times;</button>
             </td>
             {% endif %}
         </tr>

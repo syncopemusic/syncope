@@ -13,7 +13,7 @@ from syncope.models import CustomUser, PollAttendance, Poll, PollPerson, PollEve
 from syncope.forms import PollCreateForm, PollPersonForm, PollAttendanceForm, PollEventForm
 from syncope.permissions import AccessControl
 from syncope.views.drafts import DraftMixin
-from syncope.utils import group_by_section, add_query_param, q_filter, filter_period, in_period_q, yes_no
+from syncope.utils import group_by_section, add_query_param, q_filter, filter_period, in_period_q
 from syncope.mixins import ListFilterMixin
 
 
@@ -26,7 +26,7 @@ class PollAdminMixin:
 
 @method_decorator(login_required, name="dispatch")
 class PollListView(ListFilterMixin, ListView):
-    filter_spec = {'start': 'date', 'end': 'date', 'has_persons': ('yes', 'no')}
+    filter_spec = {'start': 'date', 'end': 'date'}
     model = Poll
     context_object_name = "polls"
     template_name = "syncope/poll_list.html"
@@ -43,6 +43,8 @@ class PollListView(ListFilterMixin, ListView):
         sort_field_map = {
             'id': 'pk',
             'title': 'title',
+            'persons': 'num_persons',
+            'created': 'created_at',
             'updated': 'updated_at',
         }
         sort_field = sort_field_map.get(sort, 'updated_at')
@@ -65,8 +67,6 @@ class PollListView(ListFilterMixin, ListView):
     def apply_filters(self, polls, filters):
         if period := filter_period(filters):
             polls = polls.filter(in_period_q('created_at', *period))
-        if 'has_persons' in filters:
-            polls = yes_no(polls, filters['has_persons'], Q(num_persons__gt=0))
         return polls
 
     def get_context_data(self, **kwargs):

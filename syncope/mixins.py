@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404
 from django.core.exceptions import PermissionDenied
 from django.views.generic import DetailView
 from .models import CustomUser
-from .models import Event, Attendance, EventSong
+from .models import Event, Attendance, EventSong, Song
 from .views.drafts import DraftMixin as BaseDraftMixin
 from .utils import YES_NO, filter_qs, parse_filters
 
@@ -42,8 +42,8 @@ class ListFilterMixin:
 class SongOwnerMixin:
     """
     Handles owner fetching for all song views.
-    For Detail/Update/Delete: also checks permission using permission_check_method.
-    ListView/CreateView will just fetch owner_user; queryset/form handle filtering.
+    Detail/Update/Delete/Create: also checks permission using permission_check_method.
+    ListView just fetches owner_user; its queryset filters.
     """
     permission_check_method = None  # assign in view if needed
 
@@ -53,11 +53,15 @@ class SongOwnerMixin:
         self.owner_user = get_object_or_404(CustomUser, username=url_username)
 
     def dispatch(self, request, *args, **kwargs):
-        # Only enforce permission for Detail/Update/Delete views
-        if self.permission_check_method and hasattr(self, "get_object") and isinstance(self, DetailView):
-            song = super().get_object(queryset=self.get_queryset())
-            allowed = self.permission_check_method(request.user, song)
-            if not allowed:
+        # Enforce for every view on one song (Detail/Update/Delete) and for Create, which checks a song of this owner.
+        if self.permission_check_method:
+            if isinstance(self, CreateView):
+                song = Song(user=self.owner_user)
+            elif "pk" in self.kwargs and hasattr(self, "get_object"):
+                song = super().get_object(queryset=self.get_queryset())
+            else:
+                song = None  # list views filter in get_queryset
+            if song is not None and not self.permission_check_method(request.user, song):
                 raise PermissionDenied("You do not have permission")
         return super().dispatch(request, *args, **kwargs)
 

@@ -7,8 +7,8 @@ from django.utils import timezone
 
 from syncope.models import (
     Attendance, AttendanceType, CustomUser, Event, EventResource, EventSong, EventSongResource, EventType,
-    Invitation, InvitationStatus, InvitationType, LyricsTranslation, Membership, MembershipPeriod, Person,
-    PersonSkill, Poll, PollPerson, Project, Resource, Role, Singer, Skill, Song, Voice,
+    Invitation, InvitationStatus, InvitationType, LyricsTranslation, Membership, MembershipPeriod, Organization,
+    Person, PersonRole, PersonSkill, Poll, PollPerson, Project, Resource, Role, Singer, Skill, Song, Voice,
 )
 from syncope.utils import filter_period, parse_date_query, parse_filters
 
@@ -603,17 +603,51 @@ class ListFilterTests(TestCase):
             self.assertEqual(response.context["filters"], {}, name)
             self.assertContains(response, '<details class="filter-panel">', msg_prefix=name)
 
-    def test_poll_created_range_and_has_persons(self):
+    def test_poll_created_range(self):
         Poll.objects.create(user=self.org, title="Empty")
-        full = Poll.objects.create(user=self.org, title="Full")
-        PollPerson.objects.create(poll=full, person=Person.objects.create(first_name="P", last_name="One"))
+        Poll.objects.create(user=self.org, title="Full")
         titles = lambda **p: {x.title for x in self.get("poll_list_search", **p).context["polls"]}
-        self.assertEqual(titles(has_persons="yes"), {"Full"})
-        self.assertEqual(titles(has_persons="no"), {"Empty"})
         today = timezone.localdate().isoformat()
         self.assertEqual(titles(start=today, end=today), {"Empty", "Full"})
         self.assertEqual(titles(start="2999-01-01"), set())
-        self.assertEqual(titles(has_persons="yes", q="empty"), set())  # filter and search AND together
+        self.assertEqual(titles(start="2999-01-01", q="empty"), set())  # filter and search AND together
+
+    # Read access by role: members see the org, supporters non-rehearsal events + projects, externals the project list.
+    def viewer(self, role_id):
+        user = CustomUser.objects.create_user(username=f"v{role_id}", email=f"v{role_id}@example.com", password="pw12345")
+        personal = Person.objects.create(first_name="V", last_name=str(role_id), user=user)
+        in_org = Person.objects.create(first_name="V", last_name=str(role_id), owner=personal)
+        Membership.objects.create(user=self.org, person=in_org)
+        PersonRole.objects.create(person=in_org, role_id=role_id)
+        self.client.login(username=user.username, password="pw12345")
+
+    def status(self, name, **kw):
+        return self.client.get(reverse(f"syncope:{name}", kwargs={**self.kw, **kw})).status_code
+
+    def test_roles_get_only_their_pages(self):
+        project = Project.objects.create(user=self.org, title="P")
+        rehearsal = self.event("Rehearsal", self.local(2025, 3, 1, 19))
+        concert = self.event("Concert", self.local(2025, 3, 2, 19), type_id=EventType.CONCERT)
+        self.viewer(Role.EXTERNAL)
+        self.assertEqual(self.status("project_list"), 200)
+        for name, kw in (("project_detail", {"pk": project.pk}), ("song_list", {}), ("attendance", {}), ("org_member_list", {}),
+                         ("event_list", {}), ("event_detail", {"pk": concert.pk})):
+            self.assertEqual(self.status(name, **kw), 403, name)
+        self.viewer(Role.SUPPORTER)
+        self.assertEqual(self.status("event_detail", pk=concert.pk), 200)
+        self.assertEqual(self.status("event_detail", pk=rehearsal.pk), 404)
+        self.assertEqual({e.name for e in self.get("event_list").context["object_list"]}, {"Concert"})
+        for name, kw in (("project_detail", {"pk": project.pk}), ("attendance", {}), ("org_member_list", {})):
+            self.assertEqual(self.status(name, **kw), 403, name)
+        self.viewer(Role.MEMBER)
+        Organization.objects.create(user=self.org, name="Org", email="org@example.com")  # songs of an org, not a person
+        song = Song.objects.create(user=self.org, title="Tune", internal_id=1)
+        self.assertEqual(self.status("song_list"), 200)
+        self.assertEqual(self.status("song_detail", pk=song.pk), 200)
+        self.assertEqual(self.status("song_new"), 403)
+        self.assertEqual(self.status("song_meta_edit", pk=song.pk), 403)
+        self.assertEqual(self.status("attendance"), 200)
+        self.assertEqual(self.status("event_detail", pk=rehearsal.pk), 200)
 
     def test_invitation_type_status_direction_range(self):
         other = CustomUser.objects.create_user(username="zed", email="zed@example.com", password="pw12345")
@@ -635,10 +669,11 @@ class ListFilterTests(TestCase):
         mk = lambda title, a, b: Project.objects.create(user=self.org, title=title, start_date=a, end_date=b)
         mk("Up", day(10), day(20)); mk("On", day(-5), day(5)); mk("Open", day(-5), None); mk("Past", day(-20), day(-10)); mk("Undated", None, None)
         titles = lambda **p: {x.title for x in self.get("project_list_search", **p).context["projects"]}
-        self.assertEqual(titles(status="upcoming"), {"Up"})
-        self.assertEqual(titles(status="ongoing"), {"On", "Open"})
-        self.assertEqual(titles(status="past"), {"Past"})
-        self.assertEqual(titles(start=day(-15).isoformat(), end=day(-12).isoformat()), {"Past"})
+        # Missing dates are open-ended: the undated project matches every status and date range.
+        self.assertEqual(titles(status="upcoming"), {"Up", "Undated"})
+        self.assertEqual(titles(status="ongoing"), {"On", "Open", "Undated"})
+        self.assertEqual(titles(status="past"), {"Past", "Undated"})
+        self.assertEqual(titles(start=day(-15).isoformat(), end=day(-12).isoformat()), {"Past", "Undated"})
         self.assertEqual(titles(), {"Up", "On", "Open", "Past", "Undated"})
 
     def test_event_filters_guests_resources_and_attendee_search(self):
@@ -706,3 +741,4 @@ class ListFilterTests(TestCase):
         self.client.post(f"{url}?f=1&voice={voice.pk}", {f"attendance_{gig.pk}_{bob.pk}": str(AttendanceType.ILLNESS)})
         att = lambda p: Attendance.objects.get(event=gig, person=p).attendance_type_id
         self.assertEqual((att(bob), att(ana)), (AttendanceType.ILLNESS, AttendanceType.PRESENT))
+

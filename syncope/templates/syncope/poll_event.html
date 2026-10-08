@@ -72,12 +72,14 @@
                         </div>
                     </td>
                     <td class="col-main">
-                        <div>{% if pe.location %}{{ pe.location }}{% else %}-{% endif %}</div>
-                        <div class="song-subline">{% if pe.details %}{{ pe.details }}{% else %}-{% endif %}</div>
+                        <div class="song-title">{% if pe.location %}{{ pe.location }}{% else %}-{% endif %}</div>
+                        {% if pe.details %}<div class="song-subline">{{ pe.details }}</div>{% endif %}
                     </td>
                     <td class="col-action">
-                        <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}" class="btn btn-secondary">Edit</a>
-                        {% if is_admin %}<button type="button" class="btn btn-remove" title="Remove this date">×</button>{% endif %}
+                        <div class="link-row link-row-end">
+                            <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}" class="btn btn-secondary">Edit</a>
+                            {% if is_admin %}<button type="button" class="btn btn-danger btn-remove" title="Remove this date">×</button>{% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
@@ -264,8 +266,8 @@ $(function () {
                 <div class="song-subline">${formatDateForDisplay(values.startedAt)} ${formatTimeForDisplay(values.startedAt)}-${formatTimeForDisplay(values.endedAt)}</div>
             </td>
             <td class="col-main">
-                <div>${values.location ? escapeHtml(values.location) : '-'}</div>
-                <div class="song-subline">${values.details ? escapeHtml(values.details) : '-'}</div>
+                <div class="song-title">${values.location ? escapeHtml(values.location) : '-'}</div>
+                ${values.details ? `<div class="song-subline">${escapeHtml(values.details)}</div>` : ''}
             </td>
             <td></td>
         `;
@@ -286,7 +288,7 @@ $(function () {
         }
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
-        removeBtn.className = 'btn btn-remove';
+        removeBtn.className = 'btn btn-danger btn-remove';
         removeBtn.title = 'Remove staged addition';
         removeBtn.textContent = '×';
         actionsCell.appendChild(removeBtn);

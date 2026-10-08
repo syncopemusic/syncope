@@ -78,13 +78,11 @@
         const tr = document.createElement('tr');
         tr.className = 'staged-add';
         tr.innerHTML = `
-            <td class="drag-handle-cell"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span></td>
-            <td class="col-num"></td>
-            <td></td>
+            <td class="col-lead"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span><span class="col-num"></span></td>
             <td class="col-main">${escapeHtml(url)}<input type="hidden" name="new_url" value="${escapeHtml(url)}"></td>
             <td class="col-main">${escapeHtml(desc)}<input type="hidden" name="new_description" value="${escapeHtml(desc)}"></td>
             ${relatedColumnLabel ? `<td>${escapeHtml(setlistLabel)}<input type="hidden" name="new_setlist_id" value="${escapeHtml(setlistId)}"></td>` : ''}
-            <td class="col-action"><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>
+            <td class="col-action"><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>
         `;
         ownRowsBody.appendChild(tr);
         newUrlInput.value = '';

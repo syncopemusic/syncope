@@ -36,6 +36,14 @@ def is_event_admin(user, org_user):
     ).filter(person__roles__id=Role.ADMIN).exists()
 
 
+def _visible_events(user, org_user):
+    """The org's events as this viewer may see them: supporters get everything except rehearsals."""
+    events = Event.objects.filter(user=org_user)
+    if user == org_user or AccessControl.sees_rehearsals(user, org_user.username):
+        return events
+    return events.exclude(event_type_id=EventType.REHEARSAL)
+
+
 def can_view_event_content(user, org_user):
     """True if user can view an event's songs/meta content (ADMIN/MEMBER/SUPPORTER, or the org's own account)."""
     return user == org_user or AccessControl.can_view_event_content(user, org_user).exists()
@@ -43,7 +51,7 @@ def can_view_event_content(user, org_user):
 
 def can_view_event_attendance(user, org_user):
     """True if user can view an event's attendance (ADMIN/MEMBER, or the org's own account)."""
-    return user == org_user or AccessControl.can_edit_event(user, org_user).exists()
+    return user == org_user or AccessControl.can_view_event_attendance(user, org_user).exists()
 
 
 def _save_resource_formset(existing_manager, resource_model, owner_kwargs, resource_formset, owner_user):
@@ -243,7 +251,7 @@ class EventListView(ListFilterMixin, ListView):
         self.customuser = get_object_or_404(CustomUser, username=url_username)
         sort_field, _, _ = self._get_sort_field()
         events = q_filter(
-            Event.objects.filter(user=self.customuser), self.request.GET.get('q', ''),
+            _visible_events(self.request.user, self.customuser), self.request.GET.get('q', ''),
             ['name', 'location', 'description', 'event_type__name', 'project__title', 'eventsong__song__title'],
             period_q=lambda d0, d1: date_overlap_q('started_at', 'ended_at', d0, d1),
             extra_q=_present_names_q,
@@ -302,7 +310,7 @@ class EventDetailView(DetailView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
-        return Event.objects.filter(user=self.customuser).prefetch_related(
+        return _visible_events(self.request.user, self.customuser).prefetch_related(
             'attendance_set__person',
             'attendance_set__attendance_type',
             'eventsong_set__song__composer',

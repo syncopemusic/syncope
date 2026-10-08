@@ -52,8 +52,8 @@
                 {% for total in event_totals %}
                     <td class="table-event-col">{{ total.present }}/{{ total.total }}</td>
                 {% endfor %}
-                <td class="col-main"><strong>{{ grand_present }}/{{ grand_total }}</strong></td>
-                <td class="col-main"><strong>{{ grand_percentage|floatformat:0 }}%</strong></td>
+                <td class="col-main">{{ grand_present }}/{{ grand_total }}</td>
+                <td class="col-main">{{ grand_percentage|floatformat:0 }}%</td>
             </tr>
         </tbody>
     </table>

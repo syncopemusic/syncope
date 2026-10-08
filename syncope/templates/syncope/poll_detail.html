@@ -16,27 +16,25 @@
         </span>
         {% endif %}
     </h1>
-    {% if is_admin %}<a href="{% url 'syncope:poll_update' url_username poll.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
+    {% if is_admin %}<a href="{% url 'syncope:poll_update' url_username poll.pk %}" class="btn btn-secondary">Edit Poll Details</a>{% endif %}
 </div>
 
-{% if poll.description %}
-<p class="poll-summary">{{ poll.description }}</p>
+{% if is_admin %}
+<div class="link-row">
+    <a href="{% url 'syncope:poll_events' url_username poll.pk %}" class="btn btn-secondary">Edit Dates</a>
+    <a href="{% url 'syncope:poll_persons' url_username poll.pk %}" class="btn btn-secondary">Edit Persons</a>
+</div>
 {% endif %}
+
+<div class="project-header">
+    <h3>Details</h3>
+    <p>{{ poll.description|default:"-"|linebreaksbr }}</p>
+</div>
 
 {% if is_admin %}
 {# Hidden CSRF token for the JS fetch call #}
 <div hidden>{% csrf_token %}</div>
 {% endif %}
-
-<div class="section-header">
-    <h3>Dates</h3>
-    {% if is_admin %}<a href="{% url 'syncope:poll_events' url_username poll.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
-</div>
-
-<div class="section-header">
-    <h3>Invited persons</h3>
-    {% if is_admin %}<a href="{% url 'syncope:poll_persons' url_username poll.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
-</div>
 
 {% if table_rows %}
 <div class="table-container">
@@ -60,7 +58,7 @@
                     </div>
                 </th>
                 {% endfor %}
-                <th class="col-main">Total</th>
+                <th class="col-main">Total<br>{{ poll_events|length }}</th>
                 <th class="col-main">%</th>
             </tr>
         </thead>
@@ -72,22 +70,17 @@
                 {% for total in event_totals %}
                 <td class="table-event-col">{{ total.yes }}{% if total.maybe %}({{ total.maybe }}){% endif %}</td>
                 {% endfor %}
-                <td class="col-main"><strong>{{ grand_yes }}{% if grand_maybe %}({{ grand_maybe }}){% endif %}</strong></td>
-                <td class="col-main"><strong>{{ grand_percentage|floatformat:0 }}%</strong></td>
+                <td class="col-main">{{ grand_yes }}{% if grand_maybe %}({{ grand_maybe }}){% endif %}</td>
+                <td class="col-main">{{ grand_percentage|floatformat:0 }}%</td>
             </tr>
             {% for group in grouped_table_rows %}
             {% for row in group.items %}
             {% url 'syncope:poll_person_attendance' url_username poll.pk row.person.pk as person_attendance_url %}
             <tr {% if forloop.first and not forloop.parentloop.first %}class="group-start"{% endif %}>
                 <td class="col-num">{{ row.index }}</td>
-                <td class="sticky-col col-main">
-                    <div>{{ row.person.person.first_name }} {{ row.person.person.last_name }}</div>
-                    <div class="song-subline">
-                        {% if row.person.person.singer_set.all or row.person.person.instrumentalist_set.all %}
-                            {% for singer in row.person.person.singer_set.all %}{{ singer.voice.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                            {% for instrumentalist in row.person.person.instrumentalist_set.all %}{{ instrumentalist.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                        {% else %}<small>No voice/instrument</small>{% endif %}
-                    </div>
+                <td class="sticky-col col-main"
+                    title="{% for singer in row.person.person.singer_set.all %}{{ singer.voice.name }}{% if not forloop.last %}, {% endif %}{% endfor %} {% for instrumentalist in row.person.person.instrumentalist_set.all %}{{ instrumentalist.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                    {{ row.person.person.first_name }} {{ row.person.person.last_name }}
                 </td>
                 <td>
                     <a href="{{ person_attendance_url }}" target="_blank" class="btn btn-secondary" title="Edit your poll results">Edit</a>

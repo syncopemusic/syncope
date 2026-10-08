@@ -38,6 +38,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.LoginRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'syncope.middleware.ProfileCompletionMiddleware',
+    'syncope.middleware.OrgAccessMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 

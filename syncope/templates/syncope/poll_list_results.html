@@ -7,8 +7,8 @@
     <tr>
         <th class="col-num"><a href="?q={{ q|urlencode }}&{{ filter_qs }}&sort=id{% if current_sort == 'id' and not reverse %}&reverse=true{% endif %}" class="sortable-header">{% if current_sort == 'id' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}</a></th>
         <th class="col-main"><a href="?q={{ q|urlencode }}&{{ filter_qs }}&sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Title{% if current_sort == 'title' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th>Persons</th>
-        <th>Created</th>
+        <th><a href="?q={{ q|urlencode }}&{{ filter_qs }}&sort=persons{% if current_sort == 'persons' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Persons{% if current_sort == 'persons' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?q={{ q|urlencode }}&{{ filter_qs }}&sort=created{% if current_sort == 'created' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Created{% if current_sort == 'created' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th><a href="?q={{ q|urlencode }}&{{ filter_qs }}&sort=updated{% if current_sort == 'updated' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Updated{% if current_sort == 'updated' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
     </tr>
     </thead>

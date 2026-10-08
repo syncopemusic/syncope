@@ -428,7 +428,7 @@ class OrgMemberDetailView(DetailView):
             self.customuser = get_object_or_404(CustomUser, username=url_username)
 
             if request.user != self.customuser:
-                self.has_edit_permission = AccessControl.can_edit_event(
+                self.has_edit_permission = AccessControl.can_view_event_attendance(
                     request.user, self.customuser
                 ).exists()
 

@@ -94,6 +94,19 @@ class AccessControl:
 
 
     @classmethod
+    def org_role_ids(cls, auth_user, url_username):
+        """Role ids the viewer holds in the org (ADMIN for the org's own account); empty for strangers."""
+        try:
+            return set(cls.get_org_roles(auth_user, url_username).values_list('id', flat=True))
+        except Person.DoesNotExist:
+            return set()
+
+    @classmethod
+    def sees_rehearsals(cls, auth_user, url_username):
+        """Rehearsals (and attendance) are for ADMIN and MEMBER only; supporters get the other event types."""
+        return bool(cls.org_role_ids(auth_user, url_username) & {Role.ADMIN, Role.MEMBER})
+
+    @classmethod
     def _user_memberships(cls, auth_user):
         """
         Get all memberships where auth_user is involved.
@@ -419,10 +432,14 @@ class AccessControl:
     @classmethod
     def can_edit_event(cls, auth_user, url_username):
         """
-        Return queryset of Memberships that auth_user can view:
-        - Personal memberships if owner_user is same as auth_user
-        - Or org memberships if auth_user is ADMIN or MEMBER of that org
+        Memberships that may change attendance, imports and members' details in the org (ADMIN only;
+        MEMBERs are read-only, see can_view_event_attendance).
         """
+        return cls._memberships_with_roles(auth_user, url_username, [Role.ADMIN])
+
+    @classmethod
+    def can_view_event_attendance(cls, auth_user, url_username):
+        """Memberships that may view attendance and member details (ADMIN, MEMBER) without editing."""
         return cls._memberships_with_roles(auth_user, url_username, [Role.ADMIN, Role.MEMBER])
 
     @classmethod

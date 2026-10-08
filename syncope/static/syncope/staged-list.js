@@ -47,7 +47,7 @@ function initStagedList({ formId, tbodyId, rootId = tbodyId, addField, prefix, s
     });
     buildRow ??= (btn, info) => `<td class="${numClass}"></td>
         <td class="col-main">${info}<input type="hidden" name="${addField}" value="${btn.dataset.id}"></td>
-        <td class="col-action"><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>`;
+        <td class="col-action"><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>`;
     el('results')?.addEventListener('click', e => {
         const btn = e.target.closest('.btn-secondary'), row = btn?.closest('.search-result-row');
         if (!row) return;

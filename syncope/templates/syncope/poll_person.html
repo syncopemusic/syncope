@@ -23,7 +23,7 @@
                 <tr data-id="{{ pp.pk }}" data-person-id="{{ pp.person_id }}" {% if forloop.first and not forloop.parentloop.first %}class="group-start"{% endif %}>
                     <td class="col-num">{{ pp.index }}</td>
                     <td class="col-main">
-                        <div>{{ pp.person.first_name }} {{ pp.person.last_name }}</div>
+                        <div class="song-title">{{ pp.person.first_name }} {{ pp.person.last_name }}</div>
                         <div class="song-subline">
                             {% with voice=pp.person.singer_set.first instrument=pp.person.instrumentalist_set.first %}
                                 {% if voice %}{{ voice.voice.name }}
@@ -33,7 +33,7 @@
                         </div>
                     </td>
                     <td class="col-action">
-                        {% if is_admin %}<button type="button" class="btn btn-remove" title="Remove from poll">×</button>{% endif %}
+                        {% if is_admin %}<button type="button" class="btn btn-danger btn-remove" title="Remove from poll">×</button>{% endif %}
                     </td>
                 </tr>
                 {% endfor %}

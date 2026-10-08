@@ -52,7 +52,7 @@
         <tbody>
             {% for eventsong in eventsongs %}
             <tr>
-                <td class="song-index">{{ forloop.counter }}</td>
+                <td class="col-num">{{ forloop.counter }}</td>
                 <td class="col-main">
                     <div class="song-title">
                         {% if eventsong.resource_icons %}
@@ -114,8 +114,10 @@
                 </td>
                 {% endcomment %}
                 <td>
-                    {% if attendance.attendance_type_id == 1 %}{% icon "check" %}{% elif attendance.attendance_type_id == 2 %}{% icon "briefcase" %}{% elif attendance.attendance_type_id == 3 %}{% icon "thermometer" %}{% elif attendance.attendance_type_id == 4 %}{% icon "umbrella" %}{% else %}{% icon "circle-help" %}{% endif %}
+                    <span class="btn att-type-{{ attendance.attendance_type_id|default:0 }}" data-type-id="{{ attendance.attendance_type_id|default:0 }}">
+                    {% if attendance.attendance_type_id == 1 %}{% icon "check" %}{% elif attendance.attendance_type_id == 2 %}{% icon "briefcase" %}{% elif attendance.attendance_type_id == 3 %}{% icon "thermometer" %}{% elif attendance.attendance_type_id == 4 %}{% icon "plane" %}{% else %}{% icon "circle-help" %}{% endif %}
                     {{ attendance.attendance_type }}
+                    </span>
                 </td>
             </tr>
         {% endfor %}

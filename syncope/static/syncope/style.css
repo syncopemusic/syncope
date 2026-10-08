@@ -158,8 +158,21 @@
         background-size: 6px 6px;
     }
 
-    h1, h2, h3, h4, h5, h6 {
+    h1, h2, h3, h4, h5, h6, .table-detail th {
         font-family: var(--font-heading);
+        font-weight: 400; /* Garamond ships one weight; anything bolder is browser-faked. */
+    }
+
+    /* Text belongs to the heading above it: tight gap, not the browser's 1em + 1em. */
+    h2, h3, h4, .table-detail th {
+        margin-block-end: var(--space-1);
+
+        /* First in its block: sits as close under the page title as a detail table. */
+        &:first-child { margin-block-start: 0; }
+    }
+
+    :is(h1, h2, h3, h4) + p {
+        margin-block-start: 0;
     }
 
     strong {
@@ -731,10 +744,6 @@
         background-color: transparent;
         border-color: var(--color-text-on-accent);
         color: var(--color-text-on-accent);
-        padding-block: var(--space-1);
-        padding-inline: var(--space-2);
-        border-radius: var(--radius-sm);
-        font-size: var(--font-size-2xs);
     }
 
     .btn-ghost:hover {
@@ -757,12 +766,8 @@
         margin-block-start: calc(var(--space-6) * 2);
     }
 
-    .btn-link,
-    .btn-remove {
-        background: none;
-    }
-
     .btn-link {
+        background: none;
         color: var(--color-primary);
     }
 
@@ -776,20 +781,10 @@
         justify-content: center;
     }
 
-    .btn-remove {
-        color: var(--color-text-muted);
-        border: 1px solid var(--color-danger);
-    }
-
-    .btn-remove:hover {
-        color: var(--color-danger);
-        text-decoration: underline;
-    }
-
-    /* Wide screens: the x / undo glyph is swapped for a word (JS keeps writing the glyph). */
+    /* Used with .btn-danger: wide screens swap the x / undo glyph for a word (JS keeps writing the glyph). */
     @media (min-width: 769px) {
         .btn-remove { font-size: 0; }
-        .btn-remove::after { content: "Delete"; font-size: var(--font-size-md); }
+        .btn-remove::after { content: "Remove"; font-size: 14px; }
         .pending-remove .btn-remove::after { content: "Undo"; }
     }
 
@@ -841,8 +836,8 @@
         margin-block-end: var(--space-4);
     }
 
-    .form-group label,
-    form p label {
+    .form-group > label,
+    form p > label {
         display: block;
         margin-block-end: var(--space-1);
         font-size: var(--font-size-sm);
@@ -1030,7 +1025,7 @@
     }
 
     /* Uppercase caption style shared by section labels, table headers and filter labels. */
-    :where(.section-label, .table thead th, .table tbody th.sticky-col, .table-detail tr th, .filter-label, .filter-sub summary) {
+    :where(.section-label, .table thead th, .table tbody th.sticky-col, .filter-label, .filter-sub summary) {
         text-transform: uppercase;
         letter-spacing: var(--tracking-caps);
     }
@@ -1052,8 +1047,8 @@
         font-size: var(--font-size-sm);
         overflow: hidden;
 
-        /* Up to 3 columns: stay narrow. 4 or more: spread across the page. */
-        &:not(:has(thead th:nth-child(4))) {
+        /* Up to 4 columns: stay narrow. 5 or more: spread across the page. */
+        &:not(:has(thead th:nth-child(5))) {
             max-inline-size: var(--content-narrow);
         }
 
@@ -1072,7 +1067,8 @@
 
         & tbody td,
         & tbody th {
-            padding: var(--space-2);
+            padding: 0 var(--space-2);
+            block-size: var(--table-matrix-size);
             border-block-end: 1px solid var(--color-border-subtle);
             vertical-align: middle;
             text-align: inherit;
@@ -1104,33 +1100,27 @@
             color: inherit;
             text-decoration: none;
         }
+    }
 
-        /* Compact by default, roomier when the .table-container is wide. */
-        @container (min-inline-size: 36rem) {
-            font-size: var(--font-size-md);
+    /* One leading cell: drag handle, number, icon side by side. */
+    .col-lead {
+        white-space: nowrap;
+    }
 
-            & thead th {
-                padding: var(--space-3);
-                font-size: var(--font-size-xs);
-            }
-
-            & tbody td {
-                padding: var(--space-3);
-            }
-        }
+    .col-lead > * {
+        vertical-align: middle;
+        margin-inline-end: var(--space-2);
     }
 
     /* Shared by every drag-to-reorder table. */
-    .drag-handle-cell { width: 2.2rem; text-align: center; padding-inline: 0; }
     .drag-handle {
         cursor: grab;
         touch-action: none;
         color: var(--color-text-muted);
-        display: flex;
+        display: inline-flex;
         flex-direction: column;
         align-items: center;
         line-height: 0.7;
-        padding: var(--space-2);
         font-weight: 500;
         font-size: var(--font-size-lg);
     }
@@ -1148,25 +1138,23 @@
         border-block-start: 2px solid var(--color-border);
     }
 
+    /* Label/value pairs read as heading + text (same look as Description / Details). */
     .table-detail {
-        width: 100%;
-        max-inline-size: 640px;
         margin-block-end: var(--space-5);
-        font-size: var(--font-size-md);
     }
 
-    .table-detail tr td {
-        padding: var(--space-2) var(--space-1);
-        vertical-align: baseline;
-    }
-
-    .table-detail tr th {
-        inline-size: 120px;
-        padding: var(--space-2) var(--space-4) var(--space-2) 0;
-        font-weight: 500;
-        color: var(--color-text-muted);
-        font-size: var(--font-size-sm);
+    .table-detail :is(tr, th, td) {
+        display: block;
+        padding: 0;
         text-align: start;
+    }
+
+    .table-detail th {
+        font-size: var(--font-size-lg);
+    }
+
+    .table-detail td {
+        margin-block-end: var(--space-3);
     }
 
     /* --- Editable list rows: search result row, spinner, staged/pending table rows --- */
@@ -1235,18 +1223,12 @@
         align-items: center;
         flex-shrink: 0;
     }
-    .poll-summary {
-        margin-block: 0.25em;
-        font-size: var(--font-size-md);
-        overflow-wrap: anywhere;
-    }
-
     .project-header p {
         overflow-wrap: anywhere;
+        margin-block: var(--space-1) var(--space-3);
     }
     .dt-short { display: none; }
 
-    .song-index { width: 1.5rem; }
     .song-title { font-weight: 500; overflow-wrap: break-word; }
     .song-subline {
         display: flex;
@@ -1257,11 +1239,12 @@
         font-weight: 400;
         color: var(--color-text-muted);
         overflow-wrap: break-word;
+
+        & a { font-weight: inherit; }
     }
     .song-meta { white-space: nowrap; color: var(--color-text-muted); }
 
     /* Edit-page table: narrow fixed columns; the extra class beats .table's cell padding. */
-    .songs-table .song-index { width: 1.3rem; padding-inline: 0; }
     .songs-table .song-resources { text-align: center; width: 1.4rem; padding-inline: 0; }
     .songs-table .song-actions { text-align: center; width: 2.2rem; padding-inline-start: 0; }
 
@@ -1297,11 +1280,6 @@
         padding-inline: var(--space-1);
     }
 
-    /* Matrix rows only as tall as the attendance cell (:has() limits it to cells holding one). */
-    .table-matrix tbody td:has(.table-cell-attendance) {
-        padding-block: 0;
-    }
-
     /* Fixed width so every date column lines up; centred in both header and body. */
     .table-event-col {
         inline-size: var(--table-matrix-size);
@@ -1319,13 +1297,6 @@
         rotate: 180deg;
         white-space: nowrap;
         font-size: var(--font-size-2xs);
-    }
-
-    /* Rotated button: inline axis is vertical, so min-inline-size = equal height for every date. */
-    .table-event-header .btn-ghost {
-        min-inline-size: 4.5rem;
-        justify-content: center;
-        line-height: 1.2;
     }
 
     /* Non-rehearsal events: light date button; plain-text headers underlined. */
@@ -1372,23 +1343,16 @@
         box-shadow: none;
     }
 
-    /* Clickable status pill (attendance/poll edit pages); colour comes from .att-type-N. */
-    .chip {
-        display: inline-flex;
-        align-items: center;
+    /* Status buttons (attendance/poll edit pages): a plain .btn; colour comes from .att-type-N. */
+    .btn[data-type-id] {
         justify-content: center;
-        gap: var(--space-1);
         inline-size: 7.5rem;
-        padding: var(--space-1) var(--space-2);
-        border-radius: var(--radius-sm);
-        font-size: var(--font-size-md);
-        line-height: 1;
         cursor: default;
         user-select: none;
     }
 
-    /* Only chips/cells that cycle on click look clickable; plain ones are read-only. */
-    .chip[data-cycle],
+    /* Only buttons/cells that cycle on click look clickable; plain ones are read-only. */
+    .btn[data-cycle],
     .table-cell-attendance[data-cycle] {
         cursor: pointer;
         outline: 1px solid var(--color-primary);
@@ -1396,7 +1360,7 @@
         transition: transform var(--transition-fast), box-shadow var(--transition-fast);
     }
 
-    .chip[data-cycle]:hover,
+    .btn[data-cycle]:hover,
     .table-cell-attendance[data-cycle]:hover {
         transform: translateY(-2px);
         box-shadow: var(--shadow-sm);
@@ -1661,8 +1625,13 @@
         container-type: inline-size;
     }
 
+    /* Tables inside forms line up with the inputs above them. */
+    form .table-container:not(:has(thead th:nth-child(5))) {
+        max-inline-size: var(--field-max);
+    }
+
     /* Narrow tables: shrink the scroll box too, so wheeling beside the table scrolls the page. */
-    .table-container:not(:has(thead th:nth-child(4))) {
+    .table-container:not(:has(thead th:nth-child(5))) {
         max-inline-size: var(--content-narrow);
     }
 
@@ -1727,10 +1696,8 @@
     .att-type-3 { background-color: var(--color-attendance-3); }
     .att-type-4 { background-color: var(--color-attendance-4); }
 
-    /* Disabled matrix cell drops its att-type colour (same layer, later in source). */
+    /* Disabled matrix cell keeps its att-type colour but is not clickable (no outline, no hover). */
     .table-cell-attendance-disabled {
-        background-color: var(--color-surface);
-        color: var(--color-text);
         pointer-events: none;
         cursor: default;
     }
@@ -1747,7 +1714,10 @@
         list-style: none;
     }
 
-    .narrow {
+    /* Prose, detail blocks and narrow tables share one line length. */
+    .narrow,
+    .table-detail,
+    p {
         max-inline-size: var(--content-narrow);
     }
 
@@ -1764,6 +1734,11 @@
     .col-num,
     .col-action {
         text-align: right;
+    }
+
+    /* The column shrinks to content, so wrapping would stack the buttons; keep them side by side. */
+    .col-action .link-row {
+        flex-wrap: nowrap;
     }
 
     /* The one column that grows; every other column shrinks to content (.table width:1%). */

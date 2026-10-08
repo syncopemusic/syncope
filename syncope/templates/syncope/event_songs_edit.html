@@ -10,12 +10,11 @@
     <form method="post" id="songs-form">
         {% csrf_token %}
         <input type="hidden" id="song-order-input" name="song_order" value="">
-        <div class="table-container narrow">
+        <div class="table-container">
             <table class="table songs-table">
                 <thead>
                     <tr>
-                        <th class="drag-handle-cell"></th>
-                        <th class="song-index"></th>
+                        <th class="col-lead"></th>
                         <th class="col-main">Song</th>
                         <th class="song-resources" title="Resources">&#128206;</th>
                         {% if is_admin %}<th class="song-actions"></th>{% endif %}
@@ -25,7 +24,7 @@
                     {% for eventsong in eventsongs %}
                         {% include "syncope/_song_row.html" %}
                     {% endfor %}
-                    <tr class="empty-row"><td colspan="{% if is_admin %}5{% else %}4{% endif %}">No songs added yet.</td></tr>
+                    <tr class="empty-row"><td colspan="{% if is_admin %}4{% else %}3{% endif %}">No songs added yet.</td></tr>
                 </tbody>
             </table>
         </div>
@@ -76,11 +75,10 @@
         rowClass: 'song-row',
         searchUrl: "{% url 'syncope:event_songs_search' url_username event.pk %}",
         buildRow: (btn, info) => `
-            <td class="drag-handle-cell"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span></td>
-            <td class="song-index"></td>
+            <td class="col-lead"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span><span class="song-index"></span></td>
             <td class="col-main">${info}</td>
             <td class="song-resources" title="Event resources for song">${escapeHtml(btn.dataset.resources || '0')}</td>
-            <td class="song-actions"><button type="button" class="btn btn-remove" title="Remove staged addition">&times;</button></td>`,
+            <td class="song-actions"><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>`,
         extraCount: () => (keptIds().some((pk, i) => pk !== expectedOrder()[i]) ? 1 : 0),
         afterChange: () => {
             songRows().forEach((row, i) => { row.querySelector('.song-index').textContent = i + 1; });

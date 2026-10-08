@@ -146,6 +146,7 @@ class SongListView(ListFilterMixin, SongOwnerMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["url_username"] = self.owner_user.username
+        context["can_manage"] = AccessControl.can_manage_song(self.request.user, Song(user=self.owner_user))
         context["q"] = self.request.GET.get('q', '')
         context["current_sort"] = self.request.GET.get('sort', 'id')
         context["reverse"] = self.request.GET.get('reverse', 'false') == 'true'
