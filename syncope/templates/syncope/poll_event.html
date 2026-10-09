@@ -1,7 +1,7 @@
 {% extends "syncope/base.html" %}
 {% load static dt_tags %}
 
-{% block title %}{% if editing %}Edit Date{% else %}Dates{% endif %} - {{ poll.title }}{% endblock %}
+{% block title %}{% if editing %}Edit Date - {{ poll.title }}{% else %}{{ poll.title }} - Syncope{% endif %}{% endblock %}
 
 {% block content %}
 
@@ -47,7 +47,14 @@
 {% include "syncope/_save_bar.html" with form_id="poll-event-form" url=return_target %}
 
 {% else %}
-<h1>{{ poll.title }} - Dates</h1>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ poll.title }}</span>
+            <small><span title="Page"> | Events</span></small>
+        </span>
+    </h1>
+</div>
 
 <form method="post" id="dates-form">
     {% csrf_token %}

@@ -1,6 +1,6 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}Details - {{ object.title }}{% endblock %}
+{% block title %}{{ object.title }} - Syncope{% endblock %}
 
 {% block content %}
 
@@ -12,7 +12,14 @@
     </div>
 {% endif %}
 
-<h1>Details - {{ object.title }}</h1>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ object.title }}</span>
+            <small><span title="Action"> | Edit</span></small>
+        </span>
+    </h1>
+</div>
 
 <form method="post" id="project-meta-form">
     {% csrf_token %}

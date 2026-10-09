@@ -1,10 +1,21 @@
 {% extends "syncope/base.html" %}
 {% load static %}
 
-{% block title %}{% if form.instance.pk %}Edit{% else %}New{% endif %} title{% endblock %}
+{% block title %}{% if form.instance.pk %}{{ form.instance.title }} - Syncope{% else %}New title{% endif %}{% endblock %}
 
 {% block content %}
-<h1>{% if form.instance.pk %}Edit{% else %}New{% endif %} Poll title</h1>
+{% if form.instance.pk %}
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ form.instance.title }}</span>
+            <small><span title="Action"> | Edit</span></small>
+        </span>
+    </h1>
+</div>
+{% else %}
+<h1>New Poll title</h1>
+{% endif %}
 
 <form method="post" id="poll-form">
     {% csrf_token %}

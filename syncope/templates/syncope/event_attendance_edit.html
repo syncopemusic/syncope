@@ -1,10 +1,17 @@
 {% extends "syncope/base.html" %}
 {% load static dt_tags %}
-{% block title %}Attendance - {% event_label event %}{% endblock %}
+{% block title %}{{ event.name|default:event.event_type }} - Syncope{% endblock %}
 
 {% block content %}
 
-<h1>Attendance - {% event_label event %}</h1>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="{% if event.name %}Title{% else %}Type{% endif %}">{{ event.name|default:event.event_type }}</span>
+            <small><span title="Page"> | Attendance</span></small>
+        </span>
+    </h1>
+</div>
 
 <div>
     <form method="post" id="attendance-form">
@@ -33,7 +40,7 @@
     <div id="add-participants" class="narrow">
         <h3>Add participant</h3>
         <p class="search-form">
-            <span class="search-field">
+            <span class="search-field search-field-wide">
                 <input type="text" id="participant-search-input" value="{{ search_q }}" placeholder="Search by name, voice, or instrument">
                 <span class="search-spinner" id="participant-search-spinner"></span>
             </span>

@@ -1,11 +1,22 @@
 {% extends "syncope/base.html" %}
 {% load static %}
 
-{% block title %}{% if object %}Edit Organization{% else %}Create Organization{% endif %}{% endblock %}
+{% block title %}{% if object %}{{ object.name }} - Edit{% else %}Create Organization{% endif %}{% endblock %}
 
 {% block content %}
 
-<h1>{% if object %}Edit {{ object.name }}{% else %}New Organization{% endif %}</h1>
+{% if object %}
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Organization">{{ object.name }}</span>
+            <small><span title="Action"> | Edit</span></small>
+        </span>
+    </h1>
+</div>
+{% else %}
+<h1>New Organization</h1>
+{% endif %}
 <form method="post" id="org-form">
   {% csrf_token %}
   {{ form.as_p }}

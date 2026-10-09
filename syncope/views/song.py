@@ -205,6 +205,7 @@ class SongDetailView(SongOwnerMixin, DetailView):
             song.song_resource.select_related('resource').order_by('order')
         )
         context['related_song_resources'] = song_related_resource_rows(song)
+        context['resource_count'] = len(context['song_resources']) + len(context['related_song_resources'])
 
         return context
 

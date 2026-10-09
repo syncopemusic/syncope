@@ -1,15 +1,22 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}{{ user.username }}{% endblock %}
+{% block title %}Syncope{% endblock %}
 
 {% block content %}
-<div class="card dash-head">
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            {% if person.first_name or person.last_name %}
+            <span title="Name">{{ person.first_name }} {{ person.last_name }}</span>
+            {% else %}
+            <span title="Username">{{ user.username }}</span>
+            {% endif %}
+        </span>
+    </h1>
     {% if person.first_name or person.last_name %}
-        <h2>{{ person.first_name }} {{ person.last_name }}</h2>
-        <p><a href="{% url 'syncope:profile_detail' user.username %}" class="btn btn-secondary">View profile</a></p>
+    <a href="{% url 'syncope:profile_detail' user.username %}" class="btn btn-secondary">View profile</a>
     {% else %}
-        <h2>{{ user.username }}</h2>
-        <p><a href="{% url 'syncope:person_update' user.username %}" class="btn btn-secondary">Complete your profile</a></p>
+    <a href="{% url 'syncope:person_update' user.username %}" class="btn btn-secondary">Complete your profile</a>
     {% endif %}
 </div>
 

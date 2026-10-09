@@ -1,10 +1,15 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}Lyrics: {{ song.title }}{% endblock %}
+{% block title %}{{ song.title }} - Syncope{% endblock %}
 {% block content %}
 
 <div class="section-header">
-    <h1>Lyrics for "{{ song.title }}"</h1>
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ song.title }}</span>
+            <small><span title="Page"> | Lyrics</span></small>
+        </span>
+    </h1>
     <a href="{% url 'syncope:song_meta_edit' url_username song.pk %}" class="btn btn-secondary">Edit</a>
 </div>
 

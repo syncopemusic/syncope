@@ -1,7 +1,7 @@
 {% extends "syncope/base.html" %}
 {% load static dt_tags icon_tags %}
 
-{% block title %}{{ event.name|default:event.event_type }}{% endblock %}
+{% block title %}{{ event.name|default:event.event_type }} - Syncope{% endblock %}
 
 {% block content %}
 
@@ -131,7 +131,7 @@
 
 {% if event_resources or related_event_resources or is_admin %}
 <div class="section-header">
-    <h3>Resources</h3>
+    <h3>Resources ({{ resource_count }})</h3>
     {% if is_admin %}<a href="{% url 'syncope:event_resources_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% include "syncope/_resource_table.html" with rows=event_resources related_rows=related_event_resources related_column_label="Song" editable=False %}

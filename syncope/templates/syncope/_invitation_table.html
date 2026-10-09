@@ -46,9 +46,9 @@ Parameters:
             <td class="col-num">{{ forloop.counter }}</td>
             <td>{% dt invitation.created_at "date-year" %}</td>
             <td>{{ invitation.invitation_type }}</td>
-            <td class="col-main">{{ invitation.sender }}</td>
-            <td>{% if invitation.admin_involved %}{{ invitation.admin_involved }}{% else %}?{% endif %}</td>
-            <td class="col-main">{{ invitation.recipient }}</td>
+            <td class="col-main">{% include "syncope/_user_cell.html" with u=invitation.sender %}</td>
+            <td>{% if invitation.admin_involved %}{% include "syncope/_user_cell.html" with u=invitation.admin_involved %}{% else %}?{% endif %}</td>
+            <td class="col-main">{% include "syncope/_user_cell.html" with u=invitation.recipient %}</td>
             <td>{{ invitation.status }}</td>
             <td>{% if invitation.expires_at %}{% dt invitation.expires_at "datetime" %}{% else %}-{% endif %}</td>
             <td><a href="{% url 'syncope:invitation_detail' url_username invitation.pk %}">View</a></td>

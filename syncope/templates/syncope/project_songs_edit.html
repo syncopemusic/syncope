@@ -1,10 +1,17 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}Songs - {{ project.title }}{% endblock %}
+{% block title %}{{ project.title }} - Syncope{% endblock %}
 
 {% block content %}
 
-<h1>Songs - {{ project.title }}</h1>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ project.title }}</span>
+            <small><span title="Page"> | Songs</span></small>
+        </span>
+    </h1>
+</div>
 
 <form method="post" id="songs-form">
     {% csrf_token %}
@@ -47,7 +54,7 @@
 
 <div id="add-songs" class="narrow">
     <h3>Add song</h3>
-    <p class="search-field">
+    <p class="search-field search-field-wide">
         <input type="text" id="song-search-input" value="{{ search_q }}" placeholder="Search by ID, title, composer, or keywords">
         <span class="search-spinner" id="song-search-spinner"></span>
     </p>

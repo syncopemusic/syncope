@@ -1,9 +1,16 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}New Project{% endblock %}
+{% block title %}New Project - Syncope{% endblock %}
 
 {% block content %}
-<h1>New Project</h1>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Type">Project</span>
+            <small><span title="Action"> | New</span></small>
+        </span>
+    </h1>
+</div>
 <p><small>You can add other details after initial save.</small></p>
 <form method="post">
     {% csrf_token %}

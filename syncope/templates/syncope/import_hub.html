@@ -1,10 +1,17 @@
 {% extends 'syncope/base.html' %}
 {% load static %}
 
-{% block title %}Import Data Hub{% endblock %}
+{% block title %}Import - Syncope{% endblock %}
 
 {% block content %}
-<h1>Import Data Hub</h1>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Organization">{{ org_user.organizations.first.name|default:org_user.username }}</span>
+            <small><span title="Page"> | Import</span></small>
+        </span>
+    </h1>
+</div>
 <p class="text-muted">Upload and manage your data in multiple steps. Steps can be repeated as needed.</p>
 
 <div class="card-grid">

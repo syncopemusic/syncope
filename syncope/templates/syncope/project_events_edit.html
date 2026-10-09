@@ -1,10 +1,17 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}Events - {{ project.title }}{% endblock %}
+{% block title %}{{ project.title }} - Syncope{% endblock %}
 
 {% block content %}
 
-<h1>Events - {{ project.title }}</h1>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ project.title }}</span>
+            <small><span title="Page"> | Events</span></small>
+        </span>
+    </h1>
+</div>
 
 <form method="post" id="events-form">
     {% csrf_token %}
@@ -42,7 +49,7 @@
 
 <div id="add-events" class="narrow">
     <h3>Add event</h3>
-    <p class="search-field">
+    <p class="search-field search-field-wide">
         <input type="text" id="event-search-input" value="{{ search_q }}" placeholder="Search by event name">
         <span class="search-spinner" id="event-search-spinner"></span>
     </p>

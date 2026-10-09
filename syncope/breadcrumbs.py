@@ -131,7 +131,7 @@ SECTIONS = {
 # detail = section > object, sub = section > object > label.
 PAGES = {
     "profile_detail": ("profile", "list", None),
-    "person_update": ("profile", "page", "Details"),
+    "person_update": ("profile", "page", "Update"),
     "profile_resources": ("profile", "page", "Resources"),
     "profile_account": ("profile", "page", "Username & Password"),
     "invitation_list": ("invitations", "list", None),
@@ -142,7 +142,7 @@ PAGES = {
     "attendance": ("attendance", "list", None),
     "song_list": ("songs", "list", None),
     "song_new": ("songs", "page", "New"),
-    "song_meta_edit": ("songs", "sub", "Details"),
+    "song_meta_edit": ("songs", "sub", "Edit"),
     "song_lyrics_edit": ("songs", "sub", "Lyrics"),
     "song_resources_edit": ("songs", "sub", "Resources"),
     "song_quotes": ("songs", "sub", "Quotes"),
@@ -151,7 +151,7 @@ PAGES = {
     "project_list": ("projects", "list", None),
     "project_new": ("projects", "page", "New"),
     "project_detail": ("projects", "detail", None),
-    "project_meta_edit": ("projects", "sub", "Details"),
+    "project_meta_edit": ("projects", "sub", "Edit"),
     "project_resources_edit": ("projects", "sub", "Resources"),
     "project_events_edit": ("projects", "sub", "Events"),
     "project_songs_edit": ("projects", "sub", "Songs"),
@@ -160,9 +160,9 @@ PAGES = {
     "poll_list": ("polls", "list", None),
     "poll_new": ("polls", "page", "New"),
     "poll_detail": ("polls", "detail", None),
-    "poll_update": ("polls", "sub", "Edit"),
+    "poll_edit": ("polls", "sub", "Edit"),
     "poll_persons": ("polls", "sub", "Persons"),
-    "poll_events": ("polls", "sub", "Dates"),
+    "poll_events": ("polls", "sub", "Events"),
     "poll_event_update": ("polls", "sub", "Edit date"),
     "poll_attendance": ("polls", "sub", "Attendance"),
     "poll_person_attendance": ("polls", "sub", "Attendance"),
@@ -193,6 +193,15 @@ def section_crumb(request, username, section_key):
     return {"label": label, "url": reverse(f"syncope:{list_name}", kwargs={"username": username})}
 
 
+def owner_crumb(username):
+    """Organization (-> its dashboard) or plain user (-> home) that a section page belongs to."""
+    from syncope.models import Organization
+    org = Organization.objects.filter(user__username=username).first()
+    if org:
+        return {"label": org.name, "url": reverse("syncope:org_dashboard", kwargs={"username": username})}
+    return {"label": username, "url": reverse("syncope:home")}
+
+
 def auto_breadcrumbs(request):
     match = request.resolver_match
     spec = PAGES.get(match.url_name) if match else None
@@ -204,7 +213,10 @@ def auto_breadcrumbs(request):
     if kind == "list":
         return [{"label": page_label or root["label"], "url": None}]
     if kind == "page":
-        return [root, {"label": page_label, "url": None}]
+        crumbs = [root, {"label": page_label, "url": None}]
+        if section_key == "invitations":
+            crumbs.insert(0, owner_crumb(username))
+        return crumbs
     _, _, detail_name, label_fn = SECTIONS[section_key]
     pk = match.kwargs.get("pk")
     obj_label = label_fn(pk) if label_fn else None

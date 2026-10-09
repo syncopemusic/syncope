@@ -123,7 +123,7 @@
     --z-mobile-drawer: 1000;
 
     /* Attendance grid cell size: event-column floor and chip size. */
-    --table-matrix-size: 2.5rem;
+    --table-matrix-size: 38px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -390,6 +390,11 @@
         .mobile-topbar:has(.breadcrumbs) {
             display: block;
             padding: var(--space-3) var(--space-6) 0;
+        }
+
+        /* Breadcrumbs already sit above: halve the gap before the page header. */
+        .main:has(.mobile-topbar .breadcrumbs) .main-content {
+            padding-block-start: var(--space-3);
         }
     }
 
@@ -892,6 +897,15 @@
         box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
     }
 
+    /* Every field form (direct <p> / .form-group children) shares the narrow content width; table forms and auth pages keep their own. */
+    .grid-container:not(.auth) form:has(> :is(p, .form-group)):not(.filter-form, .inline-form) {
+        max-inline-size: var(--content-narrow);
+    }
+    .grid-container:not(.auth) form:has(> :is(p, .form-group)):not(.filter-form, .inline-form) :is(input, select, textarea, .pw-field, .pw-meter),
+    :is(#resources-form, #add-quote, #add-date, .lyrics-columns) :is(input, select, textarea) {
+        max-inline-size: none;
+    }
+
     /* Wrapper for a live-search input; positions the spinner and keeps the input full width. */
     .search-field {
         position: relative;
@@ -1005,7 +1019,7 @@
     /* Lyrics edit page: lyrics + translations side by side on desktop, stacked on mobile. */
     .lyrics-columns {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(2, minmax(0, var(--content-narrow)));
         gap: var(--space-5);
         align-items: start;
     }
@@ -1256,13 +1270,9 @@
             white-space: normal;
             overflow: visible;
             text-overflow: clip;
-        }
-        .event-title-text {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
             min-width: 0;
         }
+        .event-title-text { min-width: 0; overflow-wrap: anywhere; }
     }
 
     /* --- Matrix/pivot tables (attendance grids) --- */
@@ -1297,6 +1307,11 @@
         rotate: 180deg;
         white-space: nowrap;
         font-size: var(--font-size-2xs);
+    }
+
+    /* Vertical text swaps the button's axes, so the shared .btn padding made it 54px wide: swap it back to 38px (same as other buttons). */
+    .table-event-header .btn {
+        padding: var(--space-4) var(--space-2);
     }
 
     /* Non-rehearsal events: light date button; plain-text headers underlined. */
@@ -1623,11 +1638,6 @@
         overflow: auto;
         max-height: calc(100dvh - 4rem);
         container-type: inline-size;
-    }
-
-    /* Tables inside forms line up with the inputs above them. */
-    form .table-container:not(:has(thead th:nth-child(5))) {
-        max-inline-size: var(--field-max);
     }
 
     /* Narrow tables: shrink the scroll box too, so wheeling beside the table scrolls the page. */

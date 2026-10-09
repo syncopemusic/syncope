@@ -1,6 +1,6 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}{% if object %}Details - {{ object.title }}{% else %}New Song{% endif %}{% endblock %}
+{% block title %}{% if object %}{{ object.title }}{% else %}New Song{% endif %} - Syncope{% endblock %}
 {% block content %}
 
 {% if messages %}
@@ -11,7 +11,25 @@
     </div>
 {% endif %}
 
-<h1>{% if object %}Details - {{ object.title }}{% else %}New Song{% endif %}</h1>
+{% if object %}
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ object.title }}</span>
+            <small><span title="Action"> | Edit</span></small>
+        </span>
+    </h1>
+</div>
+{% else %}
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Type">Songs</span>
+            <small><span title="Action"> | New</span></small>
+        </span>
+    </h1>
+</div>
+{% endif %}
 
 <form method="post" id="song-meta-form">
     {% csrf_token %}

@@ -357,6 +357,7 @@ class EventDetailView(DetailView):
         context['eventsongs'] = eventsongs
 
         context['related_event_resources'] = event_related_resource_rows(self.object)
+        context['resource_count'] = len(context['event_resources']) + len(context['related_event_resources'])
 
         return context
 
@@ -691,7 +692,7 @@ class EventMetaEditView(UpdateView):
         context['eventsongs'] = event.eventsong_set.select_related('song').order_by('order')
         context['encore_eventsong_id'] = event.eventsong_set.filter(encore=True).values_list('pk', flat=True).first()
         context['breadcrumbs'], context['origin_key'] = event_breadcrumbs(
-            self.request, self.kwargs.get('username'), event, current_label='Details'
+            self.request, self.kwargs.get('username'), event, current_label='Edit'
         )
         return context
 

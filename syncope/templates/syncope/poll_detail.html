@@ -1,12 +1,13 @@
 {% extends "syncope/base.html" %}
 {% load static dt_tags icon_tags %}
 
-{% block title %}{{ poll.title }} votes{% endblock %}
+{% block title %}{{ poll.title }} - Syncope{% endblock %}
 
 {% block content %}
 
 <div class="section-header">
-    <h1 class="event-title">{{ poll.title }} votes
+    <h1 class="event-title">
+        <span class="event-title-text"><span title="Title">{{ poll.title }}</span></span>
         {% if is_admin %}
         <span class="share-controls">
             <button id="share-btn" class="btn btn-link" title="Copy link">
@@ -16,7 +17,7 @@
         </span>
         {% endif %}
     </h1>
-    {% if is_admin %}<a href="{% url 'syncope:poll_update' url_username poll.pk %}" class="btn btn-secondary">Edit Poll Details</a>{% endif %}
+    {% if is_admin %}<a href="{% url 'syncope:poll_edit' url_username poll.pk %}" class="btn btn-secondary">Edit Poll Details</a>{% endif %}
 </div>
 
 {% if is_admin %}

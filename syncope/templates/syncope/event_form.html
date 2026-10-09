@@ -1,9 +1,16 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}{% if form.instance.pk %}Edit{% else %}New{% endif %} Event{% endblock %}
+{% block title %}New Event - Syncope{% endblock %}
 
 {% block content %}
-<h1>New event</h1>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Page">Events</span>
+            <small><span title="Action"> | New</span></small>
+        </span>
+    </h1>
+</div>
 <form method="post">
     {% csrf_token %}
     <input type="hidden" name="draft_key" value="{{ draft_key }}">

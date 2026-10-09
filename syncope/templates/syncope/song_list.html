@@ -5,7 +5,7 @@
 
 <div class="section-header">
     <h1>Songs</h1>
-    {% if can_manage %}<a href="{%  url 'syncope:song_new' url_username %}" class="btn btn-primary" title="Add new song into archive">+ Add</a>{% endif %}
+    {% if can_manage %}<a href="{%  url 'syncope:song_new' url_username %}" class="btn btn-primary" title="New song in archive">+ New</a>{% endif %}
 </div>
 
 {% include "syncope/_search_box.html" with prefix="song-list" q=q placeholder="Search by ID, title, composer, arranger, poet, origin, keywords, language" %}

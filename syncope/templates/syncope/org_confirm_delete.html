@@ -1,10 +1,17 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}Delete {{ object.name }}{% endblock %}
+{% block title %}{{ object.name }} - Syncope{% endblock %}
 
 {% block content %}
 
-<h1>Delete Organization</h1>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Organization">{{ object.name }}</span>
+            <small><span title="Action"> | Delete</span></small>
+        </span>
+    </h1>
+</div>
 <p>Are you sure you want to delete <strong>{{ object.name }}</strong>? This will permanently delete the organization and all its data.</p>
 
 {% if is_admin %}

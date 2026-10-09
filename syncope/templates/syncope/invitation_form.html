@@ -1,8 +1,15 @@
 {% extends "syncope/base.html" %}
-{% block title %}New Invitation{% endblock %}
+{% block title %}Invitations - Syncope{% endblock %}
 
 {% block content %}
-<h1>New Invitation</h1>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="{% if is_org %}Organization{% else %}Username{% endif %}">{{ owner_name }}</span>
+            <small><span title="Action"> | New Invitation</span></small>
+        </span>
+    </h1>
+</div>
 
 {% if is_org %}
 <form method="post" class="inline-form">
@@ -15,7 +22,7 @@
 </form>
 {% endif %}
 
-<form method="post">
+<form method="post" id="invitation-form">
     {% csrf_token %}
     <input type="hidden" name="draft_key" value="{{ draft_key }}">
     {{ form.as_p }}

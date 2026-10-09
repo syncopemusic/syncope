@@ -1,9 +1,10 @@
 {% extends "syncope/base.html" %}
 {% load static dt_tags icon_tags %}
-{% block title %}{{ person }}{% endblock %}
+{% block title %}{{ person }} - Syncope{% endblock %}
 {% block content %}
 <div class="section-header">
-    <h1 class="event-title">{{ person }}
+    <h1 class="event-title">
+        <span class="event-title-text"><span title="Person">{{ person }}</span></span>
         <span class="share-controls">
             <button id="share-btn" class="btn btn-link" title="Copy link">
                 <img src="{% static 'syncope/images/link.svg' %}" width="16" height="16" alt="Link">
@@ -31,7 +32,7 @@
 
 {% if person_resources or is_admin %}
 <div class="section-header">
-    <h3>Resources</h3>
+    <h3>Resources ({{ person_resources|length }})</h3>
     {% if profile %}<a href="{% url 'syncope:profile_resources' url_username %}" class="btn btn-secondary">Edit</a>{% elif is_admin %}<a href="{% url 'syncope:person_resources_edit' url_username person.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% if person_resources %}
@@ -60,87 +61,19 @@
 {% endif %}
 {% endif %}
 
-<!-- Composers -->
-{% if composed_songs %}
-<h3>Composed Songs</h3>
-<div class="table-container">
-<table class="table">
-  <thead>
-  <tr>
-    <th class="col-num"></th>
-    <th class="col-main">Title</th>
-  </tr>
-  </thead>
-  <tbody>
-  {% for song in composed_songs %}
+<!-- Songs by role -->
+{% if composed_songs %}{% include "syncope/_member_songs_table.html" with heading="Composed Songs" songs=composed_songs %}{% endif %}
+{% if written_songs %}{% include "syncope/_member_songs_table.html" with heading="Written Songs" songs=written_songs %}{% endif %}
+{% if arranged_songs %}{% include "syncope/_member_songs_table.html" with heading="Arranged Songs" songs=arranged_songs %}{% endif %}
 
-  <tr>
-    <td class="col-num">{{ forloop.counter }}</td>
-    <td class="col-main"><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
-  </tr>
-
-  {% endfor %}
-  </tbody>
-</table>
-</div>
-{% endif %}
-
-<!-- Poets -->
-{% if written_songs %}
-<h3>Written Songs</h3>
-<div class="table-container">
-<table class="table">
-  <thead>
-  <tr>
-    <th class="col-num"></th>
-    <th class="col-main">Title</th>
-  </tr>
-  </thead>
-  <tbody>
-  {% for song in written_songs %}
-  <tr>
-    <td class="col-num">{{ forloop.counter }}</td>
-    <td class="col-main"><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
-  </tr>
-  {% endfor %}
-  </tbody>
-</table>
-</div>
-{% endif %}
-
-<!-- Arrangers -->
-{% if arranged_songs %}
-<h3>Arranged Songs</h3>
-<div class="table-container">
-<table class="table">
-  <thead>
-  <tr>
-    <th class="col-num"></th>
-    <th class="col-main">Title</th>
-  </tr>
-  </thead>
-  <tbody>
-  {% for song in arranged_songs %}
-  <tr>
-    <td class="col-num">{{ forloop.counter }}</td>
-    <td class="col-main"><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
-  </tr>
-  {% endfor %}
-  </tbody>
-</table>
-</div>
-{% endif %}
-
-<!-- Translators -->
 {% if translation_pairs %}
-<h3>Translations</h3>
+<h3>Translations ({{ translation_pairs|length }})</h3>
 <div class="table-container">
 <table class="table">
   <thead>
   <tr>
     <th class="col-num"></th>
-    <th class="col-main">Original Language</th>
-    <th>Translation Language</th>
+    <th class="col-main">Languages</th>
     <th>Songs</th>
   </tr>
   </thead>
@@ -148,8 +81,7 @@
   {% for pair in translation_pairs %}
   <tr>
     <td class="col-num">{{ forloop.counter }}</td>
-    <td class="col-main">{{ pair.original_lang }}</td>
-    <td>{{ pair.translation_lang }}</td>
+    <td class="col-main">{{ pair.languages }}</td>
     <td>{{ pair.count }}</td>
   </tr>
   {% endfor %}
@@ -157,6 +89,7 @@
 </table>
 </div>
 {% endif %}
+{% if translated_songs %}{% include "syncope/_member_songs_table.html" with heading="Translated Songs" songs=translated_songs %}{% endif %}
 
 {% if profile %}
 <div class="section-header">
@@ -171,7 +104,7 @@
 
 <!-- Projects -->
 {% if member_projects %}
-<h3>Projects</h3>
+<h3>Projects ({{ member_projects|length }})</h3>
 <div class="table-container">
 <table class="table">
   <thead>

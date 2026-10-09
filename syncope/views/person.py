@@ -201,7 +201,7 @@ def _filtered_person_queryset(request, org_user, list_type, filters):
 
 @method_decorator(login_required, name='dispatch')
 class PersonUpdateView(DraftMixin, UpdateView):
-    """Profile > Details (name, contact, dates, voices/instruments/skills)."""
+    """Profile > Update (name, contact, dates, voices/instruments/skills)."""
     template_name = "syncope/person_form.html"
     form_class = PersonForm
     context_object_name = "person_create"
@@ -525,40 +525,27 @@ class OrgMemberDetailView(DetailView):
             person.person_resource.select_related('resource').order_by('order')
         )
 
-        # Composed songs
-        composed_songs = person.composed_songs.all()
-        if composed_songs.exists():
-            context["composed_songs"] = composed_songs
+        # Songs by role; composer/arranger are shown in each row's subline
+        for key, songs in {
+            "composed_songs": person.composed_songs.all(),
+            "written_songs": person.written_songs.all(),
+            "arranged_songs": person.arranged_songs.all(),
+            "translated_songs": Song.objects.filter(lyricstranslation__translator=person).distinct(),
+        }.items():
+            songs = list(songs.select_related("composer", "arranger"))
+            if songs:
+                context[key] = songs
 
-        # Written songs
-        written_songs = person.written_songs.all()
-        if written_songs.exists():
-            context["written_songs"] = written_songs
-
-        # Arranged songs
-        arranged_songs = person.arranged_songs.all()
-        if arranged_songs.exists():
-            context["arranged_songs"] = arranged_songs
-
-        # Translation pairs with song counts
-        translations = LyricsTranslation.objects.filter(
-            translator=person
-        ).select_related('song__languagecode', 'languagecode')
-        if translations.exists():
-            # translation_pairs = []
-            # Group by (original language, translation language) pair
-            pair_dict = {}
-            for trans in translations:
-                original_lang = trans.song.languagecode.language_code if trans.song.languagecode else "Unknown"
-                translation_lang = trans.languagecode.language_code if trans.languagecode else "Unknown"
-                key = (original_lang, translation_lang)
-                if key not in pair_dict:
-                    pair_dict[key] = {"original_lang": original_lang, "translation_lang": translation_lang, "count": 0}
-                pair_dict[key]["count"] += 1
-
-            translation_pairs = list(pair_dict.values())
-            if translation_pairs:
-                context["translation_pairs"] = translation_pairs
+        # Translation counts per (original language, translation language) pair
+        pairs = {}
+        for trans in LyricsTranslation.objects.filter(translator=person).select_related("song__languagecode", "languagecode"):
+            original = trans.song.languagecode.language_code if trans.song.languagecode else "Unknown"
+            translated = trans.languagecode.language_code if trans.languagecode else "Unknown"
+            pairs[(original, translated)] = pairs.get((original, translated), 0) + 1
+        if pairs:
+            context["translation_pairs"] = [
+                {"languages": f"{o} - {t}", "count": n} for (o, t), n in pairs.items()
+            ]
 
         # Projects (reordered by latest event date) with the person's singer/instrumentalist roles.
         # Voices/instruments are not stored per project, so the same roles show on every row.

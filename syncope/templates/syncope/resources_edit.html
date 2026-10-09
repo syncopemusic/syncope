@@ -1,9 +1,16 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}Resources - {{ owner }}{% endblock %}
+{% block title %}{% if profile %}{{ user.username }}{% else %}{% firstof owner.title owner.name owner.event_type owner %}{% endif %} - Syncope{% endblock %}
 {% block content %}
 
-<h1>{% if profile %}Update Your Profile{% else %}Resources - {{ owner }}{% endif %}</h1>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="{% if profile %}Username{% elif owner.title or owner.name %}Title{% elif owner.event_type %}Type{% else %}Name{% endif %}">{% if profile %}{{ user.username }}{% else %}{% firstof owner.title owner.name owner.event_type owner %}{% endif %}</span>
+            <small><span title="Page"> | Resources</span></small>
+        </span>
+    </h1>
+</div>
 
 
 <form method="post" id="resources-form">

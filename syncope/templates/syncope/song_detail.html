@@ -67,7 +67,7 @@
 
 {% if song_resources or related_song_resources or can_manage %}
 <div class="section-header">
-    <h3>Resources</h3>
+    <h3>Resources ({{ resource_count }})</h3>
     {% if can_manage %}<a href="{% url 'syncope:song_resources_edit' url_username song.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% include "syncope/_resource_table.html" with rows=song_resources related_rows=related_song_resources related_column_label="Event" editable=False %}
@@ -150,7 +150,7 @@
         {% for event in events %}
         <tr>
             <td class="col-num">{{ forloop.counter }}</td>
-            <td class="col-main {% if event.event_type.id != 1 %}table-event-header-strong{% endif %}">
+            <td class="col-main">
                 <a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event }}</a>
             </td>
             <td>{% dt event.started_at "date-year" %}</td>

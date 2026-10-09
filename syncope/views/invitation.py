@@ -125,7 +125,9 @@ class InvitationListView(ListFilterMixin, InvitationAccessMixin, ListView):
         context['history_sort'] = history_sort
         context['history_reverse'] = history_reverse
         context['url_username'] = self.customuser.username
-        context['is_org'] = Organization.objects.filter(user=self.customuser).exists()
+        org = Organization.objects.filter(user=self.customuser).first()
+        context['is_org'] = org is not None
+        context['owner_name'] = org.name if org else self.customuser.username
         context['q'] = self.request.GET.get('q', '')
 
         return context
@@ -152,7 +154,9 @@ class InvitationCreateView(DraftMixin, InvitationAccessMixin, SelectPersonInitia
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.customuser.username
-        context['is_org'] = Organization.objects.filter(user=self.customuser).exists()
+        org = Organization.objects.filter(user=self.customuser).first()
+        context['is_org'] = org is not None
+        context['owner_name'] = org.name if org else self.customuser.username
         return context
 
     def form_valid(self, form):

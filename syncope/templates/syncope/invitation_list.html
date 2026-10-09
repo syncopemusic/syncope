@@ -4,11 +4,16 @@
 
 {% block content %}
 <div class="section-header">
-    <h1>Invitations</h1>
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="{% if is_org %}Organization{% else %}Username{% endif %}">{{ owner_name }}</span>
+            <small><span title="Page"> | Invitations</span></small>
+        </span>
+    </h1>
     {% if is_org %}
-    <a href="{% url 'syncope:invitation_new' url_username %}" class="btn btn-primary" title="Add new invite">+ Add</a>
+    <a href="{% url 'syncope:invitation_new' url_username %}" class="btn btn-primary" title="New invite">+ New</a>
     {% else %}
-    <a href="{% url 'syncope:invitation_new' url_username %}" class="btn btn-primary" title="Add new invitation request">+ Add</a>
+    <a href="{% url 'syncope:invitation_new' url_username %}" class="btn btn-primary" title="New invitation request">+ New</a>
     {% endif %}
 </div>
 

@@ -1,9 +1,16 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}Delete Member{% endblock %}
+{% block title %}{{ person.first_name }} {{ person.last_name }} - Syncope{% endblock %}
 
 {% block content %}
-<h1>Delete Member?</h1>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Name">{{ person.first_name }} {{ person.last_name }}</span>
+            <small><span title="Action"> | Delete</span></small>
+        </span>
+    </h1>
+</div>
 
 <p>Are you sure you want to delete <strong>{{ person.first_name }} {{ person.last_name }}</strong>?</p>
 

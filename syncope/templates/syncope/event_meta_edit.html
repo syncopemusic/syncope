@@ -1,6 +1,6 @@
 {% extends "syncope/base.html" %}
 {% load static dt_tags %}
-{% block title %}Details - {% event_label object %}{% endblock %}
+{% block title %}{{ object.name|default:object.event_type }} - Syncope{% endblock %}
 
 {% block content %}
 
@@ -12,7 +12,14 @@
     </div>
 {% endif %}
 
-<h1>Event Details - {% event_label object %}</h1>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="{% if object.name %}Title{% else %}Type{% endif %}">{{ object.name|default:object.event_type }}</span>
+            <small><span title="Action"> | Edit</span></small>
+        </span>
+    </h1>
+</div>
 
 <form method="post" id="event-meta-form">
     {% csrf_token %}

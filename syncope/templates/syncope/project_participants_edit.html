@@ -1,10 +1,17 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}Participants - {{ project.title }}{% endblock %}
+{% block title %}{{ project.title }} - Syncope{% endblock %}
 
 {% block content %}
 
-<h1>Participants - {{ project.title }}</h1>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ project.title }}</span>
+            <small><span title="Page"> | Participants</span></small>
+        </span>
+    </h1>
+</div>
 
 <form method="post" id="participants-form">
     {% csrf_token %}
@@ -46,7 +53,7 @@
 <div id="add-guests" class="narrow">
     <h3>Add guest</h3>
     <p class="search-form">
-        <span class="search-field">
+        <span class="search-field search-field-wide">
             <input type="text" id="guest-search-input" value="{{ search_q }}" placeholder="Search by name">
             <span class="search-spinner" id="guest-search-spinner"></span>
         </span>

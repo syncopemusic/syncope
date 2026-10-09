@@ -423,11 +423,11 @@ class EventForm(forms.ModelForm):
     class Meta:
         model = Event
         fields = ['name',
+                  'event_type',
                   'location',
                   'description',
                   'started_at',
                   'ended_at',
-                  'event_type',
                   'project',
                   'producers',
                   'additional_notes',

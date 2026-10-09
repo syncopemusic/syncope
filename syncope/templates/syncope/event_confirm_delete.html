@@ -1,11 +1,18 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}Delete Event{% endblock %}
+{% block title %}{{ event.name|default:event.event_type }} - Syncope{% endblock %}
 
 {% block content %}
-<h1>Delete Event?</h1>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="{% if event.name %}Title{% else %}Type{% endif %}">{{ event.name|default:event.event_type }}</span>
+            <small><span title="Action"> | Delete</span></small>
+        </span>
+    </h1>
+</div>
 
-<p>Are you sure you want to delete <strong>{{ event.name }}</strong>?</p>
+<p>Are you sure you want to delete <strong>{{ event.name|default:event.event_type }}</strong>?</p>
 
 {% if is_admin %}
 <form method="post">

@@ -1,11 +1,15 @@
 {% extends "syncope/base.html" %}
 {% load static dt_tags icon_tags %}
 
-{% block title %}{{ project.title }}{% endblock %}
+{% block title %}{{ project.title }} - Syncope{% endblock %}
 
 {% block content %}
 <div class="section-header">
-    <h1 class="event-title">{{ project.title }}
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ project.title }}</span>
+            <small><span title="Type"> | Project</span></small>
+        </span>
         <span class="share-controls">
             <button id="share-btn" class="btn btn-link" title="Copy link">
                 <img src="{% static 'syncope/images/link.svg' %}" width="16" height="16" alt="Link">
