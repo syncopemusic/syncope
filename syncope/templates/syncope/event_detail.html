@@ -27,10 +27,10 @@
     <tr><th>End date</th><td>{% dt event.ended_at "datetime-dow-full" "dt-full" %}{% dt event.ended_at "datetime-dow-short" "dt-short" %}</td></tr>
     {% endif %}
     {% if event.project %}<tr><th>Project</th><td><a href="{% url 'syncope:project_detail' url_username event.project.pk %}">{{ event.project.title }}</a></td></tr>{% endif %}
-    {% if event.description %}<tr><th>Description</th><td>{{ event.description }}</td></tr>{% endif %}
+    {% if event.description %}<tr><th>Description</th><td>{{ event.description|linebreaksbr }}</td></tr>{% endif %}
     {% if event.producers %}<tr><th>Organizers</th><td>{{ event.producers }}</td></tr>{% endif %}
     {% if event.num_visitors %}<tr><th>Visitors</th><td>{{ event.num_visitors }}</td></tr>{% endif %}
-    {% if is_admin and event.additional_notes %}<tr><th>Personal notes</th><td>{{ event.additional_notes }}</td></tr>{% endif %}
+    {% if is_admin and event.additional_notes %}<tr><th>Personal notes</th><td>{{ event.additional_notes|linebreaksbr }}</td></tr>{% endif %}
 </table>
 
 <div hidden>{% csrf_token %}</div>

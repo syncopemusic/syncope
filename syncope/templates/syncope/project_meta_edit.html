@@ -12,13 +12,14 @@
     </div>
 {% endif %}
 
-<div class="section-header">
+<div class="section-header section-header-edit">
     <h1 class="event-title">
         <span class="event-title-text">
             <span title="Title">{{ object.title }}</span>
             <small><span title="Action"> | Edit</span></small>
         </span>
     </h1>
+    <a href="{% url 'syncope:project_delete' url_username object.pk %}" class="btn btn-danger btn-delete">Delete Project</a>
 </div>
 
 <form method="post" id="project-meta-form">
@@ -32,7 +33,6 @@
         </div>
     {% endfor %}
 
-    <p class="danger-zone"><a href="{% url 'syncope:project_delete' url_username object.pk %}" class="btn btn-danger">Delete Project</a></p>
 </form>
 
 {% url 'syncope:project_detail' url_username object.pk as project_detail_url %}

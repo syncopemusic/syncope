@@ -6,6 +6,7 @@ from datetime import date, datetime, time, timedelta
 from django.utils import timezone
 from django.views.generic import View
 from django.db.models import Count, Q
+from django.http import QueryDict
 from django.shortcuts import redirect
 from syncope.utils import group_by_section, parse_date_query, parse_filters
 from django.db import transaction
@@ -479,6 +480,7 @@ def quick_add_rehearsal(request, username):
 
         messages.success(request, f"Rehearsal created with {len(attendance_records)} members!")
 
-    # Redirect back to dashboard
-    return redirect('syncope:attendance', username=username)
+    # Redirect back to dashboard, keeping the filters the page was showing (the "qs" field holds its query string)
+    query = QueryDict(request.POST.get('qs', '').lstrip('?')).urlencode()
+    return redirect(reverse('syncope:attendance', kwargs={'username': username}) + (f'?{query}' if query else ''))
 

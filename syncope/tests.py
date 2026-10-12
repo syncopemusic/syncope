@@ -304,7 +304,7 @@ class ResourcesEditViewTests(TestCase):
 class ResourcesEditOtherKindsRenderTests(TestCase):
     """Detail pages and the Resources edit page render for the other three owner kinds too."""
 
-    fixtures = ["syncope/fixture_role.json", "syncope/fixture_eventtype.json"]
+    fixtures = ["syncope/fixture_role.json", "syncope/fixture_eventtype.json", "syncope/fixture_attendancetype.json"]
 
     def setUp(self):
         self.org_user = CustomUser.objects.create_user(
@@ -327,6 +327,18 @@ class ResourcesEditOtherKindsRenderTests(TestCase):
         self.assertEqual(
             self.client.get(reverse("syncope:org_member_detail", kwargs={"username": "org", "pk": self.person.pk})).status_code, 200
         )
+
+    def test_member_events_list_only_present(self):
+        # the member page preselects performance/concert/recording
+        Event.objects.filter(pk=self.event.pk).update(event_type_id=EventType.PERFORMANCE)
+        other = Event.objects.create(user=self.org_user, name="Missed Event", event_type_id=EventType.PERFORMANCE)
+        Attendance.objects.create(event=self.event, person=self.person, attendance_type_id=AttendanceType.PRESENT)
+        Attendance.objects.create(event=other, person=self.person, attendance_type_id=AttendanceType.ILLNESS)
+        kwargs = {"username": "org", "pk": self.person.pk}
+        for name in ("org_member_detail", "org_member_event_search"):
+            response = self.client.get(reverse(f"syncope:{name}", kwargs=kwargs))
+            self.assertContains(response, "Test Event", msg_prefix=name)
+            self.assertNotContains(response, "Missed Event", msg_prefix=name)
 
     def test_resources_edit_pages_render_for_each_kind(self):
         for url_name, pk in (

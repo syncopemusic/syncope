@@ -94,6 +94,12 @@
     const savedRows = () => Array.from(attendanceTbody.querySelectorAll('tr[data-id]'));
     savedRows().forEach(row => { row.dataset.originalTypeId = row.querySelector('.attendance-chip')?.dataset.typeId ?? '0'; });
 
+    // submit only the types this user changed, so saving never reverts someone else's edits to untouched rows
+    document.getElementById('attendance-form').addEventListener('submit', () => savedRows().forEach(row => {
+        const hidden = row.querySelector(`input[name="type_${row.dataset.id}"]`);
+        if (hidden) hidden.disabled = hidden.value === row.dataset.originalTypeId;
+    }));
+
     // chip click: the add-type chip above the search just picks a type, row chips also stage a type change
     document.addEventListener('click', e => {
         const chip = e.target.closest('[data-cycle]');

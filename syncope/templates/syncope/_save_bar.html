@@ -1,4 +1,4 @@
-<div class="save-bar" id="save-bar">
+<div class="save-bar{% if dirty_only %} save-bar-dirty-only{% endif %}" id="save-bar">
     {% if form_id %}
     <span id="clean-actions">
         <a href="{{ url }}" class="btn btn-primary">Return</a>

@@ -6,13 +6,14 @@
 {% block content %}
 
 {% if object %}
-<div class="section-header">
+<div class="section-header section-header-edit">
     <h1 class="event-title">
         <span class="event-title-text">
             <span title="Organization">{{ object.name }}</span>
             <small><span title="Action"> | Edit</span></small>
         </span>
     </h1>
+    <a href="{% url 'syncope:org_delete' object.user.username %}" class="btn btn-danger btn-delete">Delete Organization</a>
 </div>
 {% else %}
 <h1>New Organization</h1>
@@ -24,9 +25,6 @@
   <div class="form-actions">
     <button type="submit" class="btn btn-primary">Create</button>
   </div>
-  {% endif %}
-  {% if object %}
-  <p class="danger-zone"><a href="{% url 'syncope:org_delete' object.user.username %}" class="btn btn-danger">Delete Organization</a></p>
   {% endif %}
 </form>
 

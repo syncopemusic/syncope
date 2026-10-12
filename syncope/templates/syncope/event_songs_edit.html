@@ -17,7 +17,7 @@
     <form method="post" id="songs-form">
         {% csrf_token %}
         <input type="hidden" id="song-order-input" name="song_order" value="">
-        <div class="table-container">
+        <div class="table-container" id="songs-table-container"{% if not eventsongs %} hidden{% endif %}>
             <table class="table songs-table">
                 <thead>
                     <tr>
@@ -31,7 +31,6 @@
                     {% for eventsong in eventsongs %}
                         {% include "syncope/_song_row.html" %}
                     {% endfor %}
-                    <tr class="empty-row"><td colspan="{% if is_admin %}4{% else %}3{% endif %}">No songs added yet.</td></tr>
                 </tbody>
             </table>
         </div>
@@ -88,6 +87,7 @@
             <td class="song-actions"><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>`,
         extraCount: () => (keptIds().some((pk, i) => pk !== expectedOrder()[i]) ? 1 : 0),
         afterChange: () => {
+            document.getElementById('songs-table-container').hidden = !songsTbody.querySelector('tr:not(.empty-row)');
             songRows().forEach((row, i) => { row.querySelector('.song-index').textContent = i + 1; });
             document.getElementById('song-order-input').value = songRows()
                 .filter(r => !r.classList.contains('pending-remove'))

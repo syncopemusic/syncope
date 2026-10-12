@@ -2,6 +2,7 @@ from django.urls import path
 from django.views.generic import RedirectView
 
 from .views.attendance import AttendanceDashboardView, quick_add_rehearsal, self_attendance_update
+from .views.event import PersonEventListView
 from .views.event import EventCreateView, EventDetailView, EventListView, EventListSearchView, EventDeleteView
 from .views.event import EventSongsEditView, EventAttendanceEditView, EventMetaEditView
 from .views.event import event_songs_search, event_song_resources_save
@@ -76,6 +77,7 @@ urlpatterns = [
     path("<str:username>/members/new/", OrgMemberAddView.as_view(), name="org_member_new"),
     path("<str:username>/members/new/member/", OrgMemberAddView.as_view(), {'preset': 'member'}, name="org_member_new_member"),
     path("<str:username>/members/<int:pk>/", OrgMemberDetailView.as_view(), name="org_member_detail"),
+    path("<str:username>/members/<int:pk>/events/", PersonEventListView.as_view(), name="org_member_event_search"),
     path("<str:username>/members/<int:pk>/edit/", OrgMemberEditView.as_view(), name="org_member_edit"),
     path("<str:username>/members/<int:pk>/resources/edit/", ResourcesEditView.as_view(kind='person'), name="person_resources_edit"),
     path("<str:username>/members/<int:pk>/delete/", OrgMemberDeleteView.as_view(), name="org_member_delete"),

@@ -21,6 +21,7 @@
             <tr>
                 <th class="col-num"></th>
                 <th class="col-main">Name</th>
+                <th></th>
                 <th class="col-action">Action</th>
             </tr>
         </thead>
@@ -28,23 +29,14 @@
             {% for person in participants %}
             <tr data-id="{{ person.pk }}">
                 <td class="col-num">{{ forloop.counter }}</td>
-                <td class="col-main">
-                    <div class="song-title">{{ person.first_name }} {{ person.last_name }}</div>
-                    <div class="song-subline">
-                        {% with voice=person.singer_set.first instrument=person.instrumentalist_set.first skill=person.skills.first %}
-                            {% if voice %}{{ voice.voice.name }}
-                            {% elif instrument %}{{ instrument.instrument.name }}
-                            {% elif skill %}{{ skill.title }}
-                            {% else %}<small>No skill</small>{% endif %}
-                        {% endwith %}
-                    </div>
-                </td>
+                <td class="col-main song-title">{{ person.first_name }} {{ person.last_name }}</td>
+                <td>{% if person.is_guest %}<small>Guest</small>{% endif %}</td>
                 <td class="col-action">
                     <button type="button" class="btn btn-danger btn-remove" title="Remove from project">&times;</button>
                 </td>
             </tr>
             {% endfor %}
-            <tr class="empty-row"><td colspan="3">No participants yet.</td></tr>
+            <tr class="empty-row"><td colspan="4">No participants yet.</td></tr>
         </tbody>
     </table>
     </div>
@@ -80,6 +72,10 @@
         addField: 'add_guest',
         prefix: 'guest',
         searchUrl: "{% url 'syncope:project_guests_search' url_username project.pk %}",
+        buildRow: (btn, info) => `<td class="col-num"></td>
+            <td class="col-main song-title">${info}<input type="hidden" name="add_guest" value="${btn.dataset.id}"></td>
+            <td><small>Guest</small></td>
+            <td class="col-action"><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>`,
     });
 </script>
 {% endblock %}

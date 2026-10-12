@@ -14,7 +14,7 @@ from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from datetime import datetime
 from django.views.generic import ListView,  UpdateView,  DetailView, FormView
 from django.views.generic.edit import DeleteView
-from django.db.models import Q, Max, Min, Value
+from django.db.models import Q, Min, Value
 from django.db.models.functions import Coalesce
 import datetime
 from django.db import transaction
@@ -28,6 +28,8 @@ from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list, add_query_param, safe_next_url, parse_filters, filter_qs
 from syncope.breadcrumbs import PROJECT_ORIGIN_PREFIX, origin_root_crumbs, project_origin_breadcrumbs, section_crumb, event_breadcrumbs, event_song_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
 from syncope.views.drafts import DraftMixin
+from syncope.views.event import PersonEventListView
+from django.utils.safestring import mark_safe
 
 SKILL_MAP = {
     'composers': Skill.COMPOSER,
@@ -547,51 +549,11 @@ class OrgMemberDetailView(DetailView):
                 {"languages": f"{o} - {t}", "count": n} for (o, t), n in pairs.items()
             ]
 
-        # Projects (reordered by latest event date) with the person's singer/instrumentalist roles.
-        # Voices/instruments are not stored per project, so the same roles show on every row.
-        roles = []
-        if person.skills.filter(id=Skill.SINGER).exists():
-            voices = ", ".join(s.voice.name for s in person.singer_set.select_related("voice"))
-            roles.append(f"Singer ({voices})" if voices else "Singer")
-        if person.skills.filter(id=Skill.INSTRUMENTALIST).exists():
-            instruments = ", ".join(i.instrument.name for i in person.instrumentalist_set.select_related("instrument"))
-            roles.append(f"Instrumentalist ({instruments})" if instruments else "Instrumentalist")
-
-        if roles:
-            projects = Project.objects.filter(
-                events__attendance__person=person
-            ).annotate(
-                latest_event=Max('events__started_at')
-            ).distinct().order_by('-latest_event')
-
-            member_projects = []
-            for project in projects:
-                perf_attended = Attendance.objects.filter(
-                    person=person,
-                    event__project=project,
-                    event__event_type_id__in=[EventType.PERFORMANCE, EventType.CONCERT, EventType.RECORDING],
-                    attendance_type_id=AttendanceType.PRESENT,
-                ).count()
-                rehearsals_present = Attendance.objects.filter(
-                    person=person,
-                    event__project=project,
-                    event__event_type_id=EventType.REHEARSAL,
-                    attendance_type_id=AttendanceType.PRESENT,
-                ).count()
-                rehearsals_total = Attendance.objects.filter(
-                    person=person,
-                    event__project=project,
-                    event__event_type_id=EventType.REHEARSAL,
-                ).counted().count()
-                member_projects.append({
-                    "project": project,
-                    "performances_attended": perf_attended,
-                    "rehearsals_present": rehearsals_present,
-                    "rehearsals_total": rehearsals_total,
-                })
-
-            context["member_projects"] = member_projects
-            context["member_roles"] = ", ".join(roles)
+        # Events attended: the member page renders the same partial the live search fetches
+        events = PersonEventListView.as_view(initial_types=[EventType.PERFORMANCE, EventType.CONCERT, EventType.RECORDING])(self.request, username=url_username, pk=person.pk)
+        events.render()
+        context.update({k: events.context_data[k] for k in ('filters', 'filter_types', 'q')})
+        context['events_html'] = mark_safe(events.content.decode())
 
         return context
 

@@ -12,13 +12,14 @@
 {% endif %}
 
 {% if object %}
-<div class="section-header">
+<div class="section-header section-header-edit">
     <h1 class="event-title">
         <span class="event-title-text">
             <span title="Title">{{ object.title }}</span>
             <small><span title="Action"> | Edit</span></small>
         </span>
     </h1>
+    <a href="{% url 'syncope:song_delete' url_username object.pk %}" class="btn btn-danger btn-delete">Delete Song</a>
 </div>
 {% else %}
 <div class="section-header">
@@ -54,9 +55,6 @@
         {% endif %}
     {% endfor %}
 
-    {% if object %}
-    <p class="danger-zone"><a href="{% url 'syncope:song_delete' url_username object.pk %}" class="btn btn-danger">Delete Song</a></p>
-    {% endif %}
 </form>
 
 {% include "syncope/_save_bar.html" with form_id="song-meta-form" url=return_url|default:cancel_url %}

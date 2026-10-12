@@ -15,6 +15,7 @@ from syncope.permissions import AccessControl
 from syncope.views.drafts import DraftMixin
 from syncope.utils import group_by_section, add_query_param, q_filter, filter_period, in_period_q
 from syncope.mixins import ListFilterMixin
+from syncope.breadcrumbs import ORIGIN_PARAM, auto_breadcrumbs
 
 
 class PollAdminMixin:
@@ -311,6 +312,14 @@ class PollEventUpdateView(PollAdminMixin, UpdateView):
         context['poll'] = self.poll
         context['url_username'] = self.kwargs['username']
         context['editing'] = True
+        # Reached from the Edit Dates list (?origin=events): Return and the trail go back there, else to the results.
+        events_url = reverse("syncope:poll_events", kwargs={"username": self.kwargs['username'], "pk": self.poll.pk})
+        if self.request.GET.get(ORIGIN_PARAM) == "events":
+            context['return_url'] = events_url
+            *head, current = auto_breadcrumbs(self.request)
+            context['breadcrumbs'] = [*head, {"label": "Events", "url": events_url}, current]
+        else:
+            context['return_url'] = reverse("syncope:poll_detail", kwargs={"username": self.kwargs['username'], "pk": self.poll.pk})
         return context
 
     def form_valid(self, form):
@@ -318,10 +327,7 @@ class PollEventUpdateView(PollAdminMixin, UpdateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse("syncope:poll_events", kwargs={
-            "username": self.kwargs["username"],
-            "pk": self.kwargs["pk"]
-        })
+        return self.request.get_full_path()
 
 
 @method_decorator(login_not_required, name="dispatch")

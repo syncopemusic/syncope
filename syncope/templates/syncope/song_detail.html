@@ -58,12 +58,13 @@
         <td>{{ song.languagecode }}</td>
     </tr>
     {% endif %}
+    {% if song.additional_notes %}
+    <tr>
+        <th>Additional Notes</th>
+        <td>{{ song.additional_notes|linebreaksbr }}</td>
+    </tr>
+    {% endif %}
 </table>
-
-{% if song.additional_notes %}
-<h3>Additional Notes</h3>
-<p>{{ song.additional_notes|linebreaksbr }}</p>
-{% endif %}
 
 {% if song_resources or related_song_resources or can_manage %}
 <div class="section-header">

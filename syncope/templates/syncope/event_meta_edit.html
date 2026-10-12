@@ -12,13 +12,14 @@
     </div>
 {% endif %}
 
-<div class="section-header">
+<div class="section-header section-header-edit">
     <h1 class="event-title">
         <span class="event-title-text">
             <span title="{% if object.name %}Title{% else %}Type{% endif %}">{{ object.name|default:object.event_type }}</span>
             <small><span title="Action"> | Edit</span></small>
         </span>
     </h1>
+    <a href="{% url 'syncope:event_delete' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-danger btn-delete">Delete Event</a>
 </div>
 
 <form method="post" id="event-meta-form">
@@ -44,7 +45,6 @@
     </div>
     {% endif %}
 
-    <p class="danger-zone"><a href="{% url 'syncope:event_delete' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-danger">Delete Event</a></p>
 </form>
 
 {% url 'syncope:event_detail' url_username object.pk as event_detail_url %}

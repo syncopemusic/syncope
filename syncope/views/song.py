@@ -18,7 +18,7 @@ from syncope.forms import QuoteFormSet, LyricsTranslationFormSet
 from syncope.mixins import ListFilterMixin, SongOwnerMixin
 from syncope.views.drafts import DraftMixin, clear_draft
 from syncope.permissions import AccessControl
-from syncope.utils import resource_icon_list, add_query_param, safe_next_url, filter_period, in_period_q, yes_no
+from syncope.utils import search_events, resource_icon_list, add_query_param, safe_next_url, filter_period, in_period_q, yes_no
 from syncope.breadcrumbs import project_origin_breadcrumbs, event_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
 from syncope.views.resource import song_related_resource_rows
 
@@ -545,9 +545,9 @@ def song_events_search(request, username, pk):
     song = _manageable_song(request, username, pk)
     search_q = request.GET.get('q', '')
     exclude_ids = [int(x) for x in request.GET.get('exclude', '').split(',') if x.isdigit()]
-    results = Event.objects.filter(user=song.user, name__icontains=search_q).exclude(
-        eventsong__song=song
-    ).exclude(pk__in=exclude_ids).order_by('-started_at') if search_q else []
+    results = search_events(
+        Event.objects.filter(user=song.user).exclude(eventsong__song=song).exclude(pk__in=exclude_ids), search_q
+    ).order_by('-started_at') if search_q else []
     return render(request, 'syncope/song_event_search_results.html', {
         'event_results': results,
         'search_q': search_q,

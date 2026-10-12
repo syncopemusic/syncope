@@ -43,8 +43,7 @@
 
 </form>
 
-{% url 'syncope:poll_events' url_username poll.pk as return_target %}
-{% include "syncope/_save_bar.html" with form_id="poll-event-form" url=return_target %}
+{% include "syncope/_save_bar.html" with form_id="poll-event-form" url=return_url %}
 
 {% else %}
 <div class="section-header">
@@ -84,7 +83,7 @@
                     </td>
                     <td class="col-action">
                         <div class="link-row link-row-end">
-                            <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}" class="btn btn-secondary">Edit</a>
+                            <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}?origin=events" class="btn btn-secondary">Edit</a>
                             {% if is_admin %}<button type="button" class="btn btn-danger btn-remove" title="Remove this date">×</button>{% endif %}
                         </div>
                     </td>

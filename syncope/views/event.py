@@ -1,4 +1,5 @@
 from functools import wraps
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseForbidden
 from django.shortcuts import  get_object_or_404, render
 from django.urls import reverse_lazy, reverse
@@ -25,7 +26,7 @@ from syncope.forms import AddSongToEventForm, EventSongResourceFormSet
 from syncope.views.drafts import DraftMixin
 from syncope.views.resource import event_related_resource_rows
 from syncope.permissions import AccessControl
-from syncope.utils import resource_icon_list, add_query_param, q_filter, date_overlap_q, filter_period, match_pk, yes_no
+from syncope.utils import resource_icon_list, add_query_param, search_events, date_overlap_q, filter_period, match_pk, yes_no
 from syncope.breadcrumbs import event_breadcrumbs, origin_root_crumbs, DEFAULT_EVENT_ORIGIN
 
 
@@ -199,13 +200,6 @@ class EventCreateView(DraftMixin, CreateView):
             "pk": self.object.pk
         })
 
-def _present_names_q(q):
-    """Events at which someone matching the name q was marked present."""
-    return Q(pk__in=Attendance.objects.filter(
-        attendance_type_id=AttendanceType.PRESENT, person__in=Person.objects.matching_name(q)
-    ).values('event_id'))
-
-
 def _guest_event_ids(owner):
     """Events with a present attendee who had no active MEMBER period in the org on the event date."""
     member = MembershipPeriod.objects.filter(
@@ -234,6 +228,7 @@ class EventListView(ListFilterMixin, ListView):
 
         sort_field_map = {
             'date': 'started_at',
+            'title': 'name',
             'type': 'event_type__name',
             'project': 'project__title',
             'location': 'location',
@@ -250,12 +245,7 @@ class EventListView(ListFilterMixin, ListView):
         url_username = self.kwargs.get("username")
         self.customuser = get_object_or_404(CustomUser, username=url_username)
         sort_field, _, _ = self._get_sort_field()
-        events = q_filter(
-            _visible_events(self.request.user, self.customuser), self.request.GET.get('q', ''),
-            ['name', 'location', 'description', 'event_type__name', 'project__title', 'eventsong__song__title'],
-            period_q=lambda d0, d1: date_overlap_q('started_at', 'ended_at', d0, d1),
-            extra_q=_present_names_q,
-        )
+        events = search_events(_visible_events(self.request.user, self.customuser), self.request.GET.get('q', ''))
         events = events.annotate(
             event_res_n=Count('event_resource', distinct=True),
             song_res_n=Count('eventsong__event_song_resource', distinct=True),
@@ -295,6 +285,30 @@ class EventListView(ListFilterMixin, ListView):
 class EventListSearchView(EventListView):
     template_name = 'syncope/event_list_results.html'
     with_filter_options = False
+
+
+class PersonEventListView(EventListView):
+    """Events one org member was present at: results partial for the member page and its live search."""
+    filter_spec = {'start': 'date', 'end': 'date', 'type': 'multi'}
+    template_name = 'syncope/person_event_list_results.html'
+    initial_types = None  # type ids preselected when the request names none (member page first load only)
+
+    def get_filters(self):
+        filters = super().get_filters()
+        if self.initial_types and 'type' not in filters:
+            filters['type'] = self.initial_types
+        return filters
+
+    def get_queryset(self):
+        self.customuser = get_object_or_404(CustomUser, username=self.kwargs['username'])
+        if not can_view_event_attendance(self.request.user, self.customuser):
+            raise PermissionDenied
+        person = get_object_or_404(Person, pk=self.kwargs['pk'], memberships__user=self.customuser)
+        sort_field, _, _ = self._get_sort_field()
+        events = _visible_events(self.request.user, self.customuser).filter(
+            attendance__person=person, attendance__attendance_type_id=AttendanceType.PRESENT)
+        events = search_events(events, self.request.GET.get('q', '')).select_related('project', 'event_type')
+        return self.apply_filters(events, self.get_filters()).order_by(sort_field)
 
 
 @method_decorator(login_required, name='dispatch')

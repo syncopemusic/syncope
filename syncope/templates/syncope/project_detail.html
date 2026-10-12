@@ -21,16 +21,12 @@
 </div>
 <div hidden>{% csrf_token %}</div>
 
-<div class="project-header">
-    <h3>Description</h3>
-    <p>{{ project.description|default:"-"|linebreaksbr }}</p>
-    <h3>Details</h3>
-    <p>{{ project.details|default:"-"|linebreaksbr }}</p>
-    <table class="table-detail">
+<table class="table-detail">
+        <tr><th>Description</th><td>{{ project.description|default:"-"|linebreaksbr }}</td></tr>
+        <tr><th>Details</th><td>{{ project.details|default:"-"|linebreaksbr }}</td></tr>
         <tr><th>Start date</th><td>{% if project.start_date %}{% dt project.start_date "date-year" %}{% else %}-{% endif %}</td></tr>
         <tr><th>End date</th><td>{% if project.end_date %}{% dt project.end_date "date-year" %}{% else %}-{% endif %}</td></tr>
-    </table>
-</div>
+</table>
 
 <hr>
 

@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static dt_tags icon_tags %}
+{% load static dt_tags icon_tags filter_tags %}
 {% block title %}{{ person }} - Syncope{% endblock %}
 {% block content %}
 <div class="section-header">
@@ -20,7 +20,7 @@
 <table class="table-detail">
   {% if person_data.email %}<tr><th>Email</th><td>{{ person_data.email }}</td></tr>{% endif %}
   {% if person_data.phone %}<tr><th>Phone</th><td>{{ person_data.phone }}</td></tr>{% endif %}
-  {% if person_data.address %}<tr><th>Address</th><td>{{ person_data.address }}</td></tr>{% endif %}
+  {% if person_data.address %}<tr><th>Address</th><td>{{ person_data.address|linebreaksbr }}</td></tr>{% endif %}
   {% if person_data.birth_date %}<tr><th>Birth date</th><td>{% dt person_data.birth_date "date-year" %}</td></tr>{% endif %}
   {% if person_data.instruments %}<tr><th>Instrument</th><td>{{ person_data.instruments|join:", " }}</td></tr>{% endif %}
   {% if person_data.skills %}
@@ -102,40 +102,44 @@
 </table>
 {% endif %}
 
-<!-- Projects -->
-{% if member_projects %}
-<h3>Projects ({{ member_projects|length }})</h3>
-<div class="table-container">
-<table class="table">
-  <thead>
-  <tr>
-    <th class="col-num"></th>
-    <th class="col-main">Project</th>
-    <th>Role</th>
-  </tr>
-  </thead>
-  <tbody>
-  {% for entry in member_projects %}
-  <tr>
-    <td class="col-num">{{ forloop.counter }}</td>
-    <td class="col-main"><a href="{%  url 'syncope:project_detail' url_username entry.project.pk %}">{{ entry.project.title }}</a>
-    <span title="Performances">{{ entry.performances_attended }}</span>
-    <span title="Rehearsals">{{ entry.rehearsals_present }}/{{ entry.rehearsals_total }}</span></td>
-    <td>{{ member_roles }}</td>
-  </tr>
-  {% endfor %}
-  </tbody>
-</table>
+<!-- Events attended -->
+<h3>Events</h3>
+{% include "syncope/_search_box.html" with prefix="person-event" q=q placeholder="Search by name, type, project, location, song, or date (2025, 3.2025, 5.3.2025)" %}
+
+{% filter_panel "person-event-filter-form" %}
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="start" label="From" type="date" value=filters.start|date:"Y-m-d" %}
 </div>
-{% endif %}
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="end" label="To" type="date" value=filters.end|date:"Y-m-d" %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="type" label="Event type" options=filter_types selected=filters.type %}
+</div>
+{% endfilter_panel %}
+
+<div id="person-event-results">{{ events_html }}</div>
 
 {% url 'syncope:org_member_list' url_username as member_list_url %}
 {% include "syncope/_save_bar.html" with url=return_url|default:member_list_url %}
 
 {% block extra_js %}
 <script src="{% static 'syncope/share.js' %}"></script>
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/filter-form.js' %}"></script>
 <script>
 initShareButton({ type: 'person', id: {{ person.pk }} });
+const filterForm = document.getElementById('person-event-filter-form');
+const searchInput = document.getElementById('person-event-search-input');
+const search = initLiveSearch({
+    input: searchInput,
+    spinner: document.getElementById('person-event-search-spinner'),
+    results: document.getElementById('person-event-results'),
+    clearBtn: document.getElementById('person-event-search-clear'),
+    searchUrl: "{% url 'syncope:org_member_event_search' url_username person.pk %}",
+    filterForm,
+});
+initFilterForm(filterForm, () => search.run(searchInput.value));
 </script>
 {% endblock %}
 

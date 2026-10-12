@@ -20,17 +20,18 @@
     {% if is_admin %}<a href="{% url 'syncope:poll_edit' url_username poll.pk %}" class="btn btn-secondary">Edit Poll Details</a>{% endif %}
 </div>
 
+{% if poll.description %}
+<table class="table-detail">
+    <tr><th>Details</th><td>{{ poll.description|linebreaksbr }}</td></tr>
+</table>
+{% endif %}
+
 {% if is_admin %}
 <div class="link-row">
     <a href="{% url 'syncope:poll_events' url_username poll.pk %}" class="btn btn-secondary">Edit Dates</a>
     <a href="{% url 'syncope:poll_persons' url_username poll.pk %}" class="btn btn-secondary">Edit Persons</a>
 </div>
 {% endif %}
-
-<div class="project-header">
-    <h3>Details</h3>
-    <p>{{ poll.description|default:"-"|linebreaksbr }}</p>
-</div>
 
 {% if is_admin %}
 {# Hidden CSRF token for the JS fetch call #}

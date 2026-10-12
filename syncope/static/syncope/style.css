@@ -398,10 +398,6 @@
         }
     }
 
-    .mobile-topbar .breadcrumbs {
-        margin: 0;
-    }
-
     @media (max-width: 768px) {
         .grid-container {
             grid-template-columns: 1fr;
@@ -423,26 +419,14 @@
         .mobile-topbar .breadcrumbs {
             flex: 1;
             min-width: 0;
-            margin: 0;
-            font-size: var(--font-size-2xs);
-            overflow-x: auto;
-            scrollbar-width: none;
-        }
-
-        .mobile-topbar .breadcrumbs::-webkit-scrollbar {
-            display: none;
-        }
-
-        .mobile-topbar .breadcrumbs ol {
-            flex-wrap: nowrap;
-            width: max-content;
+            align-self: center;
         }
 
         .main-content h1:first-of-type {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            font-size: var(--font-size-lg);
+            font-size: var(--font-size-xl);
             margin: var(--space-2) 0;
         }
 
@@ -474,6 +458,7 @@
             background: none;
             padding: 0;
             font-size: var(--font-size-xl);
+            line-height: 1;
             cursor: pointer;
             color: var(--color-text-muted);
         }
@@ -551,11 +536,6 @@
         block-size: 100%;
         transition: width var(--transition-fast), background-color var(--transition-fast);
     }
-
-    /* Same bottom spacing as .card-grid so the next h3 sits level. */
-    .dash-head {
-        margin-block-end: var(--space-5);
-    }
 }
 
 @layer components {
@@ -581,6 +561,11 @@
         color: var(--color-warning-text);
     }
 
+    /* Pages with nothing to return to: the bar only appears once there are changes to save. */
+    .save-bar-dirty-only:not(.dirty) {
+        display: none;
+    }
+
     /* IDs are hooks for save-bar.js. */
     .save-bar-dirty {
         display: contents;
@@ -598,9 +583,9 @@
             margin-inline-start: auto;
         }
 
-        /* Keep content clear of the fixed save bar. */
-        .main-content:has(.save-bar) {
-            padding-block-end: var(--save-bar-clearance);
+        /* Keep the footer (last, so content too) clear of the fixed save bar. */
+        .main:has(.save-bar:is(:not(.save-bar-dirty-only), .dirty)) .footer {
+            padding-block-end: calc(var(--space-4) + var(--save-bar-clearance));
         }
     }
 
@@ -682,6 +667,13 @@
     .breadcrumbs [aria-current="page"] {
         color: var(--color-text);
         font-weight: 500;
+    }
+
+    /* Components outrank the layout layer, so the topbar's margin reset has to live here. */
+    @media (max-width: 768px) {
+        .mobile-topbar .breadcrumbs {
+            margin: 0;
+        }
     }
 
     /* --- Buttons --- */
@@ -1088,7 +1080,6 @@
             text-align: inherit;
         }
 
-
         & tbody tr:last-child td,
         & tbody tr:last-child th {
             border-block-end: none;
@@ -1153,22 +1144,45 @@
     }
 
     /* Label/value pairs read as heading + text (same look as Description / Details). */
+    /* Label beside value; a value too long for the rest of the row wraps under its label. */
     .table-detail {
-        margin-block-end: var(--space-5);
+        margin-block-end: 0;
     }
 
-    .table-detail :is(tr, th, td) {
+    .table-detail,
+    .table-detail tbody {
         display: block;
+    }
+
+    .table-detail tr {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        column-gap: var(--space-4);
+    }
+
+    .table-detail :is(th, td) {
         padding: 0;
         text-align: start;
     }
 
     .table-detail th {
-        font-size: var(--font-size-lg);
+        flex: 0 0 10rem;
+        margin-block-end: var(--space-1);
+        font-size: 1.2rem;
     }
 
     .table-detail td {
-        margin-block-end: var(--space-3);
+        flex: 1 1 auto;
+        max-inline-size: var(--content-narrow);
+        overflow-wrap: anywhere;
+        margin-block-end: var(--space-1);
+    }
+
+    @media (max-width: 40rem) {
+        .table-detail th {
+            flex-basis: 100%;
+        }
     }
 
     /* --- Editable list rows: search result row, spinner, staged/pending table rows --- */
@@ -1183,7 +1197,7 @@
     .search-spinner {
         position: absolute;
         top: 50%;
-        right: 0.6rem;
+        right: 2.25rem;
         transform: translateY(-50%);
         width: 16px;
         height: 16px;
@@ -1215,7 +1229,6 @@
     .search-clear:hover { color: var(--color-text); }
     .search-clear[hidden] { display: none; }
     .search-field:has(.search-clear) input { padding-inline-end: 2.25rem; }
-    .search-spinner { right: 2.25rem; }
     @media (min-width: 769px) {
         .search-spinner {
             right: auto;
@@ -1236,10 +1249,6 @@
         display: flex;
         align-items: center;
         flex-shrink: 0;
-    }
-    .project-header p {
-        overflow-wrap: anywhere;
-        margin-block: var(--space-1) var(--space-3);
     }
     .dt-short { display: none; }
 
@@ -1455,7 +1464,14 @@
         display: none;
     }
 
+    .filter-count {
+        color: var(--color-text-muted);
+        font-size: var(--font-size-xs);
+    }
+
     .filter-form {
+        /* Checkbox box has a fixed width so inputs below can line up with the label text. */
+        --filter-indent: calc(1rem + var(--space-1));
         display: flex;
         flex-direction: column;
         gap: var(--space-2);
@@ -1468,7 +1484,6 @@
         gap: var(--space-2);
         align-items: end;
     }
-
 
     .filter-field {
         display: flex;
@@ -1502,11 +1517,6 @@
 
     .filter-field input {
         padding: var(--space-2);
-    }
-
-    /* Checkbox box has a fixed width so inputs below can line up with the label text. */
-    .filter-form {
-        --filter-indent: calc(1rem + var(--space-1));
     }
 
     .filter-form input[type="checkbox"] {
@@ -1548,10 +1558,6 @@
         margin-block: var(--space-1);
     }
 
-
-
-
-
     @media (min-width: 769px) {
         .filter-panel > summary {
             justify-content: flex-start;
@@ -1567,13 +1573,6 @@
         .filter-panel {
             padding: var(--space-1) var(--space-2);
         }
-
-
-
-
-
-
-
     }
 
     .section-header {
@@ -1584,14 +1583,26 @@
         flex-wrap: wrap;
     }
 
+    /* Edit-page header: capped to the form width so the Delete button's right edge lines up with the form. */
+    .section-header-edit {
+        max-inline-size: var(--content-narrow);
+    }
+    .section-header-edit .btn-delete {
+        margin-inline-start: auto;
+    }
+
     /* h3 sub-sections get space above, tight below; the page h1 stays flush. */
     .section-header:has(h3) {
-        margin-block-start: var(--space-6);
+        margin-block-start: var(--space-4);
     }
 
     .section-header h3,
     .section-header h1 {
         margin: 0;
+    }
+
+    .section-header h3 {
+        font-size: 1.2rem;
     }
 
     .badge {
@@ -1648,6 +1659,10 @@
     @media (max-width: 768px) {
         .table-container {
             padding-block-end: var(--save-bar-clearance);
+        }
+
+        .main:has(.save-bar-dirty-only:not(.dirty)) .table-container {
+            padding-block-end: 0;
         }
     }
 
@@ -1765,17 +1780,9 @@
 
     /* Touch devices: comfortable tap height. */
     @media (pointer: coarse) {
-        input[type="date"],
-        input[type="datetime-local"],
-        input[type="time"],
-        input[type="number"],
-        input[type="text"],
-        input[type="email"],
-        input[type="password"],
+        input:is([type="date"], [type="datetime-local"], [type="time"], [type="number"], [type="text"], [type="email"], [type="password"]),
         .btn {
             min-height: var(--tap-target);
         }
     }
 }
-
-.filter-count { color: var(--color-text-muted); font-size: var(--font-size-xs); }

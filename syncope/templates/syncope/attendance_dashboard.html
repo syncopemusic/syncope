@@ -5,6 +5,14 @@
 <div class="stack">
     <h1>Attendance</h1>
 
+    {% if can_edit %}
+    <form method="post" action="{%  url 'syncope:quick_new_rehearsal' username=url_username %}" class="link-row">
+        {% csrf_token %}
+        <input type="hidden" name="qs">
+        <button type="submit" class="btn btn-secondary" title="Add rehearsal now">+ Add Rehearsal</button>
+    </form>
+    {% endif %}
+
     <p class="search-form">
         <span class="search-field search-field-wide">
             <input type="text" id="attendance-search-input" name="q" form="attendance-filter-form" value="{{ filters.q }}" placeholder="Search by member, voice, instrument, or date (2025, 3.2025, 5.3.2025)">
@@ -44,13 +52,6 @@
         </form>
     </details>
 
-    {% if can_edit %}
-    <form method="post" action="{%  url 'syncope:quick_new_rehearsal' username=url_username %}" class="link-row link-row-end">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-primary" title="Add rehearsal now">+ Add Rehearsal</button>
-    </form>
-    {% endif %}
-
     {# Main Form with Attendance Table #}
     <form method="post" id="attendance-form">
         {% csrf_token %}
@@ -61,7 +62,7 @@
 </div>
 
 {% url 'syncope:attendance' url_username as attendance_url %}
-{% if can_edit %}{% include "syncope/_save_bar.html" with form_id="attendance-form" url=attendance_url %}{% endif %}
+{% if can_edit %}{% include "syncope/_save_bar.html" with form_id="attendance-form" url=attendance_url dirty_only=True %}{% endif %}
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script src="{% static 'syncope/filter-form.js' %}"></script>
@@ -111,6 +112,13 @@ function cycleAttendance(cell) {
     paintCell(cell, next);
     saveBarCtl.sync();
 }
+
+// Submit only the cells this user changed, so saving never reverts someone else's edits to untouched cells.
+document.getElementById('attendance-form').addEventListener('submit', () => {
+    document.querySelectorAll('.table-cell-attendance[data-type-id]').forEach(cell => {
+        cell.querySelector('input[type="hidden"]').disabled = cell.dataset.typeId === cell.dataset.originalTypeId;
+    });
+});
 
 document.addEventListener('click', e => {
     const cell = e.target.closest('[data-cycle]');
@@ -166,6 +174,17 @@ function loadTable() {
 }
 
 initFilterForm(filterForm, loadTable);
+
+// Add Rehearsal reloads the page: carry the current filters over and keep the panel open.
+const filterPanel = document.querySelector('.filter-panel');
+try {
+    filterPanel.open = !!sessionStorage.getItem('attendanceFilterOpen');
+    sessionStorage.removeItem('attendanceFilterOpen');
+} catch (e) {}
+document.querySelector('input[name="qs"]')?.form.addEventListener('submit', e => {
+    e.target.elements.qs.value = location.search;
+    try { if (filterPanel.open) sessionStorage.setItem('attendanceFilterOpen', '1'); } catch (e) {}
+});
 initLiveSearch({
     input: document.getElementById('attendance-search-input'),
     spinner: document.getElementById('attendance-search-spinner'),

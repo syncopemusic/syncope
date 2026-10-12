@@ -10,6 +10,7 @@ from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, 
     MembershipPeriod, PersonRole
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q, Count
+from .utils import search_events
 
 
 class HtmlDateInput(forms.DateInput):
@@ -515,7 +516,7 @@ class AddEventToProjectForm(forms.Form):
             eligible = Event.objects.filter(user=org_user).exclude(
                 project=project
             ).exclude(pk__in=exclude_ids or []).select_related('project').order_by('-started_at')
-            self.search_results = list(eligible.filter(name__icontains=search_q))
+            self.search_results = list(search_events(eligible, search_q))
             for event in self.search_results:
                 if event.project_id:
                     self.other_project_ids[event.pk] = event.project.title

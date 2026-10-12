@@ -81,6 +81,17 @@ def q_filter(qs, q, fields, period_q=None, number_q=None, extra_q=None):
     return match_pk(qs, cond)
 
 
+def search_events(qs, q):
+    """Event live search shared by the event list and the add-event pickers."""
+    return q_filter(
+        qs, q, ['name', 'location', 'description', 'event_type__name', 'project__title', 'eventsong__song__title'],
+        period_q=lambda d0, d1: date_overlap_q('started_at', 'ended_at', d0, d1),
+        extra_q=lambda name: Q(pk__in=Attendance.objects.filter(
+            attendance_type_id=AttendanceType.PRESENT, person__in=Person.objects.matching_name(name)
+        ).values('event_id')),
+    )
+
+
 def parse_filters(GET, spec):
     """Active, valid filters from a query string. spec maps name -> 'date' | 'multi' (ids) | 'codes' (strings) | tuple of allowed choices;
     anything absent or invalid is dropped."""

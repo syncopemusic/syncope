@@ -5,13 +5,14 @@
 
 {% block content %}
 {% if form.instance.pk %}
-<div class="section-header">
+<div class="section-header section-header-edit">
     <h1 class="event-title">
         <span class="event-title-text">
             <span title="Title">{{ form.instance.title }}</span>
             <small><span title="Action"> | Edit</span></small>
         </span>
     </h1>
+    <a href="{% url 'syncope:poll_delete' url_username poll.pk %}" class="btn btn-danger btn-delete">Delete Poll</a>
 </div>
 {% else %}
 <h1>New Poll title</h1>
@@ -35,9 +36,6 @@
     <div class="form-actions">
         <button type="submit" class="btn btn-primary">Create</button>
     </div>
-    {% endif %}
-    {% if form.instance.pk %}
-    <p class="danger-zone"><a href="{% url 'syncope:poll_delete' url_username poll.pk %}" class="btn btn-danger">Delete Poll</a></p>
     {% endif %}
 </form>
 
