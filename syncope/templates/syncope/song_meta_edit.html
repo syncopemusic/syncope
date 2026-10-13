@@ -3,14 +3,6 @@
 {% block title %}{% if object %}{{ object.title }}{% else %}New Song{% endif %} - Syncope{% endblock %}
 {% block content %}
 
-{% if messages %}
-    <div class="messages">
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-        {% endfor %}
-    </div>
-{% endif %}
-
 {% if object %}
 <div class="section-header section-header-edit">
     <h1 class="event-title">

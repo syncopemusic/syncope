@@ -46,7 +46,7 @@ def _parse_event_filters(GET):
         'end_date': day('end_date', today),
         'event_limit': limit,
         'event_type': types,
-        # q: a date (q_period) narrows the event columns, any other text the member rows
+        # q: a date (q_period) or a project title narrows the event columns, any other text the member rows
         'q': (q := GET.get('q', '').strip()),
         'q_period': parse_date_query(q),
         **parse_filters(GET, {'voice': 'multi', 'instrument': 'multi'}),  # member rows, like the members page
@@ -117,6 +117,11 @@ class AttendanceDashboardView(View):
             'person_skill__skill',
         )
 
+    def _searches_projects(self, filters):
+        """True when the search text (not a date) is part of one of this org's project titles: it then picks the event columns."""
+        return bool(filters['q'] and not filters['q_period']
+                    and Event.objects.filter(user=self.org_user, project__title__icontains=filters['q']).exists())
+
     def _fetch_events(self, filters, include_prefetch=True):
         """
         Fetch events matching the filters (see _parse_event_filters), oldest first.
@@ -138,6 +143,8 @@ class AttendanceDashboardView(View):
             events_qs = events_qs.filter(event_type_id__in=filters['event_type'])
         if filters['q_period']:
             events_qs = events_qs.filter(started_at__date__gte=filters['q_period'][0], started_at__date__lt=filters['q_period'][1])
+        if self._searches_projects(filters):
+            events_qs = events_qs.filter(project__title__icontains=filters['q'])
 
         events_qs = events_qs.order_by('-started_at')
         if filters['event_limit']:
@@ -165,7 +172,7 @@ class AttendanceDashboardView(View):
         for key, model in (('voice', Singer), ('instrument', Instrumentalist)):
             for value_id in filters.get(key, []):
                 members = members.filter(pk__in=model.objects.filter(**{f'{key}_id': value_id}).values('person_id'))
-        if filters['q'] and not filters['q_period']:
+        if filters['q'] and not filters['q_period'] and not self._searches_projects(filters):
             q = filters['q']
             members = members.filter(
                 Q(pk__in=Person.objects.matching_name(q))

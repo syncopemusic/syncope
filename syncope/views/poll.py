@@ -110,6 +110,8 @@ class PollCreateUpdateView(DraftMixin, PollAdminMixin, UpdateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
+        if 'pk' in self.kwargs:
+            messages.success(self.request, "Poll updated successfully!")
         if 'pk' not in self.kwargs and form.cleaned_data.get('import_active_members'):
             today = timezone.now().date()
             persons = Person.objects.in_org_user(self.org_user).filter(
@@ -124,6 +126,8 @@ class PollCreateUpdateView(DraftMixin, PollAdminMixin, UpdateView):
         return response
 
     def get_success_url(self):
+        if 'pk' in self.kwargs:
+            return self.request.get_full_path()  # editing: stay on the edit page
         return reverse("syncope:poll_detail", kwargs={
             "username": self.kwargs.get("username"),
             "pk": self.object.pk

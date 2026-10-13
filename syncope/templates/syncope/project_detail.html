@@ -21,19 +21,23 @@
 </div>
 <div hidden>{% csrf_token %}</div>
 
+{% if project.description or project.details or project.start_date or project.end_date %}
 <table class="table-detail">
-        <tr><th>Description</th><td>{{ project.description|default:"-"|linebreaksbr }}</td></tr>
-        <tr><th>Details</th><td>{{ project.details|default:"-"|linebreaksbr }}</td></tr>
-        <tr><th>Start date</th><td>{% if project.start_date %}{% dt project.start_date "date-year" %}{% else %}-{% endif %}</td></tr>
-        <tr><th>End date</th><td>{% if project.end_date %}{% dt project.end_date "date-year" %}{% else %}-{% endif %}</td></tr>
+    {% if project.description %}<tr><th>Description</th><td>{{ project.description|linebreaksbr }}</td></tr>{% endif %}
+    {% if project.details %}<tr><th>Details</th><td>{{ project.details|linebreaksbr }}</td></tr>{% endif %}
+    {% if project.start_date %}<tr><th>Start date</th><td>{% dt project.start_date "date-year" %}</td></tr>{% endif %}
+    {% if project.end_date %}<tr><th>End date</th><td>{% dt project.end_date "date-year" %}</td></tr>{% endif %}
 </table>
 
 <hr>
+{% endif %}
 
+{% if participants or is_admin %}
 <div class="section-header">
     <h3>Participants ({{ participants|length }})</h3>
     {% if is_admin %}<a href="{% url 'syncope:project_participants_edit' url_username project.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
+{% endif %}
 {% if participants %}
 <div class="table-container">
 <table class="table">
@@ -57,10 +61,12 @@
 </div>
 {% endif %}
 
+{% if songs or is_admin %}
 <div class="section-header">
     <h3>Songs ({{ songs|length }})</h3>
     {% if is_admin %}<a href="{% url 'syncope:project_songs_edit' url_username project.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
+{% endif %}
 {% if songs %}
 <div class="table-container">
 <table class="table">
@@ -95,12 +101,14 @@
 
 {% endif %}
 
+{% if events or is_admin %}
 <div class="section-header">
     <h3>Events ({{ events|length }})</h3>
     {% if is_admin %}<a href="{% url 'syncope:project_events_edit' url_username project.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
+{% endif %}
 {% if events %}
-<div class="table-container">
+<div class="table-container table-narrow">
 <table class="table">
     <thead>
     <tr>

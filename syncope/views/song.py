@@ -352,10 +352,11 @@ class SongMetaEditView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Upd
         clear_draft(self.request, self.get_draft_key())
         form.instance.user = self.owner_user
         self.object = form.save()
+        messages.success(self.request, "Song updated successfully!")
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
-        return self._song_detail_url()
+        return self.request.get_full_path()  # stay on the edit page
 
 
 @login_required
@@ -453,7 +454,7 @@ class SongQuoteView(SongOwnerMixin, View):
         next_url = request.GET.get('next') or request.POST.get('next', '')
         if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
             return next_url
-        return reverse('syncope:song_detail', kwargs={'username': username, 'pk': pk})
+        return request.get_full_path()  # stay on the edit page
 
     def get(self, request, username, pk):
         song = self._get_song(pk)
@@ -482,6 +483,7 @@ class SongQuoteView(SongOwnerMixin, View):
         formset = QuoteFormSet(request.POST, instance=song, prefix='quotes', user=song.user)
         if formset.is_valid():
             formset.save()
+            messages.success(request, "Quotes updated successfully!")
             return redirect(self._next_url(request, username, pk))
         return render(request, self.template_name, {
             'song': song,

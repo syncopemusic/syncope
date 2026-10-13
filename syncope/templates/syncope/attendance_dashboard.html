@@ -2,20 +2,20 @@
 {% load static dt_tags %}
 {% block title %}Attendance{% endblock %}
 {% block content %}
-<div class="stack">
-    <h1>Attendance</h1>
-
-    {% if can_edit %}
-    <form method="post" action="{%  url 'syncope:quick_new_rehearsal' username=url_username %}" class="link-row">
-        {% csrf_token %}
-        <input type="hidden" name="qs">
-        <button type="submit" class="btn btn-secondary" title="Add rehearsal now">+ Add Rehearsal</button>
-    </form>
-    {% endif %}
+    <div class="section-header">
+        <h1>Attendance</h1>
+        {% if can_edit %}
+        <form method="post" action="{%  url 'syncope:quick_new_rehearsal' username=url_username %}" class="inline-form">
+            {% csrf_token %}
+            <input type="hidden" name="qs">
+            <button type="submit" class="btn btn-primary" title="Add a rehearsal now, all members marked absent">+ Add</button>
+        </form>
+        {% endif %}
+    </div>
 
     <p class="search-form">
         <span class="search-field search-field-wide">
-            <input type="text" id="attendance-search-input" name="q" form="attendance-filter-form" value="{{ filters.q }}" placeholder="Search by member, voice, instrument, or date (2025, 3.2025, 5.3.2025)">
+            <input type="text" id="attendance-search-input" name="q" form="attendance-filter-form" value="{{ filters.q }}" placeholder="Search by member, voice, instrument, project, or date (2025, 3.2025, 5.3.2025)">
             <span class="search-spinner" id="attendance-search-spinner"></span>
         </span>
         <button type="button" id="attendance-search-clear" class="btn btn-secondary">Clear</button>
@@ -59,7 +59,6 @@
         <div id="attendance-results">{% include "syncope/_attendance_table.html" %}</div>
 
     </form>
-</div>
 
 {% url 'syncope:attendance' url_username as attendance_url %}
 {% if can_edit %}{% include "syncope/_save_bar.html" with form_id="attendance-form" url=attendance_url dirty_only=True %}{% endif %}
@@ -74,7 +73,7 @@ const TYPE_META = {
     1: { label: 'Present',           icon: 'check',       cls: 'att-type-1' },
     2: { label: 'Work',              icon: 'briefcase',   cls: 'att-type-2' },
     3: { label: 'Illness',           icon: 'thermometer', cls: 'att-type-3' },
-    4: { label: 'Private',           icon: 'plane',    cls: 'att-type-4' },
+    4: { label: 'Private',           icon: 'sun',      cls: 'att-type-4' },
 };
 
 function paintCell(cell, typeId) {

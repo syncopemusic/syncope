@@ -18,8 +18,8 @@
 
 {% if person_data %}
 <table class="table-detail">
-  {% if person_data.email %}<tr><th>Email</th><td>{{ person_data.email }}</td></tr>{% endif %}
-  {% if person_data.phone %}<tr><th>Phone</th><td>{{ person_data.phone }}</td></tr>{% endif %}
+  {% if person_data.email %}<tr><th>Email</th><td><a href="mailto:{{ person_data.email }}">{{ person_data.email }}</a></td></tr>{% endif %}
+  {% if person_data.phone %}<tr><th>Phone</th><td><a href="tel:{{ person_data.phone }}">{{ person_data.phone }}</a></td></tr>{% endif %}
   {% if person_data.address %}<tr><th>Address</th><td>{{ person_data.address|linebreaksbr }}</td></tr>{% endif %}
   {% if person_data.birth_date %}<tr><th>Birth date</th><td>{% dt person_data.birth_date "date-year" %}</td></tr>{% endif %}
   {% if person_data.instruments %}<tr><th>Instrument</th><td>{{ person_data.instruments|join:", " }}</td></tr>{% endif %}
@@ -102,6 +102,7 @@
 </table>
 {% endif %}
 
+{% if show_events %}
 <!-- Events attended -->
 <h3>Events</h3>
 {% include "syncope/_search_box.html" with prefix="person-event" q=q placeholder="Search by name, type, project, location, song, or date (2025, 3.2025, 5.3.2025)" %}
@@ -119,6 +120,7 @@
 {% endfilter_panel %}
 
 <div id="person-event-results">{{ events_html }}</div>
+{% endif %}
 
 {% url 'syncope:org_member_list' url_username as member_list_url %}
 {% include "syncope/_save_bar.html" with url=return_url|default:member_list_url %}
@@ -129,6 +131,7 @@
 <script src="{% static 'syncope/filter-form.js' %}"></script>
 <script>
 initShareButton({ type: 'person', id: {{ person.pk }} });
+{% if show_events %}
 const filterForm = document.getElementById('person-event-filter-form');
 const searchInput = document.getElementById('person-event-search-input');
 const search = initLiveSearch({
@@ -140,6 +143,7 @@ const search = initLiveSearch({
     filterForm,
 });
 initFilterForm(filterForm, () => search.run(searchInput.value));
+{% endif %}
 </script>
 {% endblock %}
 

@@ -118,6 +118,7 @@
     --save-bar-clearance: 4rem;
 
     /* Stacking */
+    --mobile-topbar-height: 3rem;
     --z-sticky: 1;
     --z-mobile-topbar: 1001;
     --z-mobile-drawer: 1000;
@@ -340,7 +341,7 @@
 
     .main-content {
         padding: var(--space-6);
-        overflow-y: auto;
+        /* No overflow: any value here would capture the tables' sticky thead. */
         display: flex;
         flex-direction: column;
         position: relative;
@@ -375,51 +376,10 @@
         max-inline-size: var(--content-max);
     }
 
-    .mobile-toggle {
-        display: none;
-        border: none;
-        inline-size: fit-content;
-    }
-
-    .mobile-topbar {
-        display: none;
-    }
-
-    /* Desktop only: the :has() selector would outrank the mobile flex topbar below. */
-    @media (min-width: 769px) {
-        .mobile-topbar:has(.breadcrumbs) {
-            display: block;
-            padding: var(--space-3) var(--space-6) 0;
-        }
-
-        /* Breadcrumbs already sit above: halve the gap before the page header. */
-        .main:has(.mobile-topbar .breadcrumbs) .main-content {
-            padding-block-start: var(--space-3);
-        }
-    }
-
     @media (max-width: 768px) {
         .grid-container {
             grid-template-columns: 1fr;
             grid-template-areas: "main";
-        }
-
-        .mobile-topbar {
-            display: flex;
-            align-items: center;
-            gap: var(--space-2);
-            position: sticky;
-            top: 0;
-            z-index: var(--z-mobile-topbar);
-            padding: var(--space-2) var(--space-4);
-            background-color: var(--color-surface);
-            border-block-end: 1px solid var(--color-border-subtle);
-        }
-
-        .mobile-topbar .breadcrumbs {
-            flex: 1;
-            min-width: 0;
-            align-self: center;
         }
 
         .main-content h1:first-of-type {
@@ -438,49 +398,6 @@
             padding: var(--space-4);
         }
 
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100dvh;
-            width: var(--sidebar-width);
-            transform: translateX(-100%);
-            z-index: var(--z-mobile-drawer);
-            box-shadow: var(--shadow-md);
-        }
-
-        .grid-container.menu-visible .sidebar {
-            transform: translateX(0);
-        }
-
-        .mobile-toggle {
-            display: block;
-            background: none;
-            padding: 0;
-            font-size: var(--font-size-xl);
-            line-height: 1;
-            cursor: pointer;
-            color: var(--color-text-muted);
-        }
-
-        /* Drawer open: the topbar steps aside and the toggle floats above the drawer. */
-        .grid-container.menu-visible .mobile-topbar {
-            background-color: transparent;
-            border-block-end-color: transparent;
-            pointer-events: none;
-        }
-
-        .grid-container.menu-visible .mobile-topbar .breadcrumbs {
-            visibility: hidden;
-        }
-
-        .grid-container.menu-visible .mobile-toggle {
-            position: fixed;
-            top: 0.5rem;
-            right: 1rem;
-            z-index: calc(var(--z-mobile-drawer) + 1);
-            pointer-events: auto;
-        }
     }
 
     /* Anonymous pages: no sidebar; .auth also centers. */
@@ -669,10 +586,106 @@
         font-weight: 500;
     }
 
-    /* Components outrank the layout layer, so the topbar's margin reset has to live here. */
+    /* --- Mobile topbar, burger and drawer --- one rule set for every page. The bar is fixed to the viewport, so page or table width never affects it. */
+    .mobile-toggle {
+        display: none;
+        border: none;
+        inline-size: fit-content;
+    }
+
+    .mobile-topbar {
+        display: none;
+    }
+
+    @media (min-width: 769px) {
+        .mobile-topbar:has(.breadcrumbs) {
+            display: block;
+            padding: var(--space-3) var(--space-6) 0;
+        }
+
+        /* Breadcrumbs already sit above: halve the gap before the page header. */
+        .main:has(.mobile-topbar .breadcrumbs) .main-content {
+            padding-block-start: var(--space-3);
+        }
+    }
+
     @media (max-width: 768px) {
+        .main {
+            padding-block-start: var(--mobile-topbar-height);
+        }
+
+        .mobile-topbar {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            position: fixed;
+            inset: 0 0 auto;
+            block-size: var(--mobile-topbar-height);
+            z-index: var(--z-mobile-topbar);
+            padding-inline: var(--space-4);
+            background-color: var(--color-surface);
+            border-block-end: 1px solid var(--color-border-subtle);
+        }
+
         .mobile-topbar .breadcrumbs {
+            flex: 1;
+            min-width: 0;
             margin: 0;
+        }
+
+        /* One line, so the bar is always exactly its token height. */
+        .mobile-topbar .breadcrumbs ol {
+            flex-wrap: nowrap;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .mobile-toggle {
+            display: block;
+            background: none;
+            padding: 0;
+            font-size: var(--font-size-xl);
+            line-height: 1;
+            cursor: pointer;
+            color: var(--color-text-muted);
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100dvh;
+            width: var(--sidebar-width);
+            transform: translateX(-100%);
+            z-index: var(--z-mobile-drawer);
+            box-shadow: var(--shadow-md);
+        }
+
+        .grid-container.menu-visible .sidebar {
+            transform: translateX(0);
+        }
+
+        /* Drawer open: the bar steps aside and the X sits exactly where the burger was. */
+        .grid-container.menu-visible .mobile-topbar {
+            background-color: transparent;
+            border-block-end-color: transparent;
+            pointer-events: none;
+        }
+
+        .grid-container.menu-visible .mobile-topbar .breadcrumbs {
+            visibility: hidden;
+        }
+
+        .grid-container.menu-visible .mobile-toggle {
+            position: fixed;
+            top: 0;
+            left: var(--space-4);
+            display: flex;
+            align-items: center;
+            block-size: var(--mobile-topbar-height);
+            z-index: calc(var(--z-mobile-drawer) + 1);
+            pointer-events: auto;
+            color: var(--color-text-on-accent);
         }
     }
 
@@ -797,6 +810,11 @@
         justify-content: flex-end;
     }
 
+    /* Gap between a button row and the table below it. */
+    .link-row-spaced {
+        margin-block-end: var(--space-3);
+    }
+
     /* Vertical rhythm for a column of blocks. */
     .stack {
         display: flex;
@@ -911,6 +929,11 @@
 
     .link-row > .search-field {
         margin: 0;
+    }
+
+    /* Page header to search box: 8px + 4px = the same 12px gap on every list page (flex parent, margins add). */
+    .section-header + .search-form {
+        margin-block-start: var(--space-1);
     }
 
     .form-group textarea {
@@ -1037,8 +1060,9 @@
     }
 
     /* --- Tables --- one .table component with modifiers; .table-matrix is the attendance grid variant. */
-    /* No rows, no header. */
-    .table:not(:has(tbody tr)) thead {
+    /* No rows: no header, no box. */
+    .table:not(:has(tbody tr)) thead,
+    .table-container:not(:has(tbody tr)) {
         display: none;
     }
 
@@ -1051,7 +1075,8 @@
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-sm);
         font-size: var(--font-size-sm);
-        overflow: hidden;
+        /* clip, not hidden: hidden would make the table a scroll container and break sticky. */
+        overflow: clip;
 
         /* Up to 4 columns: stay narrow. 5 or more: spread across the page. */
         &:not(:has(thead th:nth-child(5))) {
@@ -1104,6 +1129,32 @@
         & thead th a {
             color: inherit;
             text-decoration: none;
+        }
+    }
+
+    /* Desktop: not a scroll box, the window scrolls and sticky thead pins to it (mobile turns it into one, below). */
+    .table-container:not(:has(thead th:nth-child(5))),
+    .table-container.table-narrow {
+        max-inline-size: var(--content-narrow);
+    }
+
+    @media (max-width: 768px) {
+        /* Every table: screen-wide (cancels .main-content's side padding) and scrolls both ways in its own box; header and first column pin to the box. */
+        .table-container {
+            margin-inline: calc(-1 * var(--space-4));
+            max-inline-size: none;
+            overflow: auto;
+            max-block-size: calc(100dvh - var(--mobile-topbar-height));
+            padding-block-end: var(--save-bar-clearance);
+        }
+
+        .table {
+            max-inline-size: none;
+            border-radius: 0;
+        }
+
+        .main:has(.save-bar-dirty-only:not(.dirty)) .table-container {
+            padding-block-end: 0;
         }
     }
 
@@ -1179,9 +1230,10 @@
         margin-block-end: var(--space-1);
     }
 
-    @media (max-width: 40rem) {
+    /* Narrow screens: label shrinks to its text so the value stays beside it; a value that no longer fits drops to its own full row. */
+    @media (max-width: 42rem) {
         .table-detail th {
-            flex-basis: 100%;
+            flex-basis: auto;
         }
     }
 
@@ -1644,28 +1696,6 @@
         user-select: none;
     }
 
-    /* Real scroll container so .table's sticky thead has something to pin against. */
-    .table-container {
-        overflow: auto;
-        max-height: calc(100dvh - 4rem);
-        container-type: inline-size;
-    }
-
-    /* Narrow tables: shrink the scroll box too, so wheeling beside the table scrolls the page. */
-    .table-container:not(:has(thead th:nth-child(5))) {
-        max-inline-size: var(--content-narrow);
-    }
-
-    @media (max-width: 768px) {
-        .table-container {
-            padding-block-end: var(--save-bar-clearance);
-        }
-
-        .main:has(.save-bar-dirty-only:not(.dirty)) .table-container {
-            padding-block-end: 0;
-        }
-    }
-
     .sortable-header {
         color: inherit;
         text-decoration: none;
@@ -1739,9 +1769,10 @@
         list-style: none;
     }
 
-    /* Prose, detail blocks and narrow tables share one line length. */
+    /* Prose, detail blocks, narrow tables and filter panels (as wide as the search box above) share one line length. */
     .narrow,
     .table-detail,
+    .filter-panel,
     p {
         max-inline-size: var(--content-narrow);
     }

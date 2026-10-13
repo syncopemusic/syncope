@@ -210,7 +210,7 @@ class PersonUpdateView(DraftMixin, UpdateView):
     organization = None
 
     def get_success_url(self):
-        return reverse("syncope:profile_detail", kwargs={"username": self.request.user.username})
+        return self.request.get_full_path()  # stay on the edit page
 
     def dispatch(self, request, *args, **kwargs):
         url_username = self.kwargs.get("username")
@@ -293,6 +293,7 @@ class PersonUpdateView(DraftMixin, UpdateView):
         self._update_voices(form.cleaned_data["voices"])
         self._update_instruments(form.cleaned_data["instruments"])
 
+        messages.success(self.request, "Profile updated successfully!")
         return redirect(self.get_success_url())
 
     def _sync_m2m(self, model_class, new_items, id_field, related_skill_title=None):
@@ -549,11 +550,13 @@ class OrgMemberDetailView(DetailView):
                 {"languages": f"{o} - {t}", "count": n} for (o, t), n in pairs.items()
             ]
 
-        # Events attended: the member page renders the same partial the live search fetches
-        events = PersonEventListView.as_view(initial_types=[EventType.PERFORMANCE, EventType.CONCERT, EventType.RECORDING])(self.request, username=url_username, pk=person.pk)
-        events.render()
-        context.update({k: events.context_data[k] for k in ('filters', 'filter_types', 'q')})
-        context['events_html'] = mark_safe(events.content.decode())
+        # Events attended: the member page renders the same partial the live search fetches. Only orgs have events (a personal profile has no membership).
+        context['show_events'] = Organization.objects.filter(user=self.customuser).exists()
+        if context['show_events']:
+            events = PersonEventListView.as_view(initial_types=[EventType.PERFORMANCE, EventType.CONCERT, EventType.RECORDING])(self.request, username=url_username, pk=person.pk)
+            events.render()
+            context.update({k: events.context_data[k] for k in ('filters', 'filter_types', 'q')})
+            context['events_html'] = mark_safe(events.content.decode())
 
         return context
 
@@ -987,7 +990,8 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
             # 9. update date fields
             self._update_dates(form)
 
-        return redirect(self._person_detail_url())
+        messages.success(self.request, "Saved.")
+        return redirect(self.request.get_full_path())  # stay on the edit page
 
     def _update_person_info(self, form):
         """update personal info"""

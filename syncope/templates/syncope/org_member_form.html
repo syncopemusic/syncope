@@ -62,46 +62,61 @@
     {% include "syncope/_field.html" with field=form.roles %}
     {% endif %}
 
-    <!-- Membership Periods -->
+    <!-- Membership Periods: table, then the add form (poll events pattern). -->
     {% if period_formset %}
     {{ period_formset.management_form }}
-    <h3>Membership Periods</h3>
-    {% if periods %}
+    <h2>Membership Periods</h2>
     <div class="table-container">
     <table class="table">
         <thead>
-            <tr><th>Role</th><th>From</th><th>To</th></tr>
+            <tr><th>Role</th><th>From</th><th>To</th><th class="col-action"></th></tr>
         </thead>
-        <tbody>
-            {% for period in periods %}
+        <tbody id="periods-tbody">
+            {% for p_form in period_formset %}
+            {% if p_form.instance.pk %}
+            {# Existing periods ride along as hidden inputs so the formset still validates them; the x only stages DELETE until Save. #}
             <tr>
-                <td>{{ period.role }}</td>
-                <td>{% dt period.started_at "date-year" %}</td>
-                <td>{% if period.ended_at %}{% dt period.ended_at "date-year" %}{% else %}<small>Active</small>{% endif %}</td>
+                <td>{{ p_form.instance.role }}{{ p_form.id }}{{ p_form.role.as_hidden }}{{ p_form.started_at.as_hidden }}{{ p_form.ended_at.as_hidden }}</td>
+                <td>{% dt p_form.instance.started_at "date-year" %}</td>
+                <td>{% if p_form.instance.ended_at %}{% dt p_form.instance.ended_at "date-year" %}{% else %}Active{% endif %}</td>
+                <td class="col-action">
+                    <input type="checkbox" name="{{ p_form.DELETE.html_name }}" id="{{ p_form.DELETE.auto_id }}" hidden>
+                    <button type="button" class="btn btn-danger btn-remove" title="Remove this period">&times;</button>
+                </td>
             </tr>
+            {% else %}
+            {# A failed save brings the staged period back, editable, with its error. #}
+            <tr class="staged-add">
+                <td>{{ p_form.role }}</td>
+                <td>{{ p_form.started_at }}</td>
+                <td>{{ p_form.ended_at }}{% if p_form.errors %}<small class="error">{{ p_form.errors }}</small>{% endif %}</td>
+                <td class="col-action"><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>
+            </tr>
+            {% endif %}
             {% endfor %}
         </tbody>
     </table>
     </div>
-    {% endif %}
-    {% for p_form in period_formset %}
-    {% if forloop.last and not p_form.instance.pk %}<h4>Add role period</h4>{% endif %}
-    <p>
-        {{ p_form.id }}
-        {{ p_form.role.label_tag }} {{ p_form.role }}
-        {{ p_form.started_at.label_tag }} {{ p_form.started_at }}
-        {{ p_form.ended_at.label_tag }} {{ p_form.ended_at }}
-        <small class="form-help">{{ p_form.ended_at.help_text }}</small>
-        {% if p_form.instance.pk %}
-            <input type="checkbox" name="{{ p_form.DELETE.html_name }}" id="{{ p_form.DELETE.auto_id }}"
-                   data-confirm="Delete this period? Press Save to confirm.">
-            <small class="form-help">Delete</small>
-        {% endif %}
-        {% if p_form.errors %}<small class="error">{{ p_form.errors }}</small>{% endif %}
-    </p>
-    {% empty %}
-    <p><small>No membership periods recorded.</small></p>
-    {% endfor %}
+
+    <div id="add-period" class="narrow">
+        <h3>Add role period</h3>
+        <div class="form-group">
+            <label for="new-period-role">Role</label>
+            <select id="new-period-role">
+                {% for value, label in period_formset.empty_form.fields.role.choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="new-period-from">From</label>
+            <input type="date" id="new-period-from">
+        </div>
+        <div class="form-group">
+            <label for="new-period-to">To</label>
+            <input type="date" id="new-period-to">
+            <small class="form-help">Leave blank if still active</small>
+        </div>
+        <p><button type="button" id="add-period-btn" class="btn btn-primary" title="Add this period">+ Add</button></p>
+    </div>
     {% if period_formset.non_form_errors %}
         <p class="error">{{ period_formset.non_form_errors }}</p>
     {% endif %}
@@ -122,14 +137,75 @@
 <script>
     const form = document.getElementById('org-member-form');
     const fieldTracker = trackFormFieldChanges(form);
+    const periodsTbody = document.getElementById('periods-tbody');
+    const escapeHtml = s => Object.assign(document.createElement('div'), { textContent: s }).innerHTML;
 
     const saveBarCtl = initSaveBar({
         formId: 'org-member-form',
-        countUnsavedChanges: fieldTracker.count,
+        countUnsavedChanges: () => fieldTracker.count() + periodsTbody.querySelectorAll('tr.staged-add').length,
         onDiscard: () => {
             form.reset();
+            periodsTbody.querySelectorAll('tr.staged-add').forEach(row => row.remove());
+            periodsTbody.querySelectorAll('tr.pending-remove').forEach(row => setRemoved(row, false));
             fieldTracker.reset();
         },
+    });
+
+    // x stages a delete (turns into an undo arrow); on a not-yet-saved row it just drops the row.
+    function setRemoved(row, removed) {
+        const box = row.querySelector('input[type="checkbox"]');
+        const btn = row.querySelector('.btn-remove');
+        box.checked = removed;
+        row.classList.toggle('pending-remove', removed);
+        btn.innerHTML = removed ? '&#8634;' : '&times;';
+        btn.title = removed ? 'Undo removal' : 'Remove this period';
+        box.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    periodsTbody.addEventListener('click', e => {
+        const btn = e.target.closest('.btn-remove');
+        if (!btn) return;
+        const row = btn.closest('tr');
+        if (row.classList.contains('staged-add')) {
+            row.remove();
+            saveBarCtl.sync();
+        } else {
+            setRemoved(row, !row.classList.contains('pending-remove'));
+        }
+    });
+
+    const roleSelect = document.getElementById('new-period-role');
+    const fromInput = document.getElementById('new-period-from');
+    const toInput = document.getElementById('new-period-to');
+    [fromInput, toInput].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); }));
+
+    const showDate = v => new Date(v + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+    document.getElementById('add-period-btn').addEventListener('click', () => {
+        if (!roleSelect.value || !fromInput.value) {
+            alert('Role and start date are required.');
+            return;
+        }
+        if (toInput.value && toInput.value < fromInput.value) {
+            alert('End date must be after start date.');
+            return;
+        }
+        const total = document.getElementById('id_periods-TOTAL_FORMS');
+        const i = parseInt(total.value, 10);
+        const tr = document.createElement('tr');
+        tr.className = 'staged-add';
+        tr.innerHTML = `
+            <td>${escapeHtml(roleSelect.selectedOptions[0].textContent)}
+                <input type="hidden" name="periods-${i}-role" value="${escapeHtml(roleSelect.value)}">
+                <input type="hidden" name="periods-${i}-started_at" value="${escapeHtml(fromInput.value)}">
+                <input type="hidden" name="periods-${i}-ended_at" value="${escapeHtml(toInput.value)}"></td>
+            <td>${showDate(fromInput.value)}</td>
+            <td>${toInput.value ? showDate(toInput.value) : 'Active'}</td>
+            <td class="col-action"><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>`;
+        periodsTbody.appendChild(tr);
+        total.value = i + 1;
+        roleSelect.value = fromInput.value = toInput.value = '';
+        saveBarCtl.sync();
     });
 
     form.addEventListener('input', () => saveBarCtl.sync());

@@ -115,7 +115,7 @@
                 {% endcomment %}
                 <td>
                     <span class="btn att-type-{{ attendance.attendance_type_id|default:0 }}" data-type-id="{{ attendance.attendance_type_id|default:0 }}">
-                    {% if attendance.attendance_type_id == 1 %}{% icon "check" %}{% elif attendance.attendance_type_id == 2 %}{% icon "briefcase" %}{% elif attendance.attendance_type_id == 3 %}{% icon "thermometer" %}{% elif attendance.attendance_type_id == 4 %}{% icon "plane" %}{% else %}{% icon "circle-help" %}{% endif %}
+                    {% if attendance.attendance_type_id == 1 %}{% icon "check" %}{% elif attendance.attendance_type_id == 2 %}{% icon "briefcase" %}{% elif attendance.attendance_type_id == 3 %}{% icon "thermometer" %}{% elif attendance.attendance_type_id == 4 %}{% icon "sun" %}{% else %}{% icon "circle-help" %}{% endif %}
                     {{ attendance.attendance_type }}
                     </span>
                 </td>

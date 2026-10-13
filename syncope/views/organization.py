@@ -173,7 +173,11 @@ class OrganizationUpdateView(DraftMixin, OrgAdminMixin, UpdateView):
     template_name = "syncope/org_form.html"
 
     def get_success_url(self):
-        return reverse("syncope:org_dashboard", kwargs={"username": self.kwargs['username']})
+        return self.request.get_full_path()  # stay on the edit page
+
+    def form_valid(self, form):
+        messages.success(self.request, "Organization updated successfully!")
+        return super().form_valid(form)
 
 
 @method_decorator(login_required, name='dispatch')

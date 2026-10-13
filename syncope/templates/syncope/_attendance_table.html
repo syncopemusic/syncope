@@ -1,4 +1,5 @@
 {% load dt_tags %}
+<p class="result-count">{{ events|length }} event{{ events|length|pluralize }}, {{ members|length }} {{ members|length|pluralize:"person,persons" }}</p>
 <div class="table-container">
     <table class="table table-matrix table-grouped">
         <thead>

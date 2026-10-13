@@ -801,7 +801,7 @@ class BaseMembershipPeriodFormSet(BaseInlineFormSet):
 MembershipPeriodFormSet = inlineformset_factory(
     Person, MembershipPeriod, fk_name='person',
     form=MembershipPeriodForm, formset=BaseMembershipPeriodFormSet,
-    extra=1, can_delete=True,
+    extra=0, can_delete=True,  # new periods are added on demand (JS clones empty_form)
 )
 
 

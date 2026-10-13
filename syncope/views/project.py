@@ -304,7 +304,7 @@ class ProjectMetaEditView(ProjectAdminRequiredMixin, UpdateView):
         return kwargs
 
     def get_success_url(self):
-        return reverse('syncope:project_detail', kwargs={'username': self.kwargs.get('username'), 'pk': self.object.pk})
+        return reverse('syncope:project_meta_edit', kwargs={'username': self.kwargs.get('username'), 'pk': self.object.pk})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -78,7 +78,7 @@
         {% for at in attendance_types %}{ id: {{ at.pk }}, name: "{{ at.name|escapejs }}" },{% endfor %}
     ];
     const CYCLE_ORDER = attendanceTypes.map(t => t.id);
-    const ICONS = { 0: 'circle-help', 1: 'check', 2: 'briefcase', 3: 'thermometer', 4: 'plane' };
+    const ICONS = { 0: 'circle-help', 1: 'check', 2: 'briefcase', 3: 'thermometer', 4: 'sun' };
 
     function paintChip(chip) {
         const id = parseInt(chip.dataset.typeId, 10);

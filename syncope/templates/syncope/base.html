@@ -3,7 +3,7 @@
 {% load static dt_tags %}
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, interactive-widget=resizes-content">
     <title>{% block title %}{% endblock %}</title>
 
     <link rel="stylesheet" href="{% static 'syncope/style.css' %}">
@@ -144,27 +144,25 @@
     </script>
 
     <script>
+        // matchMedia (not innerWidth, which follows pinch-zoom) so this matches the CSS breakpoint on every page.
+        const mobileQuery = matchMedia("(max-width: 768px)");
+
         function toggleMenu(){
             const container = document.querySelector(".grid-container");
             const button = document.querySelector(".mobile-toggle");
-            if (!button) return;
+            if (!button || !mobileQuery.matches) return;
 
-            if (window.innerWidth < 769) {
-                const isOpen = container.classList.toggle("menu-visible");
-                button.textContent = isOpen ? "✕" : "☰";
-            }
+            const isOpen = container.classList.toggle("menu-visible");
+            button.textContent = isOpen ? "✕" : "☰";
         }
 
         document.querySelector(".mobile-toggle")?.addEventListener("click", toggleMenu);
 
-        window.addEventListener("resize", function() {
-            const container = document.querySelector(".grid-container");
+        mobileQuery.addEventListener("change", function(e) {
             const button = document.querySelector(".mobile-toggle");
-            if (!button) return;
-            if (window.innerWidth > 768) {
-                container.classList.remove("menu-visible");
-                button.textContent = "☰";
-            }
+            if (!button || e.matches) return;
+            document.querySelector(".grid-container").classList.remove("menu-visible");
+            button.textContent = "☰";
         });
     </script>
 
