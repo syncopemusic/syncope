@@ -2,7 +2,7 @@ from functools import wraps
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
-from datetime import date, timedelta
+from datetime import timedelta
 from django.utils import timezone
 from django.db import transaction
 from django.views.generic import ListView, CreateView, UpdateView, DetailView, View
@@ -13,7 +13,7 @@ from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.contrib import messages
-from syncope.models import CustomUser, Person, Role, Song
+from syncope.models import AttendanceType, CustomUser, Person, Song
 from syncope.models import Event, EventType, Project, EventSongResource
 from syncope.forms import ProjectForm
 from syncope.forms import AddEventToProjectForm
@@ -71,26 +71,20 @@ def _event_search_results(add_event_form):
     return add_event_form.search_results
 
 
-def _project_members(project, org_user):
-    """Persons with a membership period active at any point during project's date range."""
-    reference_date = project.start_date or date.today()
-    end_date = project.end_date or date.today()
+def _project_members(project):
+    """Persons marked present at any event of this project."""
     return Person.objects.filter(
-        membership_period__user=org_user,
-        membership_period__role_id=Role.MEMBER,
-        membership_period__started_at__lte=end_date,
-    ).filter(
-        Q(membership_period__ended_at__gte=reference_date) |
-        Q(membership_period__ended_at__isnull=True)
+        attendance__event__project=project,
+        attendance__attendance_type_id=AttendanceType.PRESENT,
     ).distinct().prefetch_related(
         'singer_set__voice', 'instrumentalist_set__instrument', 'skills'
     )
 
 
-def _project_participants(project, org_user):
+def _project_participants(project):
     """Members + guests, deduped (a guest who is also an active member is shown once,
     as a member) and sorted together."""
-    participants = list(_project_members(project, org_user))
+    participants = list(_project_members(project))
     member_ids = {p.pk for p in participants}
     for guest in project.guests.all().prefetch_related('singer_set__voice', 'instrumentalist_set__instrument', 'skills'):
         if guest.pk in member_ids:
@@ -403,7 +397,7 @@ class ProjectParticipantsEditView(ProjectAdminRequiredMixin, View):
         search_q = request.GET.get('q', '')
         context = {
             'project': project,
-            'participants': _project_participants(project, self.org_user),
+            'participants': _project_participants(project),
             'url_username': self.kwargs.get('username'),
             'search_q': search_q,
             'add_guest_form': AddGuestToProjectForm(org_user=self.org_user, project=project, search_q=search_q),
@@ -415,7 +409,7 @@ class ProjectParticipantsEditView(ProjectAdminRequiredMixin, View):
         org_user = self.org_user
 
         with transaction.atomic():
-            current_participant_ids = {p.pk for p in _project_participants(project, org_user)}
+            current_participant_ids = {p.pk for p in _project_participants(project)}
             remove_ids = {pk for pk in current_participant_ids if request.POST.get(f'remove_{pk}') == '1'}
             if remove_ids:
                 project.guests.remove(*project.guests.filter(pk__in=remove_ids))
@@ -453,7 +447,7 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
 
         context['events'] = _events_with_resource_counts(project)
         context['songs'] = project.songs.all().order_by('title')
-        context['participants'] = _project_participants(project, org_user)
+        context['participants'] = _project_participants(project)
 
         # Add project resources
         context['project_resources'] = resource_icon_list(project.project_resource.all().order_by('order'))
