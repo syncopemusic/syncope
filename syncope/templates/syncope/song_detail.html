@@ -114,6 +114,8 @@
     {% if can_manage %}<a href="{% url 'syncope:song_lyrics_edit' url_username song.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% if song.lyrics %}<div>{{ song.lyrics|linebreaks }}</div>{% endif %}
+
+{% if song.lyricstranslation_set.all %}<h3>Translations</h3>{% endif %}
 <div class="stack">
 {% for t in song.lyricstranslation_set.all %}
     <details class="filter-panel">

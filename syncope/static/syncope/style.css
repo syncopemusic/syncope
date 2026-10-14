@@ -1050,7 +1050,11 @@
     }
 
     .translation-panel .translation-remove {
-        align-self: flex-end;
+        margin-inline: auto var(--space-2);
+    }
+
+    .translation-panel:not([open]) .translation-remove {
+        display: none;
     }
 
     /* Uppercase caption style shared by section labels, table headers and filter labels. */
