@@ -32,7 +32,7 @@
                 <td class="col-main song-title">{{ person.first_name }} {{ person.last_name }}</td>
                 <td>{% if person.is_guest %}<small>Guest</small>{% endif %}</td>
                 <td class="col-action">
-                    <button type="button" class="btn btn-danger btn-remove" title="Remove from project">&times;</button>
+                    {% if person.is_guest %}<button type="button" class="btn btn-danger btn-remove" title="Remove from project">&times;</button>{% endif %}
                 </td>
             </tr>
             {% endfor %}

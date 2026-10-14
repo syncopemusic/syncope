@@ -72,8 +72,7 @@ def _event_search_results(add_event_form):
 
 
 def _project_members(project, org_user):
-    """Persons with a membership period active at any point during project's date range,
-    minus anyone explicitly removed from this project's participant list."""
+    """Persons with a membership period active at any point during project's date range."""
     reference_date = project.start_date or date.today()
     end_date = project.end_date or date.today()
     return Person.objects.filter(
@@ -83,7 +82,7 @@ def _project_members(project, org_user):
     ).filter(
         Q(membership_period__ended_at__gte=reference_date) |
         Q(membership_period__ended_at__isnull=True)
-    ).exclude(excluded_from_projects=project).distinct().prefetch_related(
+    ).distinct().prefetch_related(
         'singer_set__voice', 'instrumentalist_set__instrument', 'skills'
     )
 
@@ -419,14 +418,7 @@ class ProjectParticipantsEditView(ProjectAdminRequiredMixin, View):
             current_participant_ids = {p.pk for p in _project_participants(project, org_user)}
             remove_ids = {pk for pk in current_participant_ids if request.POST.get(f'remove_{pk}') == '1'}
             if remove_ids:
-                guest_ids = set(project.guests.filter(pk__in=remove_ids).values_list('pk', flat=True))
-                if guest_ids:
-                    project.guests.remove(*guest_ids)
-                member_ids = remove_ids - guest_ids
-                if member_ids:
-                    project.excluded_members.add(
-                        *Person.objects.filter(pk__in=member_ids, membership_period__user=org_user)
-                    )
+                project.guests.remove(*project.guests.filter(pk__in=remove_ids))
 
             eligible_ids = set(
                 Person.objects.filter(membership_period__user=org_user).exclude(

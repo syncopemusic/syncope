@@ -108,22 +108,15 @@ class ProjectStagedEditTests(TestCase):
         self.assertFalse(EventSong.objects.filter(event=event, song=song).exists())
         self.assertTrue(EventSong.objects.filter(event=event, song=other).exists())
 
-    def test_add_guest_and_remove_auto_member(self):
+    def test_add_guest(self):
         guest = Person.objects.create(first_name="Gia", last_name="Guest")
         MembershipPeriod.objects.create(
             user=self.org_user, person=guest, role_id=Role.EXTERNAL, started_at=date(2020, 1, 1)
-        )
-        member = Person.objects.create(first_name="Mia", last_name="Member")
-        MembershipPeriod.objects.create(
-            user=self.org_user, person=member, role_id=Role.MEMBER, started_at=date(2020, 1, 1)
         )
         url = reverse("syncope:project_participants_edit", kwargs={"username": "org", "pk": self.project.pk})
 
         self.client.post(url, {"add_guest": [str(guest.pk)]})
         self.assertIn(guest, self.project.guests.all())
-
-        self.client.post(url, {f"remove_{member.pk}": "1"})
-        self.assertIn(member, self.project.excluded_members.all())
 
 
 class OrgMemberEditInvalidPeriodTests(TestCase):
