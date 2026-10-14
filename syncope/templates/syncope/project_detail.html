@@ -81,9 +81,9 @@
     <tr>
         <td class="col-num">{{ forloop.counter }}</td>
         <td class="col-main">
-            <div class="song-title">
+            <div class="song-subline"><span class="song-title">
                 <a href="{% url 'syncope:song_detail' url_username song.pk %}?origin=project-{{ project.pk }}">{{ song.title }}</a>
-            </div>
+            </span>{% if song.duration %}<small class="song-meta">{{ song.duration_display }}</small>{% endif %}</div>
             <div class="song-subline">
                 <span{% if song.composer %} title="{{ song.composer.first_name }} {{ song.composer.last_name }} {{ song.composer.birth_date|date:'Y' }}-{{ song.composer.death_date|date:'Y' }}"{% endif %}>
                     {% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}
@@ -166,7 +166,7 @@
 
 
 <div class="section-header">
-    <h3>Project Resources</h3>
+    <h3>Project Resources ({{ project_resources|length }})</h3>
     {% if is_admin %}<a href="{% url 'syncope:project_resources_edit' url_username object.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% include "syncope/_resource_table.html" with rows=project_resources editable=False %}

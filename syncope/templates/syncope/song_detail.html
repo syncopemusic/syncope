@@ -44,6 +44,7 @@
     {% if song.group %}<tr><th>Type</th><td>{{ song.group }}</td></tr>{% endif %}
     {% if song.year %}<tr><th>Year</th><td>{{ song.year }}</td></tr>{% endif %}
     {% if song.number_of_voices %}<tr><th>Voices</th><td>{{ song.number_of_voices }}</td></tr>{% endif %}
+    {% if song.duration %}<tr><th>Duration</th><td>{{ song.duration_display }}</td></tr>{% endif %}
     {% if song.number_of_pages %}<tr><th>Pages</th><td>{{ song.number_of_pages }}</td></tr>{% endif %}
     {% if song.number_of_copies %}<tr><th>Copies</th><td>{{ song.number_of_copies }}</td></tr>{% endif %}
     {% if song.keywords %}
@@ -76,7 +77,7 @@
 
 {% if song.quotes.all or can_manage %}
 <div class="section-header">
-    <h3>Quotes</h3>
+    <h3>Quotes ({{ song.quotes.all|length }})</h3>
     {% if can_manage %}<a href="{% url 'syncope:song_quotes' url_username song.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
 </div>
 {% if song.quotes.all %}

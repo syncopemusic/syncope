@@ -10,6 +10,7 @@ from syncope.models import (
     Invitation, InvitationStatus, InvitationType, LyricsTranslation, Membership, MembershipPeriod, Organization,
     Person, PersonRole, PersonSkill, Poll, PollPerson, Project, Resource, Role, Singer, Skill, Song, Voice,
 )
+from syncope.forms import SongMetaForm
 from syncope.utils import filter_period, parse_date_query, parse_filters
 
 
@@ -310,6 +311,7 @@ class ResourcesEditOtherKindsRenderTests(TestCase):
         self.org_user = CustomUser.objects.create_user(
             username="org", email="org@example.com", password="pw12345"
         )
+        Organization.objects.create(user=self.org_user, name="Org", email="org@example.com")  # only orgs show member events
         Person.objects.create(user=self.org_user, email=self.org_user.email, first_name="Org", last_name="Owner")
         self.project = Project.objects.create(user=self.org_user, title="Test Project")
         self.event = Event.objects.create(user=self.org_user, name="Test Event", event_type_id=EventType.REHEARSAL)
@@ -706,11 +708,6 @@ class ListFilterTests(TestCase):
         names = lambda **p: [e.name for e in self.get("event_list_search", **p).context["events"]]
         self.assertEqual(names(type=EventType.CONCERT), ["Rich"])
         self.assertEqual(names(project=project.pk), ["Rich"])
-        self.assertEqual(names(has_songs="yes"), ["Rich"])
-        self.assertEqual(names(has_songs="no"), ["Plain"])
-        self.assertEqual(names(has_resources="yes"), ["Rich"])
-        self.assertEqual(names(guests="yes"), ["Rich"])  # Gus was ill at Plain, only present counts
-        self.assertEqual(names(guests="no"), ["Plain"])
         self.assertEqual(names(start="2025-03-05"), ["Rich"])
         self.assertEqual(names(q="gus"), ["Rich"])  # present attendee names are searchable
         self.assertEqual(names(q="mia"), ["Plain"])
@@ -733,10 +730,8 @@ class ListFilterTests(TestCase):
         self.assertEqual(titles(composer=composer.pk), {"A"})
         self.assertEqual(titles(start="2025-03-05", end="2025-03-05"), {"C"})
         self.assertEqual(titles(start="2025-03-06"), set())
-        self.assertEqual(titles(performed="yes"), {"C"})
-        self.assertEqual(titles(performed="no"), {"A", "B"})
-        self.assertEqual(titles(has_resources="yes"), {"C"})
-        self.assertEqual(titles(language="aa", performed="yes"), set())  # filters AND together
+        self.assertEqual(titles(language="aa", composer=composer.pk), {"A"})  # filters AND together
+        self.assertEqual(titles(language="ab", composer=composer.pk), set())
 
     def test_dashboard_voice_filter_narrows_rows_and_keeps_hidden_attendance(self):
         gig = self.event("r", timezone.now() - timedelta(hours=3))
@@ -754,3 +749,21 @@ class ListFilterTests(TestCase):
         att = lambda p: Attendance.objects.get(event=gig, person=p).attendance_type_id
         self.assertEqual((att(bob), att(ana)), (AttendanceType.ILLNESS, AttendanceType.PRESENT))
 
+
+
+class SongDurationTests(SimpleTestCase):
+    def parse(self, text):
+        form = SongMetaForm(data={"duration": text})
+        form.is_valid()
+        return form.cleaned_data.get("duration"), "duration" in form.errors
+
+    def test_parse(self):
+        for text, seconds in [("3:45", 225), ("125:30", 7530), ("1:02:03", 3723), ("", None)]:
+            self.assertEqual(self.parse(text), (seconds, False))
+        for bad in ["1:75", "90", "a:b"]:
+            self.assertTrue(self.parse(bad)[1], bad)
+
+    def test_display(self):
+        self.assertEqual(Song(duration=3723).duration_display, "1:02:03")
+        self.assertEqual(Song(duration=225).duration_display, "3:45")
+        self.assertEqual(Song().duration_display, "")

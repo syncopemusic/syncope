@@ -327,6 +327,8 @@ SONG_PERSON_FIELD_META = {
 
 
 class SongMetaForm(forms.ModelForm):
+    duration = forms.CharField(required=False, widget=forms.TextInput(attrs={"placeholder": "mm:ss"}))
+
     class Meta:
         model = Song
         fields = [
@@ -336,10 +338,11 @@ class SongMetaForm(forms.ModelForm):
             "arranger",
             "poet",
             "translator",
-            "origin",
+            "duration",
             "number_of_pages",
             "number_of_copies",
             "year",
+            "origin",
             "ensemble",
             "number_of_voices",
             "additional_notes",
@@ -355,12 +358,24 @@ class SongMetaForm(forms.ModelForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
+        self.initial["duration"] = self.instance.duration_display
 
         if user:
             for field_name, skill_id in SONG_PERSON_FIELD_SKILLS.items():
                 self.fields[field_name].queryset = Person.objects.for_user_with_skill(
                     user=user, skill_id=skill_id
                 )
+
+    def clean_duration(self):
+        text = self.cleaned_data["duration"].strip()
+        if not text:
+            return None
+        parts = text.split(":")
+        if len(parts) not in (2, 3) or not all(p.isdigit() for p in parts) or any(int(p) > 59 for p in parts[1:]):
+            raise forms.ValidationError("Use mm:ss (seconds 0-59).")
+        *hm, seconds = map(int, parts)
+        minutes = hm[-1] + 60 * hm[0] if len(hm) == 2 else hm[0]
+        return minutes * 60 + seconds
 
     def clean_internal_id(self):
         value = self.cleaned_data.get("internal_id")

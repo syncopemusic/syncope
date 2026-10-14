@@ -54,11 +54,14 @@
             <tr>
                 <td class="col-num">{{ forloop.counter }}</td>
                 <td class="col-main">
-                    <div class="song-title">
+                    <div class="song-subline">
+                    <span class="song-title">
                         {% if eventsong.resource_icons %}
                             <span title="Song has its own resources available">{% icon eventsong.resource_icons.0.icon %}</span>
                         {% endif %}
                         <a href="{% url 'syncope:song_detail' url_username eventsong.song.pk %}?from_event={{ event.pk }}&origin={{ origin_key }}">{{ eventsong.song.title }}</a>
+                    </span>
+                    {% if eventsong.song.duration %}<small class="song-meta">{{ eventsong.song.duration_display }}</small>{% endif %}
                     </div>
                     <div class="song-subline">
                         <span{% if eventsong.song.composer %} title="{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} {{ eventsong.song.composer.birth_date|date:'Y' }}-{{ eventsong.song.composer.death_date|date:'Y' }}"{% endif %}>

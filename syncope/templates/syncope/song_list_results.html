@@ -29,8 +29,21 @@
                     Arranger {% if current_sort == 'arranger' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
-            <th>Copies</th>
-            <th title="Concerts / Performances">Con/Per</th>
+            <th>
+                <a href="?q={{ q }}&sort=copies{% if current_sort == 'copies' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
+                    Copies {% if current_sort == 'copies' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+                </a>
+            </th>
+            <th title="Number of concerts / performances">
+                <a href="?q={{ q }}&sort=perf{% if current_sort == 'perf' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
+                    PERF {% if current_sort == 'perf' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+                </a>
+            </th>
+            <th>
+                <a href="?q={{ q }}&sort=duration{% if current_sort == 'duration' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
+                    DUR {% if current_sort == 'duration' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+                </a>
+            </th>
         </tr>
     </thead>
     <tbody>
@@ -54,6 +67,7 @@
             </td>
             <td>{{ song.number_of_copies|default:"-" }}</td>
             <td><span title="Number of concerts / number of performances">{% if song.concert_count or song.performance_count %}{{ song.concert_count }}/{{ song.performance_count }}{% else %}-{% endif %}</span></td>
+            <td><span title="{{ song.duration_title }}">{{ song.duration_display|default:"-" }}</span></td>
         </tr>
     {% endfor %}
     </tbody>

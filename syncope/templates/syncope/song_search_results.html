@@ -12,7 +12,7 @@
                             data-resources="{{ song.resource_count }}"
                             data-internal-id="{{ song.internal_id|default:'' }}">+</button>
                     <div class="search-result-info">
-                        <div class="song-title">{{ song.title }}</div>
+                        <div class="song-subline"><span class="song-title">{{ song.title }}</span>{% if song.duration %}<small class="song-meta">{{ song.duration_display }}</small>{% endif %}</div>
                         <div class="song-subline">
                             <span>
                                 {% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}

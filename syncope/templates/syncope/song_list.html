@@ -29,12 +29,6 @@
 <div class="filter-row">
     {% include "syncope/_filter_multi.html" with name="arranger" label="Arranger" options=filter_arrangers selected=filters.arranger %}
 </div>
-<div class="filter-row">
-    {% include "syncope/_filter_choice.html" with name="has_resources" label="Has resources" options=filter_yes_no selected=filters.has_resources %}
-</div>
-<div class="filter-row">
-    {% include "syncope/_filter_choice.html" with name="performed" label="Performed" options=filter_yes_no selected=filters.performed %}
-</div>
 {% endfilter_panel %}
 
 <div id="song-list-results">

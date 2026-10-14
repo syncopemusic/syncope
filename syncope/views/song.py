@@ -18,7 +18,7 @@ from syncope.forms import QuoteFormSet, LyricsTranslationFormSet
 from syncope.mixins import ListFilterMixin, SongOwnerMixin
 from syncope.views.drafts import DraftMixin, clear_draft
 from syncope.permissions import AccessControl
-from syncope.utils import search_events, resource_icon_list, add_query_param, safe_next_url, filter_period, in_period_q, yes_no
+from syncope.utils import search_events, resource_icon_list, add_query_param, safe_next_url, filter_period, in_period_q
 from syncope.breadcrumbs import project_origin_breadcrumbs, event_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
 from syncope.views.resource import song_related_resource_rows
 
@@ -68,7 +68,6 @@ def _annotate_song_queryset(qs, owner_user):
 
 SONG_FILTER_SPEC = {
     'start': 'date', 'end': 'date', 'language': 'codes', 'composer': 'multi', 'poet': 'multi', 'arranger': 'multi',
-    'has_resources': ('yes', 'no'), 'performed': ('yes', 'no'),
 }
 
 
@@ -83,10 +82,6 @@ def _apply_song_filters(qs, filters):
     for role in ('composer', 'poet', 'arranger'):
         if role in filters:
             qs = qs.filter(**{f'{role}_id__in': filters[role]})
-    for key, has in (('has_resources', Q(has_direct_resources__gt=0) | Q(has_event_resources__gt=0)),
-                     ('performed', Q(concert_count__gt=0) | Q(performance_count__gt=0))):
-        if key in filters:
-            qs = yes_no(qs, filters[key], has)
     return qs
 
 
@@ -106,15 +101,18 @@ def _apply_song_sort(qs, request):
         'composer': 'composer__last_name',
         'poet': 'poet__last_name',
         'arranger': 'arranger__last_name',
+        'duration': 'duration',
+        'copies': 'number_of_copies',
+        'perf': ('concert_count', 'performance_count'),
         # Origin/Lang columns are hidden from the table for now but kept sortable.
         'origin': 'origin',
         'languagecode': 'languagecode__language_code',
     }
 
-    sort_field = sort_field_map.get(sort, 'internal_id')
-    if reverse:
-        sort_field = f'-{sort_field}'
-    return qs.order_by(sort_field)
+    sort_fields = sort_field_map.get(sort, 'internal_id')
+    if isinstance(sort_fields, str):
+        sort_fields = (sort_fields,)
+    return qs.order_by(*(f'-{f}' if reverse else f for f in sort_fields))
 
 
 @method_decorator(login_required, name='dispatch')

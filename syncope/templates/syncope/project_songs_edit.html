@@ -29,9 +29,7 @@
             <tr data-id="{{ song.pk }}">
                 <td class="song-index">{{ forloop.counter }}</td>
                 <td class="col-main">
-                    <div class="song-title">
-                        {{ song.title }}
-                    </div>
+                    <div class="song-subline"><span class="song-title">{{ song.title }}</span>{% if song.duration %}<small class="song-meta">{{ song.duration_display }}</small>{% endif %}</div>
                     <div class="song-subline">
                         <span{% if song.composer %} title="{{ song.composer.first_name }} {{ song.composer.last_name }} {{ song.composer.birth_date|date:'Y' }}-{{ song.composer.death_date|date:'Y' }}"{% endif %}>
                             {% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}
