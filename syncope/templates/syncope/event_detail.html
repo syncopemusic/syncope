@@ -1,145 +1,67 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static dt_tags icon_tags %}
 
-{% block title %}{{ event.name }}{% endblock %}
-
-{% block extra_css %}
-<style>
-    .event-title { margin-bottom: 0.25em; }
-    .event-summary { margin-top: 0.25em; }
-    .resource-table-compact { border-collapse: collapse; font-size: 0.8rem; margin: 0.25rem 0; }
-    .resource-table-compact td { padding: 1px 4px; }
-
-    .bottom-bar {
-        position: sticky;
-        bottom: 0;
-        background-color: #f5f5f5;
-        border-top: 1px solid #ccc;
-        padding: 0.75rem 1rem;
-        margin-top: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .dt-short { display: none; }
-
-    .event-songs-table .song-index { text-align: center; font-weight: bold; vertical-align: middle; width: 1.5rem; }
-    .event-songs-table .song-title { font-weight: 500; }
-    .event-songs-table .song-subline {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: 0.5rem;
-        font-size: 0.85rem;
-        color: #666;
-    }
-    .event-songs-table .song-meta { white-space: nowrap; color: #888; }
-    .event-songs-table .song-encore { text-align: center; }
-
-    @media (max-width: 768px) {
-        .bottom-bar {
-            position: fixed;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-        }
-        #event-detail-content {
-            padding-bottom: 4rem;
-        }
-        .dt-full { display: none; }
-        .dt-short { display: inline; }
-
-        .main-content h2.event-title {
-            white-space: normal;
-            overflow: visible;
-            text-overflow: clip;
-            display: flex;
-            align-items: baseline;
-            flex-wrap: nowrap;
-            justify-content: space-between;
-        }
-        .event-title-text {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            min-width: 0;
-        }
-        .share-controls {
-            display: flex;
-            align-items: center;
-            flex-shrink: 0;
-        }
-    }
-</style>
-{% endblock %}
+{% block title %}{{ event.name|default:event.event_type }} - Syncope{% endblock %}
 
 {% block content %}
 
-<div id="event-detail-content">
+<div>
 
-<h2 class="event-title"><span class="event-title-text"> <span title="Title">{{ event.name }}</span> <small><span title="Type"> | {{ event.event_type }}</span></small></span>
-    <span class="share-controls">
-        <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
-            <img src="{% static 'syncope/images/link.svg' %}" width="16" height="16" alt="Link">
-        </button>
-        <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
-    </span>
-</h2>
-<p class="event-summary">{% if event.location %}Location: {{ event.location }}<br>{% endif %}
-{% if event.same_date %}
-<span class="dt-full" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-full">{{ event.started_at|date:"l d F, Y, H:i" }}</span><span class="dt-short" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-short">{{ event.started_at|date:"D d M, Y, H:i" }}</span>&ndash;<span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="time">{{ event.ended_at|date:"H:i" }}</span>
-{% else %}
-Date: <span class="dt-full" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-full">{{ event.started_at|date:"l d F, Y, H:i" }}</span><span class="dt-short" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-short">{{ event.started_at|date:"D d M, Y, H:i" }}</span><br>
-Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="datetime-dow-full">{{ event.ended_at|date:"l d F, Y, H:i" }}</span><span class="dt-short" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="datetime-dow-short">{{ event.ended_at|date:"D d M, Y, H:i" }}</span>
-{% endif %}
-{% if event.project %}<br><span title="Project"> Project:<a href="{% url 'syncope:project_detail' url_username event.project.pk %}">{{ event.project.title }}</a></span>{% endif %}
-{% if event.description %}<br>{{ event.description }}{% endif %}
-{% if event.producers %}<br>Organizers: {{ event.producers }}{% endif %}
-{% if event.num_visitors %}<br>Visitors: {{ event.num_visitors }}{% endif %}
-{% if is_admin and event.additional_notes %}<br>Personal notes: {{ event.additional_notes }}{% endif %}
-</p>
-
-{% if all_event_resources %}
-<table class="resource-table-compact">
-    <tbody>
-        {% for res in all_event_resources %}
-        <tr>
-            <td>{{ res.icon }} <a href="{{ res.share_url|default:res.url }}" target="_blank" rel="noopener noreferrer">{{ res.desc }}</a>{% if res.song %} <small>({{ res.song.title }})</small>{% endif %}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
+<div class="section-header">
+    <h1 class="event-title"><span class="event-title-text"> {% if event.name %}<span title="Title">{{ event.name }}</span> <small><span title="Type"> | {{ event.event_type }}</span></small>{% else %}<span title="Type">{{ event.event_type }}</span>{% endif %}</span>
+        <span class="share-controls">
+            <button id="share-btn" class="btn btn-link" title="Copy link">
+                <img src="{% static 'syncope/images/link.svg' %}" width="16" height="16" alt="Link">
+            </button>
+            <span id="share-result" class="share-result"></span>
+        </span>
+    </h1>
+    {% if is_admin %}<a href="{% url 'syncope:event_meta_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
+<table class="table-detail">
+    {% if event.location %}<tr><th>Location</th><td>{{ event.location }}</td></tr>{% endif %}
+    {% if event.same_date %}
+    <tr><th>Date</th><td>{% dt event.started_at "datetime-dow-full" "dt-full" %}{% dt event.started_at "datetime-dow-short" "dt-short" %}-{% dt event.ended_at "time" %}</td></tr>
+    {% else %}
+    <tr><th>Start date</th><td>{% dt event.started_at "datetime-dow-full" "dt-full" %}{% dt event.started_at "datetime-dow-short" "dt-short" %}</td></tr>
+    <tr><th>End date</th><td>{% dt event.ended_at "datetime-dow-full" "dt-full" %}{% dt event.ended_at "datetime-dow-short" "dt-short" %}</td></tr>
+    {% endif %}
+    {% if event.project %}<tr><th>Project</th><td><a href="{% url 'syncope:project_detail' url_username event.project.pk %}">{{ event.project.title }}</a></td></tr>{% endif %}
+    {% if event.description %}<tr><th>Description</th><td>{{ event.description|linebreaksbr }}</td></tr>{% endif %}
+    {% if event.producers %}<tr><th>Organizers</th><td>{{ event.producers }}</td></tr>{% endif %}
+    {% if event.num_visitors %}<tr><th>Visitors</th><td>{{ event.num_visitors }}</td></tr>{% endif %}
+    {% if is_admin and event.additional_notes %}<tr><th>Personal notes</th><td>{{ event.additional_notes|linebreaksbr }}</td></tr>{% endif %}
 </table>
-{% endif %}
 
-{% if is_admin %}
-<p><a href="{% url 'syncope:event_meta_edit' url_username event.pk %}?origin={{ origin_key }}">Edit meta data</a></p>
-{% endif %}
-<div style="display:none;">{% csrf_token %}</div>
+<div hidden>{% csrf_token %}</div>
 
-
-<h3>Songs
-    {% if is_admin %}<a href="{% url 'syncope:event_songs_edit' url_username event.pk %}?origin={{ origin_key }}">Edit</a>{% endif %}
-</h3>
+<div class="section-header">
+    <h3>Songs ({{ eventsongs|length }})</h3>
+    {% if is_admin %}<a href="{% url 'syncope:event_songs_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
 {% if eventsongs %}
-    <table class="event-songs-table">
+    <div class="table-container">
+    <table class="table">
         <thead>
             <tr>
                 <th></th>
-                <th>Song</th>
+                <th class="col-main">Song</th>
                 <th title="Encore">&#8635;</th>
             </tr>
         </thead>
         <tbody>
             {% for eventsong in eventsongs %}
             <tr>
-                <td class="song-index">{{ forloop.counter }}</td>
-                <td class="song-cell">
-                    <div class="song-title">
+                <td class="col-num">{{ forloop.counter }}</td>
+                <td class="col-main">
+                    <div class="song-subline">
+                    <span class="song-title">
                         {% if eventsong.resource_icons %}
-                            <span title="Song has its own resources available">{{ eventsong.resource_icons.0.icon }}</span>
+                            <span title="Song has its own resources available">{% icon eventsong.resource_icons.0.icon %}</span>
                         {% endif %}
                         <a href="{% url 'syncope:song_detail' url_username eventsong.song.pk %}?from_event={{ event.pk }}&origin={{ origin_key }}">{{ eventsong.song.title }}</a>
+                    </span>
+                    {% if eventsong.song.duration %}<small class="song-meta">{{ eventsong.song.duration_display }}</small>{% endif %}
                     </div>
                     <div class="song-subline">
                         <span{% if eventsong.song.composer %} title="{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} {{ eventsong.song.composer.birth_date|date:'Y' }}-{{ eventsong.song.composer.death_date|date:'Y' }}"{% endif %}>
@@ -152,26 +74,27 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
                         {% endif %}
                     </div>
                 </td>
-                <td class="song-encore">{% if eventsong.encore %}&#10003;{% endif %}</td>
+                <td>{% if eventsong.encore %}&#10003;{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-{% else %}
-    <p>No songs added yet.</p>
+    </div>
 {% endif %}
 
 {% if can_view_attendance %}
-<h3>Attendance
-    {% if is_admin %}<a href="{% url 'syncope:event_attendance_edit' url_username event.pk %}?origin={{ origin_key }}">Edit</a>{% endif %}
-</h3>
+<div class="section-header">
+    <h3>Attendance ({{ present_count }}/{{ attendances|length }})</h3>
+    {% if is_admin %}<a href="{% url 'syncope:event_attendance_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
 {% if attendances %}
-    <table>
+    <div class="table-container">
+    <table class="table">
         <thead>
             <tr>
-                <th>#</th>
+                <th class="col-num"></th>
 
-                <th>Person</th>
+                <th class="col-main">Person</th>
 
                 <th>Attendance</th>
             </tr>
@@ -179,8 +102,8 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
         <tbody>
         {% for attendance in attendances %}
             <tr>
-                <td>{{ forloop.counter }}</td>
-                <td>{% include "syncope/person_link.html" with person=attendance.person from_event=event.pk origin=origin_key %}</td>
+                <td class="col-num">{{ forloop.counter }}</td>
+                <td class="col-main">{% include "syncope/person_link.html" with person=attendance.person from_event=event.pk origin=origin_key %}</td>
                 {% comment %}
                 <td>
 
@@ -194,84 +117,37 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
                 </td>
                 {% endcomment %}
                 <td>
-                    {% if attendance.attendance_type_id == 1 %}✓{% elif attendance.attendance_type_id == 2 %}💼{% elif attendance.attendance_type_id == 3 %}🤒{% elif attendance.attendance_type_id == 4 %}🏖{% else %}?{% endif %}
+                    <span class="btn att-type-{{ attendance.attendance_type_id|default:0 }}" data-type-id="{{ attendance.attendance_type_id|default:0 }}">
+                    {% if attendance.attendance_type_id == 1 %}{% icon "check" %}{% elif attendance.attendance_type_id == 2 %}{% icon "briefcase" %}{% elif attendance.attendance_type_id == 3 %}{% icon "thermometer" %}{% elif attendance.attendance_type_id == 4 %}{% icon "sun" %}{% else %}{% icon "circle-help" %}{% endif %}
                     {{ attendance.attendance_type }}
+                    </span>
                 </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
+    </div>
 {% else %}
     <p>No attendance records yet.</p>
 {% endif %}
 {% endif %}
 
+{% if event_resources or related_event_resources or is_admin %}
+<div class="section-header">
+    <h3>Resources ({{ resource_count }})</h3>
+    {% if is_admin %}<a href="{% url 'syncope:event_resources_edit' url_username event.pk %}?origin={{ origin_key }}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
+{% include "syncope/_resource_table.html" with rows=event_resources related_rows=related_event_resources related_column_label="Song" editable=False %}
+{% endif %}
+
 </div>
 
-<div class="bottom-bar">
-    <a href="{{ breadcrumbs.0.url }}" class="btn-primary" style="text-decoration:none; display:inline-block;">Return</a>
-</div>
+{% include "syncope/_save_bar.html" with url=return_url %}
 
 {% block extra_js %}
+<script src="{% static 'syncope/share.js' %}"></script>
 <script>
-function createShareHandler(btn, resultSpan, shareData) {
-    return function () {
-        btn.disabled = true;
-        if (resultSpan) resultSpan.textContent = 'Copying...';
-
-        fetch('/share/create/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            },
-            body: JSON.stringify(shareData),
-        })
-        .then(function(response) {
-            if (!response.ok) throw new Error('Request failed');
-            return response.json();
-        })
-        .then(function(data) {
-            const shareUrl = window.location.origin + '/' + data.share_id + '/';
-
-            // Copy to clipboard
-            navigator.clipboard.writeText(shareUrl).then(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link copied:\n' + shareUrl);
-                }
-            }).catch(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link:\n' + shareUrl);
-                }
-            });
-        })
-        .catch(function() {
-            if (resultSpan) {
-                resultSpan.textContent = 'Failed';
-            } else {
-                alert('Failed to generate share link');
-            }
-        })
-        .finally(function() {
-            btn.disabled = false;
-        });
-    };
-}
-
-const shareBtn = document.getElementById('share-btn');
-if (shareBtn) {
-    shareBtn.addEventListener('click', createShareHandler(
-        shareBtn,
-        document.getElementById('share-result'),
-        { type: 'event', id: {{ event.pk }} }
-    ));
-}
+initShareButton({ type: 'event', id: {{ event.pk }} });
 </script>
 {% endblock %}
 

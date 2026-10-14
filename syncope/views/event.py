@@ -1,4 +1,5 @@
 from functools import wraps
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseForbidden
 from django.shortcuts import  get_object_or_404, render
 from django.urls import reverse_lazy, reverse
@@ -7,7 +8,7 @@ from django.utils import timezone
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, UpdateView,  DetailView, View
 from django.views.generic.edit import DeleteView
-from django.db.models import Min, Case, When, Value, IntegerField, Prefetch, Count
+from django.db.models import Min, Case, When, Value, IntegerField, Prefetch, Count, Q
 from django.shortcuts import redirect
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
@@ -16,13 +17,16 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.http import url_has_allowed_host_and_scheme
 from syncope.models import CustomUser, Person, Role, Song
-from syncope.models import Event, EventSong, Attendance, AttendanceType, EventResource, EventSongResource, Resource, SongResource
+from syncope.models import Event, EventSong, Attendance, AttendanceType, EventSongResource, Resource
+from syncope.models import EventType, Project
+from syncope.mixins import ListFilterMixin
 from syncope.forms import EventForm, AddAttendanceForm
-from syncope.forms import AddSongToEventForm, EventResourceFormSet, EventSongResourceFormSet
+from syncope.forms import AddSongToEventForm, EventSongResourceFormSet
 from syncope.views.drafts import DraftMixin
+from syncope.views.resource import event_related_resource_rows
 from syncope.permissions import AccessControl
-from syncope.utils import resource_icon_list, add_query_param
-from syncope.breadcrumbs import event_breadcrumbs, DEFAULT_EVENT_ORIGIN
+from syncope.utils import resource_icon_list, add_query_param, search_events, date_overlap_q, filter_period, match_pk
+from syncope.breadcrumbs import event_breadcrumbs, origin_root_crumbs, DEFAULT_EVENT_ORIGIN
 
 
 def is_event_admin(user, org_user):
@@ -32,6 +36,14 @@ def is_event_admin(user, org_user):
     ).filter(person__roles__id=Role.ADMIN).exists()
 
 
+def _visible_events(user, org_user):
+    """The org's events as this viewer may see them: supporters get everything except rehearsals."""
+    events = Event.objects.filter(user=org_user)
+    if user == org_user or AccessControl.sees_rehearsals(user, org_user.username):
+        return events
+    return events.exclude(event_type_id=EventType.REHEARSAL)
+
+
 def can_view_event_content(user, org_user):
     """True if user can view an event's songs/meta content (ADMIN/MEMBER/SUPPORTER, or the org's own account)."""
     return user == org_user or AccessControl.can_view_event_content(user, org_user).exists()
@@ -39,11 +51,11 @@ def can_view_event_content(user, org_user):
 
 def can_view_event_attendance(user, org_user):
     """True if user can view an event's attendance (ADMIN/MEMBER, or the org's own account)."""
-    return user == org_user or AccessControl.can_edit_event(user, org_user).exists()
+    return user == org_user or AccessControl.can_view_event_attendance(user, org_user).exists()
 
 
 def _save_resource_formset(existing_manager, resource_model, owner_kwargs, resource_formset, owner_user):
-    """Shared save logic for EventResourceFormSet / EventSongResourceFormSet."""
+    """Shared save logic for a resource formset against its owner's manager."""
     existing_manager.all().delete()
     valid_forms = [
         f for f in resource_formset.forms
@@ -60,11 +72,6 @@ def _save_resource_formset(existing_manager, resource_model, owner_kwargs, resou
             resource.description = description
             resource.save(update_fields=['description'])
         resource_model.objects.create(resource=resource, order=idx + 1, **owner_kwargs)
-
-
-def save_event_resources(event, resource_formset, owner_user):
-    """Persist an EventResourceFormSet against `event`."""
-    _save_resource_formset(event.event_resource, EventResource, {'event': event}, resource_formset, owner_user)
 
 
 def save_event_song_resources(event_song, resource_formset, owner_user):
@@ -142,7 +149,7 @@ class EventCreateView(DraftMixin, CreateView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        # kwargs['username'] = self.request.user
+        kwargs['user'] = self.customuser or self.request.user
         return kwargs
 
     def get_form(self, form_class=None):
@@ -150,6 +157,7 @@ class EventCreateView(DraftMixin, CreateView):
         # Name and most other fields are optional (see EventForm); a start date is the one
         # thing we actually need up front to auto-generate a name and seed attendance.
         form.fields['started_at'].required = True
+        form.fields['started_at'].label = 'Start date hour *'
         return form
 
     def get_initial(self):
@@ -192,7 +200,8 @@ class EventCreateView(DraftMixin, CreateView):
         })
 
 @method_decorator(login_required, name="dispatch")
-class EventListView(ListView):
+class EventListView(ListFilterMixin, ListView):
+    filter_spec = {'start': 'date', 'end': 'date', 'type': 'multi', 'project': 'multi'}
     template_name = "syncope/event_list.html"
     context_object_name = "events"
     model = Event
@@ -208,8 +217,12 @@ class EventListView(ListView):
 
         sort_field_map = {
             'date': 'started_at',
+            'title': 'name',
             'type': 'event_type__name',
             'project': 'project__title',
+            'location': 'location',
+            'resources': 'event_res_n',
+            'song_resources': 'song_res_n',
         }
         sort_field = sort_field_map.get(sort, 'started_at')
         if reverse:
@@ -219,24 +232,66 @@ class EventListView(ListView):
 
     def get_queryset(self):
         url_username = self.kwargs.get("username")
-        customuser = get_object_or_404(CustomUser, username=url_username)
+        self.customuser = get_object_or_404(CustomUser, username=url_username)
         sort_field, _, _ = self._get_sort_field()
-        return Event.objects.filter(user=customuser).order_by(sort_field).prefetch_related('event_resource__resource')
+        events = search_events(_visible_events(self.request.user, self.customuser), self.request.GET.get('q', ''))
+        events = events.annotate(
+            event_res_n=Count('event_resource', distinct=True),
+            song_res_n=Count('eventsong__event_song_resource', distinct=True),
+        )
+        return self.apply_filters(events, self.get_filters()).order_by(sort_field)
+
+    def apply_filters(self, events, filters):
+        if period := filter_period(filters):
+            events = match_pk(events, date_overlap_q('started_at', 'ended_at', *period))
+        if 'type' in filters:
+            events = events.filter(event_type_id__in=filters['type'])
+        if 'project' in filters:
+            events = events.filter(project_id__in=filters['project'])
+        return events
+
+    def filter_options(self):
+        return {
+            'filter_types': EventType.objects.order_by('id').values_list('id', 'name'),
+            'filter_projects': Project.objects.filter(user__username=self.kwargs['username']).values_list('id', 'title'),
+        }
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        for event in context['events']:
-            event.resource_icons = resource_icon_list(event.event_resource.all())
-            event.resource_count = event.event_resource.count()
-            event_song_resources = EventSongResource.objects.filter(
-                event_song__event=event
-            ).select_related('resource').order_by('order')
-            event.event_song_resource_icons = resource_icon_list(event_song_resources)
-            event.event_song_resource_count = event_song_resources.count()
+        context['q'] = self.request.GET.get('q', '')
         _, sort, reverse = self._get_sort_field()
         context['current_sort'] = sort
         context['reverse'] = reverse
         return context
+
+
+class EventListSearchView(EventListView):
+    template_name = 'syncope/event_list_results.html'
+    with_filter_options = False
+
+
+class PersonEventListView(EventListView):
+    """Events one org member was present at: results partial for the member page and its live search."""
+    filter_spec = {'start': 'date', 'end': 'date', 'type': 'multi'}
+    template_name = 'syncope/person_event_list_results.html'
+    initial_types = None  # type ids preselected when the request names none (member page first load only)
+
+    def get_filters(self):
+        filters = super().get_filters()
+        if self.initial_types and 'type' not in filters:
+            filters['type'] = self.initial_types
+        return filters
+
+    def get_queryset(self):
+        self.customuser = get_object_or_404(CustomUser, username=self.kwargs['username'])
+        if not can_view_event_attendance(self.request.user, self.customuser):
+            raise PermissionDenied
+        person = get_object_or_404(Person, pk=self.kwargs['pk'], memberships__user=self.customuser)
+        sort_field, _, _ = self._get_sort_field()
+        events = _visible_events(self.request.user, self.customuser).filter(
+            attendance__person=person, attendance__attendance_type_id=AttendanceType.PRESENT)
+        events = search_events(events, self.request.GET.get('q', '')).select_related('project', 'event_type')
+        return self.apply_filters(events, self.get_filters()).order_by(sort_field)
 
 
 @method_decorator(login_required, name='dispatch')
@@ -252,7 +307,7 @@ class EventDetailView(DetailView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
-        return Event.objects.filter(user=self.customuser).prefetch_related(
+        return _visible_events(self.request.user, self.customuser).prefetch_related(
             'attendance_set__person',
             'attendance_set__attendance_type',
             'eventsong_set__song__composer',
@@ -270,7 +325,10 @@ class EventDetailView(DetailView):
         context['breadcrumbs'], context['origin_key'] = event_breadcrumbs(
             self.request, self.kwargs.get('username'), self.object
         )
-        context['attendances'] = get_ordered_attendance_queryset(self.object)
+        context['return_url'] = context['breadcrumbs'][-2]['url']
+        attendances = list(get_ordered_attendance_queryset(self.object))
+        context['attendances'] = attendances
+        context['present_count'] = sum(a.attendance_type_id == 1 for a in attendances)
         context['is_admin'] = is_event_admin(self.request.user, self.customuser)
         context['can_view_attendance'] = can_view_event_attendance(self.request.user, self.customuser)
         context['event_resources'] = resource_icon_list(
@@ -295,16 +353,8 @@ class EventDetailView(DetailView):
                 eventsong.resource_icons = resource_icon_list(eventsong.event_song_resource.all())
         context['eventsongs'] = eventsongs
 
-        # Build combined resource list: event resources first, then event-song resources
-        all_event_resources = [
-            {'url': r['url'], 'icon': r['icon'], 'desc': r['desc'], 'song': None, 'share_url': r.get('share_url')}
-            for r in context['event_resources']
-        ]
-        for eventsong in eventsongs:
-            for r in resource_icon_list(eventsong.event_song_resource.all()):
-                r['song'] = eventsong.song
-                all_event_resources.append(r)
-        context['all_event_resources'] = all_event_resources
+        context['related_event_resources'] = event_related_resource_rows(self.object)
+        context['resource_count'] = len(context['event_resources']) + len(context['related_event_resources'])
 
         return context
 
@@ -379,7 +429,7 @@ class EventSongsEditView(View):
 
         with transaction.atomic():
             if remove_pks:
-                # EventSongResource.event_song is on_delete=PROTECT — clear resources first.
+                # EventSongResource.event_song is on_delete=PROTECT - clear resources first.
                 EventSongResource.objects.filter(event_song_id__in=remove_pks).delete()
                 EventSong.objects.filter(event=event, pk__in=remove_pks).delete()
 
@@ -461,7 +511,7 @@ def event_songs_search(request, org_user, event):
 @login_required
 @event_admin_required
 def event_song_resources_save(request, org_user, event, eventsong_pk):
-    """Rare, low-frequency edit — a plain form POST + redirect is fine here (no AJAX needed)."""
+    """Rare, low-frequency edit - a plain form POST + redirect is fine here (no AJAX needed)."""
     eventsong = get_object_or_404(EventSong, pk=eventsong_pk, event=event)
     formset = EventSongResourceFormSet(
         request.POST, instance=eventsong, user=org_user, prefix=f"esresource_{eventsong.pk}",
@@ -470,7 +520,8 @@ def event_song_resources_save(request, org_user, event, eventsong_pk):
         save_event_song_resources(eventsong, formset, org_user)
         messages.success(request, "Song resources updated.")
     else:
-        messages.error(request, "Please fix errors in the song's resources.")
+        problems = list(formset.non_form_errors()) + [msg for f in formset.errors for errs in f.values() for msg in errs]
+        messages.error(request, "Please fix errors in the song's resources: " + "; ".join(problems))
     songs_url = reverse('syncope:event_songs_edit', kwargs={'username': org_user.username, 'pk': event.pk})
     return redirect(f"{songs_url}#song-{eventsong.pk}")
 
@@ -633,36 +684,21 @@ class EventMetaEditView(UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         event = self.object
-        if self.request.POST:
-            context['resource_formset'] = EventResourceFormSet(
-                self.request.POST, instance=event, user=self.customuser,
-            )
-        else:
-            context['resource_formset'] = EventResourceFormSet(
-                instance=event, user=self.customuser,
-            )
         context['url_username'] = self.kwargs.get('username')
         context['is_admin'] = self.is_admin
         context['eventsongs'] = event.eventsong_set.select_related('song').order_by('order')
         context['encore_eventsong_id'] = event.eventsong_set.filter(encore=True).values_list('pk', flat=True).first()
         context['breadcrumbs'], context['origin_key'] = event_breadcrumbs(
-            self.request, self.kwargs.get('username'), event, current_label='Details'
+            self.request, self.kwargs.get('username'), event, current_label='Edit'
         )
         return context
 
     def form_valid(self, form):
-        context = self.get_context_data()
-        resource_formset = context['resource_formset']
-        if not resource_formset.is_valid():
-            messages.error(self.request, "Please fix errors in the resources section.")
-            return self.form_invalid(form)
-
         encore_raw = self.request.POST.get('encore_song', '')
         encore_pk = int(encore_raw) if encore_raw.isdigit() else None
 
         with transaction.atomic():
             self.object = form.save()
-            save_event_resources(self.object, resource_formset, self.customuser)
             eventsongs = self.object.eventsong_set.filter(encore=True) | self.object.eventsong_set.filter(pk=encore_pk)
             for es in eventsongs.distinct():
                 new_encore = es.pk == encore_pk
@@ -679,14 +715,7 @@ class EventMetaEditView(UpdateView):
         return super().form_invalid(form)
 
     def get_success_url(self):
-        url = reverse('syncope:event_detail', kwargs={
-            'username': self.kwargs.get('username'),
-            'pk': self.object.pk,
-        })
-        origin = self.request.GET.get('origin')
-        if origin:
-            url = add_query_param(url, {'origin': origin})
-        return url
+        return self.request.get_full_path()  # stay on the edit page
 
 
 @method_decorator(login_required, name="dispatch")
@@ -720,13 +749,14 @@ class EventDeleteView(LoginRequiredMixin, DeleteView):
 
     def delete(self, request, *args, **kwargs):
         event = self.get_object()
-        event_name = event.name
+        event_name = str(event)
         response = super().delete(request, *args, **kwargs)
         messages.success(request, f"Successfully deleted event '{event_name}'.")
         return response
 
     def get_success_url(self):
-        return reverse('syncope:event_list', kwargs={'username': self.kwargs.get('username')})
+        roots, _ = origin_root_crumbs(self.request, self.kwargs.get('username'))
+        return roots[-1]['url']
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

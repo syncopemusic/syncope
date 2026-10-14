@@ -3,8 +3,10 @@ from .models import (Song, Membership, CustomUser, Attendance, AttendanceType,
                      MembershipPeriod, Role, Skill, ApproximateDate,
                      Singer, Voice, Event, Project, EventType, EventSong,
                      LanguageCode, Instrument, Instrumentalist)
-import csv, datetime
-from datetime import datetime, date
+import csv, datetime, re
+from datetime import datetime, date, timedelta
+from functools import reduce
+from operator import or_
 from django.contrib import messages
 from .permissions import AccessControl
 from django.db import transaction
@@ -21,6 +23,117 @@ def add_query_param(url, params):
     for key, value in params.items():
         qs[key] = [str(value)]
     return urlunparse(parsed._replace(query=urlencode(qs, doseq=True)))
+
+
+def parse_date_query(q):
+    """Half-open date range [start, end) for a typed day, month or year (D.M.YYYY, M.YYYY, YYYY, also YYYY-M-D / YYYY-M).
+    None when q is not a valid date: 31.2.2025 never slips into March."""
+    parts = re.split(r'[\s./-]+', q.strip(' .'))
+    if not 1 <= len(parts) <= 3 or not all(p.isascii() and p.isdigit() for p in parts):
+        return None
+    nums = [int(p) for p in parts]
+    if len(parts[-1]) == 4:
+        nums.reverse()
+    elif len(parts[0]) != 4:
+        return None
+    y, m, d = (nums + [None, None])[:3]
+    if not 1000 <= y <= 2999:
+        return None
+    try:
+        if d is not None:
+            start = date(y, m, d)
+            return start, start + timedelta(days=1)
+        if m is not None:
+            return date(y, m, 1), date(y + (m == 12), m % 12 + 1, 1)
+    except ValueError:
+        return None
+    return date(y, 1, 1), date(y + 1, 1, 1)
+
+
+def date_overlap_q(start, end, d0, d1, dt=True):
+    """Q for a [start, end] range (end may be null: single day) touching [d0, d1). dt=False for DateFields."""
+    t = '__date' if dt else ''
+    return (Q(**{f'{start}{t}__lt': d1, f'{end}{t}__gte': d0})
+            | Q(**{f'{end}__isnull': True, f'{start}{t}__gte': d0, f'{start}{t}__lt': d1}))
+
+
+YES_NO = (('yes', 'Yes'), ('no', 'No'))
+
+
+def match_pk(qs, cond):
+    """Filter qs by cond through a pk subquery so to-many joins neither duplicate rows nor inflate annotations on qs."""
+    return qs.filter(pk__in=qs.model.objects.filter(cond).values('pk'))
+
+
+def q_filter(qs, q, fields, period_q=None, number_q=None, extra_q=None):
+    """Live-search filter: OR of icontains on `fields`, `period_q(d0, d1)` when q is a date, `number_q(n)` when q is digits,
+    `extra_q(q)` for anything else."""
+    q = q.strip()
+    if not q:
+        return qs
+    cond = reduce(or_, (Q(**{f'{f}__icontains': q}) for f in fields))
+    if period_q and (period := parse_date_query(q)):
+        cond |= period_q(*period)
+    if number_q and q.isdigit():
+        cond |= number_q(int(q))
+    if extra_q:
+        cond |= extra_q(q)
+    return match_pk(qs, cond)
+
+
+def search_events(qs, q):
+    """Event live search shared by the event list and the add-event pickers."""
+    return q_filter(
+        qs, q, ['name', 'location', 'description', 'event_type__name', 'project__title', 'eventsong__song__title'],
+        period_q=lambda d0, d1: date_overlap_q('started_at', 'ended_at', d0, d1),
+        extra_q=lambda name: Q(pk__in=Attendance.objects.filter(
+            attendance_type_id=AttendanceType.PRESENT, person__in=Person.objects.matching_name(name)
+        ).values('event_id')),
+    )
+
+
+def parse_filters(GET, spec):
+    """Active, valid filters from a query string. spec maps name -> 'date' | 'multi' (ids) | 'codes' (strings) | tuple of allowed choices;
+    anything absent or invalid is dropped."""
+    filters = {}
+    for key, kind in spec.items():
+        if kind == 'date':
+            try:
+                filters[key] = date.fromisoformat(GET[key])
+            except (KeyError, ValueError):
+                pass
+        elif kind == 'multi':
+            ids = [int(v) for v in GET.getlist(key) if v.isascii() and v.isdigit()]
+            if ids:
+                filters[key] = ids
+        elif kind == 'codes':
+            if codes := [v for v in GET.getlist(key) if v]:
+                filters[key] = codes
+        elif GET.get(key) in kind:
+            filters[key] = GET[key]
+    return filters
+
+
+def filter_qs(filters):
+    """Query string (with the submitted-form marker) that reproduces `filters`, for sort links."""
+    return urlencode({**{k: v.isoformat() if isinstance(v, date) else v for k, v in filters.items()}, 'f': 1}, doseq=True)
+
+
+def filter_period(filters, start='start', end='end'):
+    """Half-open [d0, d1) date range for the (inclusive) start/end filters; None when neither is set."""
+    if start not in filters and end not in filters:
+        return None
+    return filters.get(start, date.min), filters[end] + timedelta(days=1) if end in filters else date.max
+
+
+def in_period_q(field, d0, d1):
+    """Q for a DateTimeField whose local date lies in [d0, d1)."""
+    return Q(**{f'{field}__date__gte': d0, f'{field}__date__lt': d1})
+
+
+def yes_no(qs, value, cond):
+    """Filter qs by cond for 'yes', by its negation for 'no'."""
+    return qs.filter(cond) if value == 'yes' else qs.exclude(cond)
 
 
 def safe_next_url(request, default):
@@ -143,6 +256,8 @@ def import_songs(org_user, request, file_path, delimiter=";"):
             keywords_value = (row.get(KEYWORDS_KEY) or '').strip()
             language_code_value = (row.get(LANGUAGE_CODE_KEY) or '').strip()
             additional_notes_value = (row.get(ADDITIONAL_NOTES_KEY) or '').strip()
+            for tag in ('<br/>', '<br />', '<br>'):
+                additional_notes_value = additional_notes_value.replace(tag, '\n')
             lyrics_value = (row.get(LYRICS_KEY) or '').strip()
             try:
                 composer = _get_or_create_person_with_skill(
@@ -1087,14 +1202,14 @@ def combine_event_projects(org_user, request):
         }
 
 
-RESOURCE_ICONS = {
-    'video':      '▶',
-    'audio':      '🎧',
-    'sheet':      '𝄞',
-    'wikipedia':  'Ⓦ',
-    'doc':        '📄',
-    'photo':      '📷',
-    'other':      '🔗',
+RESOURCE_ICONS = {  # icon names from templates/syncope/_icons.html
+    'video':      'play',
+    'audio':      'headphones',
+    'sheet':      'music',
+    'wikipedia':  'globe',
+    'doc':        'file-text',
+    'photo':      'image',
+    'other':      'link',
 }
 
 
@@ -1139,7 +1254,8 @@ def resource_icon_list(resource_qs):
     }
 
     return [
-        {'url': r.resource.url,
+        {'pk': r.pk,
+         'url': r.resource.url,
          'share_url': reverse('syncope:share_visit', args=[share_map.get(r.resource_id)]) if r.resource_id in share_map else None,
          'icon': RESOURCE_ICONS[get_url_info(r.resource.url)],
          'desc': r.resource.description or r.resource.url}

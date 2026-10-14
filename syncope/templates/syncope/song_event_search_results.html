@@ -1,0 +1,18 @@
+{% if search_q %}
+    <p class="result-count">{{ event_results|length }} result{{ event_results|length|pluralize }}</p>
+    {% if event_results %}
+        <div id="event-result-list">
+            {% for event in event_results %}
+                <div class="search-result-row">
+                    <button type="button" class="btn btn-secondary" data-id="{{ event.pk }}">+</button>
+                    <div class="search-result-info">
+                        <div class="song-title">{{ event }}</div>
+                        <div class="song-subline">
+                            <span>{% include "syncope/_event_daterange.html" with no_date_text="No date" %}</span>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endif %}

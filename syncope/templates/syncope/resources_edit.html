@@ -1,0 +1,117 @@
+{% extends "syncope/base.html" %}
+{% load static %}
+{% block title %}{% if profile %}{{ user.username }}{% else %}{% firstof owner.title owner.name owner.event_type owner %}{% endif %} - Syncope{% endblock %}
+{% block content %}
+
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="{% if profile %}Username{% elif owner.title or owner.name %}Title{% elif owner.event_type %}Type{% else %}Name{% endif %}">{% if profile %}{{ user.username }}{% else %}{% firstof owner.title owner.name owner.event_type owner %}{% endif %}</span>
+            <small><span title="Page"> | Resources</span></small>
+        </span>
+    </h1>
+</div>
+
+
+<form method="post" id="resources-form">
+    {% csrf_token %}
+    <input type="hidden" name="order" id="resources-order">
+
+    {% include "syncope/_resource_table.html" with rows=own_rows related_rows=related_rows related_column_label=related_column_label editable=True table_id="resources" %}
+
+    <div id="add-resource" class="narrow">
+        <h3>Add resource</h3>
+        <div class="form-group">
+            <label for="new-resource-url">URL</label>
+            <input type="url" id="new-resource-url">
+        </div>
+        <div class="form-group">
+            <label for="new-resource-description">Description</label>
+            <input type="text" id="new-resource-description">
+        </div>
+        {% if setlist_options %}
+        <div class="form-group">
+            <label for="new-resource-setlist">{{ related_column_label }}</label>
+            <select id="new-resource-setlist">
+                <option value="">Not tied to a {{ related_column_label|lower }}</option>
+                {% for opt in setlist_options %}
+                <option value="{{ opt.pk }}"{% if opt.started_at %} data-dt="{{ opt.started_at|date:"c" }}" data-dt-fmt="date-year" data-dt-prefix="Specific to: {{ opt.label }} - "{% endif %}>Specific to: {{ opt.label }}{% if opt.started_at %} - {{ opt.started_at|date:"d M, Y" }}{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        <p><button type="button" id="add-resource-btn" class="btn btn-primary">+ Add</button></p>
+    </div>
+</form>
+
+{% include "syncope/_save_bar.html" with form_id="resources-form" url=owner_detail_url %}
+
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/staged-list.js' %}"></script>
+<script>
+    const resourcesForm = document.getElementById('resources-form');
+    const ownRowsBody = document.getElementById('resources-own-rows');
+    const orderInput = document.getElementById('resources-order');
+    let reordered = false;
+
+    const saveBarCtl = initStagedList({
+        formId: 'resources-form',
+        tbodyId: 'resources-own-rows',
+        rootId: 'resources',
+        extraCount: () => (reordered ? 1 : 0),
+        onDiscardExtra: () => window.location.reload(),
+    });
+
+    initDragReorder(ownRowsBody, { onDrop: () => { reordered = true; saveBarCtl.sync(); } });
+
+    const newUrlInput = document.getElementById('new-resource-url');
+    const newDescInput = document.getElementById('new-resource-description');
+    const relatedColumnLabel = {{ related_column_label|yesno:"true,false" }};
+
+    const newSetlistSelect = document.getElementById('new-resource-setlist');
+
+    document.getElementById('add-resource-btn').addEventListener('click', function() {
+        const url = newUrlInput.value.trim();
+        if (!url) {
+            newUrlInput.setCustomValidity('Enter the resource URL');
+            newUrlInput.reportValidity();
+            newUrlInput.setCustomValidity('');
+            return;
+        }
+        const desc = newDescInput.value.trim();
+        const setlistId = newSetlistSelect ? newSetlistSelect.value : '';
+        const setlistLabel = newSetlistSelect && setlistId ? newSetlistSelect.selectedOptions[0].textContent : '-';
+        const tr = document.createElement('tr');
+        tr.className = 'staged-add';
+        tr.innerHTML = `
+            <td class="col-lead"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span><span class="col-num"></span></td>
+            <td class="col-main">${escapeHtml(url)}<input type="hidden" name="new_url" value="${escapeHtml(url)}"></td>
+            <td class="col-main">${escapeHtml(desc)}<input type="hidden" name="new_description" value="${escapeHtml(desc)}"></td>
+            ${relatedColumnLabel ? `<td>${escapeHtml(setlistLabel)}<input type="hidden" name="new_setlist_id" value="${escapeHtml(setlistId)}"></td>` : ''}
+            <td class="col-action"><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>
+        `;
+        ownRowsBody.appendChild(tr);
+        newUrlInput.value = '';
+        newDescInput.value = '';
+        if (newSetlistSelect) newSetlistSelect.value = '';
+        saveBarCtl.sync();
+    });
+
+    resourcesForm.addEventListener('submit', function() {
+        const tokens = [];
+        let newIdx = 0;
+        ownRowsBody.querySelectorAll('tr').forEach(function(row) {
+            if (row.classList.contains('pending-remove')) return;
+            if (row.dataset.id?.startsWith('es')) return;  // song/event-specific rows: removable only, not orderable
+            if (row.dataset.id) {
+                tokens.push('r' + row.dataset.id);
+            } else if (row.classList.contains('staged-add')) {
+                tokens.push('n' + newIdx);
+                newIdx++;
+            }
+        });
+        orderInput.value = tokens.join(',');
+    });
+</script>
+{% endblock %}

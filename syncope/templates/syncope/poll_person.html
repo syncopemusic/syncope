@@ -1,86 +1,89 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 
-{% block title %}{{ poll.title }} - Persons{% endblock %}
+{% block title %}{{ poll.title }} - Syncope{% endblock %}
 
 {% block content %}
-<h2>{{ poll.title }} — Persons</h2>
-<form method="post" style="display:inline;">
-    {% csrf_token %}
-    <input type="hidden" name="draft_key" value="{{ draft_key }}">
-    <button type="submit"
-            formaction="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:org_member_new' url_username %}&next={{ request.get_full_path|urlencode }}"
-            style="margin-top: 1rem; padding: 0.5rem 1rem;">+ Create New Person</button>
-</form>
-<p><small>Search for persons to limit the dropdown menu; select from the dropdown and press "Add".</small></p>
-<form method="get">
-    <input type="text" name="q" value="{{ q }}" placeholder="Search by name, role, skill, voice, instrument">
-    <button type="submit">Search</button>
-    {% if q %}<a href="?" class="btn-primary" style="text-decoration: none; color: inherit;">Clear</a>{% endif %}
-</form>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ poll.title }}</span>
+            <small><span title="Page"> | Persons</span></small>
+        </span>
+    </h1>
+</div>
 
-<form method="post">
+<form method="post" id="persons-form">
     {% csrf_token %}
-    {{ form.poll }}
-    <div class="form-group">
-        {{ form.person }}
-        {% if form.person.errors %}<span class="error">{{ form.person.errors }}</span>{% endif %}
+    <div class="table-container">
+        <table class="table table-grouped">
+            <thead>
+                <tr>
+                    <th class="col-num"></th>
+                    <th class="col-main">Name</th>
+                    <th class="col-action"></th>
+                </tr>
+            </thead>
+            <tbody id="persons-tbody">
+                {% for group in grouped_poll_persons %}
+                {% for pp in group.items %}
+                <tr data-id="{{ pp.pk }}" data-person-id="{{ pp.person_id }}" {% if forloop.first and not forloop.parentloop.first %}class="group-start"{% endif %}>
+                    <td class="col-num">{{ pp.index }}</td>
+                    <td class="col-main">
+                        <div class="song-title">{{ pp.person.first_name }} {{ pp.person.last_name }}</div>
+                        <div class="song-subline">
+                            {% with voice=pp.person.singer_set.first instrument=pp.person.instrumentalist_set.first %}
+                                {% if voice %}{{ voice.voice.name }}
+                                {% elif instrument %}{{ instrument.instrument.name }}
+                                {% else %}<small>No voice/instrument</small>{% endif %}
+                            {% endwith %}
+                        </div>
+                    </td>
+                    <td class="col-action">
+                        {% if is_admin %}<button type="button" class="btn btn-danger btn-remove" title="Remove from poll">×</button>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% endfor %}
+                <tr class="empty-row"><td colspan="3">No persons added yet.</td></tr>
+            </tbody>
+        </table>
     </div>
-    <button type="submit" style="margin-top: 1rem; padding: 0.5rem 1rem;">Add</button>
+
+    {% if is_admin %}
+    <div id="add-participants" class="narrow">
+        <h3>Add participant</h3>
+        <p class="search-form">
+            <span class="search-field search-field-wide">
+                <input type="text" id="participant-search-input" placeholder="Search by name, role, skill, voice, instrument">
+                <span class="search-spinner" id="participant-search-spinner"></span>
+            </span>
+            <button type="button" id="participant-search-clear" class="btn btn-secondary">Clear</button>
+        </p>
+        <p>
+            <span id="participant-search-count" class="result-count"></span>
+        </p>
+        <div id="participant-search-results"></div>
+    </div>
+    {% endif %}
 </form>
 
-<p><small>Bulk importing option:</small></p>
-<form method="post" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="bulk_import">
-    {{ bulk_import_form.role_criteria }}
-    {{ bulk_import_form.skill_criteria }}
-    <button type="submit" style="margin-top: 1rem; padding: 0.5rem 1rem;">Auto Import</button>
-</form>
-<a href="{% url 'syncope:poll_detail' url_username poll.pk %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a>
+{% url 'syncope:poll_detail' url_username poll.pk as return_target %}
+{% include "syncope/_save_bar.html" with form_id="persons-form" url=return_target %}
+{% endblock %}
 
-<h3>Added Persons ({{ poll_persons|length }})</h3>
-{% if poll_persons %}
-<div style="max-width: 750px; overflow-x: auto;">
-    <table style="border-collapse: collapse; width: 100%;">
-        <thead>
-            <tr style="background-color: #f8f9fa;">
-                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; width: 50px;">#</th>
-                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Name</th>
-                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Attendance Link</th>
-                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 100px;">Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for group in grouped_poll_persons %}
-            {% for pp in group.items %}
-            <tr {% if forloop.first and not forloop.parentloop.first %}style="border-top: 3px solid #333;"{% endif %}>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{{ forloop.counter }}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">{{ pp.person.first_name }} {{ pp.person.last_name }}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">
-                    <a href="{% url 'syncope:poll_person_attendance' url_username poll.pk pp.pk %}" target="_blank">→ Link</a>
-                </td>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
-                    {% if is_admin %}
-                    <form method="post" action="{% url 'syncope:poll_person_remove' url_username poll.pk pp.pk %}" style="display:inline;" onclick="return confirm('Remove {{ pp.person.first_name }} {{ pp.person.last_name }}?')">
-                        {% csrf_token %}
-                        <button type="submit" class="btn-danger" style="padding: 4px 8px; font-size: 0.9rem;">Remove</button>
-                    </form>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% else %}
-<p>No persons added yet.</p>
-{% endif %}
-<div>
-    <p>Admin links:
-        <a href="{% url 'syncope:poll_update' url_username poll.pk %}">Edit title</a> |
-        <a href="{% url 'syncope:poll_events' url_username poll.pk %}">Add event slots</a> |
-        <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Back to poll - votes</a>
-    </p>
-</div>
+{% block extra_js %}
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/staged-list.js' %}"></script>
+<script>
+    initStagedList({
+        formId: 'persons-form',
+        tbodyId: 'persons-tbody',
+        addField: 'add_person',
+        prefix: 'participant',
+        excludeKey: 'personId',
+        searchUrl: "{% url 'syncope:poll_persons_search' url_username poll.pk %}",
+    });
+</script>
 {% endblock %}

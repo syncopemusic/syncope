@@ -1,24 +1,29 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 
-{% block title %}{% if form.instance.pk %}Edit{% else %}New{% endif %} title{% endblock %}
+{% block title %}{% if form.instance.pk %}{{ form.instance.title }} - Syncope{% else %}New title{% endif %}{% endblock %}
 
 {% block content %}
-<h2>{% if form.instance.pk %}Edit{% else %}New{% endif %} Poll title</h2>
+{% if form.instance.pk %}
+<div class="section-header section-header-edit">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ form.instance.title }}</span>
+            <small><span title="Action"> | Edit</span></small>
+        </span>
+    </h1>
+    <a href="{% url 'syncope:poll_delete' url_username poll.pk %}" class="btn btn-danger btn-delete">Delete Poll</a>
+</div>
+{% else %}
+<h1>New Poll title</h1>
+{% endif %}
 
-<form method="post">
+<form method="post" id="poll-form">
     {% csrf_token %}
 
-    <div class="form-group">
-        <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
-        {{ form.title }}
-        {% if form.title.errors %}<span class="error">{{ form.title.errors }}</span>{% endif %}
-    </div>
+    {% include "syncope/_field.html" with field=form.title %}
 
-    <div class="form-group">
-        <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
-        {{ form.description }}
-        {% if form.description.errors %}<span class="error">{{ form.description.errors }}</span>{% endif %}
-    </div>
+    {% include "syncope/_field.html" with field=form.description %}
 
     {% if not form.instance.pk %}
     <div class="form-group">
@@ -27,13 +32,39 @@
     </div>
     {% endif %}
 
-    <button type="submit" style="margin-top: 1rem; padding: 0.5rem 1rem;">Save</button>
-
-</form>
-    {% if form.instance.pk %}
-
-    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a>
-    {% else %}
-    <a href="{% url 'syncope:poll_list' url_username %}"><button style="margin-top: 1rem; padding: 0.5rem 1rem;">Back</button></a>
+    {% if not form.instance.pk %}
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Create</button>
+    </div>
     {% endif %}
+</form>
+
+{% if form.instance.pk %}
+{% url 'syncope:poll_detail' url_username poll.pk as return_target %}
+{% else %}
+{% url 'syncope:poll_list' url_username as return_target %}
+{% endif %}
+{% if form.instance.pk %}
+{% include "syncope/_save_bar.html" with form_id="poll-form" url=return_target %}
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>
+    const form = document.getElementById('poll-form');
+    const fieldTracker = trackFormFieldChanges(form);
+
+    const saveBarCtl = initSaveBar({
+        formId: 'poll-form',
+        countUnsavedChanges: fieldTracker.count,
+        onDiscard: () => {
+            form.reset();
+            fieldTracker.reset();
+        },
+    });
+
+    form.addEventListener('input', () => saveBarCtl.sync());
+    form.addEventListener('change', () => saveBarCtl.sync());
+    saveBarCtl.sync();
+</script>
+{% else %}
+{% include "syncope/_save_bar.html" with url=return_target %}
+{% endif %}
 {% endblock %}

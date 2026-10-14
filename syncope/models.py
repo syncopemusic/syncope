@@ -5,6 +5,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.contrib.auth.models import  AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.conf import settings
+from django.template.defaultfilters import date as date_filter
 
 
 class Role(models.Model):
@@ -218,6 +219,14 @@ class PersonQuerySet(models.QuerySet):
     def for_user_with_skill(self, user, skill_id):
         """Generic method - any skill any organization. Returns persons ordered by most recently created first."""
         return self.in_org_user(user).with_skill(skill_id).order_by('-created_at')
+
+    def matching_name(self, q):
+        """Match persons whose first/last name together contain every whitespace-separated
+        token in q, e.g. "John Doe" matches first_name="John", last_name="Doe"."""
+        persons = self
+        for token in q.split():
+            persons = persons.filter(Q(first_name__icontains=token) | Q(last_name__icontains=token))
+        return persons
 
     def active_performers(self, org_user, at_date):
         """Persons with an active MEMBER period at the given date.
@@ -500,6 +509,22 @@ class Song(models.Model):
             )
         ]
 
+    @property
+    def duration_display(self):
+        if not self.duration:
+            return ""
+        h, rem = divmod(self.duration, 3600)
+        m, s = divmod(rem, 60)
+        return f"{h}:{m:02}:{s:02}" if h else f"{m}:{s:02}"
+
+    @property
+    def duration_title(self):
+        if not self.duration:
+            return ""
+        h, rem = divmod(self.duration, 3600)
+        m, s = divmod(rem, 60)
+        return f"{h}h{m:02}min{s:02}s" if h else f"{m:02}min{s:02}s"
+
     def __str__(self):
         composer_name = self.composer.last_name if self.composer else '-'
         return f"{self.title} - {composer_name}"
@@ -564,7 +589,7 @@ class Event(models.Model):
         related_name="events"
     )
     internal_id = models.PositiveIntegerField("ID", blank=True, null=True)
-    name = models.CharField("name of the event", max_length=250)
+    name = models.CharField("name of the event", max_length=250, blank=True)
     location = models.TextField(blank=True, null=True)
     started_at = models.DateTimeField("start date hour", blank=True, null=True)
     ended_at = models.DateTimeField("end date hour", blank=True, null=True)
@@ -589,6 +614,9 @@ class Event(models.Model):
         blank=True,
         related_name='events'
     )
+
+    def __str__(self):
+        return f"{self.name} ({self.event_type})" if self.name else str(self.event_type)
 
     @property
     def same_date(self):
@@ -728,6 +756,9 @@ class PollEvent(models.Model):
     details = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.event_type} ({date_filter(self.started_at, 'd M, Y')})"
 
     @property
     def same_date(self):

@@ -1,405 +1,1823 @@
+/* Tokens & fonts: edit :root to restyle (docs/FRONTEND_GUIDE.md); both stay unlayered. */
+/* latin-ext */
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/eb-garamond-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/eb-garamond-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url("fonts/inter-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url("fonts/inter-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* Theme seeds: bg, surface, text, primary, danger, ink, fonts, attendance-0..4. Rules use tokens, never raw values. */
+:root {
+    /* Color */
+    --color-bg: #f4f1ea;
+    --color-bg-subtle: #ebe6d9;
+    --color-surface: #ffffff;
+    --color-border: #e5dfd6;
+    --color-border-subtle: #efe9dd;
+    --color-text: #2c2a28;
+    --color-text-muted: #5c574f;
+    --color-text-on-accent: #ffffff;
 
-* {
-    box-sizing: border-box;
+    --color-primary: #8b6f47;
+    --color-primary-hover: #a8895e;
+    --color-danger: #c0392b;
+
+    /* Outline focus idiom for links, buttons and cells; text fields use the box-shadow idiom instead. */
+    --focus-ring: 2px solid var(--color-primary);
+    --focus-ring-offset: 2px;
+
+    /* Dark chrome (sidebar, table headers); not --color-text so text is never a background. */
+    --color-ink: #3e3a34;
+    --ink-fg: color-mix(in srgb, var(--color-text-on-accent) 85%, transparent);
+    --ink-fg-muted: color-mix(in srgb, var(--color-text-on-accent) 70%, transparent);
+    --ink-fg-faint: color-mix(in srgb, var(--color-text-on-accent) 50%, transparent);
+    --ink-line: color-mix(in srgb, var(--color-text-on-accent) 10%, transparent);
+    --ink-active: color-mix(in srgb, var(--color-text-on-accent) 20%, transparent);
+
+    --color-success-bg: #e8f5e9;
+    --color-success-border: #c8e6c9;
+    --color-success-text: #2e7d32;
+    --color-error-bg: #fdecea;
+    --color-error-border: #f5c6cb;
+    --color-error-text: #721c24;
+    --color-warning-bg: #fff8e1;
+    --color-warning-border: #ffe082;
+    --color-warning-text: #5f4c0b;
+    --color-info-bg: #e3f2fd;
+    --color-info-border: #bbdefb;
+    --color-info-text: #0c5460;
+
+    /* Attendance colours by AttendanceType pk (0 TBD, 1 Present, 2 Work, 3 Illness, 4 Private); keep order. */
+    --color-attendance-0: #dfe6e9;
+    --color-attendance-1: #c8f7c5;
+    --color-attendance-2: #ffeaa7;
+    --color-attendance-3: #fab1a0;
+    --color-attendance-4: #a29bfe;
+
+    /* Typography */
+    --font-heading: "EB Garamond", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-size-2xs: 0.75rem;
+    --font-size-xs: 0.8rem;
+    --font-size-sm: 0.85rem;
+    --font-size-md: 0.9rem;
+    --font-size-lg: 1.1rem;
+    --font-size-xl: 1.5rem;
+    --tracking-caps: 0.04em;
+
+    /* Spacing */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+
+    /* Shape / motion */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 999px;
+    --shadow-sm: 0 1px 3px color-mix(in srgb, var(--color-text) 8%, transparent);
+    --shadow-md: 0 2px 8px color-mix(in srgb, var(--color-text) 10%, transparent);
+    --transition-fast: 0.2s ease;
+    --sidebar-width: 250px;
+    --field-max: 480px;
+    --content-narrow: 42rem;
+    --content-max: 1200px;
+    --tap-target: 44px;
+    --state-fade: 0.55;
+    --save-bar-clearance: 4rem;
+
+    /* Stacking */
+    --mobile-topbar-height: 3rem;
+    --z-sticky: 1;
+    --z-mobile-topbar: 1001;
+    --z-mobile-drawer: 1000;
+
+    /* Attendance grid cell size: event-column floor and chip size. */
+    --table-matrix-size: 38px;
 }
 
-body {
-    margin: 0;
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --transition-fast: 0s;
+    }
 }
 
-.grid-container {
-    display: grid;
-    grid-template-columns: 250px 1fr;
-    grid-template-areas: "sidebar main";
-    min-height: 100vh;
-    transition: grid-template-columns 0.2s ease;
+@layer reset, base, layout, components, state, utilities;
 
+@layer reset {
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+    }
+
+    /* The hidden attribute always wins over component display rules. */
+    [hidden] {
+        display: none !important;
+    }
 }
 
-.sidebar {
-    grid-area: sidebar;
-    background-color: gray;
-    color: white;
-    padding: 1rem;
-    overflow-y: auto;
-    transition: transform 0.2s ease;
+@layer base {
+    body {
+        font-family: var(--font-body);
+        color: var(--color-text);
+        background-color: var(--color-bg);
+        background-image: radial-gradient(color-mix(in srgb, var(--color-text) 5%, transparent) 1px, transparent 1px);
+        background-size: 6px 6px;
+    }
+
+    h1, h2, h3, h4, h5, h6, .table-detail th {
+        font-family: var(--font-heading);
+        font-weight: 400; /* Garamond ships one weight; anything bolder is browser-faked. */
+    }
+
+    /* Text belongs to the heading above it: tight gap, not the browser's 1em + 1em. */
+    h2, h3, h4, .table-detail th {
+        margin-block-end: var(--space-1);
+
+        /* First in its block: sits as close under the page title as a detail table. */
+        &:first-child { margin-block-start: 0; }
+    }
+
+    :is(h1, h2, h3, h4) + p {
+        margin-block-start: 0;
+    }
+
+    strong {
+        font-weight: 500;
+    }
+
+    button, input, select, textarea {
+        font-family: inherit;
+    }
+
+    a {
+        color: var(--color-primary);
+        text-decoration: none;
+        transition: color var(--transition-fast);
+    }
+
+    a:hover {
+        color: var(--color-primary-hover);
+        text-decoration: underline;
+    }
+
+    /* Two focus idioms, don't merge: outline on :focus-visible, box-shadow on text-field :focus. */
+    :where(a, button, input, select, textarea, summary, [tabindex], .btn, .table-cell-attendance):focus-visible {
+        outline: var(--focus-ring);
+        outline-offset: var(--focus-ring-offset);
+    }
 }
 
-.main {
-    min-width: 0;
-    grid-area: main;
-}
-
-.menu-links,
-.menu-links ul,
-.org-list,
-.org-submenu {
-    list-style: none;
-}
-
-.menu-links {
-    padding-left: 0;
-}
-
-.menu-links li {
-    margin-bottom: 0.5rem;
-}
-
-.menu-links a {
-    color: white;
-    text-decoration: none;
-    padding: 0.5rem;
-    border-radius: 4px;
-}
-
-.menu-links a.active,
-.org-submenu a.active {
-    font-weight: bold;
-    background-color: rgba(255, 255, 255, 0.2);
-}
-
-.org-list {
-    padding-left: 0.5rem;
-}
-
-.org-submenu {
-    padding-left: 1rem;
-}
-
-.main-content {
-    padding: 2rem;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    min-width: 0;
-}
-
-
-
-.content {
-    flex: 1;
-}
-
-.table-container {
-    overflow-x: auto;
-}
-
-.sticky-col {
-    position: sticky;
-    left: 0;
-    background-color: #f8f9fa;
-    z-index: 1;
-    max-width: 140px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* Attendance status colors, keyed by the real AttendanceType pk (0=TBD, 1=Present,
-   2=Work/School, 3=Illness, 4=Private/Vacation). Shared by the per-event attendance
-   subpage's status chips. */
-.att-type-0 { background-color: #dfe6e9; }
-.att-type-1 { background-color: #c8f7c5; }
-.att-type-2 { background-color: #ffeaa7; }
-.att-type-3 { background-color: #fab1a0; }
-.att-type-4 { background-color: #a29bfe; }
-
-.col-num {
-    text-align: right;
-}
-
-.btn-full {
-    display: inline;
-}
-
-.btn-short {
-    display: none;
-}
-
-.mobile-toggle {
-    display: none;
-    border: none;
-    width: fit-content;
-}
-
-.mobile-topbar {
-    display: none;
-}
-.mobile-topbar:has(.breadcrumbs) {
-    display: block;
-    padding: 0.75rem 2rem 0;
-}
-.mobile-topbar .breadcrumbs {
-    margin: 0;
-}
-
-.save-bar {
-    position: sticky;
-    bottom: 0;
-    background-color: #f5f5f5;
-    border-top: 1px solid #ccc;
-    padding: 0.75rem 1rem;
-    margin-top: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.save-bar.dirty {
-    background-color: #fff3cd;
-    border-top-color: #ffc107;
-}
-
-.save-bar .dirty-note {
-    font-size: 0.85rem;
-    color: #856404;
-}
-
-
-@media (max-width: 768px) {
+@layer layout {
     .grid-container {
+        display: grid;
+        grid-template-columns: var(--sidebar-width) 1fr;
+        grid-template-areas: "sidebar main";
+        min-height: 100dvh;
+        transition: grid-template-columns var(--transition-fast);
+    }
+
+    .sidebar {
+        grid-area: sidebar;
+        background-color: var(--color-ink);
+        color: var(--ink-fg);
+        padding: 0;
+        overflow-y: auto;
+        transition: transform var(--transition-fast);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .sidebar-header {
+        display: block;
+        padding: var(--space-5) var(--space-4) var(--space-4);
+        text-align: center;
+        border-block-end: 1px solid var(--ink-line);
+        margin-block-end: var(--space-3);
+        text-decoration: none;
+    }
+
+    .sidebar-logo {
+        inline-size: 48px;
+        block-size: auto;
+    }
+
+    .sidebar-brand {
+        font-family: var(--font-heading);
+        font-size: var(--font-size-xl);
+        color: var(--color-text-on-accent);
+        margin: var(--space-1) 0 0;
+    }
+
+    .main {
+        min-width: 0;
+        grid-area: main;
+    }
+
+    .menu-links,
+    .menu-links ul,
+    .org-list,
+    .org-submenu {
+        list-style: none;
+    }
+
+    .menu-links {
+        padding-inline: var(--space-3);
+        flex: 1;
+    }
+
+    .menu-links li {
+        margin-block-end: var(--space-1);
+    }
+
+    .menu-links a {
+        color: var(--ink-fg);
+        text-decoration: none;
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-sm);
+        display: block;
+        transition: background-color var(--transition-fast), color var(--transition-fast);
+    }
+
+    .menu-links a:hover {
+        background-color: var(--ink-line);
+        color: var(--color-text-on-accent);
+    }
+
+    .menu-links a.active,
+    .org-submenu a.active,
+    .org-item.active > a {
+        font-weight: 500;
+        background-color: var(--ink-active);
+        color: var(--color-text-on-accent);
+    }
+
+    /* Pill from .badge; colour and size overridden for the dark sidebar. */
+    .nav-badge {
+        background-color: var(--color-primary);
+        color: var(--color-text-on-accent);
+        font-size: var(--font-size-2xs);
+        font-weight: 500;
+        padding: 1px 6px;
+        margin-inline-start: var(--space-1);
+    }
+
+    .section-label {
+        margin: 0;
+        padding: var(--space-3) var(--space-3) var(--space-1);
+        font-size: var(--font-size-2xs);
+        font-weight: 500;
+        color: var(--ink-fg-faint);
+    }
+
+    .org-list {
+        padding-inline-start: 0;
+    }
+
+    .org-item {
+        margin-block-end: var(--space-1);
+    }
+
+    .org-submenu {
+        padding-inline-start: var(--space-4);
+        margin-block-start: 2px;
+    }
+
+    .org-submenu a {
+        font-size: var(--font-size-sm);
+        padding: 0.35rem var(--space-3);
+        color: var(--ink-fg-muted);
+    }
+
+    .org-empty {
+        padding: var(--space-2) var(--space-3);
+        color: var(--ink-fg-faint);
+        font-size: var(--font-size-sm);
+    }
+
+    .sidebar-footer {
+        padding: var(--space-3) var(--space-4);
+        border-block-start: 1px solid var(--ink-line);
+        margin-block-start: auto;
+    }
+
+    .sidebar-footer form {
+        display: inline;
+    }
+
+    .main-content {
+        padding: var(--space-6);
+        /* No overflow: any value here would capture the tables' sticky thead. */
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        min-width: 0;
+    }
+
+    /* Zero the first h1's top margin so headings align whether or not they sit in .section-header. */
+    .main-content h1:first-of-type {
+        margin-block-start: 0;
+    }
+
+    .content {
+        flex: 1;
+    }
+
+    .footer {
+        padding: var(--space-5) 2.5rem;
+        font-size: var(--font-size-sm);
+        color: var(--color-text-muted);
+    }
+
+    .footer::before {
+        content: "";
+        display: block;
+        inline-size: 60px;
+        block-size: 1.5px;
+        background: var(--color-primary);
+        margin-block-end: var(--space-4);
+    }
+
+    .footer-info {
+        max-inline-size: var(--content-max);
+    }
+
+    @media (max-width: 768px) {
+        .grid-container {
+            grid-template-columns: 1fr;
+            grid-template-areas: "main";
+        }
+
+        .main-content h1:first-of-type {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: var(--font-size-xl);
+            margin: var(--space-2) 0;
+        }
+
+        .main-content {
+            padding: var(--space-4);
+        }
+
+        .footer {
+            padding: var(--space-4);
+        }
+
+    }
+
+    /* Anonymous pages: no sidebar; .auth also centers. */
+    .grid-container.no-sidebar {
         grid-template-columns: 1fr;
         grid-template-areas: "main";
     }
 
-    .mobile-topbar {
+    .auth .main-content {
+        margin: auto;
+        width: min(100%, 24rem);
+        justify-content: center;
+    }
+
+    .auth-switch {
+        text-align: center;
+        padding-block-start: 40px; /* one extra button height between the submit and switch buttons */
+    }
+
+    .pw-field {
+        position: relative;
+        display: block;
+        max-inline-size: var(--field-max);
+    }
+    .pw-field > input {
+        inline-size: 100%;
+        padding-inline-end: 2.5rem;
+    }
+    .pw-eye {
+        position: absolute;
+        inset-block: 0;
+        inset-inline-end: 0;
+        padding-inline: var(--space-3);
+        border: 0;
+        background: none;
+        cursor: pointer;
+        opacity: 0.5;
+    }
+    .pw-eye[aria-pressed="true"] {
+        opacity: 1;
+    }
+
+    /* Password strength bar: red to blue; width and label carry the level too. */
+    .pw-meter {
+        max-inline-size: var(--field-max);
+        block-size: 8px;
+        border-radius: 4px;
+        background: var(--color-border);
+        overflow: hidden;
+    }
+    .pw-meter > span {
+        display: block;
+        block-size: 100%;
+        transition: width var(--transition-fast), background-color var(--transition-fast);
+    }
+}
+
+@layer components {
+    .save-bar {
+        position: sticky;
+        bottom: 0;
+        background-color: var(--color-bg-subtle);
+        border-block-start: 1px solid var(--color-border);
+        padding: var(--space-3) var(--space-4);
+        margin-block-start: var(--space-4);
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        position: sticky;
-        top: 0;
-        z-index: 1001;
-        padding: 0.5rem 1rem;
-        background-color: #fff;
-        border-bottom: 1px solid #eee;
+        gap: var(--space-4);
     }
 
-    .mobile-topbar .breadcrumbs {
-        flex: 1;
-        min-width: 0;
+    .save-bar.dirty {
+        background-color: var(--color-warning-bg);
+        border-block-start-color: var(--color-warning-border);
+    }
+
+    .save-bar .dirty-note {
+        font-size: var(--font-size-sm);
+        color: var(--color-warning-text);
+    }
+
+    /* Pages with nothing to return to: the bar only appears once there are changes to save. */
+    .save-bar-dirty-only:not(.dirty) {
+        display: none;
+    }
+
+    /* IDs are hooks for save-bar.js. */
+    .save-bar-dirty {
+        display: contents;
+    }
+
+    @media (max-width: 768px) {
+        .save-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            z-index: var(--z-sticky);
+        }
+
+        .save-bar-discard {
+            margin-inline-start: auto;
+        }
+
+        /* Keep the footer (last, so content too) clear of the fixed save bar. */
+        .main:has(.save-bar:is(:not(.save-bar-dirty-only), .dirty)) .footer {
+            padding-block-end: calc(var(--space-4) + var(--save-bar-clearance));
+        }
+    }
+
+    @media (min-width: 769px) {
+        .save-bar {
+            margin-block-start: var(--space-6);
+        }
+    }
+
+    .messages {
+        margin-block-end: var(--space-4);
+    }
+
+    .alert {
+        padding: var(--space-3) var(--space-4);
+        margin-block-end: var(--space-2);
+        border: 1px solid;
+        border-radius: var(--radius-sm);
+    }
+
+    .alert-success {
+        background-color: var(--color-success-bg);
+        border-color: var(--color-success-border);
+        color: var(--color-success-text);
+    }
+
+    .alert-error {
+        background-color: var(--color-error-bg);
+        border-color: var(--color-error-border);
+        color: var(--color-error-text);
+    }
+
+    .alert-warning {
+        background-color: var(--color-warning-bg);
+        border-color: var(--color-warning-border);
+        color: var(--color-warning-text);
+    }
+
+    .alert-info {
+        background-color: var(--color-info-bg);
+        border-color: var(--color-info-border);
+        color: var(--color-info-text);
+    }
+
+    .breadcrumbs {
+        margin-block-end: var(--space-4);
+        font-size: var(--font-size-sm);
+        color: var(--color-text-muted);
+    }
+
+    .breadcrumbs ol {
+        display: flex;
+        flex-wrap: wrap;
+        list-style: none;
         margin: 0;
-        font-size: 0.78rem;
-        overflow-x: auto;
-        scrollbar-width: none;
-    }
-
-    .mobile-topbar .breadcrumbs::-webkit-scrollbar {
-        display: none;
-    }
-
-    .mobile-topbar .breadcrumbs ol {
-        flex-wrap: nowrap;
-        width: max-content;
-    }
-
-    .main-content h2:first-of-type {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-size: 1.15rem;
-        margin: 0.5rem 0;
-    }
-
-    input[type="date"],
-    input[type="number"],
-    input[type="text"],
-    input[type="email"],
-    input[type="password"],
-    button[type="submit"],
-    .btn-primary,
-    .btn-danger {
-        min-height: 44px;
-    }
-
-    .save-bar {
-        position: fixed;
-        left: 0;
-        right: 0;
-        z-index: 1000;
-    }
-
-    #discard-btn {
-        margin-left: auto;
-    }
-
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        width: 250px;
-        transform: translateX(-100%);
-        z-index: 1000;
-        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-    }
-
-    .grid-container.menu-visible .sidebar {
-        transform: translateX(0);
-    }
-
-    .mobile-toggle {
-        display: block;
-        background: none;
         padding: 0;
-        font-size: 1.5rem;
-        cursor: pointer;
-        color: gray;
     }
 
-    .mobile-toggle.is-open {
-        color: white;
+    .breadcrumbs li {
+        display: flex;
+        align-items: center;
     }
 
-    .btn-full {
+    .breadcrumbs li + li::before {
+        content: "›";
+        margin: 0 var(--space-2);
+        color: var(--color-border);
+    }
+
+    .breadcrumbs a {
+        color: var(--color-text-muted);
+        text-decoration: none;
+    }
+
+    .breadcrumbs a:hover {
+        text-decoration: underline;
+    }
+
+    .breadcrumbs [aria-current="page"] {
+        color: var(--color-text);
+        font-weight: 500;
+    }
+
+    /* --- Mobile topbar, burger and drawer --- one rule set for every page. The bar is fixed to the viewport, so page or table width never affects it. */
+    .mobile-toggle {
+        display: none;
+        border: none;
+        inline-size: fit-content;
+    }
+
+    .mobile-topbar {
         display: none;
     }
 
-    .btn-short {
+    @media (min-width: 769px) {
+        .mobile-topbar:has(.breadcrumbs) {
+            display: block;
+            padding: var(--space-3) var(--space-6) 0;
+        }
+
+        /* Breadcrumbs already sit above: halve the gap before the page header. */
+        .main:has(.mobile-topbar .breadcrumbs) .main-content {
+            padding-block-start: var(--space-3);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .main {
+            padding-block-start: var(--mobile-topbar-height);
+        }
+
+        .mobile-topbar {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            position: fixed;
+            inset: 0 0 auto;
+            block-size: var(--mobile-topbar-height);
+            z-index: var(--z-mobile-topbar);
+            padding-inline: var(--space-4);
+            background-color: var(--color-surface);
+            border-block-end: 1px solid var(--color-border-subtle);
+        }
+
+        .mobile-topbar .breadcrumbs {
+            flex: 1;
+            min-width: 0;
+            margin: 0;
+        }
+
+        /* One line, so the bar is always exactly its token height. */
+        .mobile-topbar .breadcrumbs ol {
+            flex-wrap: nowrap;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .mobile-toggle {
+            display: block;
+            background: none;
+            padding: 0;
+            font-size: var(--font-size-xl);
+            line-height: 1;
+            cursor: pointer;
+            color: var(--color-text-muted);
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100dvh;
+            width: var(--sidebar-width);
+            transform: translateX(-100%);
+            z-index: var(--z-mobile-drawer);
+            box-shadow: var(--shadow-md);
+        }
+
+        .grid-container.menu-visible .sidebar {
+            transform: translateX(0);
+        }
+
+        /* Drawer open: the bar steps aside and the X sits exactly where the burger was. */
+        .grid-container.menu-visible .mobile-topbar {
+            background-color: transparent;
+            border-block-end-color: transparent;
+            pointer-events: none;
+        }
+
+        .grid-container.menu-visible .mobile-topbar .breadcrumbs {
+            visibility: hidden;
+        }
+
+        .grid-container.menu-visible .mobile-toggle {
+            position: fixed;
+            top: 0;
+            left: var(--space-4);
+            display: flex;
+            align-items: center;
+            block-size: var(--mobile-topbar-height);
+            z-index: calc(var(--z-mobile-drawer) + 1);
+            pointer-events: auto;
+            color: var(--color-text-on-accent);
+        }
+    }
+
+    /* --- Buttons --- */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-sm);
+        border: 1px solid transparent;
+        font-family: var(--font-body);
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 20px;
+        white-space: nowrap;
+        cursor: pointer;
+        text-decoration: none;
+        transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    .btn:hover {
+        text-decoration: none;
+    }
+
+    .btn:disabled,
+    .btn[disabled] {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-primary {
+        background-color: var(--color-primary);
+        color: var(--color-text-on-accent);
+    }
+
+    .btn-primary:hover {
+        background-color: var(--color-primary-hover);
+        color: var(--color-text-on-accent);
+    }
+
+    .btn-secondary {
+        background-color: var(--color-bg);
+        border-color: var(--color-border);
+        color: var(--color-text);
+    }
+
+    .btn-secondary:hover {
+        background-color: var(--color-bg-subtle);
+    }
+
+    /* .btn-secondary is for light surfaces; restyled for the dark sidebar. */
+    .sidebar .btn-secondary {
+        background-color: var(--color-ink);
+        border-color: var(--ink-active);
+        color: var(--ink-fg-muted);
+    }
+
+    .sidebar .btn-secondary:hover {
+        background-color: var(--ink-line);
+        color: var(--color-text-on-accent);
+    }
+
+    /* Transparent button for dark surfaces (e.g. the matrix thead). */
+    .btn-ghost {
+        background-color: transparent;
+        border-color: var(--color-text-on-accent);
+        color: var(--color-text-on-accent);
+    }
+
+    .btn-ghost:hover {
+        background-color: var(--ink-line);
+    }
+
+    .btn-danger {
+        background-color: var(--color-bg);
+        border-color: var(--color-danger);
+        color: var(--color-danger);
+    }
+
+    .btn-danger:hover {
+        background-color: var(--color-danger);
+        color: var(--color-text-on-accent);
+    }
+
+    /* Page-level destructive action below a primary action (Delete, Unlink); sets the gap. */
+    .danger-zone {
+        margin-block-start: calc(var(--space-6) * 2);
+    }
+
+    .btn-link {
+        background: none;
+        color: var(--color-primary);
+    }
+
+    .btn-link:hover {
+        color: var(--color-primary-hover);
+        text-decoration: underline;
+    }
+
+    .btn-block {
+        inline-size: 100%;
+        justify-content: center;
+    }
+
+    /* Used with .btn-danger: wide screens swap the x / undo glyph for a word (JS keeps writing the glyph). */
+    @media (min-width: 769px) {
+        .btn-remove { font-size: 0; }
+        .btn-remove::after { content: "Remove"; font-size: 14px; }
+        .pending-remove .btn-remove::after { content: "Undo"; }
+    }
+
+    /* Group of secondary actions (e.g. "Edit title | Edit people"); not a form submit/cancel pair. */
+    .link-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        flex-wrap: wrap;
+    }
+
+    .link-row-end {
+        justify-content: flex-end;
+    }
+
+    /* Gap between a button row and the table below it. */
+    .link-row-spaced {
+        margin-block-end: var(--space-3);
+    }
+
+    /* Vertical rhythm for a column of blocks. */
+    .stack {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+    /* Feedback text next to #share-btn (Copying/Copied/Failed). */
+    .share-result {
+        margin-inline-start: var(--space-1);
+        font-size: var(--font-size-sm);
+        color: var(--color-text-muted);
+    }
+
+    /* Form submit/cancel row: cancel first in the DOM (left), primary right; capped at --field-max. */
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: var(--space-3);
+        margin-block-start: var(--space-4);
+        max-inline-size: var(--field-max);
+    }
+
+    @media (max-width: 768px) {
+        .form-actions {
+            justify-content: space-between;
+            max-inline-size: none;
+        }
+    }
+
+    /* --- Forms --- */
+    .form-group {
+        margin-block-end: var(--space-4);
+    }
+
+    .form-group > label,
+    form p > label {
+        display: block;
+        margin-block-end: var(--space-1);
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+        color: var(--color-text-muted);
+    }
+
+    .error {
+        color: var(--color-danger);
+        font-size: var(--font-size-sm);
+    }
+    .field-error {
+        display: block;
+    }
+
+    .search-form {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin: var(--space-3) 0;
+        flex-wrap: wrap;
+    }
+
+    /* Compact controls (filters, table notes): thin border; size/padding set per component. */
+    :where(.filter-field input, .filter-field select, .filter-sub-select, .table-comment-input) {
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        font-size: var(--font-size-md);
+    }
+
+    /* One field recipe for every text-like control inside a form paragraph, .form-group or .search-field. */
+    :where(.form-group, form p, .search-field) :is(
+        input:is([type="text"], [type="email"], [type="password"], [type="url"], [type="number"], [type="date"], [type="datetime-local"], [type="time"], [type="tel"], [type="search"]),
+        select,
+        textarea
+    ) {
+        inline-size: 100%;
+        max-inline-size: var(--field-max);
+        padding: var(--space-2) var(--space-3);
+        border: 1.5px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        font-family: var(--font-body);
+        font-size: var(--font-size-md);
+        color: var(--color-text);
+        background-color: var(--color-surface);
+        transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    :where(.form-group, form p, .search-field) :is(input, select, textarea):focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+    }
+
+    /* Every field form (direct <p> / .form-group children) shares the narrow content width; table forms and auth pages keep their own. */
+    .grid-container:not(.auth) form:has(> :is(p, .form-group)):not(.filter-form, .inline-form) {
+        max-inline-size: var(--content-narrow);
+    }
+    .grid-container:not(.auth) form:has(> :is(p, .form-group)):not(.filter-form, .inline-form) :is(input, select, textarea, .pw-field, .pw-meter),
+    :is(#resources-form, #add-quote, #add-date, .lyrics-columns) :is(input, select, textarea) {
+        max-inline-size: none;
+    }
+
+    /* Wrapper for a live-search input; positions the spinner and keeps the input full width. */
+    .search-field {
+        position: relative;
+        flex: 0 1 var(--field-max);
+        min-inline-size: 200px;
+    }
+
+    /* Top-of-page list search: fills the row instead of capping at --field-max. */
+    .search-field-wide { flex: 1 1 auto; }
+    .search-field-wide input { max-inline-size: none; }
+
+    .link-row > .search-field {
+        margin: 0;
+    }
+
+    /* Page header to search box: 8px + 4px = the same 12px gap on every list page (flex parent, margins add). */
+    .section-header + .search-form {
+        margin-block-start: var(--space-1);
+    }
+
+    .form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .form-help,
+    :where(.form-group, form p) .helptext {
+        margin: var(--space-1) 0 0;
+        font-size: var(--font-size-xs);
+        color: var(--color-text);
+    }
+
+    :where(.form-group, form p) ul.errorlist {
+        list-style: none;
+        margin: var(--space-1) 0 0;
+        padding: 0;
+    }
+
+    :where(.form-group, form p) ul.errorlist li,
+    .pw-bad {
+        color: var(--color-danger);
+    }
+    :where(.form-group, form p) ul.errorlist li,
+    .pw-bad,
+    #pw-label,
+    #pw-match {
+        font-size: var(--font-size-sm);
+    }
+
+    /* Mobile: these long-text fields collapse to one line and grow with content (needs field-sizing). */
+    @media (max-width: 768px) {
+        textarea:is([name="location"], [name="description"], [name="details"], [name="producers"], [name="additional_notes"]) {
+            field-sizing: content;
+            max-block-size: 8lh;
+            overflow-y: auto;
+        }
+    }
+
+    /* --- Cards --- */
+    .card {
+        padding: var(--space-5);
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(var(--card-min, 220px), 1fr));
+        gap: var(--space-4);
+        margin-block-end: var(--space-5);
+    }
+
+    .card-grid-wide {
+        --card-min: 260px;
+    }
+
+    .card-title {
+        margin: 0 0 var(--space-2);
+        font-size: var(--font-size-md);
+    }
+
+    .card-strong .card-title {
+        font-weight: 500;
+    }
+
+    /* Label/value row inside a card. */
+    .card-field {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-2);
+        padding-block: var(--space-1);
+        border-block-end: 1px solid var(--color-border-subtle);
+    }
+
+    .card-field:last-child {
+        border-block-end: none;
+    }
+
+    .card-field .table-comment-input {
+        flex: 1;
+    }
+
+    .card-label {
+        color: var(--color-text-muted);
+        font-size: var(--font-size-sm);
+        flex-shrink: 0;
+    }
+
+    .card-value {
+        text-align: end;
+    }
+
+    /* Lyrics edit page: lyrics + translations side by side on desktop, stacked on mobile. */
+    .lyrics-columns {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, var(--content-narrow)));
+        gap: var(--space-5);
+        align-items: start;
+    }
+
+    @media (max-width: 768px) {
+        .lyrics-columns {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .translation-panel {
+        margin-block-end: var(--space-4);
+    }
+
+    .translation-panel .translation-remove {
+        margin-inline: auto var(--space-2);
+    }
+
+    .translation-panel:not([open]) .translation-remove {
+        display: none;
+    }
+
+    /* Uppercase caption style shared by section labels, table headers and filter labels. */
+    :where(.section-label, .table thead th, .table tbody th.sticky-col, .filter-label, .filter-sub summary) {
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-caps);
+    }
+
+    /* --- Tables --- one .table component with modifiers; .table-matrix is the attendance grid variant. */
+    /* No rows: no header, no box. */
+    .table:not(:has(tbody tr)) thead,
+    .table-container:not(:has(tbody tr)) {
+        display: none;
+    }
+
+    .table {
+        width: 100%;
+        margin-block-end: var(--space-5);
+        border-collapse: separate;
+        border-spacing: 0;
+        background-color: var(--color-surface);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+        font-size: var(--font-size-sm);
+        /* clip, not hidden: hidden would make the table a scroll container and break sticky. */
+        overflow: clip;
+
+        /* Up to 4 columns: stay narrow. 5 or more: spread across the page. */
+        &:not(:has(thead th:nth-child(5))) {
+            max-inline-size: var(--content-narrow);
+        }
+
+        & thead th {
+            position: sticky;
+            inset-block-start: 0;
+            /* One above .sticky-col so scrolled rows never paint over the header. */
+            z-index: calc(var(--z-sticky) + 1);
+            padding: var(--space-2);
+            background-color: var(--color-ink);
+            color: var(--color-text-on-accent);
+            font-size: var(--font-size-2xs);
+            font-weight: 500;
+            text-align: start;
+        }
+
+        & tbody td,
+        & tbody th {
+            padding: 0 var(--space-2);
+            block-size: var(--table-matrix-size);
+            border-block-end: 1px solid var(--color-border-subtle);
+            vertical-align: middle;
+            text-align: inherit;
+        }
+
+        & tbody tr:last-child td,
+        & tbody tr:last-child th {
+            border-block-end: none;
+        }
+
+        /* Zebra stripe: --color-bg at 40%. */
+        & tbody tr:nth-child(even) {
+            --row-tint: var(--color-bg) 40%;
+            background-color: color-mix(in srgb, var(--color-bg) 40%, transparent);
+        }
+
+        & tbody tr:hover {
+            --row-tint: var(--color-primary) 8%;
+            background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
+        }
+
+        & a {
+            font-weight: 500;
+        }
+
+        /* Header links always inherit the header text colour. */
+        & thead th a {
+            color: inherit;
+            text-decoration: none;
+        }
+    }
+
+    /* Desktop: not a scroll box, the window scrolls and sticky thead pins to it (mobile turns it into one, below). */
+    .table-container:not(:has(thead th:nth-child(5))),
+    .table-container.table-narrow {
+        max-inline-size: var(--content-narrow);
+    }
+
+    @media (max-width: 768px) {
+        /* Every table: screen-wide (cancels .main-content's side padding) and scrolls both ways in its own box; header and first column pin to the box. */
+        .table-container {
+            margin-inline: calc(-1 * var(--space-4));
+            max-inline-size: none;
+            overflow: auto;
+            max-block-size: calc(100dvh - var(--mobile-topbar-height));
+            padding-block-end: var(--save-bar-clearance);
+        }
+
+        .table {
+            max-inline-size: none;
+            border-radius: 0;
+        }
+
+        .main:has(.save-bar-dirty-only:not(.dirty)) .table-container {
+            padding-block-end: 0;
+        }
+    }
+
+    /* One leading cell: drag handle, number, icon side by side. */
+    .col-lead {
+        white-space: nowrap;
+    }
+
+    .col-lead > * {
+        vertical-align: middle;
+        margin-inline-end: var(--space-2);
+    }
+
+    /* Shared by every drag-to-reorder table. */
+    .drag-handle {
+        cursor: grab;
+        touch-action: none;
+        color: var(--color-text-muted);
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        line-height: 0.7;
+        font-weight: 500;
+        font-size: var(--font-size-lg);
+    }
+    .drag-handle:active { cursor: grabbing; }
+
+    /* Shrink columns to content; zero specificity so any sizing rule or .col-main wins. */
+    :where(.table) :where(thead th, tbody td) {
+        width: 1%;
+        white-space: nowrap;
+    }
+
+    /* Divider above a group's first row and total rows. */
+    .table-grouped tbody tr.group-start td,
+    .totals-row td {
+        border-block-start: 2px solid var(--color-border);
+    }
+
+    /* Label/value pairs read as heading + text (same look as Description / Details). */
+    /* Label beside value; a value too long for the rest of the row wraps under its label. */
+    .table-detail {
+        margin-block-end: 0;
+    }
+
+    .table-detail,
+    .table-detail tbody {
+        display: block;
+    }
+
+    .table-detail tr {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        column-gap: var(--space-4);
+    }
+
+    .table-detail :is(th, td) {
+        padding: 0;
+        text-align: start;
+    }
+
+    .table-detail th {
+        flex: 0 0 10rem;
+        margin-block-end: var(--space-1);
+        font-size: 1.2rem;
+    }
+
+    .table-detail td {
+        flex: 1 1 auto;
+        max-inline-size: var(--content-narrow);
+        overflow-wrap: anywhere;
+        margin-block-end: var(--space-1);
+    }
+
+    /* Narrow screens: label shrinks to its text so the value stays beside it; a value that no longer fits drops to its own full row. */
+    @media (max-width: 42rem) {
+        .table-detail th {
+            flex-basis: auto;
+        }
+    }
+
+    /* --- Editable list rows: search result row, spinner, staged/pending table rows --- */
+    .search-result-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) 0;
+    }
+    .search-result-info { flex: 1; min-width: 0; }
+
+    .search-spinner {
+        position: absolute;
+        top: 50%;
+        right: 2.25rem;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid var(--color-border);
+        border-top-color: var(--color-text-muted);
+        animation: spin 0.7s linear infinite;
+        opacity: 0;
+        pointer-events: none;
+    }
+    .search-spinner.is-active { opacity: 1; }
+    @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+    /* Inline × (placed inside .search-field by initLiveSearch); input gets right padding so text clears it. */
+    .search-clear {
+        position: absolute;
+        top: 50%;
+        right: 0.3rem;
+        transform: translateY(-50%);
+        inline-size: 1.75rem;
+        block-size: 1.75rem;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--color-text-muted);
+        font-size: var(--font-size-lg, 1.25rem);
+        line-height: 1;
+        cursor: pointer;
+    }
+    .search-clear:hover { color: var(--color-text); }
+    .search-clear[hidden] { display: none; }
+    .search-field:has(.search-clear) input { padding-inline-end: 2.25rem; }
+    @media (min-width: 769px) {
+        .search-spinner {
+            right: auto;
+            left: -1.75rem;
+        }
+    }
+
+    /* --- Event detail page --- */
+    .event-title { margin-block-end: 0.25em; }
+    /* Title + copy-link button stay on one row at every width. */
+    .main-content h1.event-title {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+    .share-controls {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+    .dt-short { display: none; }
+
+    .song-title { font-weight: 500; overflow-wrap: break-word; }
+    .song-subline {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: var(--space-2);
+        font-size: var(--font-size-sm);
+        font-weight: 400;
+        color: var(--color-text-muted);
+        overflow-wrap: break-word;
+
+        & a { font-weight: inherit; }
+    }
+    .song-meta { white-space: nowrap; color: var(--color-text-muted); }
+
+    /* Edit-page table: narrow fixed columns; the extra class beats .table's cell padding. */
+    .songs-table .song-resources { text-align: center; width: 1.4rem; padding-inline: 0; }
+    .songs-table .song-actions { text-align: center; width: 2.2rem; padding-inline-start: 0; }
+
+    @media (max-width: 768px) {
+        .dt-full { display: none; }
+        .dt-short { display: inline; }
+
+        .main-content h1.event-title {
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            min-width: 0;
+        }
+        .event-title-text { min-width: 0; overflow-wrap: anywhere; }
+    }
+
+    /* --- Matrix/pivot tables (attendance grids) --- */
+    /* Names are plain text, not links, so they miss .table a's weight. */
+    .table-matrix tbody td.sticky-col {
+        font-weight: 500;
+    }
+
+    /* Total / % columns: centered under their headers. */
+    .table-matrix :is(th, td).col-main:not(.sticky-col) {
+        text-align: center;
+    }
+
+    .table-matrix .col-num {
+        padding-inline: var(--space-1);
+    }
+
+    /* Fixed width so every date column lines up; centred in both header and body. */
+    .table-event-col {
+        inline-size: var(--table-matrix-size);
+    }
+
+    .table-matrix :is(thead th, tbody td).table-event-col {
+        text-align: center;
+    }
+
+    /* Rotated date label in a matrix <th>: vertical text read bottom-to-top. */
+    .table-event-header {
+        display: inline-block;
+        vertical-align: middle;
+        writing-mode: vertical-rl;
+        rotate: 180deg;
+        white-space: nowrap;
+        font-size: var(--font-size-2xs);
+    }
+
+    /* Vertical text swaps the button's axes, so the shared .btn padding made it 54px wide: swap it back to 38px (same as other buttons). */
+    .table-event-header .btn {
+        padding: var(--space-4) var(--space-2);
+    }
+
+    /* Non-rehearsal events: light date button; plain-text headers underlined. */
+    .table-event-header-strong .btn-ghost {
+        background-color: var(--color-surface);
+        border-color: var(--color-surface);
+        color: var(--color-text);
+    }
+
+    .table-event-header-strong .btn-ghost:hover {
+        background-color: var(--color-bg-subtle);
+    }
+
+    .table-event-header-strong:not(:has(.btn-ghost)) {
+        text-decoration: underline;
+    }
+
+    .table-cell-attendance {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        inline-size: var(--table-matrix-size);
+        block-size: var(--table-matrix-size);
+        margin-inline: auto;
+        border-radius: var(--radius-sm);
+        font-size: var(--font-size-lg);
+        cursor: pointer;
+        user-select: none;
+        transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .table-cell-attendance:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    /* Read-only matrix cells: no pointer or hover lift. */
+    .table-cell-attendance-static {
+        cursor: default;
+    }
+
+    .table-cell-attendance-static:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    /* Status buttons (attendance/poll edit pages): a plain .btn; colour comes from .att-type-N. */
+    .btn[data-type-id] {
+        justify-content: center;
+        inline-size: 7.5rem;
+        cursor: default;
+        user-select: none;
+    }
+
+    /* Only buttons/cells that cycle on click look clickable; plain ones are read-only. */
+    .btn[data-cycle],
+    .table-cell-attendance[data-cycle] {
+        cursor: pointer;
+        outline: 1px solid var(--color-primary);
+        outline-offset: -1px;
+        transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .btn[data-cycle]:hover,
+    .table-cell-attendance[data-cycle]:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    /* Use with .totals-row (border); adds bold. */
+    .table-row-total td {
+        font-weight: 500;
+    }
+
+    .table-comment {
+        font-size: var(--font-size-2xs);
+        color: var(--color-text-muted);
+        overflow-wrap: anywhere;
+    }
+
+    .table-comment-input {
+        inline-size: 100%;
+        font-size: var(--font-size-xs);
+        padding: var(--space-1);
+    }
+
+    .legend {
+        margin-block-end: var(--space-3);
+        font-size: var(--font-size-sm);
+        display: flex;
+        gap: var(--space-3);
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    /* Legend chips: sizing only; add .table-cell-attendance-static to drop the hover. */
+    .legend .table-cell-attendance {
+        inline-size: auto;
+        block-size: auto;
+        padding: 2px 6px;
+    }
+
+    /* Collapsible date-range / event-limit filter panel. */
+    .filter-panel {
+        margin: 0;
+        padding: var(--space-2) var(--space-3);
+        background-color: var(--color-bg-subtle);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+    }
+
+    .filter-panel > summary {
+        cursor: pointer;
+        font-weight: 500;
+        min-height: var(--tap-target);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        list-style: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .filter-panel > summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .filter-panel[open] > summary {
+        margin-block-end: var(--space-2);
+    }
+
+    .filter-toggle-icon {
+        transition: transform var(--transition-fast);
+        flex-shrink: 0;
+    }
+
+    .filter-panel[open] > summary .filter-toggle-icon {
+        transform: rotate(90deg);
+    }
+
+    .filter-panel[open] .filter-total {
+        display: none;
+    }
+
+    .filter-count {
+        color: var(--color-text-muted);
+        font-size: var(--font-size-xs);
+    }
+
+    .filter-form {
+        /* Checkbox box has a fixed width so inputs below can line up with the label text. */
+        --filter-indent: calc(1rem + var(--space-1));
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        padding-block-end: var(--space-2);
+    }
+
+    .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        align-items: end;
+    }
+
+    .filter-field {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+        font-size: var(--font-size-xs);
+    }
+
+    .filter-label,
+    .filter-sub summary label {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+    }
+
+    .filter-label {
+        color: var(--color-text-muted);
+    }
+
+    /* Date input with its Today button beside it, indented under the checkbox like the other inputs. */
+    .filter-input-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin-inline-start: var(--filter-indent);
+    }
+
+    .filter-today {
+        padding-block: var(--space-1); /* otherwise a plain .btn-secondary, like the Clear button */
+    }
+
+    .filter-field input {
+        padding: var(--space-2);
+    }
+
+    .filter-form input[type="checkbox"] {
+        margin: 0;
+        inline-size: 1rem;
+        block-size: 1rem;
+        padding: 0;
+    }
+
+    .filter-field > select,
+    .filter-field > input:not([type="checkbox"]),
+    .filter-sub-select {
+        margin-inline-start: var(--filter-indent);
+    }
+
+    /* nested collapsible list of checkboxes (skill / voice / instrument) */
+    .filter-sub summary {
+        font-size: var(--font-size-xs);
+        color: var(--color-text-muted);
+        display: flex;
+        align-items: center;
+        gap: 0.25em; /* one space character, same as the Member/Supporter labels */
+        list-style: none;
+        pointer-events: none; /* only the checkbox label opens/closes the list */
+    }
+
+    .filter-sub summary label {
+        pointer-events: auto;
+        cursor: pointer;
+    }
+
+    .filter-sub summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .filter-sub-select {
+        display: block;
+        min-inline-size: 12rem;
+        margin-block: var(--space-1);
+    }
+
+    @media (min-width: 769px) {
+        .filter-panel > summary {
+            justify-content: flex-start;
+        }
+
+        .filter-panel > summary .filter-toggle-icon {
+            order: -1;
+            margin-inline-end: var(--space-2);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .filter-panel {
+            padding: var(--space-1) var(--space-2);
+        }
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin-block-end: var(--space-2);
+        flex-wrap: wrap;
+    }
+
+    /* Edit-page header: capped to the form width so the Delete button's right edge lines up with the form. */
+    .section-header-edit {
+        max-inline-size: var(--content-narrow);
+    }
+    .section-header-edit .btn-delete {
+        margin-inline-start: auto;
+    }
+
+    /* h3 sub-sections get space above, tight below; the page h1 stays flush. */
+    .section-header:has(h3) {
+        margin-block-start: var(--space-4);
+    }
+
+    .section-header h3,
+    .section-header h1 {
+        margin: 0;
+    }
+
+    .section-header h3 {
+        font-size: 1.2rem;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 1px 8px;
+        background-color: var(--color-bg-subtle);
+        color: var(--color-text-muted);
+        font-size: var(--font-size-xs);
+        font-weight: 500;
+        border-radius: var(--radius-lg);
+    }
+
+    .badge-primary {
+        background-color: var(--color-primary);
+        color: var(--color-text-on-accent);
+    }
+
+    .badge-danger {
+        background-color: var(--color-danger);
+        color: var(--color-text-on-accent);
+    }
+
+    .badge-circle {
+        font-size: var(--font-size-xl);
+        padding: var(--space-2) var(--space-3);
+    }
+
+    /* SVG icons from the sprite: not text, so no I-beam cursor and nothing to select. */
+    .icon {
+        inline-size: 1em;
+        block-size: 1em;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        vertical-align: -0.125em;
+        pointer-events: none;
+        user-select: none;
+    }
+
+    .sortable-header {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .sortable-header:hover {
+        text-decoration: underline;
+    }
+}
+
+@layer state {
+    /* Row/panel states toggled by JS: warning = staged/changed/pending, info = moved/dragging. */
+    .staged-add,
+    .pending-remove,
+    .type-changed {
+        background-color: var(--color-warning-bg);
+    }
+
+    .row-moved,
+    .dragging {
+        background-color: var(--color-info-bg);
+    }
+
+    .dragging,
+    .translation-panel.pending-remove,
+    tr.pending-remove td {
+        opacity: var(--state-fade);
+    }
+
+    tr.pending-remove td,
+    .pending-remove .translation-summary-text {
+        text-decoration: line-through;
+    }
+
+    /* Pin only, never truncate; opaque bg tracks the row's --row-tint (hover/stripe). */
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        background-color: color-mix(in srgb, var(--row-tint, transparent 0%), var(--color-surface));
+        z-index: var(--z-sticky);
+    }
+
+    /* Corner cell (sticky header + column): restore dark bg, outrank both. */
+    .table thead th.sticky-col {
+        background-color: var(--color-ink);
+        z-index: calc(var(--z-sticky) + 2);
+    }
+
+    /* Attendance pk -> colour; see --color-attendance-* tokens. */
+    .att-type-0 { background-color: var(--color-attendance-0); }
+    .att-type-1 { background-color: var(--color-attendance-1); }
+    .att-type-2 { background-color: var(--color-attendance-2); }
+    .att-type-3 { background-color: var(--color-attendance-3); }
+    .att-type-4 { background-color: var(--color-attendance-4); }
+
+    /* Disabled matrix cell keeps its att-type colour but is not clickable (no outline, no hover). */
+    .table-cell-attendance-disabled {
+        pointer-events: none;
+        cursor: default;
+    }
+}
+
+@layer utilities {
+    .inline-form {
         display: inline;
     }
 
-    th, td {
+    .list-plain {
+        margin: 0;
+        padding-inline-start: 0;
+        list-style: none;
+    }
+
+    /* Prose, detail blocks, narrow tables and filter panels (as wide as the search box above) share one line length. */
+    .narrow,
+    .table-detail,
+    .filter-panel,
+    p {
+        max-inline-size: var(--content-narrow);
+    }
+
+    .text-muted {
+        color: var(--color-text-muted);
+    }
+
+    .result-count {
+        color: var(--color-text-muted);
+        margin: var(--space-1) 0 var(--space-2);
+    }
+
+    /* .col-action: narrow non-numeric column (e.g. one button), same alignment. */
+    .col-num,
+    .col-action {
+        text-align: right;
+    }
+
+    /* The column shrinks to content, so wrapping would stack the buttons; keep them side by side. */
+    .col-action .link-row {
+        flex-wrap: nowrap;
+    }
+
+    /* The one column that grows; every other column shrinks to content (.table width:1%). */
+    .col-main {
+        width: 100%;
         white-space: normal;
-        word-wrap: break-word;
-        border-radius: 4px;
-        padding: 8px;
     }
 
-    th {
-        font-size: 12px;
-        padding: 10px;
+    /* Django default CheckboxSelectMultiple/RadioSelect output. */
+    input[type="checkbox"],
+    input[type="radio"] {
+        margin-inline-end: var(--space-1);
     }
 
-    td {
-        font-size: 14px;
+    /* Touch devices: comfortable tap height. */
+    @media (pointer: coarse) {
+        input:is([type="date"], [type="datetime-local"], [type="time"], [type="number"], [type="text"], [type="email"], [type="password"]),
+        .btn {
+            min-height: var(--tap-target);
+        }
     }
-
-    .main-content {
-        padding: 1rem;
-    }
-
-    textarea[name="location"],
-    textarea[name="description"],
-    textarea[name="details"],
-    textarea[name="producers"],
-    textarea[name="additional_notes"] {
-        height: 2.2em;
-        min-height: 2.2em;
-        max-height: 2.2em;
-        resize: vertical;
-        overflow-y: auto;
-    }
-
-    textarea[name="location"]:not(:placeholder-shown),
-    textarea[name="description"]:not(:placeholder-shown),
-    textarea[name="details"]:not(:placeholder-shown),
-    textarea[name="producers"]:not(:placeholder-shown),
-    textarea[name="additional_notes"]:not(:placeholder-shown) {
-        height: 4.4em;
-        min-height: 4.4em;
-        max-height: 4.4em;
-    }
-}
-
-.messages {
-    margin-bottom: 1rem;
-}
-
-.alert {
-    padding: 12px;
-    margin-bottom: 0.5rem;
-    border: 1px solid;
-    border-radius: 4px;
-}
-
-.alert-success {
-    background-color: #d4edda;
-    border-color: #c3e6cb;
-    color: #155724;
-}
-
-.alert-error,
-.alert-danger {
-    background-color: #f8d7da;
-    border-color: #f5c6cb;
-    color: #721c24;
-}
-
-.alert-warning {
-    background-color: #ffeaa7;
-    border-color: #ffd36f;
-    color: #5f4c0b;
-}
-
-.alert-info {
-    background-color: #d1ecf1;
-    border-color: #bee5eb;
-    color: #0c5460;
-}
-
-.btn-primary {
-    background-color: #a8b5c5;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.btn-primary:hover {
-    background-color: #5a6268;
-}
-
-.btn-danger {
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-}
-
-#dirty-actions {
-    display: contents;
-}
-
-.breadcrumbs {
-    margin-bottom: 1rem;
-    font-size: 0.85rem;
-    color: #6c757d;
-}
-
-.breadcrumbs ol {
-    display: flex;
-    flex-wrap: wrap;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.breadcrumbs li {
-    display: flex;
-    align-items: center;
-}
-
-.breadcrumbs li + li::before {
-    content: "›";
-    margin: 0 0.4rem;
-    color: #adb5bd;
-}
-
-.breadcrumbs a {
-    color: #6c757d;
-    text-decoration: none;
-}
-
-.breadcrumbs a:hover {
-    text-decoration: underline;
-}
-
-.breadcrumbs [aria-current="page"] {
-    color: #212529;
-    font-weight: 500;
 }

@@ -1,0 +1,43 @@
+{% load dt_tags %}
+<p class="result-count">{{ projects|length }} result{{ projects|length|pluralize }}</p>
+{% if projects %}
+
+<div class="table-container">
+<table class="table">
+    <thead>
+    <tr>
+
+        <th class="col-num"></th>
+        <th class="col-main"><a href="?q={{ q|urlencode }}&{{ filter_qs }}&sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Title{% if current_sort == 'title' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?q={{ q|urlencode }}&{{ filter_qs }}&sort=start_date{% if current_sort == 'start_date' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Start date{% if current_sort == 'start_date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?q={{ q|urlencode }}&{{ filter_qs }}&sort=end_date{% if current_sort == 'end_date' and not reverse %}&reverse=true{% endif %}" class="sortable-header">End date{% if current_sort == 'end_date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?q={{ q|urlencode }}&{{ filter_qs }}&sort=events{% if current_sort == 'events' and not reverse %}&reverse=true{% endif %}" class="sortable-header">Events{% if current_sort == 'events' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+
+    </tr>
+    </thead>
+    <tbody>
+    {% for project in projects %}
+        <tr>
+            <td class="col-num">{{ forloop.counter }}</td>
+
+            <td class="col-main">
+                <a href="{%  url 'syncope:project_detail' url_username project.id %}">
+                    {{ project.title }}
+                </a>
+
+            </td>
+
+            <td>{% if project.start_date %}{% dt project.start_date "date-year" %}{% else %}-{% endif %}</td>
+            <td>{% if project.end_date %}{% dt project.end_date "date-year" %}{% else %}-{% endif %}</td>
+            <td><span title="Events">{{ project.num_main_events }}</span><span title="Rehearsals">({{ project.num_rehearsals }})</span></td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+{% elif q or filters %}
+<p>No projects found.</p>
+{% else %}
+<p>No projects yet.</p>
+{% endif %}

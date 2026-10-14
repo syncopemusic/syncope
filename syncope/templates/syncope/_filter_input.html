@@ -1,0 +1,8 @@
+<div class="filter-field">
+    <label class="filter-label"><input type="checkbox" data-toggle="{{ name }}" {% if value %}checked{% endif %}> {{ label }}</label>
+    <div class="{% if type == "date" %}filter-input-row{% endif %}">
+        <input type="{{ type }}" name="{{ name }}" value="{% firstof value default %}" {% if not value %}hidden disabled{% endif %}
+               {% if type == "number" %}min="1" max="50"{% endif %}>
+        {% if type == "date" %}<button type="button" class="btn btn-secondary filter-today" data-today="{{ name }}" {% if not value %}hidden{% endif %}>Today</button>{% endif %}
+    </div>
+</div>

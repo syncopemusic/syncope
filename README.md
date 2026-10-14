@@ -77,6 +77,11 @@ Events combine songs with attendance and calendar, with projects wrapping the ev
   participation.
 - Events can be rehearsals, performances, concerts or recording sessions.
 
+## Customizing the look
+
+See [`docs/FRONTEND_GUIDE.md`](docs/FRONTEND_GUIDE.md) for how to change colors, fonts,
+buttons, and other visual details.
+
 ## Support
 
 Feel free to open issue on github.

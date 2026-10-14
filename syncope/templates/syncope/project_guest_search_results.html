@@ -1,0 +1,16 @@
+{% if search_q %}
+    <p class="result-count">{{ add_guest_form.search_results|length }} result{{ add_guest_form.search_results|length|pluralize }}</p>
+    {% if add_guest_form.search_results %}
+        <div id="guest-result-list">
+            {% for guest in add_guest_form.search_results %}
+                <div class="search-result-row">
+                    <button type="button" class="btn btn-secondary" data-id="{{ guest.pk }}">+</button>
+                    <span class="result-label">{{ guest.first_name }} {{ guest.last_name }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <div class="search-result-row">
+        <a href="{% url 'syncope:org_member_new' url_username %}?auto_add_project={{ project.pk }}&next={% url 'syncope:project_participants_edit' url_username project.pk %}" class="btn btn-primary" title="Create new person">+ New person</a>
+    </div>
+{% endif %}

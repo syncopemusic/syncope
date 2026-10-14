@@ -1,89 +1,55 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static filter_tags %}
 {% block title %}Songs{% endblock %}
 {% block content %}
 
-<h2>Song Archive</h2>
-
-<p style="display:flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
-    <input type="text" id="song-list-search-input" value="{{ q }}" placeholder="Search by ID, title, composer, arranger, poet, origin, keywords, language" style="flex: 1;">
-    <button type="button" id="song-list-search-clear">Clear</button>
-</p>
-
-<div style="margin-bottom: 1em;">
-    <a href="{%  url 'syncope:song_new' url_username %}">+ Add New Song</a>
+<div class="section-header">
+    <h1>Songs</h1>
+    {% if can_manage %}<a href="{%  url 'syncope:song_new' url_username %}" class="btn btn-primary" title="New song in archive">+ Add</a>{% endif %}
 </div>
 
-<div style="display:none;">{% csrf_token %}</div>
+{% include "syncope/_search_box.html" with prefix="song-list" q=q placeholder="Search by ID, title, composer, arranger, poet, origin, keywords, language" %}
+
+{% filter_panel "song-filter-form" %}
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="start" label="Played from" type="date" value=filters.start|date:"Y-m-d" %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="end" label="Played to" type="date" value=filters.end|date:"Y-m-d" %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="language" label="Language" options=filter_languages selected=filters.language %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="composer" label="Composer" options=filter_composers selected=filters.composer %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="poet" label="Poet" options=filter_poets selected=filters.poet %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="arranger" label="Arranger" options=filter_arrangers selected=filters.arranger %}
+</div>
+{% endfilter_panel %}
 
 <div id="song-list-results">
     {% include "syncope/song_list_results.html" %}
 </div>
 
 {% block extra_js %}
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/filter-form.js' %}"></script>
 <script>
-document.addEventListener('click', function (e) {
-    var btn = e.target.closest('.share-song-btn');
-    if (!btn) return;
-    var songPk = btn.dataset.songPk;
-    var resultSpan = btn.nextElementSibling;
-    btn.disabled = true;
-    resultSpan.textContent = 'Copying...';
-    fetch('/share/create/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-        },
-        body: JSON.stringify({ type: 'song', id: songPk }),
-    })
-    .then(function (response) {
-        if (!response.ok) throw new Error('Request failed');
-        return response.json();
-    })
-    .then(function (data) {
-        var shareUrl = window.location.origin + '/' + data.share_id + '/';
-        navigator.clipboard.writeText(shareUrl).then(function () {
-            resultSpan.textContent = 'Copied';
-            setTimeout(function () { resultSpan.textContent = ''; }, 3000);
-        }).catch(function () {
-            resultSpan.textContent = 'Copied';
-            setTimeout(function () { resultSpan.textContent = ''; }, 3000);
-        });
-    })
-    .catch(function () {
-        resultSpan.textContent = 'Failed';
-    })
-    .finally(function () { btn.disabled = false; });
-});
-
-var songListSearchInput = document.getElementById('song-list-search-input');
-var songListResults = document.getElementById('song-list-results');
-var songListSearchTimeout;
-
-function runSongListSearch(query) {
-    var url = '{% url "syncope:song_list_search" url_username %}?q=' + encodeURIComponent(query);
-    fetch(url)
-        .then(function (response) { return response.text(); })
-        .then(function (html) { songListResults.innerHTML = html; });
-}
-
-if (songListSearchInput) {
-    songListSearchInput.addEventListener('input', function () {
-        clearTimeout(songListSearchTimeout);
-        var value = this.value;
-        songListSearchTimeout = setTimeout(function () { runSongListSearch(value); }, 1000);
+    const filterForm = document.getElementById('song-filter-form');
+    const searchInput = document.getElementById('song-list-search-input');
+    const search = initLiveSearch({
+        input: searchInput,
+        spinner: document.getElementById('song-list-search-spinner'),
+        results: document.getElementById('song-list-results'),
+        clearBtn: document.getElementById('song-list-search-clear'),
+        searchUrl: "{% url 'syncope:song_list_search' url_username %}",
+        filterForm,
     });
-    songListSearchInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') e.preventDefault();
-    });
-}
-
-document.getElementById('song-list-search-clear')?.addEventListener('click', function () {
-    clearTimeout(songListSearchTimeout);
-    songListSearchInput.value = '';
-    runSongListSearch('');
-});
+    initFilterForm(filterForm, () => search.run(searchInput.value));
 </script>
 {% endblock %}
 

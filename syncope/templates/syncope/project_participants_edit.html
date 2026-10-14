@@ -1,0 +1,81 @@
+{% extends "syncope/base.html" %}
+{% load static %}
+{% block title %}{{ project.title }} - Syncope{% endblock %}
+
+{% block content %}
+
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ project.title }}</span>
+            <small><span title="Page"> | Participants</span></small>
+        </span>
+    </h1>
+</div>
+
+<form method="post" id="participants-form">
+    {% csrf_token %}
+    <div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th class="col-num"></th>
+                <th class="col-main">Name</th>
+                <th></th>
+                <th class="col-action"></th>
+            </tr>
+        </thead>
+        <tbody id="participants-tbody">
+            {% for person in participants %}
+            <tr data-id="{{ person.pk }}">
+                <td class="col-num">{{ forloop.counter }}</td>
+                <td class="col-main song-title">{{ person.first_name }} {{ person.last_name }}</td>
+                <td>{% if person.is_guest %}<small>Guest</small>{% endif %}</td>
+                <td class="col-action">
+                    {% if person.is_guest %}<button type="button" class="btn btn-danger btn-remove" title="Remove from project">&times;</button>{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            <tr class="empty-row"><td colspan="4">No participants yet.</td></tr>
+        </tbody>
+    </table>
+    </div>
+</form>
+
+<div id="add-guests" class="narrow">
+    <h3>Add guest</h3>
+    <p class="search-form">
+        <span class="search-field search-field-wide">
+            <input type="text" id="guest-search-input" value="{{ search_q }}" placeholder="Search by name">
+            <span class="search-spinner" id="guest-search-spinner"></span>
+        </span>
+        <button type="button" id="guest-search-clear" class="btn btn-secondary">Clear</button>
+    </p>
+    <p>
+        <span id="guest-search-count" class="result-count"></span>
+    </p>
+    <div id="guest-search-results">
+        {% include "syncope/project_guest_search_results.html" %}
+    </div>
+</div>
+
+{% url 'syncope:project_detail' url_username project.pk as project_detail_url %}
+{% include "syncope/_save_bar.html" with form_id="participants-form" url=project_detail_url %}
+
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/staged-list.js' %}"></script>
+<script>
+    initStagedList({
+        formId: 'participants-form',
+        tbodyId: 'participants-tbody',
+        addField: 'add_guest',
+        prefix: 'guest',
+        searchUrl: "{% url 'syncope:project_guests_search' url_username project.pk %}",
+        buildRow: (btn, info) => `<td class="col-num"></td>
+            <td class="col-main song-title">${info}<input type="hidden" name="add_guest" value="${btn.dataset.id}"></td>
+            <td><small>Guest</small></td>
+            <td class="col-action"><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>`,
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "syncope/base.html" %}
+{% load static %}
+{% block title %}{{ project.title }} - Syncope{% endblock %}
+
+{% block content %}
+
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ project.title }}</span>
+            <small><span title="Page"> | Songs</span></small>
+        </span>
+    </h1>
+</div>
+
+<form method="post" id="songs-form">
+    {% csrf_token %}
+    <div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th class="song-index"></th>
+                <th class="col-main">Song</th>
+                <th class="col-action"></th>
+            </tr>
+        </thead>
+        <tbody id="songs-tbody">
+            {% for song in songs %}
+            <tr data-id="{{ song.pk }}">
+                <td class="song-index">{{ forloop.counter }}</td>
+                <td class="col-main">
+                    <div class="song-subline"><span class="song-title">{{ song.title }}</span>{% if song.duration %}<small class="song-meta">{{ song.duration_display }}</small>{% endif %}</div>
+                    <div class="song-subline">
+                        <span{% if song.composer %} title="{{ song.composer.first_name }} {{ song.composer.last_name }} {{ song.composer.birth_date|date:'Y' }}-{{ song.composer.death_date|date:'Y' }}"{% endif %}>
+                            {% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}
+                            {% elif song.arranger %}{{ song.arranger.first_name }} {{ song.arranger.last_name }}
+                            {% else %}<small>No composer</small>{% endif %}
+                        </span>
+                        {% if song.internal_id %}<small class="song-meta">#{{ song.internal_id }}</small>{% endif %}
+                    </div>
+                </td>
+                <td class="col-action">
+                    <button type="button" class="btn btn-danger btn-remove" title="Remove from project">&times;</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</form>
+
+<div id="add-songs" class="narrow">
+    <h3>Add song</h3>
+    <p class="search-field search-field-wide">
+        <input type="text" id="song-search-input" value="{{ search_q }}" placeholder="Search by ID, title, composer, or keywords">
+        <span class="search-spinner" id="song-search-spinner"></span>
+    </p>
+    <p class="link-row">
+        <button type="button" id="song-search-clear" class="btn btn-secondary">Clear</button>
+        <span id="song-search-count" class="result-count"></span>
+        <a href="{% url 'syncope:song_new' url_username %}?auto_add_project={{ project.pk }}&next={% url 'syncope:project_songs_edit' url_username project.pk %}" class="btn btn-primary" title="Create new song">+ Add</a>
+    </p>
+    <div id="song-search-results">
+        {% include "syncope/project_song_search_results.html" %}
+    </div>
+</div>
+
+{% url 'syncope:project_detail' url_username project.pk as project_detail_url %}
+{% include "syncope/_save_bar.html" with form_id="songs-form" url=project_detail_url %}
+
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/staged-list.js' %}"></script>
+<script>
+    initStagedList({
+        formId: 'songs-form',
+        tbodyId: 'songs-tbody',
+        addField: 'add_song',
+        prefix: 'song',
+        numClass: 'song-index',
+        searchUrl: "{% url 'syncope:project_songs_search' url_username project.pk %}",
+    });
+</script>
+{% endblock %}

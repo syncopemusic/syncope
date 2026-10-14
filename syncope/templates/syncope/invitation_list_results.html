@@ -1,0 +1,5 @@
+{% with pending_n=pending_list|length history_n=history_invitations|length %}
+<p class="result-count">{{ pending_n|add:history_n }} result{{ pending_n|add:history_n|pluralize }}</p>
+{% endwith %}
+{% include "syncope/_invitation_table.html" with title="Pending Invitations" invitations=pending_list prefix="pending" sort=pending_sort reverse=pending_reverse other_prefix="history" other_sort=history_sort other_reverse=history_reverse %}
+{% include "syncope/_invitation_table.html" with title="History" invitations=history_invitations prefix="history" sort=history_sort reverse=history_reverse other_prefix="pending" other_sort=pending_sort other_reverse=pending_reverse %}

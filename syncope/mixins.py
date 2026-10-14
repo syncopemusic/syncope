@@ -10,15 +10,40 @@ from django.shortcuts import get_object_or_404
 from django.core.exceptions import PermissionDenied
 from django.views.generic import DetailView
 from .models import CustomUser
-from .models import Event, Attendance, EventSong
+from .models import Event, Attendance, EventSong, Song
 from .views.drafts import DraftMixin as BaseDraftMixin
+from .utils import YES_NO, filter_qs, parse_filters
+
+
+class ListFilterMixin:
+    """Filter panel for a list view. Set filter_spec (see parse_filters) and implement apply_filters; the page and its
+    *ListSearchView subclass then share the filtering. filter_options() adds the panel's option lists to the context."""
+    filter_spec = {}
+    with_filter_options = True  # False on the *ListSearchView subclasses: their results partial has no panel
+
+    def get_filters(self):
+        return parse_filters(self.request.GET, self.filter_spec)
+
+    def apply_filters(self, queryset, filters):
+        return queryset
+
+    def filter_options(self):
+        return {}
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        filters = self.get_filters()
+        if self.with_filter_options:
+            context.update(self.filter_options())
+        context.update(filters=filters, filter_qs=filter_qs(filters), filter_yes_no=YES_NO)
+        return context
 
 
 class SongOwnerMixin:
     """
     Handles owner fetching for all song views.
-    For Detail/Update/Delete: also checks permission using permission_check_method.
-    ListView/CreateView will just fetch owner_user; queryset/form handle filtering.
+    Detail/Update/Delete/Create: also checks permission using permission_check_method.
+    ListView just fetches owner_user; its queryset filters.
     """
     permission_check_method = None  # assign in view if needed
 
@@ -28,11 +53,15 @@ class SongOwnerMixin:
         self.owner_user = get_object_or_404(CustomUser, username=url_username)
 
     def dispatch(self, request, *args, **kwargs):
-        # Only enforce permission for Detail/Update/Delete views
-        if self.permission_check_method and hasattr(self, "get_object") and isinstance(self, DetailView):
-            song = super().get_object(queryset=self.get_queryset())
-            allowed = self.permission_check_method(request.user, song)
-            if not allowed:
+        # Enforce for every view on one song (Detail/Update/Delete) and for Create, which checks a song of this owner.
+        if self.permission_check_method:
+            if isinstance(self, CreateView):
+                song = Song(user=self.owner_user)
+            elif "pk" in self.kwargs and hasattr(self, "get_object"):
+                song = super().get_object(queryset=self.get_queryset())
+            else:
+                song = None  # list views filter in get_queryset
+            if song is not None and not self.permission_check_method(request.user, song):
                 raise PermissionDenied("You do not have permission")
         return super().dispatch(request, *args, **kwargs)
 

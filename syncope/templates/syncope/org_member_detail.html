@@ -1,259 +1,149 @@
 {% extends "syncope/base.html" %}
-{% load static %}
-{% block title %}{{ person }}{% endblock %}
+{% load static dt_tags icon_tags filter_tags %}
+{% block title %}{{ person }} - Syncope{% endblock %}
 {% block content %}
-{% if return_url %}
-<p><button type="button" onclick="window.location.href='{{ return_url }}'">{{ return_label }}</button></p>
-{% endif %}
-{% if is_admin %}
-<p>
-    <a href="{{ person_edit_url }}">EDIT person</a>
-    &nbsp;|&nbsp;
-    <a href="{{ person_delete_url }}" class="btn-danger" style="display: inline-block; text-decoration: none;">Delete Member</a>
-    {% if is_linked and can_unlink %}
-    &nbsp;|&nbsp;
-    <form method="post" action="{% url 'syncope:org_member_unlink' url_username person.pk %}" style="display:inline;" onclick="return confirm('Unlink this member from their account? They will lose access associated with this connection.')">
-        {% csrf_token %}
-        <button type="submit" class="btn-danger" style="width: auto;">Unlink Account</button>
-    </form>
-    {% endif %}
-</p>
-{% else %}
-<p>
-    <a href="{{ person_edit_url }}">EDIT person</a>
-    {% if is_linked and can_unlink %}
-    &nbsp;|&nbsp;
-    <form method="post" action="{% url 'syncope:org_member_unlink' url_username person.pk %}" style="display:inline;" onclick="return confirm('Unlink your account from this organization member record?')">
-        {% csrf_token %}
-        <button type="submit" class="btn-danger" style="width: auto;">Unlink Account</button>
-    </form>
-    {% endif %}
-</p>
-{% endif %}
-
-<h2>{{ person }}</h2>
-<p>
-    <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
-        <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-    </button>
-    <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
-</p>
-<div style="display:none;">{% csrf_token %}</div>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text"><span title="Person">{{ person }}</span></span>
+        <span class="share-controls">
+            <button id="share-btn" class="btn btn-link" title="Copy link">
+                <img src="{% static 'syncope/images/link.svg' %}" width="16" height="16" alt="Link">
+            </button>
+            <span id="share-result" class="share-result"></span>
+        </span>
+    </h1>
+    <a href="{{ person_edit_url }}" class="btn btn-secondary">Edit</a>
+</div>
+<div hidden>{% csrf_token %}</div>
 
 {% if person_data %}
-  {% if person_data.email %}<p>Email: {{ person_data.email }}</p>{% endif %}
-  {% if person_data.phone %}<p>Phone: {{ person_data.phone }}</p>{% endif %}
-  {% if person_data.address %}<p>Address: {{ person_data.address }}</p>{% endif %}
-  {% if person_data.birth_date %}<p>Birth date: <span data-dt="{{ person_data.birth_date|date:'c' }}" data-dt-fmt="date-year">{{ person_data.birth_date|date:"Y-m-d" }}</span></p>{% endif %}
+<table class="table-detail">
+  {% if person_data.email %}<tr><th>Email</th><td><a href="mailto:{{ person_data.email }}">{{ person_data.email }}</a></td></tr>{% endif %}
+  {% if person_data.phone %}<tr><th>Phone</th><td><a href="tel:{{ person_data.phone }}">{{ person_data.phone }}</a></td></tr>{% endif %}
+  {% if person_data.address %}<tr><th>Address</th><td>{{ person_data.address|linebreaksbr }}</td></tr>{% endif %}
+  {% if person_data.birth_date %}<tr><th>Birth date</th><td>{% dt person_data.birth_date "date-year" %}</td></tr>{% endif %}
+  {% if person_data.instruments %}<tr><th>Instrument</th><td>{{ person_data.instruments|join:", " }}</td></tr>{% endif %}
   {% if person_data.skills %}
-  <p>Skills:
-    {% for skill in person_data.skills %}{{ skill }}{% if not forloop.last %}, {% endif %}{% endfor %}
-  </p>
+  <tr><th>Skill</th><td>{% for skill in person_data.skills %}{{ skill }}{% if not forloop.last %}, {% endif %}{% endfor %}</td></tr>
   {% endif %}
+  {% if person_data.voices %}<tr><th>Voice</th><td>{{ person_data.voices|join:", " }}</td></tr>{% endif %}
+</table>
 {% endif %}
 
+{% if person_resources or is_admin %}
+<div class="section-header">
+    <h3>Resources ({{ person_resources|length }})</h3>
+    {% if profile %}<a href="{% url 'syncope:profile_resources' url_username %}" class="btn btn-secondary">Edit</a>{% elif is_admin %}<a href="{% url 'syncope:person_resources_edit' url_username person.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
 {% if person_resources %}
-<h3>Resources</h3>
-<table>
+<div class="table-container">
+<table class="table">
+  <thead>
   <tr>
+    <th class="col-num"></th>
     <th></th>
-    <th></th>
-    <th>Description</th>
-    <th>URL</th>
+    <th class="col-main">Description</th>
+    <th class="col-main">URL</th>
   </tr>
+  </thead>
+  <tbody>
   {% for link in person_resources %}
   <tr>
-    <td>{{ forloop.counter }}</td>
-    <td>{{ link.icon }}</td>
-    <td>{{ link.desc }}</td>
-    <td><a href="{{ link.share_url|default:link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a></td>
+    <td class="col-num">{{ forloop.counter }}</td>
+    <td>{% icon link.icon %}</td>
+    <td class="col-main">{{ link.desc }}</td>
+    <td class="col-main"><a href="{{ link.share_url|default:link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a></td>
   </tr>
   {% endfor %}
+  </tbody>
 </table>
+</div>
+{% endif %}
 {% endif %}
 
-<!-- Composers -->
-{% if composed_songs %}
-<h3>Composed Songs</h3>
-<table>
-  <tr>
-    <th></th>
-    <th>Title</th>
-  </tr>
-  {% for song in composed_songs %}
+<!-- Songs by role -->
+{% if composed_songs %}{% include "syncope/_member_songs_table.html" with heading="Composed Songs" songs=composed_songs %}{% endif %}
+{% if written_songs %}{% include "syncope/_member_songs_table.html" with heading="Written Songs" songs=written_songs %}{% endif %}
+{% if arranged_songs %}{% include "syncope/_member_songs_table.html" with heading="Arranged Songs" songs=arranged_songs %}{% endif %}
 
-  <tr>
-    <td>{{ forloop.counter }}</td>
-    <td><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
-  </tr>
-
-  {% endfor %}
-</table>
-{% endif %}
-
-<!-- Poets -->
-{% if written_songs %}
-<h3>Written Songs</h3>
-<table>
-  <tr>
-    <th></th>
-    <th>Title</th>
-  </tr>
-  {% for song in written_songs %}
-  <tr>
-    <td>{{ forloop.counter }}</td>
-    <td><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
-  </tr>
-  {% endfor %}
-</table>
-{% endif %}
-
-<!-- Arrangers -->
-{% if arranged_songs %}
-<h3>Arranged Songs</h3>
-<table>
-  <tr>
-    <th></th>
-    <th>Title</th>
-  </tr>
-  {% for song in arranged_songs %}
-  <tr>
-    <td>{{ forloop.counter }}</td>
-    <td><a href="{%  url 'syncope:song_detail' url_username song.pk %}" title="ID + details">{{ song.pk }} - {{ song.title }}</a></td>
-  </tr>
-  {% endfor %}
-</table>
-{% endif %}
-
-<!-- Translators -->
 {% if translation_pairs %}
-<h3>Translations</h3>
-<table>
+<h3>Translations ({{ translation_pairs|length }})</h3>
+<div class="table-container">
+<table class="table">
+  <thead>
   <tr>
-    <th></th>
-    <th>Original Language</th>
-    <th>Translation Language</th>
+    <th class="col-num"></th>
+    <th class="col-main">Languages</th>
     <th>Songs</th>
   </tr>
+  </thead>
+  <tbody>
   {% for pair in translation_pairs %}
   <tr>
-    <td>{{ forloop.counter }}</td>
-    <td>{{ pair.original_lang }}</td>
-    <td>{{ pair.translation_lang }}</td>
+    <td class="col-num">{{ forloop.counter }}</td>
+    <td class="col-main">{{ pair.languages }}</td>
     <td>{{ pair.count }}</td>
   </tr>
   {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% if translated_songs %}{% include "syncope/_member_songs_table.html" with heading="Translated Songs" songs=translated_songs %}{% endif %}
+
+{% if profile %}
+<div class="section-header">
+    <h3>Account</h3>
+    <a href="{% url 'syncope:profile_account' url_username %}" class="btn btn-secondary">Edit</a>
+</div>
+<table class="table-detail">
+  <tr><th>Username</th><td>{{ user.username }}</td></tr>
+  <tr><th>Password</th><td>&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</td></tr>
 </table>
 {% endif %}
 
-<!-- Singer Projects -->
-{% if singer_projects %}
-<h3>Singer - Projects</h3>
-{% if singer_voices %}
-<p>Voices: {% for voice in singer_voices %}{{ voice.voice.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
-{% endif %}
-<table>
-  <tr>
-    <th></th>
-    <th>Project</th>
+{% if show_events %}
+<!-- Events attended -->
+<h3>Events</h3>
+{% include "syncope/_search_box.html" with prefix="person-event" q=q placeholder="Search by name, type, project, location, song, or date (2025, 3.2025, 5.3.2025)" %}
 
-  </tr>
-  {% for entry in singer_projects %}
-  <tr>
-    <td>{{ forloop.counter }}</td>
-    <td><a href="{%  url 'syncope:project_detail' url_username entry.project.pk %}">{{ entry.project.title }}</a>
-    <span title="Performances">{{ entry.performances_attended }}</span>
-    <span title="Rehearsals">{{ entry.rehearsals_present }}/{{ entry.rehearsals_total }}</span></td>
-  </tr>
-  {% endfor %}
-</table>
+{% filter_panel "person-event-filter-form" %}
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="start" label="From" type="date" value=filters.start|date:"Y-m-d" %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="end" label="To" type="date" value=filters.end|date:"Y-m-d" %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="type" label="Event type" options=filter_types selected=filters.type %}
+</div>
+{% endfilter_panel %}
 
+<div id="person-event-results">{{ events_html }}</div>
 {% endif %}
 
-<!-- Instrumentalist Projects -->
-{% if instrumentalist_projects %}
-<h3>Instrumentalist - Projects</h3>
-{% if instrumentalist_instruments %}
-<p>Instruments: {% for inst in instrumentalist_instruments %}{{ inst.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
-{% endif %}
-<table>
-  <tr>
-    <th></th>
-    <th>Project</th>
-
-  </tr>
-  {% for entry in instrumentalist_projects %}
-  <tr>
-    <td>{{ forloop.counter }}</td>
-    <td><a href="{%  url 'syncope:project_detail' url_username entry.project.pk %}">{{ entry.project.title }}</a>
-      <span title="Performances">{{ entry.performances_attended }}</span>
- <span title="Rehearsals">{{ entry.rehearsals_present }}/{{ entry.rehearsals_total }}</span></td>
-  </tr>
-  {% endfor %}
-</table>
-
-{% endif %}
+{% url 'syncope:org_member_list' url_username as member_list_url %}
+{% include "syncope/_save_bar.html" with url=return_url|default:member_list_url %}
 
 {% block extra_js %}
+<script src="{% static 'syncope/share.js' %}"></script>
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/filter-form.js' %}"></script>
 <script>
-function createShareHandler(btn, resultSpan, shareData) {
-    return function () {
-        btn.disabled = true;
-        if (resultSpan) resultSpan.textContent = 'Copying...';
-
-        fetch('/share/create/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            },
-            body: JSON.stringify(shareData),
-        })
-        .then(function(response) {
-            if (!response.ok) throw new Error('Request failed');
-            return response.json();
-        })
-        .then(function(data) {
-            const shareUrl = window.location.origin + '/' + data.share_id + '/';
-
-            // Copy to clipboard
-            navigator.clipboard.writeText(shareUrl).then(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link copied:\n' + shareUrl);
-                }
-            }).catch(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link:\n' + shareUrl);
-                }
-            });
-        })
-        .catch(function() {
-            if (resultSpan) {
-                resultSpan.textContent = 'Failed';
-            } else {
-                alert('Failed to generate share link');
-            }
-        })
-        .finally(function() {
-            btn.disabled = false;
-        });
-    };
-}
-
-const shareBtn = document.getElementById('share-btn');
-if (shareBtn) {
-    shareBtn.addEventListener('click', createShareHandler(
-        shareBtn,
-        document.getElementById('share-result'),
-        { type: 'person', id: {{ person.pk }} }
-    ));
-}
+initShareButton({ type: 'person', id: {{ person.pk }} });
+{% if show_events %}
+const filterForm = document.getElementById('person-event-filter-form');
+const searchInput = document.getElementById('person-event-search-input');
+const search = initLiveSearch({
+    input: searchInput,
+    spinner: document.getElementById('person-event-search-spinner'),
+    results: document.getElementById('person-event-results'),
+    clearBtn: document.getElementById('person-event-search-clear'),
+    searchUrl: "{% url 'syncope:org_member_event_search' url_username person.pk %}",
+    filterForm,
+});
+initFilterForm(filterForm, () => search.run(searchInput.value));
+{% endif %}
 </script>
 {% endblock %}
 

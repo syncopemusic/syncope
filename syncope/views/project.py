@@ -1,135 +1,166 @@
+from functools import wraps
 from django.http import HttpResponseForbidden
-from django.shortcuts import  get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
-from datetime import date
-from django.views.generic import ListView, CreateView, UpdateView,  DetailView
+from datetime import timedelta
+from django.utils import timezone
+from django.db import transaction
+from django.views.generic import ListView, CreateView, UpdateView, DetailView, View
 from django.views.generic.edit import DeleteView
 from django.db.models import Count, Q
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
-from django.views.decorators.http import require_POST
 from django.contrib import messages
-from syncope.models import CustomUser,  Person,  Role
-from syncope.models import Event,  EventType,   Project, EventSongResource, ProjectResource, Resource
-from syncope.forms import  ProjectForm
-from syncope.forms import  AddEventToProjectForm
-from syncope.forms import AddSongToProjectForm, AddGuestToProjectForm, ProjectResourceFormSet
-from syncope.utils import resource_icon_list
+from syncope.models import AttendanceType, CustomUser, Person, Song
+from syncope.models import Event, EventType, Project, EventSongResource
+from syncope.forms import ProjectForm
+from syncope.forms import AddEventToProjectForm
+from syncope.forms import AddSongToProjectForm, AddGuestToProjectForm
+from syncope.utils import resource_icon_list, q_filter, date_overlap_q, match_pk, filter_period
+from syncope.mixins import ListFilterMixin
 from syncope.permissions import AccessControl
-from syncope.views.drafts import DraftMixin, clear_draft
+from syncope.views.drafts import DraftMixin
 
 
-class SelectPersonInitialMixin:
-    person_preset_fields = []
-    person_preset_map = {}
+def project_admin_required(view_func):
+    """Resolve org_user/project from the URL and 403 unless the viewer can edit this project.
 
-    def _get_initial_with_presets(self):
-        initial = {}
-        if self.person_preset_map:
-            for query_key, form_key in self.person_preset_map.items():
-                pk = self.request.GET.get(query_key)
-                if pk:
-                    initial[form_key] = pk
-        else:
-            for field in self.person_preset_fields:
-                pk = self.request.GET.get(f'select_{field}')
-                if pk:
-                    initial[field] = pk
-        return initial
+    Wraps a view of the form `def foo(request, username, pk, **rest)` into one that
+    receives `org_user`/`project` directly instead of re-deriving them itself.
+    """
+    @wraps(view_func)
+    def wrapper(request, username, pk, **kwargs):
+        org_user = get_object_or_404(CustomUser, username=username)
+        project = get_object_or_404(Project, pk=pk, user=org_user)
+        if not AccessControl.can_edit_project(request.user, username):
+            return HttpResponseForbidden("Only admins can make this change.")
+        return view_func(request, org_user=org_user, project=project, **kwargs)
+    return wrapper
 
 
-@require_POST
+class ProjectAdminRequiredMixin:
+    """Class-based-view counterpart to project_admin_required: resolves org_user/project
+    onto self and 403s unless the viewer can edit this project."""
+
+    def dispatch(self, request, *args, **kwargs):
+        url_username = self.kwargs.get('username')
+        self.org_user = get_object_or_404(CustomUser, username=url_username)
+        if not AccessControl.can_edit_project(request.user, url_username):
+            return HttpResponseForbidden("Only admins can edit this project.")
+        self.project = get_object_or_404(Project, pk=self.kwargs['pk'], user=self.org_user)
+        return super().dispatch(request, *args, **kwargs)
+
+
+def _events_with_resource_counts(project):
+    """This project's events, ordered by start date, with resource_count/event_song_resource_count attached."""
+    events = list(project.events.all().order_by('started_at'))
+    for event in events:
+        event.resource_count = event.event_resource.count()
+        event.event_song_resource_count = EventSongResource.objects.filter(
+            event_song__event=event
+        ).count()
+    return events
+
+
+def _event_search_results(add_event_form):
+    """add_event_form.search_results, annotated with each event's other-project warning (if any)."""
+    for event in add_event_form.search_results:
+        event.other_project_title = add_event_form.other_project_ids.get(event.pk)
+    return add_event_form.search_results
+
+
+def _project_members(project):
+    """Persons marked present at any event of this project."""
+    return Person.objects.filter(
+        attendance__event__project=project,
+        attendance__attendance_type_id=AttendanceType.PRESENT,
+    ).distinct().prefetch_related(
+        'singer_set__voice', 'instrumentalist_set__instrument', 'skills'
+    )
+
+
+def _project_participants(project):
+    """Members + guests, deduped (a guest who is also an active member is shown once,
+    as a member) and sorted together."""
+    participants = list(_project_members(project))
+    member_ids = {p.pk for p in participants}
+    for guest in project.guests.all().prefetch_related('singer_set__voice', 'instrumentalist_set__instrument', 'skills'):
+        if guest.pk in member_ids:
+            continue
+        guest.is_guest = True
+        participants.append(guest)
+    participants.sort(key=lambda p: (p.last_name, p.first_name))
+    return participants
+
+
+def _exclude_ids_from_request(request):
+    exclude_raw = request.GET.get('exclude', '')
+    return [int(x) for x in exclude_raw.split(',') if x.strip().isdigit()]
+
+
 @login_required
-def project_add_event(request, username, pk):
-    org_user = get_object_or_404(CustomUser, username=username)
-    project = get_object_or_404(Project, pk=pk, user=org_user)
-
-    is_admin = AccessControl.can_add_event(
-        request.user, org_user
-    ).filter(person__roles__id=Role.ADMIN).exists()
-    if not is_admin:
-        return HttpResponseForbidden("Only admins can add events to projects.")
-
-    form = AddEventToProjectForm(request.POST, org_user=org_user, project=project)
-    if form.is_valid():
-        event = form.cleaned_data['event']
-        event.project = project
-        event.save()
-
-    return redirect('syncope:project_update', username=username, pk=pk)
+@project_admin_required
+def project_events_search(request, org_user, project):
+    """AJAX event search for the Events subpage's add-event picker."""
+    search_q = request.GET.get('q', '')
+    add_event_form = AddEventToProjectForm(
+        org_user=org_user, project=project, search_q=search_q, exclude_ids=_exclude_ids_from_request(request)
+    )
+    return render(request, 'syncope/project_event_search_results.html', {
+        'event_results': _event_search_results(add_event_form),
+        'search_q': search_q,
+        'project': project,
+        'url_username': org_user.username,
+    })
 
 
-@require_POST
 @login_required
-def project_remove_event(request, username, pk, event_pk):
-    org_user = get_object_or_404(CustomUser, username=username)
-    project = get_object_or_404(Project, pk=pk, user=org_user)
-    event = get_object_or_404(Event, pk=event_pk, project=project)
-
-    is_admin = AccessControl.can_add_event(
-        request.user, org_user
-    ).filter(person__roles__id=Role.ADMIN).exists()
-    if not is_admin:
-        return HttpResponseForbidden("Only admins can remove events from projects.")
-
-    event.project = None
-    event.save()
-
-    return redirect('syncope:project_update', username=username, pk=pk)
+@project_admin_required
+def project_songs_search(request, org_user, project):
+    """AJAX song search for the Songs subpage's add-song picker."""
+    search_q = request.GET.get('q', '')
+    add_song_form = AddSongToProjectForm(
+        org_user=org_user, project=project, search_q=search_q, exclude_ids=_exclude_ids_from_request(request)
+    )
+    return render(request, 'syncope/project_song_search_results.html', {
+        'add_song_form': add_song_form,
+        'search_q': search_q,
+        'project': project,
+        'url_username': org_user.username,
+    })
 
 
-@require_POST
 @login_required
-def project_add_song(request, username, pk):
-    org_user = get_object_or_404(CustomUser, username=username)
-    project = get_object_or_404(Project, pk=pk, user=org_user)
-
-    form = AddSongToProjectForm(request.POST, org_user=org_user, project=project)
-    if form.is_valid():
-        project.songs.add(form.cleaned_data['song'])
-
-    return redirect('syncope:project_update', username=username, pk=pk)
-
-
-@require_POST
-@login_required
-def project_remove_song(request, username, pk, song_pk):
-    org_user = get_object_or_404(CustomUser, username=username)
-    project = get_object_or_404(Project, pk=pk, user=org_user)
-    project.songs.remove(song_pk)
-
-    return redirect('syncope:project_update', username=username, pk=pk)
+@project_admin_required
+def project_guests_search(request, org_user, project):
+    """AJAX guest search for the Participants subpage's add-guest picker."""
+    search_q = request.GET.get('q', '')
+    add_guest_form = AddGuestToProjectForm(
+        org_user=org_user, project=project, search_q=search_q, exclude_ids=_exclude_ids_from_request(request)
+    )
+    return render(request, 'syncope/project_guest_search_results.html', {
+        'add_guest_form': add_guest_form,
+        'search_q': search_q,
+        'project': project,
+        'url_username': org_user.username,
+    })
 
 
-@require_POST
-@login_required
-def project_add_guest(request, username, pk):
-    org_user = get_object_or_404(CustomUser, username=username)
-    project = get_object_or_404(Project, pk=pk, user=org_user)
-
-    form = AddGuestToProjectForm(request.POST, org_user=org_user, project=project)
-    if form.is_valid():
-        project.guests.add(form.cleaned_data['guest'])
-
-    return redirect('syncope:project_update', username=username, pk=pk)
+def _open_range_q(d0, d1):
+    """Project dates touch [d0, d1); a missing start or end is open-ended, so dateless projects always match."""
+    return (Q(start_date__isnull=True) | Q(start_date__lt=d1)) & (Q(end_date__isnull=True) | Q(end_date__gte=d0))
 
 
-@require_POST
-@login_required
-def project_remove_guest(request, username, pk, guest_pk):
-    org_user = get_object_or_404(CustomUser, username=username)
-    project = get_object_or_404(Project, pk=pk, user=org_user)
-    project.guests.remove(guest_pk)
-
-    return redirect('syncope:project_update', username=username, pk=pk)
-
-
+def _project_period_q(d0, d1):
+    """Projects whose own (open-ended) date range, or any of whose events, touches [d0, d1)."""
+    return _open_range_q(d0, d1) | date_overlap_q('events__started_at', 'events__ended_at', d0, d1)
 
 
 @method_decorator(login_required, name="dispatch")
-class ProjectListView(LoginRequiredMixin, ListView):
+class ProjectListView(ListFilterMixin, LoginRequiredMixin, ListView):
+    filter_spec = {'start': 'date', 'end': 'date', 'status': ('upcoming', 'ongoing', 'past')}
     model = Project
     template_name = 'syncope/project_list.html'
     context_object_name = 'projects'
@@ -159,9 +190,14 @@ class ProjectListView(LoginRequiredMixin, ListView):
         url_username = self.kwargs.get('username')
         org_user = get_object_or_404(CustomUser, username=url_username)
         sort_field, _, _ = self._get_sort_field()
+        projects = q_filter(
+            Project.objects.filter(user=org_user), self.request.GET.get('q', ''),
+            ['title', 'description', 'details', 'events__name'],
+            period_q=_project_period_q,
+        )
+        projects = self.apply_filters(projects, self.get_filters())
         return (
-            Project.objects
-            .filter(user=org_user)
+            projects
             .annotate(
                 num_main_events=Count(
                     'events',
@@ -179,13 +215,35 @@ class ProjectListView(LoginRequiredMixin, ListView):
             .order_by(sort_field)
         )
 
+    def apply_filters(self, projects, filters):
+        if period := filter_period(filters):
+            projects = match_pk(projects, _project_period_q(*period))
+        today = timezone.localdate()
+        status = filters.get('status')
+        if status == 'upcoming':  # a missing date is open-ended, so dateless projects match every status
+            projects = projects.filter(Q(start_date__isnull=True) | Q(start_date__gt=today))
+        elif status == 'ongoing':
+            projects = projects.filter(_open_range_q(today, today + timedelta(days=1)))
+        elif status == 'past':
+            projects = projects.filter(Q(end_date__lt=today) | Q(start_date__isnull=True, end_date__isnull=True))
+        return projects
+
+    def filter_options(self):
+        return {'filter_statuses': (('upcoming', 'Upcoming'), ('ongoing', 'Ongoing'), ('past', 'Past'))}
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.kwargs.get('username')
+        context['q'] = self.request.GET.get('q', '')
         _, sort, reverse = self._get_sort_field()
         context['current_sort'] = sort
         context['reverse'] = reverse
         return context
+
+
+class ProjectListSearchView(ProjectListView):
+    template_name = 'syncope/project_list_results.html'
+    with_filter_options = False
 
 
 @method_decorator(login_required, name="dispatch")
@@ -207,7 +265,7 @@ class ProjectCreateView(DraftMixin, LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('syncope:project_update', kwargs={'username': self.kwargs.get('username'), 'pk': self.object.pk})
+        return reverse('syncope:project_detail', kwargs={'username': self.kwargs.get('username'), 'pk': self.object.pk})
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -223,117 +281,150 @@ class ProjectCreateView(DraftMixin, LoginRequiredMixin, CreateView):
 
 
 @method_decorator(login_required, name="dispatch")
-class ProjectUpdateView(DraftMixin, LoginRequiredMixin, SelectPersonInitialMixin, UpdateView):
+class ProjectMetaEditView(ProjectAdminRequiredMixin, UpdateView):
+    """Details subpage: title/description/details/dates, resources, and Delete."""
     model = Project
     form_class = ProjectForm
-    template_name = 'syncope/project_update.html'
+    template_name = 'syncope/project_meta_edit.html'
     success_url = None
-    person_preset_map = {
-        'select_person': 'guest',
-        'select_song': 'song',
-        'select_event': 'event',
-    }
 
-    def get_queryset(self):
-        url_username = self.kwargs.get('username')
-        org_user = get_object_or_404(CustomUser, username=url_username)
-        return Project.objects.filter(user=org_user)
+    def get_object(self, queryset=None):
+        return self.project
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        url_username = self.kwargs.get('username')
-        org_user = get_object_or_404(CustomUser, username=url_username)
-        kwargs['user'] = org_user
+        kwargs['user'] = self.org_user
         return kwargs
 
     def get_success_url(self):
-        return reverse('syncope:project_detail', kwargs={'username': self.kwargs.get('username'), 'pk': self.object.pk})
-
-    def _save_resources(self, project, resource_formset):
-        project.project_resource.all().delete()
-        valid_forms = [
-            f for f in resource_formset.forms
-            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('url')
-        ]
-        for idx, f in enumerate(valid_forms):
-            url = f.cleaned_data['url']
-            description = f.cleaned_data.get('description', '')
-            resource, created = Resource.objects.get_or_create(
-                url=url,
-                defaults={'owner': self.request.user, 'description': description}
-            )
-            if not created:
-                resource.description = description
-                resource.save(update_fields=['description'])
-            ProjectResource.objects.create(project=project, resource=resource, order=idx + 1)
-
-    def form_valid(self, form):
-        self.object = form.save()
-        rf = ProjectResourceFormSet(
-            self.request.POST, instance=self.object, user=self.request.user
-        )
-        if rf.is_valid():
-            self._save_resources(self.object, rf)
-
-        clear_draft(self.request, self.get_draft_key())
-        return redirect(self.get_success_url())
+        return reverse('syncope:project_meta_edit', kwargs={'username': self.kwargs.get('username'), 'pk': self.object.pk})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        url_username = self.kwargs.get('username')
-        org_user = get_object_or_404(CustomUser, username=url_username)
-        project = self.object
-
-        event_search_q = self.request.GET.get('event_q', '')
-        song_search_q = self.request.GET.get('song_q', '')
-        guest_search_q = self.request.GET.get('guest_q', '')
-
-        context['url_username'] = url_username
-        context['is_admin'] = AccessControl.has_permission(self.request.user, 'delete', url_username)
-        context['event_search_q'] = event_search_q
-
-        # Add events with resource counts to context
-        events = list(project.events.all().order_by('started_at'))
-        for event in events:
-            event.resource_count = event.event_resource.count()
-            event.event_song_resource_count = EventSongResource.objects.filter(
-                event_song__event=event
-            ).count()
-        context['events'] = events
-
-        presets = self._get_initial_with_presets()
-        context['add_event_form'] = AddEventToProjectForm(
-            org_user=org_user,
-            project=project,
-            search_q=event_search_q,
-            initial={'event': presets['event']} if 'event' in presets else {},
-        )
-        context['song_search_q'] = song_search_q
-        context['guest_search_q'] = guest_search_q
-        context['add_song_form'] = AddSongToProjectForm(
-            org_user=org_user,
-            project=project,
-            search_q=song_search_q,
-            initial={'song': presets['song']} if 'song' in presets else {},
-        )
-        context['add_guest_form'] = AddGuestToProjectForm(
-            org_user=org_user,
-            project=project,
-            search_q=guest_search_q,
-            initial={'guest': presets['guest']} if 'guest' in presets else {},
-        )
-
-        # Add resource formset
-        if self.request.POST:
-            context['resource_formset'] = ProjectResourceFormSet(
-                self.request.POST, instance=project, user=self.request.user
-            )
-        else:
-            context['resource_formset'] = ProjectResourceFormSet(
-                instance=project, user=self.request.user
-            )
-
+        context['url_username'] = self.kwargs.get('username')
         return context
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, "Project updated successfully!")
+        return redirect(self.get_success_url())
+
+
+@method_decorator(login_required, name='dispatch')
+class ProjectEventsEditView(ProjectAdminRequiredMixin, View):
+    """Events subpage: this project's events, plus a live search to assign more."""
+    template_name = 'syncope/project_events_edit.html'
+
+    def get(self, request, *args, **kwargs):
+        project = self.project
+        search_q = request.GET.get('q', '')
+        add_event_form = AddEventToProjectForm(org_user=self.org_user, project=project, search_q=search_q)
+        context = {
+            'project': project,
+            'events': _events_with_resource_counts(project),
+            'url_username': self.kwargs.get('username'),
+            'search_q': search_q,
+            'event_results': _event_search_results(add_event_form),
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        project = self.project
+        org_user = self.org_user
+
+        with transaction.atomic():
+            current_ids = set(project.events.values_list('pk', flat=True))
+            remove_ids = {pk for pk in current_ids if request.POST.get(f'remove_{pk}') == '1'}
+            if remove_ids:
+                Event.objects.filter(pk__in=remove_ids).update(project=None)
+
+            eligible_ids = set(
+                Event.objects.filter(user=org_user).exclude(project=project).values_list('pk', flat=True)
+            )
+            add_ids = {int(v) for v in request.POST.getlist('add_event') if v.isdigit()} & eligible_ids
+            if add_ids:
+                Event.objects.filter(pk__in=add_ids).update(project=project)
+
+        messages.success(request, "Events updated successfully!")
+        return redirect('syncope:project_events_edit', username=self.kwargs.get('username'), pk=project.pk)
+
+
+@method_decorator(login_required, name='dispatch')
+class ProjectSongsEditView(ProjectAdminRequiredMixin, View):
+    """Songs subpage: this project's songs, plus a live search to add more."""
+    template_name = 'syncope/project_songs_edit.html'
+
+    def get(self, request, *args, **kwargs):
+        project = self.project
+        search_q = request.GET.get('q', '')
+        context = {
+            'project': project,
+            'songs': project.songs.all().order_by('title'),
+            'url_username': self.kwargs.get('username'),
+            'search_q': search_q,
+            'add_song_form': AddSongToProjectForm(org_user=self.org_user, project=project, search_q=search_q),
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        project = self.project
+        org_user = self.org_user
+
+        with transaction.atomic():
+            current_ids = set(project.songs.values_list('pk', flat=True))
+            remove_ids = {pk for pk in current_ids if request.POST.get(f'remove_{pk}') == '1'}
+            if remove_ids:
+                project.songs.remove(*remove_ids)
+
+            eligible_ids = set(
+                Song.objects.filter(user=org_user).exclude(projects=project).values_list('pk', flat=True)
+            )
+            add_ids = {int(v) for v in request.POST.getlist('add_song') if v.isdigit()} & eligible_ids
+            if add_ids:
+                project.songs.add(*add_ids)
+
+        messages.success(request, "Songs updated successfully!")
+        return redirect('syncope:project_songs_edit', username=self.kwargs.get('username'), pk=project.pk)
+
+
+@method_decorator(login_required, name='dispatch')
+class ProjectParticipantsEditView(ProjectAdminRequiredMixin, View):
+    """Participants subpage: this project's members + guests, plus a live search to add more guests."""
+    template_name = 'syncope/project_participants_edit.html'
+
+    def get(self, request, *args, **kwargs):
+        project = self.project
+        search_q = request.GET.get('q', '')
+        context = {
+            'project': project,
+            'participants': _project_participants(project),
+            'url_username': self.kwargs.get('username'),
+            'search_q': search_q,
+            'add_guest_form': AddGuestToProjectForm(org_user=self.org_user, project=project, search_q=search_q),
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        project = self.project
+        org_user = self.org_user
+
+        with transaction.atomic():
+            current_participant_ids = {p.pk for p in _project_participants(project)}
+            remove_ids = {pk for pk in current_participant_ids if request.POST.get(f'remove_{pk}') == '1'}
+            if remove_ids:
+                project.guests.remove(*project.guests.filter(pk__in=remove_ids))
+
+            eligible_ids = set(
+                Person.objects.filter(membership_period__user=org_user).exclude(
+                    projects=project
+                ).values_list('pk', flat=True)
+            )
+            add_ids = {int(v) for v in request.POST.getlist('add_guest') if v.isdigit()} & eligible_ids
+            if add_ids:
+                project.guests.add(*add_ids)
+
+        messages.success(request, "Participants updated successfully!")
+        return redirect('syncope:project_participants_edit', username=self.kwargs.get('username'), pk=project.pk)
 
 
 @method_decorator(login_required, name="dispatch")
@@ -349,53 +440,20 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['url_username'] = self.kwargs.get('username')
-        project = self.object
-
-        # Get events ordered by start date and attach resource counts
-        events = list(project.events.all().order_by('started_at'))
-        for event in events:
-            event.resource_count = event.event_resource.count()
-            event.event_song_resource_count = EventSongResource.objects.filter(
-                event_song__event=event
-            ).count()
-        context['events'] = events
-
-        # Get songs
-        context['songs'] = project.songs.all().order_by('title')
-
-        # Get guests
-        context['guests'] = project.guests.all().order_by('last_name', 'first_name')
-
-        # Get members: those active at any point during project's date range
         url_username = self.kwargs.get('username')
+        context['url_username'] = url_username
+        project = self.object
         org_user = get_object_or_404(CustomUser, username=url_username)
 
-        if project.start_date:
-            reference_date = project.start_date
-        else:
-            reference_date = date.today()
-
-        # Query: persons who have a membership period that overlaps with project date range
-        # If project has no end_date, use today as the upper bound for the query
-        end_date = project.end_date if project.end_date else date.today()
-
-        members = Person.objects.filter(
-            membership_period__user=org_user,
-            membership_period__role_id=Role.MEMBER,
-            membership_period__started_at__lte=end_date,
-        ).filter(
-            Q(membership_period__ended_at__gte=reference_date) |
-            Q(membership_period__ended_at__isnull=True)
-        ).distinct().order_by('last_name', 'first_name')
-
-        context['members'] = members
+        context['events'] = _events_with_resource_counts(project)
+        context['songs'] = project.songs.all().order_by('title')
+        context['participants'] = _project_participants(project)
 
         # Add project resources
         context['project_resources'] = resource_icon_list(project.project_resource.all().order_by('order'))
 
-        # Check if user can delete this project
-        context['can_delete'] = AccessControl.can_delete_project(self.request.user, url_username)
+        # Check if user can edit/delete this project
+        context['is_admin'] = AccessControl.can_edit_project(self.request.user, url_username)
 
         return context
 

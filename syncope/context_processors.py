@@ -13,6 +13,7 @@ def user_person(request):
         "url_username": None,
         "ADMIN_ROLE": Role.objects.get(id=Role.ADMIN),
         "MEMBER_ROLE": Role.objects.get(id=Role.MEMBER),
+        "SUPPORTER_ROLE": Role.objects.get(id=Role.SUPPORTER),
     }
 
     if not request.user.is_authenticated:

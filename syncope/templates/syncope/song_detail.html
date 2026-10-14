@@ -1,182 +1,175 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static dt_tags %}
 {% block title %}{{ song.title }}{% endblock %}
 {% block content %}
 
-<h2>{{ song.title }}</h2>
+<div class="section-header">
+    <h1 class="event-title">{{ song.title }}
+        <span class="share-controls">
+            <button id="share-btn" class="btn btn-link" title="Copy link">
+                <img src="{% static 'syncope/images/link.svg' %}" width="16" height="16" alt="Link">
+            </button>
+            <span id="share-result" class="share-result"></span>
+        </span>
+    </h1>
+    {% if can_manage %}<a href="{%  url 'syncope:song_meta_edit' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
+<div hidden>{% csrf_token %}</div>
 
-<p>
-    {% if can_manage %}
-        <a href="{%  url 'syncope:song_update' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">Edit Song</a>
-        &nbsp;|&nbsp;
-        <a href="{% url 'syncope:song_delete' url_username song.pk %}{% if request.GET.from_event %}?from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}" class="btn-danger" style="display: inline-block; text-decoration: none;">Delete Song</a>
-        &nbsp;|&nbsp;
-    {% endif %}
-    {% if return_url %}
-        <button type="button" onclick="window.location.href='{{ return_url }}'">{{ return_label }}</button>
-    {% else %}
-        <a href="{%  url 'syncope:song_list' url_username %}">Back to List</a>
-    {% endif %}
-</p>
+{% url 'syncope:song_list' url_username as song_list_url %}
 
-<p>
-    <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
-        <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-    </button>
-    <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
-</p>
-<div style="display:none;">{% csrf_token %}</div>
-
-<table>
-    <tr><th>Song ID</th><td>{{ song.internal_id|default:"-" }}</td></tr>
+<table class="table-detail">
+    {% if song.internal_id %}<tr><th>Song ID</th><td>{{ song.internal_id }}</td></tr>{% endif %}
+    {% if song.composer %}
     <tr><th>Composer</th><td>
-        {% if song.composer %}
-            <a href="{%  url 'syncope:org_member_detail' url_username song.composer.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.composer }}</a>
-        {% else %}
-            -
-        {% endif %}
+        <a href="{%  url 'syncope:org_member_detail' url_username song.composer.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}{% endif %}{% if request.GET.origin %}&origin={{ request.GET.origin }}{% endif %}">{{ song.composer }}</a>
     </td></tr>
-    <tr><th>Poet</th><td>
-        {% if song.poet %}
-            <a href="{%  url 'syncope:org_member_detail' url_username song.poet.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.poet }}</a>
-        {% else %}
-            -
-        {% endif %}
-    </td></tr>
-    <tr><th>Translator</th><td>
-        {% if song.translator %}
-            <a href="{%  url 'syncope:org_member_detail' url_username song.translator.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.translator }}</a>
-        {% else %}
-            -
-        {% endif %}
-    </td></tr>
+    {% endif %}
+    {% if song.arranger %}
     <tr><th>Arranger</th><td>
-        {% if song.arranger %}
-            <a href="{%  url 'syncope:org_member_detail' url_username song.arranger.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}&origin={{ request.GET.origin }}{% endif %}">{{ song.arranger }}</a>
-        {% else %}
-            -
-        {% endif %}
+        <a href="{%  url 'syncope:org_member_detail' url_username song.arranger.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}{% endif %}{% if request.GET.origin %}&origin={{ request.GET.origin }}{% endif %}">{{ song.arranger }}</a>
     </td></tr>
-    <tr><th>Origin</th><td>{{ song.origin|default:"-" }}</td></tr>
-    <tr><th>Type</th><td>{{ song.group }}</td></tr>
-    <tr><th>Year</th><td>{{ song.year|default:"-" }}</td></tr>
-    <tr><th>Voices</th><td>{{ song.number_of_voices|default:"-" }}</td></tr>
-    <tr><th>Pages</th><td>{{ song.number_of_pages|default:"-" }}</td></tr>
-    <tr><th>Copies</th><td>{{ song.number_of_copies|default:"-" }}</td></tr>
+    {% endif %}
+    {% if song.poet %}
+    <tr><th>Poet</th><td>
+        <a href="{%  url 'syncope:org_member_detail' url_username song.poet.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}{% endif %}{% if request.GET.origin %}&origin={{ request.GET.origin }}{% endif %}">{{ song.poet }}</a>
+    </td></tr>
+    {% endif %}
+    {% if song.translator %}
+    <tr><th>Translator</th><td>
+        <a href="{%  url 'syncope:org_member_detail' url_username song.translator.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}{% endif %}{% if request.GET.origin %}&origin={{ request.GET.origin }}{% endif %}">{{ song.translator }}</a>
+    </td></tr>
+    {% endif %}
+    {% if song.origin %}<tr><th>Origin</th><td>{{ song.origin }}</td></tr>{% endif %}
+    {% if song.group %}<tr><th>Type</th><td>{{ song.group }}</td></tr>{% endif %}
+    {% if song.year %}<tr><th>Year</th><td>{{ song.year }}</td></tr>{% endif %}
+    {% if song.number_of_voices %}<tr><th>Voices</th><td>{{ song.number_of_voices }}</td></tr>{% endif %}
+    {% if song.duration %}<tr><th>Duration</th><td>{{ song.duration_display }}</td></tr>{% endif %}
+    {% if song.number_of_pages %}<tr><th>Pages</th><td>{{ song.number_of_pages }}</td></tr>{% endif %}
+    {% if song.number_of_copies %}<tr><th>Copies</th><td>{{ song.number_of_copies }}</td></tr>{% endif %}
+    {% if song.keywords %}
     <tr>
         <th>Keywords</th>
-        <td>{{ song.keywords|default:"-" }}</td>
+        <td>{{ song.keywords }}</td>
     </tr>
+    {% endif %}
+    {% if song.languagecode %}
     <tr>
-        <th>Original Language</th>
-        <td>{{ song.languagecode|default:"-" }}</td>
+        <th>Language</th>
+        <td>{{ song.languagecode }}</td>
     </tr>
+    {% endif %}
+    {% if song.additional_notes %}
+    <tr>
+        <th>Additional Notes</th>
+        <td>{{ song.additional_notes|linebreaksbr }}</td>
+    </tr>
+    {% endif %}
 </table>
 
-{% if all_song_resources %}
-<h3>Resources</h3>
-<table>
+{% if song_resources or related_song_resources or can_manage %}
+<div class="section-header">
+    <h3>Resources ({{ resource_count }})</h3>
+    {% if can_manage %}<a href="{% url 'syncope:song_resources_edit' url_username song.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
+{% include "syncope/_resource_table.html" with rows=song_resources related_rows=related_song_resources related_column_label="Event" editable=False %}
+{% endif %}
+
+{% if song.quotes.all or can_manage %}
+<div class="section-header">
+    <h3>Quotes ({{ song.quotes.all|length }})</h3>
+    {% if can_manage %}<a href="{% url 'syncope:song_quotes' url_username song.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
+{% if song.quotes.all %}
+<div class="table-container table-narrow">
+<table class="table">
     <thead>
         <tr>
-            <th></th>
-            <th></th>
-            <th></th>
-            <th>Resource</th>
-            <th>Description</th>
-            <th>Event</th>
+            <th class="col-num"></th>
+            <th class="col-main">Quote</th>
+            <th>Bar Number</th>
+            <th>Date</th>
+            <th class="col-main">Person</th>
         </tr>
     </thead>
     <tbody>
-        {% for res in all_song_resources %}
+        {% for quote in song.quotes.all %}
         <tr>
-            <td>{{ forloop.counter }}</td>
-            <td>{{ res.icon }}</td>
-            <td style="position: relative;">
-                <button class="copy-resource-btn" data-url="{{ res.share_url|default:res.url }}"
-                        style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
-                    <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-                </button>
-                <span class="copy-resource-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
-            </td>
-            <td><a href="{{ res.share_url|default:res.url }}" target="_blank" rel="noopener noreferrer">{{ res.url }}</a></td>
-            <td>{{ res.desc }}</td>
-            <td>
-                {% if res.event %}
-                    <a href="{% url 'syncope:event_detail' url_username res.event.pk %}">{{ res.event.name }} (<span data-dt="{{ res.event.started_at|date:'c' }}" data-dt-fmt="date-year">{{ res.event.started_at|date:"Y-m-d" }}</span>)</a>
-                {% else %}
-                -
-                {% endif %}
-            </td>
-
+            <td class="col-num">{{ forloop.counter }}</td>
+            <td>{{ quote.word }}</td>
+            <td>{{ quote.bar_number|default:"-" }}</td>
+            <td>{{ quote.date|default:"-" }}</td>
+            <td>{{ quote.person|default:"-" }}</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+</div>
+{% endif %}
 {% endif %}
 
-{% if song.quotes.all %}
-<h3>Quotes</h3>
-<ul>
-    {% for quote in song.quotes.all %}
-        <li>
-            {{ quote.word }}
-            {% if quote.bar_number %} (Bar {{ quote.bar_number }}){% endif %}
-            {% if quote.date %} — {{ quote.date }}{% endif %}
-            {% if quote.person %} — {{ quote.person }}{% endif %}
-        </li>
-    {% endfor %}
-</ul>
-{% endif %}
+{% if song.lyrics or song.lyricstranslation_set.all or can_manage %}
+<div class="section-header">
+    <h3>Lyrics</h3>
+    {% if can_manage %}<a href="{% url 'syncope:song_lyrics_edit' url_username song.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
+{% if song.lyrics %}<div>{{ song.lyrics|linebreaks }}</div>{% endif %}
 
-{% if song.additional_notes %}
-<h3>Additional Notes</h3>
-<p>{{ song.additional_notes }}</p>
-{% endif %}
-
-{% if song.lyrics %}
-<h3>Lyrics</h3>
-<div>{{ song.lyrics|linebreaks }}</div>
-{% endif %}
-
-{% if song.lyricstranslation_set.all %}
-<h3>Lyrics Translations</h3>
+{% if song.lyricstranslation_set.all %}<h3>Translations</h3>{% endif %}
+<div class="stack">
 {% for t in song.lyricstranslation_set.all %}
-    <h4>{{ t.languagecode }}{% if t.translator %} — {{ t.translator }}{% endif %}</h4>
-    <div>{{ t.translation|linebreaks }}</div>
+    <details class="filter-panel">
+        <summary>
+            <span>{{ t.languagecode }}{% if t.translator %} - {{ t.translator }}{% endif %}</span>
+            <svg class="filter-toggle-icon" viewBox="0 0 24 24" width="18" height="18" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </summary>
+        <div>{{ t.translation|linebreaks }}</div>
+    </details>
 {% endfor %}
+</div>
 {% endif %}
 
+{% if events or can_manage %}
+<div class="section-header">
+    <h3>Events ({{ events|length }})</h3>
+    {% if can_manage %}<a href="{% url 'syncope:song_events_edit' url_username song.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
 {% if events %}
-<h3>Events</h3>
-<table id="events-table">
+<div class="table-container">
+<table id="events-table" class="table">
     <thead>
         <tr>
-            <th>#</th>
-            <th>Name</th>
-            <th><a href="#" id="sort-type" style="text-decoration:none; color:inherit;">Type <span id="sort-type-indicator"></span></a></th>
-            <th><a href="#" id="sort-date" style="text-decoration:none; color:inherit;">Date <span id="sort-date-indicator"></span></a></th>
+            <th class="col-num"></th>
+            <th class="col-main">
+                <a href="#" id="sort-name" class="sortable-header">Name <span id="sort-name-indicator"></span></a> /
+                <a href="#" id="sort-type" class="sortable-header">Type <span id="sort-type-indicator"></span></a>
+            </th>
+            <th><a href="#" id="sort-date" class="sortable-header">Date <span id="sort-date-indicator"></span></a></th>
         </tr>
     </thead>
     <tbody>
         {% for event in events %}
         <tr>
-            <td>{{ forloop.counter }}</td>
-            <td>
-                {% if event.event_type.id != 1 %}
-                    <strong><a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a></strong>
-                {% else %}
-                    <a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event.name }}</a>
-                {% endif %}
+            <td class="col-num">{{ forloop.counter }}</td>
+            <td class="col-main">
+                <a href="{% url 'syncope:event_detail' url_username event.pk %}">{{ event }}</a>
             </td>
-            <td>{{ event.event_type }}</td>
-            <td><span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="date-year">{{ event.started_at|date:"Y-m-d" }}</span></td>
+            <td>{% dt event.started_at "date-year" %}</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+</div>
+{% endif %}
 {% endif %}
 
+{% include "syncope/_save_bar.html" with url=return_url|default:song_list_url %}
+
 {% block extra_js %}
+<script src="{% static 'syncope/share.js' %}"></script>
 <script>
 (function () {
     // Sort events table
@@ -199,67 +192,22 @@
         });
     }
 
+    makeTableSorter('sort-name', 'sort-name-indicator',
+        function (row) { return row.cells[1].textContent.trim().toLowerCase(); },
+        function (a, b, asc) { return asc ? a.localeCompare(b) : b.localeCompare(a); }
+    );
+
     makeTableSorter('sort-type', 'sort-type-indicator',
-        function (row) { return row.cells[2].textContent.trim().toLowerCase(); },
+        function (row) { return row.cells[1].textContent.trim().toLowerCase(); },
         function (a, b, asc) { return asc ? a.localeCompare(b) : b.localeCompare(a); }
     );
 
     makeTableSorter('sort-date', 'sort-date-indicator',
-        function (row) { return row.cells[3].querySelector('[data-dt]').dataset.dt; },
+        function (row) { return row.cells[2].querySelector('[data-dt]').dataset.dt; },
         function (a, b, asc) { return asc ? a.localeCompare(b) : b.localeCompare(a); }
     );
 
-    // Share button
-    function createShareHandler(btn, resultSpan, shareData) {
-        return function () {
-            btn.disabled = true;
-            if (resultSpan) resultSpan.textContent = 'Copying...';
-            fetch('/share/create/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                },
-                body: JSON.stringify(shareData),
-            })
-            .then(function (response) {
-                if (!response.ok) throw new Error('Request failed');
-                return response.json();
-            })
-            .then(function (data) {
-                var shareUrl = window.location.origin + '/' + data.share_id + '/';
-                navigator.clipboard.writeText(shareUrl).then(function () {
-                    if (resultSpan) {
-                        resultSpan.textContent = 'Copied';
-                        setTimeout(function () { resultSpan.textContent = ''; }, 3000);
-                    } else {
-                        alert('Share link copied:\n' + shareUrl);
-                    }
-                }).catch(function () {
-                    if (resultSpan) {
-                        resultSpan.textContent = 'Copied';
-                        setTimeout(function () { resultSpan.textContent = ''; }, 3000);
-                    } else {
-                        alert('Share link:\n' + shareUrl);
-                    }
-                });
-            })
-            .catch(function () {
-                if (resultSpan) resultSpan.textContent = 'Failed';
-                else alert('Failed to generate share link');
-            })
-            .finally(function () { btn.disabled = false; });
-        };
-    }
-
-    var shareBtn = document.getElementById('share-btn');
-    if (shareBtn) {
-        shareBtn.addEventListener('click', createShareHandler(
-            shareBtn,
-            document.getElementById('share-result'),
-            { type: 'song', id: {{ song.pk }} }
-        ));
-    }
+    initShareButton({ type: 'song', id: {{ song.pk }} });
 }());
 </script>
 {% endblock %}

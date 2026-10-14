@@ -2,21 +2,24 @@ from django.urls import path
 from django.views.generic import RedirectView
 
 from .views.attendance import AttendanceDashboardView, quick_add_rehearsal, self_attendance_update
-from .views.event import EventCreateView, EventDetailView, EventListView, EventDeleteView
+from .views.event import PersonEventListView
+from .views.event import EventCreateView, EventDetailView, EventListView, EventListSearchView, EventDeleteView
 from .views.event import EventSongsEditView, EventAttendanceEditView, EventMetaEditView
 from .views.event import event_songs_search, event_song_resources_save
 from .views.event import event_attendance_search
 from .views.home import HomeView, SkillListAndCreateView
 from .views.importing import ImportHubView, ImportDashboardView, CombineProjectsView
 from .views.organization import OrganizationCreateView, OrganizationDashboard, OrganizationUpdateView, OrganizationDeleteView
-from .views.person import PersonUpdateView, OrgMemberAddView, OrgMemberEditView, PersonListView, OrgMemberDetailView, OrgMemberDeleteView, org_member_unlink, person_list_search
-from .views.invitation import InvitationListView, InvitationCreateView, InvitationUpdateView
+from .views.person import PersonUpdateView, profile_account, ProfileDetailView, OrgMemberAddView, OrgMemberEditView, PersonListView, OrgMemberDetailView, OrgMemberDeleteView, org_member_unlink, person_list_search
+from .views.invitation import InvitationListView, InvitationListSearchView, InvitationCreateView, InvitationUpdateView
 from .views.organization import OrganizationCreateView, OrganizationDashboard
-from .views.project import ProjectDeleteView, ProjectCreateView, ProjectDetailView, ProjectUpdateView, ProjectListView
-from .views.project import project_add_guest, project_add_event, project_remove_event, project_remove_song, project_add_song, project_remove_guest
-from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongUpdateView, SongQuoteView, song_list_search
+from .views.project import ProjectDeleteView, ProjectCreateView, ProjectDetailView, ProjectListView, ProjectListSearchView
+from .views.project import ProjectMetaEditView, ProjectEventsEditView, ProjectSongsEditView, ProjectParticipantsEditView
+from .views.project import project_events_search, project_songs_search, project_guests_search
+from .views.song import SongListView, SongCreateView, SongDeleteView, SongDetailView, SongMetaEditView, SongLyricsEditView, SongQuoteView, SongEventsEditView, song_events_search, SongListSearchView, song_person_search
+from .views.resource import ResourcesEditView, ProfileResourcesView
 from .views.user_login_register import SignUp, UserLoginView, UserLogoutView
-from .views.poll import PollListView, PollCreateUpdateView, PollDetailView, PollDeleteView, PollPersonView, PollEventView, PollEventUpdateView, PollEventAttendanceView, PollPersonAttendanceView, poll_person_remove, poll_event_remove
+from .views.poll import PollListView, PollListSearchView, PollCreateUpdateView, PollDetailView, PollDeleteView, PollPersonView, PollEventView, PollEventUpdateView, PollEventAttendanceView, PollPersonAttendanceView, poll_persons_search
 from .views.share import create_share_link, visit_share
 from .views.drafts import save_draft_and_go
 
@@ -29,8 +32,12 @@ urlpatterns = [
 
     path("signup/", SignUp.as_view(), name="signup"),
 
+    path("<str:username>/person/", ProfileDetailView.as_view(), name="profile_detail"),
     path("<str:username>/person/update/", PersonUpdateView.as_view(), name="person_update"),
+    path("<str:username>/person/account/", profile_account, name="profile_account"),
+    path("<str:username>/person/resources/", ProfileResourcesView.as_view(), name="profile_resources"),
     path("<str:username>/invitations/", InvitationListView.as_view(), name="invitation_list"),
+    path("<str:username>/invitations/search/", InvitationListSearchView.as_view(), name="invitation_list_search"),
     path("<str:username>/invitations/new/", InvitationCreateView.as_view(), name="invitation_new"),
     path("<str:username>/invitations/<int:pk>/", InvitationUpdateView.as_view(), name="invitation_detail"),
     path("logout/", UserLogoutView.as_view(), name="logout"),
@@ -48,6 +55,7 @@ urlpatterns = [
     path("<str:username>/import/combine/", CombineProjectsView.as_view(), name="import_combine"),
     path("<str:username>/<str:method>/import/", ImportDashboardView.as_view(), name="import_dashboard"),
     path("<str:username>/events/", EventListView.as_view(), name="event_list"),
+    path("<str:username>/events/search/", EventListSearchView.as_view(), name="event_list_search"),
     path("<str:username>/events/new/", EventCreateView.as_view(), name="event_new"),
     path("<str:username>/events/<int:pk>/", EventDetailView.as_view(), name="event_detail"),
     path("<str:username>/events/<int:pk>/delete/", EventDeleteView.as_view(), name="event_delete"),
@@ -61,17 +69,17 @@ urlpatterns = [
     path("<str:username>/events/<int:pk>/attendance/edit/search/", event_attendance_search, name="event_attendance_search"),
 
     path("<str:username>/events/<int:pk>/meta/edit/", EventMetaEditView.as_view(), name="event_meta_edit"),
+    path("<str:username>/events/<int:pk>/resources/edit/", ResourcesEditView.as_view(kind='event'), name="event_resources_edit"),
 
-    path("<str:username>/members/", RedirectView.as_view(pattern_name="syncope:org_member_list", permanent=False)),
-    path("<str:username>/members/active/", PersonListView.as_view(), {"list_type": "active"}, name="org_member_list"),
-    path("<str:username>/members/inactive/", PersonListView.as_view(), {"list_type": "inactive"}, name="org_member_list_inactive"),
-    path("<str:username>/members/others/", PersonListView.as_view(), {"list_type": "others"}, name="org_member_list_others"),
+    path("<str:username>/members/", PersonListView.as_view(), {"list_type": "active"}, name="org_member_list"),
     path("<str:username>/members/all/", PersonListView.as_view(), {"list_type": "all"}, name="org_member_list_all"),
     path("<str:username>/members/search/<str:list_type>/", person_list_search, name="person_list_search"),
     path("<str:username>/members/new/", OrgMemberAddView.as_view(), name="org_member_new"),
     path("<str:username>/members/new/member/", OrgMemberAddView.as_view(), {'preset': 'member'}, name="org_member_new_member"),
     path("<str:username>/members/<int:pk>/", OrgMemberDetailView.as_view(), name="org_member_detail"),
+    path("<str:username>/members/<int:pk>/events/", PersonEventListView.as_view(), name="org_member_event_search"),
     path("<str:username>/members/<int:pk>/edit/", OrgMemberEditView.as_view(), name="org_member_edit"),
+    path("<str:username>/members/<int:pk>/resources/edit/", ResourcesEditView.as_view(kind='person'), name="person_resources_edit"),
     path("<str:username>/members/<int:pk>/delete/", OrgMemberDeleteView.as_view(), name="org_member_delete"),
     path("<str:username>/members/<int:pk>/unlink/", org_member_unlink, name="org_member_unlink"),
 
@@ -102,40 +110,51 @@ urlpatterns = [
     path("<str:username>/songs/persons/", RedirectView.as_view(pattern_name="syncope:org_composers_list", permanent=True)),
 
     path("<str:username>/songs/", SongListView.as_view(), name="song_list"),
-    path("<str:username>/songs/search/", song_list_search, name="song_list_search"),
+    path("<str:username>/songs/search/", SongListSearchView.as_view(), name="song_list_search"),
     path("<str:username>/songs/new/", SongCreateView.as_view(), name="song_new"),
     path("<str:username>/songs/<int:pk>/", SongDetailView.as_view(), name="song_detail"),
-    path("<str:username>/songs/<int:pk>/update/", SongUpdateView.as_view(), name="song_update"),
+    path("<str:username>/songs/<int:pk>/meta/edit/", SongMetaEditView.as_view(), name="song_meta_edit"),
+    path("<str:username>/songs/<int:pk>/lyrics/edit/", SongLyricsEditView.as_view(), name="song_lyrics_edit"),
+    path("<str:username>/songs/<int:pk>/resources/edit/", ResourcesEditView.as_view(kind='song'), name="song_resources_edit"),
+    path("<str:username>/songs/persons/search/<str:field>/", song_person_search, name="song_person_search"),
     path("<str:username>/songs/<int:pk>/delete/", SongDeleteView.as_view(), name="song_delete"),
     path("<str:username>/songs/<int:pk>/quotes/", SongQuoteView.as_view(), name="song_quotes"),
+    path("<str:username>/songs/<int:pk>/events/edit/", SongEventsEditView.as_view(), name="song_events_edit"),
+    path("<str:username>/songs/<int:pk>/events/edit/search/", song_events_search, name="song_events_search"),
     path('<str:username>/attendance/', AttendanceDashboardView.as_view(), name='attendance'),
     path('<str:username>/attendance/quick-new/', quick_add_rehearsal, name='quick_new_rehearsal'),
     path("skill/", SkillListAndCreateView.as_view(), name="skill"),
 
     path('<str:username>/projects/', ProjectListView.as_view(), name='project_list'),
+    path('<str:username>/projects/search/', ProjectListSearchView.as_view(), name='project_list_search'),
     path('<str:username>/projects/new/', ProjectCreateView.as_view(), name='project_new'),
     path('<str:username>/projects/<int:pk>/', ProjectDetailView.as_view(), name='project_detail'),
-    path('<str:username>/projects/<int:pk>/edit/', ProjectUpdateView.as_view(), name='project_update'),
     path('<str:username>/projects/<int:pk>/delete/', ProjectDeleteView.as_view(), name='project_delete'),
-    path('<str:username>/projects/<int:pk>/events/new/', project_add_event, name='project_new_event'),
-    path('<str:username>/projects/<int:pk>/events/<int:event_pk>/remove/', project_remove_event, name='project_remove_event'),
-    path('<str:username>/projects/<int:pk>/songs/new/', project_add_song, name='project_new_song'),
-    path('<str:username>/projects/<int:pk>/songs/<int:song_pk>/remove/', project_remove_song, name='project_remove_song'),
-    path('<str:username>/projects/<int:pk>/guests/new/', project_add_guest, name='project_new_guest'),
-    path('<str:username>/projects/<int:pk>/guests/<int:guest_pk>/remove/', project_remove_guest, name='project_remove_guest'),
+
+    path('<str:username>/projects/<int:pk>/meta/edit/', ProjectMetaEditView.as_view(), name='project_meta_edit'),
+    path('<str:username>/projects/<int:pk>/resources/edit/', ResourcesEditView.as_view(kind='project'), name='project_resources_edit'),
+
+    path('<str:username>/projects/<int:pk>/events/edit/', ProjectEventsEditView.as_view(), name='project_events_edit'),
+    path('<str:username>/projects/<int:pk>/events/edit/search/', project_events_search, name='project_events_search'),
+
+    path('<str:username>/projects/<int:pk>/songs/edit/', ProjectSongsEditView.as_view(), name='project_songs_edit'),
+    path('<str:username>/projects/<int:pk>/songs/edit/search/', project_songs_search, name='project_songs_search'),
+
+    path('<str:username>/projects/<int:pk>/participants/edit/', ProjectParticipantsEditView.as_view(), name='project_participants_edit'),
+    path('<str:username>/projects/<int:pk>/participants/edit/search/', project_guests_search, name='project_guests_search'),
 
     path("<str:username>/polls/<int:pk>/<int:person_pk>/", PollPersonAttendanceView.as_view(), name="poll_person_attendance"),
 
     path("<str:username>/polls/", PollListView.as_view(), name="poll_list"),
+    path("<str:username>/polls/search/", PollListSearchView.as_view(), name="poll_list_search"),
     path("<str:username>/polls/new/", PollCreateUpdateView.as_view(), name="poll_new"),
     path("<str:username>/polls/<int:pk>/", PollDetailView.as_view(), name="poll_detail"),
-    path("<str:username>/polls/<int:pk>/update/", PollCreateUpdateView.as_view(), name="poll_update"),
+    path("<str:username>/polls/<int:pk>/edit/", PollCreateUpdateView.as_view(), name="poll_edit"),
     path("<str:username>/polls/<int:pk>/delete/", PollDeleteView.as_view(), name="poll_delete"),
     path("<str:username>/polls/<int:pk>/persons/", PollPersonView.as_view(), name="poll_persons"),
-    path("<str:username>/polls/<int:pk>/persons/<int:person_pk>/remove/", poll_person_remove, name="poll_person_remove"),
+    path("<str:username>/polls/<int:pk>/persons/search/", poll_persons_search, name="poll_persons_search"),
     path("<str:username>/polls/<int:pk>/events/", PollEventView.as_view(), name="poll_events"),
     path("<str:username>/polls/<int:pk>/events/<int:event_pk>/edit/", PollEventUpdateView.as_view(), name="poll_event_update"),
-    path("<str:username>/polls/<int:pk>/events/<int:event_pk>/remove/", poll_event_remove, name="poll_event_remove"),
     path("<str:username>/polls/<int:pk>/attendance/", PollEventAttendanceView.as_view(), name="poll_attendance"),
 
     path("share/create/", create_share_link, name="share_create"),

@@ -1,126 +1,103 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static dt_tags icon_tags %}
 
-{% block title %}{{ poll.title }} votes{% endblock %}
+{% block title %}{{ poll.title }} - Syncope{% endblock %}
 
 {% block content %}
-<style>
-.attendance-table {
-    border-collapse: collapse;
-}
 
-.sticky-col {
-    position: sticky;
-    left: 0;
-    background: white;
-    z-index: 1;
-    min-width: 100px;
-    max-width: 130px;
-    padding: 4px 8px;
-    overflow-wrap: break-word;
-    word-break: break-word;
-}
-
-.event-col {
-    width: 20px;
-}
-
-.attendance-cell {
-    width: 40px;
-    text-align: center;
-    border-radius: 4px;
-    font-size: 1.1rem;
-    line-height: 1.5rem;
-    padding: 2px;
-    user-select: none;
-}
-
-.att-type-0 { background-color: #dfe6e9; } /* NO ANSWER */
-.att-type-1 { background-color: #c8f7c5; } /* YES */
-.att-type-2 { background-color: #ffeaa7; } /* MAYBE */
-.att-type-3 { background-color: #fab1a0; } /* NO */
-
-.comment-display {
-    font-size: 0.65rem;
-    color: #555;
-    word-wrap: break-word;
-    overflow-wrap: anywhere;
-}
-
-.table-container {
-    margin-top: 0.5rem;
-}
-</style>
-
-<h2>{{ poll.title }} votes</h2>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text"><span title="Title">{{ poll.title }}</span></span>
+        {% if is_admin %}
+        <span class="share-controls">
+            <button id="share-btn" class="btn btn-link" title="Copy link">
+                <img src="{% static 'syncope/images/link.svg' %}" width="16" height="16" alt="Link">
+            </button>
+            <span id="share-result" class="share-result"></span>
+        </span>
+        {% endif %}
+    </h1>
+    {% if is_admin %}<a href="{% url 'syncope:poll_edit' url_username poll.pk %}" class="btn btn-secondary">Edit Poll Details</a>{% endif %}
+</div>
 
 {% if poll.description %}
-<p>{{ poll.description }}</p>
+<table class="table-detail">
+    <tr><th>Details</th><td>{{ poll.description|linebreaksbr }}</td></tr>
+</table>
 {% endif %}
-{% if user.is_authenticated %}
-<div>
-    <p>Admin links:
-        <a href="{% url 'syncope:poll_update' url_username poll.pk %}">Edit title</a> |
-        <a href="{% url 'syncope:poll_persons' url_username poll.pk %}">Edit people</a> |
-        <a href="{% url 'syncope:poll_events' url_username poll.pk %}">Edit event slots</a> |
-        <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
-            <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-        </button>
-        <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
-    </p>
+
+{% if is_admin %}
+<div class="link-row link-row-spaced">
+    <a href="{% url 'syncope:poll_events' url_username poll.pk %}" class="btn btn-secondary">Edit Dates</a>
+    <a href="{% url 'syncope:poll_persons' url_username poll.pk %}" class="btn btn-secondary">Edit Persons</a>
 </div>
+{% endif %}
+
+{% if is_admin %}
 {# Hidden CSRF token for the JS fetch call #}
-<div style="display:none;">{% csrf_token %}</div>
+<div hidden>{% csrf_token %}</div>
 {% endif %}
-<div style="margin-bottom: 1rem; font-size: 0.85rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
-    <strong>Legend:</strong>
-    <span class="attendance-cell att-type-0" style="width: auto; height: auto; padding: 2px 6px;">⚑</span>
-    <span class="attendance-cell att-type-1" style="width: auto; height: auto; padding: 2px 6px;">✓</span>
-    <span class="attendance-cell att-type-2" style="width: auto; height: auto; padding: 2px 6px;">(✓)</span>
-    <span class="attendance-cell att-type-3" style="width: auto; height: auto; padding: 2px 6px;">✗</span>
-</div>
 
 {% if table_rows %}
 <div class="table-container">
-    <table class="attendance-table">
+    <table class="table table-matrix table-grouped">
         <thead>
             <tr>
+                <th class="col-num"></th>
+                <th class="sticky-col col-main">Person</th>
                 <th></th>
-                <th>🔗</th>
-                <th class="sticky-col">Person</th>
                 {% for pe in poll_events %}
-                <th class="event-col" style="vertical-align: bottom; padding: 5px; font-weight: normal; {% if pe.event_type.id != 1 %}font-weight: bold; {% endif %}"
-                    title="{% if pe.event_type.id == 1 %}{{ pe.name }}{% else %}{{ pe.event_type }}&#10;{{ pe.name }}{% endif %}">
-                    <div style="writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-size: 0.8rem; line-height: 0.7rem;">
-                        {% if pe.same_date %}<span data-dt="{{ pe.started_at|date:'c' }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span>{% else %}<span data-dt="{{ pe.started_at|date:'c' }}" data-dt-fmt="date">{{ pe.started_at|date:"d M" }}</span> – <span data-dt="{{ pe.ended_at|date:'c' }}" data-dt-fmt="date">{{ pe.ended_at|date:"d M" }}</span>{% endif %} <span data-dt="{{ pe.started_at|date:'c' }}" data-dt-fmt="time">{{ pe.started_at|date:"H:i" }}</span>{% if pe.location %} {{ pe.location|truncatechars:10 }}{% endif %}
-
+                <th class="table-event-col"
+                    title="{{ pe.event_type }}&#10;{{ pe.started_at|date:"H:i" }}{% if pe.location %}&#10;{{ pe.location }}{% endif %}">
+                    <div class="table-event-header {% if pe.event_type.id != 1 %}table-event-header-strong{% endif %}">
+                        {% if is_admin %}
+                        <a href="{% url 'syncope:poll_event_update' url_username poll.pk pe.pk %}" class="btn btn-ghost">
+                            {% if pe.same_date %}{% dt pe.started_at "date" %}{% else %}{% dt pe.started_at "date" %}-{% dt pe.ended_at "date" %}{% endif %}
+                        </a>
+                        {% else %}
+                        {% if pe.same_date %}{% dt pe.started_at "date" %}{% else %}{% dt pe.started_at "date" %}-{% dt pe.ended_at "date" %}{% endif %}
+                        {% endif %}
                     </div>
                 </th>
                 {% endfor %}
-
+                <th class="col-main">Total<br>{{ poll_events|length }}</th>
+                <th class="col-main">%</th>
             </tr>
         </thead>
         <tbody>
+            <tr class="totals-row table-row-total">
+                <td class="col-num"></td>
+                <td class="sticky-col"></td>
+                <td></td>
+                {% for total in event_totals %}
+                <td class="table-event-col">{{ total.yes }}{% if total.maybe %}({{ total.maybe }}){% endif %}</td>
+                {% endfor %}
+                <td class="col-main">{{ grand_yes }}{% if grand_maybe %}({{ grand_maybe }}){% endif %}</td>
+                <td class="col-main">{{ grand_percentage|floatformat:0 }}%</td>
+            </tr>
             {% for group in grouped_table_rows %}
             {% for row in group.items %}
-            <tr {% if forloop.first and not forloop.parentloop.first %}style="border-top: 3px solid #333;"{% endif %}>
-                <td>{{ forloop.counter }}</td>
-                <td style="position: relative;">
-
-                    <button class="share-person-btn" data-type="poll_person" data-person-pk="{{ row.person.pk }}" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link"><img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy"></button>
-                    <span class="share-person-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
-
+            {% url 'syncope:poll_person_attendance' url_username poll.pk row.person.pk as person_attendance_url %}
+            <tr {% if forloop.first and not forloop.parentloop.first %}class="group-start"{% endif %}>
+                <td class="col-num">{{ row.index }}</td>
+                <td class="sticky-col col-main"
+                    title="{% for singer in row.person.person.singer_set.all %}{{ singer.voice.name }}{% if not forloop.last %}, {% endif %}{% endfor %} {% for instrumentalist in row.person.person.instrumentalist_set.all %}{{ instrumentalist.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                    {{ row.person.person.first_name }} {{ row.person.person.last_name }}
                 </td>
-                <td class="sticky-col">
-                    <a href="{% url 'syncope:poll_person_attendance' url_username poll.pk row.person.pk %}" target="_blank" style="font-size: 0.9rem;"><strong>{{ row.person.person.first_name }} {{ row.person.person.last_name }}</strong></a>
+                <td>
+                    <a href="{{ person_attendance_url }}" target="_blank" class="btn btn-secondary" title="Edit your poll results">Edit</a>
                 </td>
                 {% for cell in row.event_cells %}
-                <td class="attendance-cell att-type-{{ cell.attendance_type_id }}"
-                    title="{{ cell.attendance_label }}">
-                    {% if cell.attendance_type_id == 1 %}✓{% elif cell.attendance_type_id == 2 %}(✓){% elif cell.attendance_type_id == 3 %}✗{% elif cell.attendance_type_id == 0 %}⚑{% endif %}
-                    {% if cell.comment %}<div class="comment-display">{{ cell.comment }}</div>{% endif %}
+                <td class="table-event-col">
+                    <span class="table-cell-attendance table-cell-attendance-static att-type-{{ cell.attendance_type_id }}"
+                        title="{{ cell.attendance_label }}">
+                        {% if cell.attendance_type_id == 1 %}{% icon "check" %}{% elif cell.attendance_type_id == 2 %}{% icon "check-check" %}{% elif cell.attendance_type_id == 3 %}{% icon "x" %}{% elif cell.attendance_type_id == 0 %}{% icon "circle-help" %}{% endif %}
+                    </span>
+                    {% if cell.comment %}<div class="table-comment">{{ cell.comment }}</div>{% endif %}
                 </td>
                 {% endfor %}
+                <td class="col-main">{{ row.total_yes }}/{{ row.total_counted }}</td>
+                <td class="col-main">{{ row.percentage|floatformat:0 }}%</td>
             </tr>
             {% endfor %}
             {% endfor %}
@@ -131,95 +108,15 @@
 <p>No attendance data yet.</p>
 {% endif %}
 
-{% if membership and ADMIN_ROLE in membership.person.roles.all %}
-
-<div>
-    <p>Admin links:
-        <br>
-        <form method="post" action="{% url 'syncope:poll_delete' url_username poll.pk %}" style="display:inline;" onsubmit="return confirm('Delete poll &quot;{{ poll.title }}&quot;? This cannot be undone.')">
-            {% csrf_token %}
-            <button type="submit" class="btn-danger">Delete the entire poll</button>
-        </form>
-        <br><button><a href="{% url 'syncope:poll_list' url_username %}">Back to list of polls</a></button></p>
-</div>
-{% endif %}
+{% url 'syncope:poll_list' url_username as return_target %}
+{% include "syncope/_save_bar.html" with url=return_target %}
 
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'syncope/share.js' %}"></script>
 <script>
-function createShareHandler(btn, resultSpan, shareData) {
-    return function () {
-        btn.disabled = true;
-        if (resultSpan) resultSpan.textContent = 'Copying...';
+initShareButton({ type: 'poll', id: {{ poll.pk }} });
 
-        fetch('/share/create/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            },
-            body: JSON.stringify(shareData),
-        })
-        .then(function(response) {
-            if (!response.ok) throw new Error('Request failed');
-            return response.json();
-        })
-        .then(function(data) {
-            const shareUrl = window.location.origin + '/' + data.share_id + '/';
-
-            // Copy to clipboard
-            navigator.clipboard.writeText(shareUrl).then(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link copied:\n' + shareUrl);
-                }
-            }).catch(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link:\n' + shareUrl);
-                }
-            });
-        })
-        .catch(function() {
-            if (resultSpan) {
-                resultSpan.textContent = 'Failed';
-            } else {
-                alert('Failed to generate share link');
-            }
-        })
-        .finally(function() {
-            btn.disabled = false;
-        });
-    };
-}
-
-// Handle main poll share button
-const shareBtn = document.getElementById('share-btn');
-if (shareBtn) {
-    shareBtn.addEventListener('click', createShareHandler(
-        shareBtn,
-        document.getElementById('share-result'),
-        { type: 'poll', id: {{ poll.pk }} }
-    ));
-}
-
-// Handle individual person share buttons
-document.querySelectorAll('.share-person-btn').forEach(function(btn) {
-    btn.dataset.originalValue = btn.innerHTML;
-    btn.addEventListener('click', function() {
-        const personPk = this.dataset.personPk;
-        const resultSpan = this.nextElementSibling;
-        createShareHandler(
-            this,
-            resultSpan,
-            { type: 'poll_person', id: personPk }
-        )();
-    });
-});
 </script>
 {% endblock %}

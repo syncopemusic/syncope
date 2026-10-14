@@ -45,6 +45,13 @@ class OrganizationDashboard(TemplateView):
     def dispatch(self, request, *args, **kwargs):
         url_username = self.kwargs["username"]
 
+        # a personal account has no Organization row: its dashboard is the user's home
+        if request.user.is_authenticated and request.user.username == url_username \
+                and not Organization.objects.filter(user=request.user).exists():
+            self.template_name = "syncope/user_dashboard.html"
+            self.organization = None
+            return TemplateView.dispatch(self, request, *args, **kwargs)
+
         self.organization = get_object_or_404(
             Organization,
             user__username=url_username
@@ -62,9 +69,13 @@ class OrganizationDashboard(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        if self.organization is None:
+            return context  # user dashboard: the context processor already supplies everything
         context["organization"] = self.organization
         context["url_username"] = self.kwargs["username"]
         context["is_admin"] = self.viewer_roles.filter(id=Role.ADMIN).exists()
+        context["is_supporter"] = self.viewer_roles.filter(id=Role.SUPPORTER).exists()
+        context["can_view_org"] = self.viewer_roles.filter(id__in=[Role.ADMIN, Role.MEMBER]).exists()  # same rule as the side menu
 
         context["org_memberships"] = AccessControl.get_visible_members(
             self.request.user,
@@ -162,7 +173,11 @@ class OrganizationUpdateView(DraftMixin, OrgAdminMixin, UpdateView):
     template_name = "syncope/org_form.html"
 
     def get_success_url(self):
-        return reverse("syncope:org_dashboard", kwargs={"username": self.kwargs['username']})
+        return self.request.get_full_path()  # stay on the edit page
+
+    def form_valid(self, form):
+        messages.success(self.request, "Organization updated successfully!")
+        return super().form_valid(form)
 
 
 @method_decorator(login_required, name='dispatch')

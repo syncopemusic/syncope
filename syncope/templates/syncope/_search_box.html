@@ -1,0 +1,8 @@
+{# Wide live-search box; initLiveSearch (search-box.js) turns the Clear button into the inline x. Needs prefix, placeholder, q. #}
+<p class="search-form">
+    <span class="search-field search-field-wide">
+        <input type="text" id="{{ prefix }}-search-input" value="{{ q }}" placeholder="{{ placeholder }}">
+        <span class="search-spinner" id="{{ prefix }}-search-spinner"></span>
+    </span>
+    <button type="button" id="{{ prefix }}-search-clear" class="btn btn-secondary">Clear</button>
+</p>

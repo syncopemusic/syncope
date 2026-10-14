@@ -3,17 +3,18 @@ from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
-from syncope.forms import PersonForm, PersonResourceFormSet, MembershipPeriodFormSet
+from syncope.forms import AccountPasswordChangeForm, UsernameChangeForm, PersonForm, MembershipPeriodFormSet
 from syncope.utils import merge_consecutive_membership_periods
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy, reverse
-from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from datetime import datetime
 from django.views.generic import ListView,  UpdateView,  DetailView, FormView
 from django.views.generic.edit import DeleteView
-from django.db.models import Q, Max, Min, Value
+from django.db.models import Q, Min, Value
 from django.db.models.functions import Coalesce
 import datetime
 from django.db import transaction
@@ -22,12 +23,13 @@ from syncope.forms import OrgMemberForm
 from syncope.models import MembershipPeriod,  PersonSkill,  PersonRole
 from syncope.models import CustomUser, Organization, Person, Membership, Role, Skill, Singer, Instrumentalist
 from syncope.models import Attendance, AttendanceType, Event, EventType, Voice, Instrument,  Project, LyricsTranslation, PersonResource, Resource, Song
+from syncope.models import Poll, PollPerson
 from syncope.permissions import AccessControl
-from syncope.utils import resource_icon_list, add_query_param, safe_next_url
-from syncope.breadcrumbs import event_breadcrumbs, event_song_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
+from syncope.utils import resource_icon_list, add_query_param, safe_next_url, parse_filters, filter_qs
+from syncope.breadcrumbs import PROJECT_ORIGIN_PREFIX, origin_root_crumbs, project_origin_breadcrumbs, section_crumb, event_breadcrumbs, event_song_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
 from syncope.views.drafts import DraftMixin
-
-NON_EXTERNAL_ROLES = [Role.ADMIN, Role.MEMBER, Role.SUPPORTER]
+from syncope.views.event import PersonEventListView
+from django.utils.safestring import mark_safe
 
 SKILL_MAP = {
     'composers': Skill.COMPOSER,
@@ -36,12 +38,27 @@ SKILL_MAP = {
     'translators': Skill.TRANSLATOR,
 }
 
+# list_type -> (page title, add-button url name, add-button label)
+LIST_INFO = {
+    'active': ('Members', 'syncope:org_member_new_member', 'member'),
+    'all': ('All Persons', None, None),
+    'composers': ('Composers', 'syncope:org_member_new_composer', 'composer'),
+    'poets': ('Poets', 'syncope:org_member_new_poet', 'poet'),
+    'arrangers': ('Arrangers', 'syncope:org_member_new_arranger', 'arranger'),
+    'translators': ('Translators', 'syncope:org_member_new_translator', 'translator'),
+}
+
 CONTEXT_TYPE_LIST_MAP = {
     'composers': 'org_composers_list',
     'poets': 'org_poets_list',
     'arrangers': 'org_arrangers_list',
     'translators': 'org_translators_list',
 }
+
+def _default_list_name(request, username):
+    """Own contacts live under 'all'; an org's default list is its active members."""
+    return 'org_member_list_all' if request.user.username == username else 'org_member_list'
+
 
 PRESET_LIST_MAP = {
     'composer': 'org_composers_list',
@@ -83,8 +100,7 @@ def _build_person_queryset(visible_memberships, q=''):
 
     if q:
         queryset = queryset.filter(
-            Q(person__first_name__icontains=q) |
-            Q(person__last_name__icontains=q) |
+            Q(person__in=Person.objects.matching_name(q)) |
             Q(person__skills__title__icontains=q) |
             Q(person__singer__voice__name__icontains=q) |
             Q(person__instrumentalist__instrument__name__icontains=q)
@@ -104,19 +120,6 @@ def _annotate_person_queryset(queryset):
     )
 
 
-def _filter_membership_periods_by_status(org_user, status):
-    """Filter membership periods by active/inactive/all status."""
-    base_query = MembershipPeriod.objects.filter(
-        user=org_user,
-        role_id__in=NON_EXTERNAL_ROLES
-    )
-    if status == 'active':
-        return base_query.filter(ended_at__isnull=True)
-    elif status == 'inactive':
-        return base_query.filter(ended_at__isnull=False)
-    return base_query
-
-
 def _apply_person_sort(queryset, request):
     """Apply sorting to person querysets based on GET parameters."""
     sort_field_map = {
@@ -133,32 +136,81 @@ def _apply_person_sort(queryset, request):
     return queryset.order_by(*fields)
 
 
-def _apply_person_list_type_filter(queryset, list_type, org_user):
-    """Apply the active/inactive/others/all/skill-based filter branch for a person list."""
-    if list_type in ('active', 'inactive'):
-        periods = _filter_membership_periods_by_status(org_user, list_type)
-        queryset = queryset.filter(person__membership_period__in=periods).distinct()
-    elif list_type == 'others':
-        ever_member_ids = MembershipPeriod.objects.filter(
-            user=org_user, role_id__in=NON_EXTERNAL_ROLES
-        ).values_list('person_id', flat=True)
-        queryset = queryset.exclude(person_id__in=ever_member_ids)
-        queryset = queryset.exclude(person__skills__id__in=SKILL_MAP.values()).distinct()
-    elif list_type == 'all':
-        pass
-    else:
-        skill_id = SKILL_MAP[list_type]
-        queryset = queryset.filter(person__skills__id=skill_id).distinct()
+def _apply_person_list_type_filter(queryset, list_type):
+    """Narrow a skill list (composers/poets/...) to that skill; 'active' and 'all' need no branch."""
+    if list_type in SKILL_MAP:
+        queryset = queryset.filter(person__skills__id=SKILL_MAP[list_type]).distinct()
     return queryset
+
+
+FILTER_STATUSES = ('active', 'past', 'all')
+FILTER_MULTI_KEYS = {'skill': PersonSkill, 'voice': Singer, 'instrument': Instrumentalist}
+
+
+def _parse_person_filters(GET, is_admin):
+    """Clean the filter GET params; non-admins only get 'active' members/admins, never supporters."""
+    filters = {}
+    for key in ('member', 'supporter', 'admin'):
+        value = GET.get(key)
+        if value in FILTER_STATUSES and (is_admin or key != 'supporter'):
+            filters[key] = value if is_admin else 'active'
+    return {**filters, **parse_filters(GET, dict.fromkeys(FILTER_MULTI_KEYS, 'multi'))}
+
+
+def _apply_person_filters(queryset, filters, org_user):
+    """AND every active filter. Uses subqueries so the sort annotations' joins are unaffected."""
+    for key, role in (('member', Role.MEMBER), ('supporter', Role.SUPPORTER), ('admin', Role.ADMIN)):
+        status = filters.get(key)
+        if not status:
+            continue
+        periods = MembershipPeriod.objects.filter(user=org_user, role_id=role)
+        if status != 'all':
+            periods = periods.filter(ended_at__isnull=(status == 'active'))
+        queryset = queryset.filter(person_id__in=periods.values('person_id'))
+    for key, model in FILTER_MULTI_KEYS.items():
+        for value_id in filters.get(key, []):
+            queryset = queryset.filter(person_id__in=model.objects.filter(
+                **{f'{key}_id': value_id}).values('person_id'))
+    return queryset
+
+
+def _person_filter_context(filters, is_admin):
+    return {
+        'filters': filters,
+        'filter_qs': filter_qs(filters),
+        'filter_is_admin': is_admin,
+        'filter_skills': Skill.objects.order_by('id').values_list('id', 'title'),
+        'filter_voices': Voice.objects.order_by('id').values_list('id', 'name'),
+        'filter_instruments': Instrument.objects.order_by('id').values_list('id', 'name'),
+    }
+
+
+def _request_person_filters(request, username):
+    """Filters from the URL; the fresh-load default (Member: Active) is added by a redirect in the list view."""
+    is_admin = AccessControl.has_permission(request.user, 'delete', username)
+    return _parse_person_filters(request.GET, is_admin), is_admin
+
+
+def _filtered_person_queryset(request, org_user, list_type, filters):
+    """Visible persons, narrowed by search, list type and filter, sorted."""
+    visible_memberships = AccessControl.get_visible_members(request.user, org_user)
+
+    queryset = _build_person_queryset(visible_memberships, request.GET.get('q', '').strip())
+    queryset = _apply_person_list_type_filter(queryset, list_type)
+    queryset = _apply_person_filters(queryset, filters, org_user)
+    return _apply_person_sort(_annotate_person_queryset(queryset), request)
 
 
 @method_decorator(login_required, name='dispatch')
 class PersonUpdateView(DraftMixin, UpdateView):
+    """Profile > Update (name, contact, dates, voices/instruments/skills)."""
     template_name = "syncope/person_form.html"
     form_class = PersonForm
     context_object_name = "person_create"
-    success_url = reverse_lazy("syncope:home")
     organization = None
+
+    def get_success_url(self):
+        return self.request.get_full_path()  # stay on the edit page
 
     def dispatch(self, request, *args, **kwargs):
         url_username = self.kwargs.get("username")
@@ -207,20 +259,6 @@ class PersonUpdateView(DraftMixin, UpdateView):
                 owner__isnull=True
             )
 
-    def get_context_data(self, resource_formset=None, **kwargs):
-        context = super().get_context_data(**kwargs)
-        if resource_formset is not None:
-            context['resource_formset'] = resource_formset
-        elif self.request.POST:
-            context['resource_formset'] = PersonResourceFormSet(
-                self.request.POST, instance=self.object, prefix='resources', user=self.request.user
-            )
-        else:
-            context['resource_formset'] = PersonResourceFormSet(
-                instance=self.object, prefix='resources', user=self.request.user
-            )
-        return context
-
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
@@ -241,24 +279,6 @@ class PersonUpdateView(DraftMixin, UpdateView):
             ).values_list("id", flat=True)
         return form
 
-    def _save_resources(self, person, resource_formset):
-        person.person_resource.all().delete()
-        valid_forms = [
-            f for f in resource_formset.forms
-            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('url')
-        ]
-        for idx, f in enumerate(valid_forms):
-            url = f.cleaned_data['url']
-            description = f.cleaned_data.get('description', '')
-            resource, created = Resource.objects.get_or_create(
-                url=url,
-                defaults={'owner': self.request.user, 'description': description}
-            )
-            if not created:
-                resource.description = description
-                resource.save(update_fields=['description'])
-            PersonResource.objects.create(person=person, resource=resource, order=idx + 1)
-
     def form_valid(self, form):
         self.object = form.save(commit=False)
 
@@ -269,16 +289,11 @@ class PersonUpdateView(DraftMixin, UpdateView):
 
         self.object.save()
 
-        rf = PersonResourceFormSet(
-            self.request.POST, instance=self.object, prefix='resources', user=self.request.user
-        )
-        if rf.is_valid():
-            self._save_resources(self.object, rf)
-
         self._update_skills(form.cleaned_data["skills"])
         self._update_voices(form.cleaned_data["voices"])
         self._update_instruments(form.cleaned_data["instruments"])
 
+        messages.success(self.request, "Profile updated successfully!")
         return redirect(self.get_success_url())
 
     def _sync_m2m(self, model_class, new_items, id_field, related_skill_title=None):
@@ -311,17 +326,22 @@ class PersonUpdateView(DraftMixin, UpdateView):
 
 @method_decorator(login_required, name='dispatch')
 class PersonListView(ListView):
-    """Shows members (active/inactive) or persons with song skills (composers/poets/arrangers/translators)."""
+    """Shows members or persons with song skills (composers/poets/arrangers/translators)."""
     template_name = "syncope/person_list.html"
     context_object_name = "persons"
     organization = None
 
     def dispatch(self, request, *args, **kwargs):
         list_type = kwargs.get('list_type')
-        valid_types = {'active', 'inactive', 'others', 'all'} | set(SKILL_MAP.keys())
+        valid_types = {'active', 'all'} | set(SKILL_MAP.keys())
         if list_type not in valid_types:
             raise Http404
-        if list_type in ('others', 'all'):
+        if list_type == 'active' and 'f' not in request.GET:
+            # Fresh load: make the default filter explicit in the URL.
+            params = request.GET.copy()
+            params.update({'f': 1, 'member': 'active'})
+            return redirect(f'{request.path}?{params.urlencode()}')
+        if list_type == 'all':
             url_username = kwargs.get('username')
             if not AccessControl.has_permission(request.user, 'delete', url_username):
                 return HttpResponseForbidden()
@@ -333,26 +353,23 @@ class PersonListView(ListView):
         self.organization = get_object_or_404(CustomUser, username=url_username)
 
     def get_queryset(self):
-        list_type = self.kwargs["list_type"]
-        url_username = self.kwargs["username"]
-        org_user = get_object_or_404(CustomUser, username=url_username)
-        visible_memberships = AccessControl.get_visible_members(self.request.user, url_username)
-
-        q = self.request.GET.get('q', '').strip()
-        queryset = _build_person_queryset(visible_memberships, q)
-        queryset = _apply_person_list_type_filter(queryset, list_type, org_user)
-
-        return _apply_person_sort(_annotate_person_queryset(queryset), self.request)
+        self.filters, self.is_admin = _request_person_filters(self.request, self.kwargs["username"])
+        return _filtered_person_queryset(self.request, self.organization, self.kwargs["list_type"], self.filters)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         list_type = self.kwargs["list_type"]
         context["list_type"] = list_type
+        is_own_contacts = list_type == 'all' and self.kwargs["username"] == self.request.user.username
+        info = ('Personal Contacts', 'syncope:org_member_new', 'contact') if is_own_contacts else LIST_INFO[list_type]
+        context["is_own_contacts"] = is_own_contacts
+        context["list_title"], context["add_url_name"], context["add_label"] = info
         context["organization"] = self.organization
         context["url_username"] = self.kwargs["username"]
         context["q"] = self.request.GET.get('q', '')
         context["current_sort"] = self.request.GET.get('sort', 'name')
         context["reverse"] = self.request.GET.get('reverse', 'false') == 'true'
+        context.update(_person_filter_context(self.filters, self.is_admin))
 
         context['person_detail_url_name'] = _DETAIL_URL_NAMES.get(list_type, 'syncope:org_member_detail')
         context['person_edit_url_name'] = _EDIT_URL_NAMES.get(list_type, 'syncope:org_member_edit')
@@ -365,25 +382,21 @@ class PersonListView(ListView):
 
 @login_required
 def person_list_search(request, username, list_type):
-    valid_types = {'active', 'inactive', 'others', 'all'} | set(SKILL_MAP.keys())
+    valid_types = {'active', 'all'} | set(SKILL_MAP.keys())
     if list_type not in valid_types:
         raise Http404
-    if list_type in ('others', 'all'):
+    if list_type == 'all':
         if not AccessControl.has_permission(request.user, 'delete', username):
             return HttpResponseForbidden()
 
-    org_user = get_object_or_404(CustomUser, username=username)
-    visible_memberships = AccessControl.get_visible_members(request.user, username)
-
-    q = request.GET.get('q', '').strip()
-    queryset = _build_person_queryset(visible_memberships, q)
-    queryset = _apply_person_list_type_filter(queryset, list_type, org_user)
-    persons = _apply_person_sort(_annotate_person_queryset(queryset), request)
+    filters, is_admin = _request_person_filters(request, username)
+    persons = _filtered_person_queryset(request, get_object_or_404(CustomUser, username=username), list_type, filters)
 
     for person in persons:
         person.resource_icons = resource_icon_list(person.person.person_resource.all())
 
     return render(request, 'syncope/person_list_results.html', {
+        **_person_filter_context(filters, is_admin),
         'persons': persons,
         'list_type': list_type,
         'url_username': username,
@@ -405,7 +418,10 @@ class OrgMemberDetailView(DetailView):
     has_edit_permission = False
 
     def get_queryset(self):
-        return Person.objects.select_related("owner__user")
+        qs = Person.objects.select_related("owner__user")
+        if self.kwargs.get("username"):
+            qs = qs.filter(memberships__user=self.customuser)
+        return qs
 
     def dispatch(self, request, *args, **kwargs):
         """Handle permission checking before processing the request."""
@@ -415,7 +431,7 @@ class OrgMemberDetailView(DetailView):
             self.customuser = get_object_or_404(CustomUser, username=url_username)
 
             if request.user != self.customuser:
-                self.has_edit_permission = AccessControl.can_edit_event(
+                self.has_edit_permission = AccessControl.can_view_event_attendance(
                     request.user, self.customuser
                 ).exists()
 
@@ -446,20 +462,27 @@ class OrgMemberDetailView(DetailView):
                 self.request, url_username, from_event, from_song, current_label=person_name
             )
         elif from_song:
-            breadcrumbs = [
-                {'label': 'Songs', 'url': reverse('syncope:song_list', kwargs={'username': url_username})},
-                {'label': from_song.title, 'url': reverse('syncope:song_detail', kwargs={'username': url_username, 'pk': from_song.pk})},
-                {'label': person_name, 'url': None},
-            ]
+            roots, root_origin = origin_root_crumbs(self.request, url_username)
+            song_url = reverse('syncope:song_detail', kwargs={'username': url_username, 'pk': from_song.pk})
+            if root_origin.startswith(PROJECT_ORIGIN_PREFIX):
+                origin_key = root_origin
+                song_url = with_origin(song_url, root_origin)
+            else:
+                roots = [section_crumb(self.request, url_username, 'songs')]
+            breadcrumbs = [*roots, {'label': from_song.title, 'url': song_url}, {'label': person_name, 'url': None}]
         elif from_event:
             breadcrumbs, origin_key = event_breadcrumbs(
                 self.request, url_username, from_event, current_label=person_name
             )
         else:
-            breadcrumbs = [
-                {'label': 'Members', 'url': reverse('syncope:org_member_list', kwargs={'username': url_username})},
-                {'label': person_name, 'url': None},
-            ]
+            project_trail = project_origin_breadcrumbs(self.request, url_username, person_name)
+            if project_trail:
+                breadcrumbs, origin_key = project_trail
+            else:
+                breadcrumbs = [
+                    section_crumb(self.request, url_username, self.kwargs.get('context_type') or 'members'),
+                    {'label': person_name, 'url': None},
+                ]
 
         context['breadcrumbs'] = breadcrumbs
         context['return_url'] = breadcrumbs[-2]['url']
@@ -505,122 +528,35 @@ class OrgMemberDetailView(DetailView):
             person.person_resource.select_related('resource').order_by('order')
         )
 
-        # Composed songs
-        composed_songs = person.composed_songs.all()
-        if composed_songs.exists():
-            context["composed_songs"] = composed_songs
+        # Songs by role; composer/arranger are shown in each row's subline
+        for key, songs in {
+            "composed_songs": person.composed_songs.all(),
+            "written_songs": person.written_songs.all(),
+            "arranged_songs": person.arranged_songs.all(),
+            "translated_songs": Song.objects.filter(lyricstranslation__translator=person).distinct(),
+        }.items():
+            songs = list(songs.select_related("composer", "arranger"))
+            if songs:
+                context[key] = songs
 
-        # Written songs
-        written_songs = person.written_songs.all()
-        if written_songs.exists():
-            context["written_songs"] = written_songs
+        # Translation counts per (original language, translation language) pair
+        pairs = {}
+        for trans in LyricsTranslation.objects.filter(translator=person).select_related("song__languagecode", "languagecode"):
+            original = trans.song.languagecode.language_code if trans.song.languagecode else "Unknown"
+            translated = trans.languagecode.language_code if trans.languagecode else "Unknown"
+            pairs[(original, translated)] = pairs.get((original, translated), 0) + 1
+        if pairs:
+            context["translation_pairs"] = [
+                {"languages": f"{o} - {t}", "count": n} for (o, t), n in pairs.items()
+            ]
 
-        # Arranged songs
-        arranged_songs = person.arranged_songs.all()
-        if arranged_songs.exists():
-            context["arranged_songs"] = arranged_songs
-
-        # Translation pairs with song counts
-        translations = LyricsTranslation.objects.filter(
-            translator=person
-        ).select_related('song__languagecode', 'languagecode')
-        if translations.exists():
-            # translation_pairs = []
-            # Group by (original language, translation language) pair
-            pair_dict = {}
-            for trans in translations:
-                original_lang = trans.song.languagecode.language_code if trans.song.languagecode else "Unknown"
-                translation_lang = trans.languagecode.language_code if trans.languagecode else "Unknown"
-                key = (original_lang, translation_lang)
-                if key not in pair_dict:
-                    pair_dict[key] = {"original_lang": original_lang, "translation_lang": translation_lang, "count": 0}
-                pair_dict[key]["count"] += 1
-
-            translation_pairs = list(pair_dict.values())
-            if translation_pairs:
-                context["translation_pairs"] = translation_pairs
-
-        # Singer projects (reordered by latest event date)
-        if person.skills.filter(id=Skill.SINGER).exists():
-            projects = Project.objects.filter(
-                events__attendance__person=person
-            ).annotate(
-                latest_event=Max('events__started_at')
-            ).distinct().order_by('-latest_event')
-
-            singer_projects = []
-            for project in projects:
-                perf_attended = Attendance.objects.filter(
-                    person=person,
-                    event__project=project,
-                    event__event_type_id__in=[EventType.PERFORMANCE, EventType.CONCERT, EventType.RECORDING],
-                    attendance_type_id=AttendanceType.PRESENT,
-                ).count()
-                rehearsals_present = Attendance.objects.filter(
-                    person=person,
-                    event__project=project,
-                    event__event_type_id=EventType.REHEARSAL,
-                    attendance_type_id=AttendanceType.PRESENT,
-                ).count()
-                rehearsals_total = Attendance.objects.filter(
-                    person=person,
-                    event__project=project,
-                    event__event_type_id=EventType.REHEARSAL,
-                ).counted().count()
-                singer_projects.append({
-                    "project": project,
-                    "performances_attended": perf_attended,
-                    "rehearsals_present": rehearsals_present,
-                    "rehearsals_total": rehearsals_total,
-                })
-
-            context["singer_projects"] = singer_projects
-
-            # Singer voices
-            singer_voices = person.singer_set.all()
-            if singer_voices.exists():
-                context["singer_voices"] = singer_voices
-
-        # Instrumentalist projects (similar to singer projects)
-        if person.skills.filter(id=Skill.INSTRUMENTALIST).exists():
-            projects = Project.objects.filter(
-                events__attendance__person=person
-            ).annotate(
-                latest_event=Max('events__started_at')
-            ).distinct().order_by('-latest_event')
-
-            instrumentalist_projects = []
-            for project in projects:
-                perf_attended = Attendance.objects.filter(
-                    person=person,
-                    event__project=project,
-                    event__event_type_id__in=[EventType.PERFORMANCE, EventType.CONCERT, EventType.RECORDING],
-                    attendance_type_id=AttendanceType.PRESENT,
-                ).count()
-                rehearsals_present = Attendance.objects.filter(
-                    person=person,
-                    event__project=project,
-                    event__event_type_id=EventType.REHEARSAL,
-                    attendance_type_id=AttendanceType.PRESENT,
-                ).count()
-                rehearsals_total = Attendance.objects.filter(
-                    person=person,
-                    event__project=project,
-                    event__event_type_id=EventType.REHEARSAL,
-                ).counted().count()
-                instrumentalist_projects.append({
-                    "project": project,
-                    "performances_attended": perf_attended,
-                    "rehearsals_present": rehearsals_present,
-                    "rehearsals_total": rehearsals_total,
-                })
-
-            context["instrumentalist_projects"] = instrumentalist_projects
-
-            # Instrumentalist instruments
-            instrumentalist_instruments = person.instrumentalist_set.all()
-            if instrumentalist_instruments.exists():
-                context["instrumentalist_instruments"] = instrumentalist_instruments
+        # Events attended: the member page renders the same partial the live search fetches. Only orgs have events (a personal profile has no membership).
+        context['show_events'] = Organization.objects.filter(user=self.customuser).exists()
+        if context['show_events']:
+            events = PersonEventListView.as_view(initial_types=[EventType.PERFORMANCE, EventType.CONCERT, EventType.RECORDING])(self.request, username=url_username, pk=person.pk)
+            events.render()
+            context.update({k: events.context_data[k] for k in ('filters', 'filter_types', 'q')})
+            context['events_html'] = mark_safe(events.content.decode())
 
         return context
 
@@ -670,7 +606,7 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
         context = super().get_context_data(**kwargs)
         context['preset'] = self.kwargs.get('preset')
         context['is_admin'] = True
-        list_name = PRESET_LIST_MAP.get(self.kwargs.get('preset'), 'org_member_list')
+        list_name = PRESET_LIST_MAP.get(self.kwargs.get('preset'), _default_list_name(self.request, self.kwargs['username']))
         context['cancel_url'] = safe_next_url(
             self.request, reverse(f"syncope:{list_name}", kwargs={'username': self.kwargs['username']})
         )
@@ -678,8 +614,10 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
 
     def form_valid(self, form):
         auto_add_event = self.request.POST.get('auto_add_event') or self.request.GET.get('auto_add_event')
+        auto_add_poll = self.request.POST.get('auto_add_poll') or self.request.GET.get('auto_add_poll')
+        auto_add_project = self.request.POST.get('auto_add_project') or self.request.GET.get('auto_add_project')
         selected_roles = form.cleaned_data["roles"]
-        if not selected_roles and auto_add_event:
+        if not selected_roles and (auto_add_event or auto_add_poll or auto_add_project):
             # Quick-added from an event's Attendance edit page: default to Member
             # rather than _add_roles' own External fallback, so they show up as
             # an active member.
@@ -708,20 +646,32 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
         host = self.request.get_host()
         safe_next = next_url if (next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={host})) else None
 
-        if safe_next and auto_add_event:
-            event = Event.objects.filter(pk=auto_add_event, user=self.customuser).first()
-            if event:
-                Attendance.objects.get_or_create(
-                    event=event, person=person,
-                    defaults={'attendance_type': AttendanceType.objects.get(pk=AttendanceType.TBD)},
-                )
+        if safe_next:
+            if auto_add_event:
+                event = Event.objects.filter(pk=auto_add_event, user=self.customuser).first()
+                if event:
+                    Attendance.objects.get_or_create(
+                        event=event, person=person,
+                        defaults={'attendance_type': AttendanceType.objects.get(pk=AttendanceType.TBD)},
+                    )
+            if auto_add_poll:
+                poll = Poll.objects.filter(pk=auto_add_poll, user=self.customuser).first()
+                if poll:
+                    PollPerson.objects.get_or_create(poll=poll, person=person)
+            if auto_add_project:
+                project = Project.objects.filter(pk=auto_add_project, user=self.customuser).first()
+                if project:
+                    project.guests.add(person)
+            preset = self.kwargs.get('preset')
+            if preset in ('composer', 'poet', 'arranger', 'translator'):
+                safe_next = add_query_param(safe_next, {f'select_{preset}': person.pk})
             draft_key = self.request.POST.get('draft_key') or self.request.GET.get('draft_key')
             if draft_key:
                 safe_next = add_query_param(safe_next, {'draft_key': draft_key})
             return HttpResponseRedirect(safe_next)
 
         preset = self.kwargs.get('preset')
-        list_name = PRESET_LIST_MAP.get(preset, 'org_member_list')
+        list_name = PRESET_LIST_MAP.get(preset, _default_list_name(self.request, self.kwargs['username']))
         return redirect(f"syncope:{list_name}", username=self.kwargs["username"])
 
     def _create_person(self, form):
@@ -871,7 +821,7 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
         )
 
 
-        self.person = get_object_or_404(Person, pk=self.kwargs["pk"])
+        self.person = get_object_or_404(Person, pk=self.kwargs["pk"], memberships__user=self.customuser)
 
 
         viewer_role = AccessControl.get_org_roles(
@@ -882,6 +832,7 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
 
         is_admin = viewer_role.filter(id=Role.ADMIN).exists()
         is_owner = self.person.user == request.user
+        self.is_admin = is_admin
 
 
 
@@ -956,6 +907,11 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
             url = with_origin(add_query_param(url, extra), origin_key)
         return url
 
+    def _person_delete_url(self):
+        context_type = self.kwargs.get('context_type')
+        delete_url_name = _DELETE_URL_NAMES.get(context_type, 'syncope:org_member_delete')
+        return reverse(delete_url_name, kwargs={'username': self.kwargs['username'], 'pk': self.person.pk})
+
     def _return_target(self):
         from_song_pk, from_event_pk, origin_key = self._from_song_event_and_origin()
         if from_song_pk:
@@ -969,44 +925,46 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
             event = Event.objects.filter(pk=from_event_pk, user=self.customuser).first()
             if event:
                 event_url = reverse('syncope:event_detail', kwargs={'username': self.kwargs['username'], 'pk': event.pk})
-                return with_origin(event_url, origin_key), f"Return to {event.name}"
-        return reverse('syncope:org_member_list', kwargs={'username': self.kwargs['username']}), "Return to Members"
+                return with_origin(event_url, origin_key), f"Return to {event}"
+        return self._person_detail_url(), f"Return to {self.person}"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["organization"] = self.customuser
-        context['is_admin'] = True
+        context['is_admin'] = self.is_admin
         context['cancel_url'] = self._person_detail_url()
         context['return_url'], context['return_label'] = self._return_target()
+        context["is_linked"] = self.person.owner_id is not None
+        context["can_unlink"] = self.is_admin or AccessControl.is_person_owner(
+            self.request.user, self.person
+        )
 
         period_qs = MembershipPeriod.objects.filter(
             person=self.person, user=self.customuser
         ).order_by('role_id', 'started_at')
 
+        context['periods'] = period_qs.select_related('role')
+
         period_kwargs = dict(instance=self.person, prefix='periods', user=self.customuser, person=self.person, queryset=period_qs)
 
         if self.request.POST:
-            context['resource_formset'] = PersonResourceFormSet(
-                self.request.POST, instance=self.person, prefix='resources', user=self.request.user
-            )
             context['period_formset'] = MembershipPeriodFormSet(self.request.POST, **period_kwargs)
         else:
-            context['resource_formset'] = PersonResourceFormSet(
-                instance=self.person, prefix='resources', user=self.request.user
-            )
             context['period_formset'] = MembershipPeriodFormSet(**period_kwargs)
         return context
 
     def form_valid(self, form):
+        pf = MembershipPeriodFormSet(
+            self.request.POST, instance=self.person, prefix='periods',
+            user=self.customuser, person=self.person,
+            queryset=MembershipPeriod.objects.filter(person=self.person, user=self.customuser),
+        )
+        if not pf.is_valid():
+            # get_context_data rebuilds the formset from POST, so the period errors show on the page.
+            return self.render_to_response(self.get_context_data(form=form))
         with transaction.atomic():
             # 1. save period formset
-            pf = MembershipPeriodFormSet(
-                self.request.POST, instance=self.person, prefix='periods',
-                user=self.customuser, person=self.person,
-                queryset=MembershipPeriod.objects.filter(person=self.person, user=self.customuser),
-            )
-            if pf.is_valid():
-                pf.save()
+            pf.save()
 
             # 2. update person info
             self._update_person_info(form)
@@ -1032,32 +990,8 @@ class OrgMemberEditView(DraftMixin, FormView):  # OrgMemberMixin,
             # 9. update date fields
             self._update_dates(form)
 
-            # 10. save resources
-            rf = PersonResourceFormSet(
-                self.request.POST, instance=self.person, prefix='resources', user=self.request.user
-            )
-            if rf.is_valid():
-                self._save_resources(rf)
-
-        return redirect(self._person_detail_url())
-
-    def _save_resources(self, resource_formset):
-        self.person.person_resource.all().delete()
-        valid_forms = [
-            f for f in resource_formset.forms
-            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('url')
-        ]
-        for idx, f in enumerate(valid_forms):
-            url = f.cleaned_data['url']
-            description = f.cleaned_data.get('description', '')
-            resource, created = Resource.objects.get_or_create(
-                url=url,
-                defaults={'owner': self.request.user, 'description': description}
-            )
-            if not created:
-                resource.description = description
-                resource.save(update_fields=['description'])
-            PersonResource.objects.create(person=self.person, resource=resource, order=idx + 1)
+        messages.success(self.request, "Saved.")
+        return redirect(self.request.get_full_path())  # stay on the edit page
 
     def _update_person_info(self, form):
         """update personal info"""
@@ -1225,7 +1159,7 @@ class OrgMemberDeleteView(LoginRequiredMixin, DeleteView):
                 event_url = reverse('syncope:event_detail', kwargs={'username': url_username, 'pk': event.pk})
                 return with_origin(event_url, origin_key)
         context_type = self.kwargs.get('context_type')
-        list_name = CONTEXT_TYPE_LIST_MAP.get(context_type, 'org_member_list')
+        list_name = CONTEXT_TYPE_LIST_MAP.get(context_type, _default_list_name(self.request, self.kwargs['username']))
         return reverse(f"syncope:{list_name}", kwargs={'username': url_username})
 
     def get_context_data(self, **kwargs):
@@ -1276,3 +1210,66 @@ def org_member_unlink(request, username, pk):
 
     messages.success(request, f"Unlinked '{name}' from their account.")
     return redirect("syncope:org_member_detail", username=username, pk=pk)
+
+
+
+@login_required
+def profile_account(request, username):
+    """Profile > Account: change username or password (two independent forms, told apart by `action`)."""
+    if request.user.username != username:
+        return HttpResponseForbidden()
+    action = request.POST.get("action")
+    username_form = UsernameChangeForm(request.POST if action == "username" else None, instance=request.user)
+    password_form = AccountPasswordChangeForm(request.user, request.POST if action == "password" else None)
+    password_form.fields["new_password2"].help_text = ""
+    password_form.fields["old_password"].widget.attrs["autocomplete"] = "new-password"  # stop browser autofill
+    if username_form.is_bound and username_form.is_valid():
+        user = username_form.save()
+        messages.success(request, "Username updated.")
+        return redirect("syncope:profile_account", username=user.username)
+    if password_form.is_bound and password_form.is_valid():
+        user = password_form.save()
+        update_session_auth_hash(request, user)
+        messages.success(request, "Password updated.")
+        return redirect("syncope:profile_account", username=username)
+    return render(request, "syncope/profile_account.html", {
+        "username_form": username_form,
+        "password_form": password_form,
+    })
+
+
+@method_decorator(login_required, name='dispatch')
+class ProfileDetailView(OrgMemberDetailView):
+    """Read-only page of the logged-in user's own personal Person - the org person detail, with profile Edit links."""
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and request.user.username != kwargs["username"]:
+            return HttpResponseForbidden()
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return Person.objects.select_related("owner__user")  # personal Person has no org membership to filter on
+
+    def get_object(self, queryset=None):
+        return get_object_or_404(self.get_queryset(), user=self.request.user, owner__isnull=True)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        username = self.kwargs["username"]
+        context["profile"] = True
+        context["is_admin"] = True
+        context.pop("breadcrumbs")  # let the profile trail be derived from the URL
+        person = self.object
+        # Own profile: show everything the profile form holds, whatever the org-role filtering says
+        context["person_data"] = {
+            "email": person.email,
+            "phone": person.phone,
+            "address": person.address,
+            "birth_date": person.birth_date,
+            "skills": person.skills.exclude(id__in=[Skill.SINGER, Skill.INSTRUMENTALIST]).values_list("title", flat=True),
+            "voices": Voice.objects.filter(singer__person=person).values_list("name", flat=True),
+            "instruments": Instrument.objects.filter(instrumentalist__person=person).values_list("name", flat=True),
+        }
+        context["return_url"] = reverse("syncope:home")
+        context["person_edit_url"] = reverse("syncope:person_update", kwargs={"username": username})
+        return context

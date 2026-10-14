@@ -1,20 +1,29 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}Delete Event{% endblock %}
+{% block title %}{{ event.name|default:event.event_type }} - Syncope{% endblock %}
 
 {% block content %}
-<h2>Delete Event?</h2>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="{% if event.name %}Title{% else %}Type{% endif %}">{{ event.name|default:event.event_type }}</span>
+            <small><span title="Action"> | Delete</span></small>
+        </span>
+    </h1>
+</div>
 
-<p>Are you sure you want to delete <strong>{{ event.name }}</strong>?</p>
+<p>Are you sure you want to delete <strong>{{ event.name|default:event.event_type }}</strong>?</p>
 
 {% if is_admin %}
 <form method="post">
     {% csrf_token %}
-    <button type="submit" class="danger">Delete</button>
-    <a href="{%  url 'syncope:event_detail' url_username event.pk %}">Cancel</a>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-danger">Delete Event</button>
+    </div>
 </form>
-{% else %}
-<p><a href="{%  url 'syncope:event_detail' url_username event.pk %}">Back to Event</a></p>
 {% endif %}
+
+{% url 'syncope:event_detail' url_username event.pk as return_target %}
+{% include "syncope/_save_bar.html" with url=return_target %}
 
 {% endblock %}

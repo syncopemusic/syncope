@@ -1,135 +1,55 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static filter_tags %}
 
 {% block title %}Events{% endblock %}
 
 {% block content %}
 
-{% if membership and ADMIN_ROLE in membership.person.roles.all %}
-<p><a href="{%  url 'syncope:event_new' url_username %}">
-    + New Event</a></p>
-{% endif %}
-<h2>Events</h2>
+<div class="section-header">
+    <h1>Events</h1>
+    {% if url_username == user.username or membership and ADMIN_ROLE in membership.person.roles.all %}
+    <a href="{%  url 'syncope:event_new' url_username %}" class="btn btn-primary" title="Add new event to the schedule">+ Add</a>
+    {% endif %}
+</div>
 
-<div style="display:none;">{% csrf_token %}</div>
+{% include "syncope/_search_box.html" with prefix="event-list" q=q placeholder="Search by name, type, project, location, song, or date (2025, 3.2025, 5.3.2025)" %}
+
+{% filter_panel "event-filter-form" %}
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="start" label="From" type="date" value=filters.start|date:"Y-m-d" %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_input.html" with name="end" label="To" type="date" value=filters.end|date:"Y-m-d" %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="type" label="Event type" options=filter_types selected=filters.type %}
+</div>
+<div class="filter-row">
+    {% include "syncope/_filter_multi.html" with name="project" label="Project" options=filter_projects selected=filters.project %}
+</div>
+{% endfilter_panel %}
+
+<div id="event-list-results">
+    {% include "syncope/event_list_results.html" %}
+</div>
 
 
-<table>
-    <tr>
-        <th>#</th>
-        <th>🔗</th>
-        <th><a href="?sort=date{% if current_sort == 'date' and not reverse %}&reverse=true{% endif %}">Date{% if current_sort == 'date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?sort=type{% if current_sort == 'type' and not reverse %}&reverse=true{% endif %}">Type{% if current_sort == 'type' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?sort=project{% if current_sort == 'project' and not reverse %}&reverse=true{% endif %}">Project{% if current_sort == 'project' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-
-        <th>Resources</th>
-    </tr>
-    {% for event in events %}
-        <tr>
-            <td>{{ forloop.counter }}</td>
-
-            <td style="position: relative;"><button class="share-event-btn" data-type="event" data-event-pk="{{ event.id }}" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link"><img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy"></button>
-              <span class="share-event-result" style="position: absolute; top: 50%; left: 100%; transform: translateY(-50%); white-space: nowrap; font-size: 0.85rem; z-index: 10; background: white; padding: 2px 4px;"></span>
-            </td>
-
-            <td> <a href="{%  url 'syncope:event_detail' url_username event.id %}?origin=events">
-                {% if event.started_at %}
-                <span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime">{{ event.started_at|date:"d M, Y, H:i" }}</span>
-                {% else %}
-                no date yet
-                {% endif %}
-                </a>
-            </td>
-            <td>{{ event.event_type }}</td>
-            <td>{% if event.project %}<a href="{%  url 'syncope:project_detail' url_username event.project.id %}">{{ event.project }}</a>{% else %}—{% endif %}</td>
-            <td>
-              {% if event.resource_count > 0 %}
-                <span title="Event resources">
-                  {% if event.resource_count > 0 %}
-                    🔗
-                  {% endif %}
-                  {{ event.resource_count }}
-                </span>
-              {% endif %}
-              {% if event.event_song_resource_count > 0 %}
-                <span title="Song resources">
-                  {% if event.event_song_resource_count > 0 %}
-                    🎵
-                  {% endif %}
-                  {{ event.event_song_resource_count }}
-                </span>
-              {% endif %}
-            </td>
-        </tr>
-    {% endfor %}
-</table>
-
-{% if user.is_authenticated %}
-{% block extra_js %}
-<script>
-function createShareHandler(btn, resultSpan, shareData) {
-    return function () {
-        btn.disabled = true;
-        if (resultSpan) resultSpan.textContent = 'Copying...';
-
-        fetch('/share/create/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            },
-            body: JSON.stringify(shareData),
-        })
-        .then(function(response) {
-            if (!response.ok) throw new Error('Request failed');
-            return response.json();
-        })
-        .then(function(data) {
-            const shareUrl = window.location.origin + '/' + data.share_id + '/';
-
-            // Copy to clipboard
-            navigator.clipboard.writeText(shareUrl).then(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link copied:\n' + shareUrl);
-                }
-            }).catch(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link:\n' + shareUrl);
-                }
-            });
-        })
-        .catch(function() {
-            if (resultSpan) {
-                resultSpan.textContent = 'Failed';
-            } else {
-                alert('Failed to generate share link');
-            }
-        })
-        .finally(function() {
-            btn.disabled = false;
-        });
-    };
-}
-
-document.querySelectorAll('.share-event-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        const eventPk = this.dataset.eventPk;
-        const resultSpan = this.nextElementSibling;
-        createShareHandler(
-            this,
-            resultSpan,
-            { type: 'event', id: eventPk }
-        )();
-    });
-});
-</script>
 {% endblock %}
-{% endif %}
 
+{% block extra_js %}
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/filter-form.js' %}"></script>
+<script>
+    const filterForm = document.getElementById('event-filter-form');
+    const searchInput = document.getElementById('event-list-search-input');
+    const search = initLiveSearch({
+        input: searchInput,
+        spinner: document.getElementById('event-list-search-spinner'),
+        results: document.getElementById('event-list-results'),
+        clearBtn: document.getElementById('event-list-search-clear'),
+        searchUrl: "{% url 'syncope:event_list_search' url_username %}",
+        filterForm,
+    });
+    initFilterForm(filterForm, () => search.run(searchInput.value));
+</script>
 {% endblock %}

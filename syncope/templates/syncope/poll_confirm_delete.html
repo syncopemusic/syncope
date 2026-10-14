@@ -1,19 +1,28 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}Delete Poll{% endblock %}
+{% block title %}{{ poll.title }} - Syncope{% endblock %}
 
 {% block content %}
-<h2>Delete Poll</h2>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ poll.title }}</span>
+            <small><span title="Action"> | Delete</span></small>
+        </span>
+    </h1>
+</div>
 
 <p>Are you sure you want to delete "<strong>{{ poll.title }}</strong>"?</p>
 
 {% if is_admin %}
 <form method="post">
     {% csrf_token %}
-    <button type="submit" class="btn btn-danger">Delete</button>
-    <a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Cancel</a>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-danger">Delete Poll</button>
+    </div>
 </form>
-{% else %}
-<p><a href="{% url 'syncope:poll_detail' url_username poll.pk %}">Back to Poll</a></p>
 {% endif %}
+
+{% url 'syncope:poll_detail' url_username poll.pk as return_target %}
+{% include "syncope/_save_bar.html" with url=return_target %}
 {% endblock %}

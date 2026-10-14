@@ -1,0 +1,51 @@
+{% extends "syncope/base.html" %}
+{% load static %}
+{% block title %}{{ object.title }} - Syncope{% endblock %}
+
+{% block content %}
+
+<div class="section-header section-header-edit">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ object.title }}</span>
+            <small><span title="Action"> | Edit</span></small>
+        </span>
+    </h1>
+    <a href="{% url 'syncope:project_delete' url_username object.pk %}" class="btn btn-danger btn-delete">Delete Project</a>
+</div>
+
+<form method="post" id="project-meta-form">
+    {% csrf_token %}
+
+    {% for field in form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {{ field.errors }}
+        </div>
+    {% endfor %}
+
+</form>
+
+{% url 'syncope:project_detail' url_username object.pk as project_detail_url %}
+{% include "syncope/_save_bar.html" with form_id="project-meta-form" url=project_detail_url %}
+
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>
+    const form = document.getElementById('project-meta-form');
+    const fieldTracker = trackFormFieldChanges(form);
+
+    const saveBarCtl = initSaveBar({
+        formId: 'project-meta-form',
+        countUnsavedChanges: fieldTracker.count,
+        onDiscard: () => {
+            form.reset();
+            fieldTracker.reset();
+        },
+    });
+
+    form.addEventListener('input', () => saveBarCtl.sync());
+    form.addEventListener('change', () => saveBarCtl.sync());
+    saveBarCtl.sync();
+</script>
+{% endblock %}

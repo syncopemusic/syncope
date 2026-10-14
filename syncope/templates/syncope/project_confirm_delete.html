@@ -1,20 +1,29 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}Delete Project{% endblock %}
+{% block title %}{{ project.title }} - Syncope{% endblock %}
 
 {% block content %}
-<h2>Delete Project?</h2>
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ project.title }}</span>
+            <small><span title="Action"> | Delete</span></small>
+        </span>
+    </h1>
+</div>
 
 <p>Are you sure you want to delete <strong>{{ project.title }}</strong>?</p>
 
 {% if can_delete %}
 <form method="post">
     {% csrf_token %}
-    <button type="submit" class="danger">Delete</button>
-    <a href="{%  url 'syncope:project_detail' url_username project.pk %}">Cancel</a>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-danger">Delete Project</button>
+    </div>
 </form>
-{% else %}
-<p><a href="{%  url 'syncope:project_detail' url_username project.pk %}">Back to Project</a></p>
 {% endif %}
+
+{% url 'syncope:project_detail' url_username project.pk as return_target %}
+{% include "syncope/_save_bar.html" with url=return_target %}
 
 {% endblock %}

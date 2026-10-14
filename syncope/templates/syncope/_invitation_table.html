@@ -23,33 +23,39 @@ Parameters:
 - other_sort: Other table's sort key (for preservation in URLs)
 - other_reverse: Other table's reverse state (for preservation in URLs)
 {% endcomment %}
-
+{% load dt_tags %}
 <h3>{{ title }}</h3>
-<table>
+<div class="table-container">
+<table class="table">
+    <thead>
     <tr>
-        <th>#</th>
-        <th><a href="?{{ prefix }}_sort=date{% if sort == 'date' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}">Date{% if sort == 'date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?{{ prefix }}_sort=type{% if sort == 'type' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}">Type{% if sort == 'type' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?{{ prefix }}_sort=sent_by{% if sort == 'sent_by' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}">Sender{% if sort == 'sent_by' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?{{ prefix }}_sort=admin{% if sort == 'admin' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}">Admin involved{% if sort == 'admin' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?{{ prefix }}_sort=received_by{% if sort == 'received_by' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}">Recipient{% if sort == 'received_by' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?{{ prefix }}_sort=status{% if sort == 'status' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}">Status{% if sort == 'status' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
-        <th><a href="?{{ prefix }}_sort=expires{% if sort == 'expires' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}">Expires{% if sort == 'expires' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th class="col-num"></th>
+        <th><a href="?q={{ q|urlencode }}&{{ filter_qs }}&{{ prefix }}_sort=date{% if sort == 'date' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}" class="sortable-header">Date{% if sort == 'date' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?q={{ q|urlencode }}&{{ filter_qs }}&{{ prefix }}_sort=type{% if sort == 'type' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}" class="sortable-header">Type{% if sort == 'type' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th class="col-main"><a href="?q={{ q|urlencode }}&{{ filter_qs }}&{{ prefix }}_sort=sent_by{% if sort == 'sent_by' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}" class="sortable-header">Sender{% if sort == 'sent_by' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?q={{ q|urlencode }}&{{ filter_qs }}&{{ prefix }}_sort=admin{% if sort == 'admin' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}" class="sortable-header">Admin involved{% if sort == 'admin' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th class="col-main"><a href="?q={{ q|urlencode }}&{{ filter_qs }}&{{ prefix }}_sort=received_by{% if sort == 'received_by' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}" class="sortable-header">Recipient{% if sort == 'received_by' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?q={{ q|urlencode }}&{{ filter_qs }}&{{ prefix }}_sort=status{% if sort == 'status' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}" class="sortable-header">Status{% if sort == 'status' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
+        <th><a href="?q={{ q|urlencode }}&{{ filter_qs }}&{{ prefix }}_sort=expires{% if sort == 'expires' and not reverse %}&{{ prefix }}_reverse=true{% endif %}{% if other_sort %}&{{ other_prefix }}_sort={{ other_sort }}{% endif %}{% if other_reverse %}&{{ other_prefix }}_reverse=true{% endif %}" class="sortable-header">Expires{% if sort == 'expires' %}{% if not reverse %} ↑{% else %} ↓{% endif %}{% endif %}</a></th>
         <th></th>
     </tr>
+    </thead>
+    <tbody>
     {% for invitation in invitations %}
         <tr>
-            <td>{{ forloop.counter }}</td>
-            <td><span data-dt="{{ invitation.created_at|date:'c' }}" data-dt-fmt="date">{{ invitation.created_at|date:"d M, Y" }}</span></td>
+            <td class="col-num">{{ forloop.counter }}</td>
+            <td>{% dt invitation.created_at "date-year" %}</td>
             <td>{{ invitation.invitation_type }}</td>
-            <td>{{ invitation.sender }}</td>
-            <td>{% if invitation.admin_involved %}{{ invitation.admin_involved }}{% else %}?{% endif %}</td>
-            <td>{{ invitation.recipient }}</td>
+            <td class="col-main">{% include "syncope/_user_cell.html" with u=invitation.sender %}</td>
+            <td>{% if invitation.admin_involved %}{% include "syncope/_user_cell.html" with u=invitation.admin_involved %}{% else %}?{% endif %}</td>
+            <td class="col-main">{% include "syncope/_user_cell.html" with u=invitation.recipient %}</td>
             <td>{{ invitation.status }}</td>
-            <td>{% if invitation.expires_at %}<span data-dt="{{ invitation.expires_at|date:'c' }}" data-dt-fmt="datetime">{{ invitation.expires_at|date:"d M, Y, H:i" }}</span>{% else %}—{% endif %}</td>
+            <td>{% if invitation.expires_at %}{% dt invitation.expires_at "datetime" %}{% else %}-{% endif %}</td>
             <td><a href="{% url 'syncope:invitation_detail' url_username invitation.pk %}">View</a></td>
         </tr>
     {% empty %}
-        <tr><td colspan="9">No invitations.</td></tr>
+        <tr><td colspan="9">{% if q or filters %}No invitations found.{% else %}No invitations.{% endif %}</td></tr>
     {% endfor %}
+    </tbody>
 </table>
+</div>

@@ -1,165 +1,94 @@
 {% extends "syncope/base.html" %}
 {% load static %}
-{% block title %}
-{% if list_type == 'active' %}Active Members
-{% elif list_type == 'inactive' %}Inactive Members
-{% elif list_type == 'others' %}Unspecified
-{% elif list_type == 'all' %}All Persons
-{% elif list_type == 'composers' %}Composers
-{% elif list_type == 'poets' %}Poets
-{% elif list_type == 'arrangers' %}Arrangers
-{% elif list_type == 'translators' %}Translators
-{% endif %}
-{% endblock %}
+{% block title %}{{ list_title }}{% endblock %}
 
 {% block content %}
-<h1>
-{% if list_type == 'active' %}Active Members
-{% elif list_type == 'inactive' %}Inactive Members
-{% elif list_type == 'others' %}Unspecified
-{% elif list_type == 'all' %}All Persons
-{% elif list_type == 'composers' %}Composers
-{% elif list_type == 'poets' %}Poets
-{% elif list_type == 'arrangers' %}Arrangers
-{% elif list_type == 'translators' %}Translators
-{% endif %}
-</h1>
+<div class="section-header">
+    <h1>{{ list_title }}</h1>
 
-{% if membership and ADMIN_ROLE in membership.person.roles.all %}
-<p>
-{% if list_type == 'active' %}
-    <a href="{% url 'syncope:org_member_new_member' url_username %}">
-        + new member
-    </a>
-{% elif list_type == 'inactive' %}
-{% elif list_type == 'others' %}
-{% elif list_type == 'composers' %}
-    <a href="{% url 'syncope:org_member_new_composer' url_username %}">
-        + Composer
-    </a>
-{% elif list_type == 'poets' %}
-    <a href="{% url 'syncope:org_member_new_poet' url_username %}">
-        + Poet
-    </a>
-{% elif list_type == 'arrangers' %}
-    <a href="{% url 'syncope:org_member_new_arranger' url_username %}">
-        + Arranger
-    </a>
-{% elif list_type == 'translators' %}
-    <a href="{% url 'syncope:org_member_new_translator' url_username %}">
-        + Translator
-    </a>
-{% endif %}
-</p>
-{% endif %}
+    {% if is_own_contacts or add_url_name and membership and ADMIN_ROLE in membership.person.roles.all %}
+        <a href="{% url add_url_name url_username %}" class="btn btn-primary" title="Add new {{ add_label }}">+ Add</a>
+    {% endif %}
+</div>
 
-{% if url_username == user.username %}
-    <p>
-        This is your personal page.
-    </p>
-{% else %}
-    <p>This is organization: {{ url_username }}</p>
-{% endif %}
-
-<p style="display:flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
-    <input type="text" id="person-search-input" value="{{ q }}" placeholder="Filter by skill, voice or instrument" style="flex: 1;">
-    <button type="button" id="person-search-clear">Clear</button>
+<p class="search-form">
+    <span class="search-field search-field-wide">
+        <input type="text" id="person-search-input" value="{{ q }}" placeholder="Search by name, skill, voice, instrument">
+        <span class="search-spinner" id="person-search-spinner"></span>
+    </span>
+    <button type="button" id="person-search-clear" class="btn btn-secondary">Clear</button>
 </p>
 
-<div style="display:none;">{% csrf_token %}</div>
+<details class="filter-panel">
+    <summary>
+        <span>Filter <span class="filter-total" id="filter-total">{% if filters %}({{ filters|length }}){% endif %}</span></span>
+        <svg class="filter-toggle-icon" viewBox="0 0 24 24" width="18" height="18" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+    </summary>
+    <form method="get" class="filter-form" id="person-filter-form">
+        <input type="hidden" name="f" value="1">
+        <div class="filter-row">
+            {% include "syncope/_filter_status.html" with name="member" label="Member" selected=filters.member %}
+        </div>
+        <div class="filter-row">
+            {% include "syncope/_filter_multi.html" with name="skill" label="Skill" options=filter_skills selected=filters.skill %}
+        </div>
+        <div class="filter-row">
+            {% include "syncope/_filter_multi.html" with name="voice" label="Voice" options=filter_voices selected=filters.voice %}
+        </div>
+        <div class="filter-row">
+            {% include "syncope/_filter_multi.html" with name="instrument" label="Instrument" options=filter_instruments selected=filters.instrument %}
+        </div>
+        {% if filter_is_admin %}
+        <div class="filter-row">
+            {% include "syncope/_filter_status.html" with name="supporter" label="Supporter" selected=filters.supporter %}
+        </div>
+        {% endif %}
+        <div class="filter-row">
+            {% include "syncope/_filter_status.html" with name="admin" label="Admin" selected=filters.admin %}
+        </div>
+    </form>
+</details>
 
 <div id="person-list-results">
     {% include "syncope/person_list_results.html" %}
 </div>
 
 {% block extra_js %}
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/filter-form.js' %}"></script>
 <script>
-function createShareHandler(btn, resultSpan, shareData) {
-    return function () {
-        btn.disabled = true;
-        if (resultSpan) resultSpan.textContent = 'Copying...';
-
-        fetch('/share/create/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            },
-            body: JSON.stringify(shareData),
-        })
-        .then(function(response) {
-            if (!response.ok) throw new Error('Request failed');
-            return response.json();
-        })
-        .then(function(data) {
-            const shareUrl = window.location.origin + '/' + data.share_id + '/';
-
-            // Copy to clipboard
-            navigator.clipboard.writeText(shareUrl).then(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link copied:\n' + shareUrl);
-                }
-            }).catch(function() {
-                if (resultSpan) {
-                    resultSpan.textContent = 'Copied';
-                    setTimeout(function() { resultSpan.textContent = ''; }, 3000);
-                } else {
-                    alert('Share link:\n' + shareUrl);
-                }
-            });
-        })
-        .catch(function() {
-            if (resultSpan) {
-                resultSpan.textContent = 'Failed';
-            } else {
-                alert('Failed to generate share link');
-            }
-        })
-        .finally(function() {
-            btn.disabled = false;
-        });
-    };
-}
-
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.share-member-btn');
-    if (!btn) return;
-    const memberPk = btn.dataset.memberPk;
-    const resultSpan = btn.nextElementSibling;
-    createShareHandler(btn, resultSpan, { type: 'person', id: memberPk })();
-});
-
-const personSearchInput = document.getElementById('person-search-input');
-const personListResults = document.getElementById('person-list-results');
-let personSearchTimeout;
-
-function runPersonListSearch(query) {
-    const sort = '{{ current_sort }}';
-    const reverse = '{{ reverse|yesno:"true,false" }}';
-    const url = `{% url 'syncope:person_list_search' url_username list_type %}?q=${encodeURIComponent(query)}&sort=${sort}&reverse=${reverse}`;
-    fetch(url)
-        .then(response => response.text())
-        .then(html => { personListResults.innerHTML = html; });
-}
-
-if (personSearchInput) {
-    personSearchInput.addEventListener('input', function() {
-        clearTimeout(personSearchTimeout);
-        personSearchTimeout = setTimeout(() => runPersonListSearch(this.value), 1000);
+    const filterForm = document.getElementById('person-filter-form');
+    const searchInput = document.getElementById('person-search-input');
+    let sort = '{{ current_sort }}';
+    let reverse = '{{ reverse|yesno:"true,false" }}';
+    const search = initLiveSearch({
+        input: searchInput,
+        spinner: document.getElementById('person-search-spinner'),
+        results: document.getElementById('person-list-results'),
+        clearBtn: document.getElementById('person-search-clear'),
+        buildUrl: query => {
+            const params = new URLSearchParams(new FormData(filterForm));
+            params.set('q', query);
+            params.set('sort', sort);
+            params.set('reverse', reverse);
+            history.replaceState(null, '', `?${params}`);  // keep the page URL shareable and reload-safe
+            return `{% url 'syncope:person_list_search' url_username list_type %}?${params}`;
+        },
     });
-    personSearchInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') e.preventDefault();
+    initFilterForm(filterForm, () => search.run(searchInput.value));
+    // Sortable headers reload only the results: take sort/reverse from the clicked link.
+    document.getElementById('person-list-results').addEventListener('click', e => {
+        const link = e.target.closest('.sortable-header');
+        if (!link) return;
+        e.preventDefault();
+        const params = new URL(link.href).searchParams;
+        sort = params.get('sort');
+        reverse = params.get('reverse') || 'false';
+        search.run(searchInput.value);
     });
-}
-
-document.getElementById('person-search-clear')?.addEventListener('click', function() {
-    clearTimeout(personSearchTimeout);
-    personSearchInput.value = '';
-    runPersonListSearch('');
-});
 </script>
 {% endblock %}
 

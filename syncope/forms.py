@@ -1,26 +1,93 @@
 from django import forms
 import datetime
-from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, UserCreationForm, UserChangeForm
 from django.utils import timezone
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
     PollAttendance, Invitation
-from .models import Event, EventSong, AttendanceType,  Voice, Instrument, EventType, EventResource, EventSongResource
-from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource, ProjectResource, \
+from .models import Event, EventSong, AttendanceType,  Voice, Instrument, EventType, EventSongResource
+from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, PersonResource, \
     MembershipPeriod, PersonRole
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q, Count
+from .utils import search_events
+
+
+class HtmlDateInput(forms.DateInput):
+    """Native <input type="date">; the single date widget for every form."""
+    input_type = 'date'
+
+
+class HtmlDateTimeInput(forms.DateTimeInput):
+    """Native <input type="datetime-local">; the single date+time widget for every form."""
+    input_type = 'datetime-local'
+
+    def __init__(self, attrs=None, format='%Y-%m-%dT%H:%M'):
+        super().__init__(attrs, format)
+
+
+# first URL segments that would collide with a /<username>/ route
+RESERVED_USERNAMES = {"home", "login", "logout", "signup", "skill", "organization", "share", "accounts", "admin"}
+
+
+PASSWORD_MISMATCH = "Passwords don't match."
+PASSWORD_INCORRECT = "Incorrect password."
 
 
 class CustomUserCreationForm(UserCreationForm):
+    error_messages = {**UserCreationForm.error_messages, "password_mismatch": PASSWORD_MISMATCH}
+
     class Meta:
         model = CustomUser
         fields = ("email", "username",)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["password2"].label = "Confirm password"
+        self.fields["password2"].help_text = ""
 
     def clean_email(self):
         email = self.cleaned_data.get("email")
         if email and CustomUser.objects.filter(email=email).exists():
             raise forms.ValidationError("An account with this email already exists.")
         return email
+
+    def clean_username(self):
+        username = self.cleaned_data.get("username")
+        if username and CustomUser.objects.filter(username=username).exists():
+            raise forms.ValidationError("User already exists.")
+        if username and username.lower() in RESERVED_USERNAMES:
+            raise forms.ValidationError("This username is reserved.")
+        return username
+
+
+class LoginForm(AuthenticationForm):
+    def clean(self):
+        username = self.cleaned_data.get("username")
+        password = self.cleaned_data.get("password")
+        if username and password:
+            User = get_user_model()
+            user = User._default_manager.filter(**{User.USERNAME_FIELD: username}).first()
+            if user is None:
+                self.add_error("username", "Invalid username.")
+            elif not user.check_password(password):
+                self.add_error("password", PASSWORD_INCORRECT)
+            else:
+                return super().clean()  # authenticates, handles inactive users
+        return self.cleaned_data
+
+
+class AccountPasswordChangeForm(PasswordChangeForm):
+    error_messages = {
+        **PasswordChangeForm.error_messages,
+        "password_incorrect": PASSWORD_INCORRECT,
+        "password_mismatch": PASSWORD_MISMATCH,
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["old_password"].label = "Current password"
+        self.fields["new_password2"].label = "Confirm new password"
 
 
 class CustomUserChangeForm(UserChangeForm):
@@ -33,6 +100,24 @@ class RegisterForm(UserCreationForm):
     class Meta:
         model = CustomUser
         fields = "__all__"
+
+
+class UsernameChangeForm(forms.ModelForm):
+    class Meta:
+        model = CustomUser
+        fields = ["username"]
+        labels = {"username": "New username"}
+        widgets = {"username": forms.TextInput(attrs={"autocomplete": "off"})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.initial["username"] = ""  # "New username" starts empty, not prefilled from the instance
+
+    def clean_username(self):
+        username = self.cleaned_data["username"]
+        if username.lower() in RESERVED_USERNAMES:
+            raise forms.ValidationError("This username is reserved.")
+        return username
 
 
 class PersonForm(forms.ModelForm):
@@ -69,8 +154,8 @@ class PersonForm(forms.ModelForm):
             "death_approximate",
         ]
         widgets = {
-            "birth_date": forms.DateInput(attrs={'type': 'date'}),
-            "death_date": forms.DateInput(attrs={'type': 'date'}),
+            "birth_date": HtmlDateInput(),
+            "death_date": HtmlDateInput(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -106,6 +191,18 @@ class OrganizationForm(forms.ModelForm):
         return email
 
 
+class ApproximationChoiceField(forms.ModelChoiceField):
+    """Exact date is the empty choice (None); rows 1 and 2 get readable labels."""
+    LABELS = {"1": "Month/day approx", "2": "Year approx"}
+
+    def __init__(self, **kwargs):
+        super().__init__(queryset=ApproximateDate.objects.exclude(approximation="0"),
+                         required=False, empty_label="Exact date", **kwargs)
+
+    def label_from_instance(self, obj):
+        return self.LABELS.get(obj.approximation, obj.approximation)
+
+
 class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
     VALID_PRESETS = {'composer', 'poet', 'translator', 'arranger', 'member'}
     # Person
@@ -117,24 +214,14 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
     # Date fields
     birth_date = forms.DateField(
         required=False,
-        widget=forms.DateInput(attrs={'type': 'date'})
+        widget=HtmlDateInput()
     )
-    birth_approximate = forms.ModelChoiceField(
-        queryset=ApproximateDate.objects.all(),
-        required=False,
-        empty_label="Exact date",
-        label="Birth date approximation"
-    )
+    birth_approximate = ApproximationChoiceField(label="Birth date approximation")
     death_date = forms.DateField(
         required=False,
-        widget=forms.DateInput(attrs={'type': 'date'})
+        widget=HtmlDateInput()
     )
-    death_approximate = forms.ModelChoiceField(
-        queryset=ApproximateDate.objects.all(),
-        required=False,
-        empty_label="Exact date",
-        label="Death date approximation"
-    )
+    death_approximate = ApproximationChoiceField(label="Death date approximation")
     # Role checkboxes
     roles = forms.ModelMultipleChoiceField(
         queryset=Role.objects.all(),
@@ -208,7 +295,8 @@ class QuoteForm(forms.ModelForm):
         widgets = {
             'word': forms.TextInput(attrs={'placeholder': 'Quote text'}),
             'bar_number': forms.TextInput(attrs={'placeholder': '43'}),
-            'date': forms.DateInput(attrs={'type': 'date'}),
+            'date': HtmlDateInput(),
+            'person': forms.HiddenInput(),
         }
 
     def __init__(self, *args, user=None, **kwargs):
@@ -217,7 +305,30 @@ class QuoteForm(forms.ModelForm):
             self.fields['person'].queryset = Person.objects.in_org_user(user)
 
 
-class SongForm(forms.ModelForm):
+# Skill each person-picker field on SongMetaForm draws its candidates from; also used
+# by song_person_search to scope the AJAX search per field.
+SONG_PERSON_FIELD_SKILLS = {
+    'composer': Skill.COMPOSER,
+    'arranger': Skill.ARRANGER,
+    'poet': Skill.POET,
+    'translator': Skill.TRANSLATOR,
+}
+
+# Label and "create new person" URL name for each song person-picker field, keyed the
+# same as SONG_PERSON_FIELD_SKILLS plus 'person' (the Quotes page's non-skill-scoped field).
+# Used by song_person_search to render the "+ New" option at the bottom of its results.
+SONG_PERSON_FIELD_META = {
+    'composer': ('Composer', 'syncope:org_member_new_composer'),
+    'arranger': ('Arranger', 'syncope:org_member_new_arranger'),
+    'poet': ('Poet', 'syncope:org_member_new_poet'),
+    'translator': ('Translator', 'syncope:org_member_new_translator'),
+    'person': ('Person', 'syncope:org_member_new'),
+}
+
+
+class SongMetaForm(forms.ModelForm):
+    duration = forms.CharField(required=False, widget=forms.TextInput(attrs={"placeholder": "mm:ss"}))
+
     class Meta:
         model = Song
         fields = [
@@ -227,39 +338,44 @@ class SongForm(forms.ModelForm):
             "arranger",
             "poet",
             "translator",
-            "origin",
+            "duration",
             "number_of_pages",
             "number_of_copies",
             "year",
+            "origin",
             "ensemble",
             "number_of_voices",
             "additional_notes",
-            "lyrics",
-            "languagecode",
             "keywords",
         ]
         widgets = {
-            "lyrics": forms.Textarea(attrs={'rows': 12}),
-        }
-        labels = {
-            "languagecode": "Language",
+            "composer": forms.HiddenInput(),
+            "arranger": forms.HiddenInput(),
+            "poet": forms.HiddenInput(),
+            "translator": forms.HiddenInput(),
         }
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
+        self.initial["duration"] = self.instance.duration_display
 
         if user:
-            person_field_skills = {
-                'composer': Skill.COMPOSER,
-                'arranger': Skill.ARRANGER,
-                'poet': Skill.POET,
-                'translator': Skill.TRANSLATOR,
-            }
-            for field_name, skill_id in person_field_skills.items():
+            for field_name, skill_id in SONG_PERSON_FIELD_SKILLS.items():
                 self.fields[field_name].queryset = Person.objects.for_user_with_skill(
                     user=user, skill_id=skill_id
                 )
+
+    def clean_duration(self):
+        text = self.cleaned_data["duration"].strip()
+        if not text:
+            return None
+        parts = text.split(":")
+        if len(parts) not in (2, 3) or not all(p.isdigit() for p in parts) or any(int(p) > 59 for p in parts[1:]):
+            raise forms.ValidationError("Use mm:ss (seconds 0-59).")
+        *hm, seconds = map(int, parts)
+        minutes = hm[-1] + 60 * hm[0] if len(hm) == 2 else hm[0]
+        return minutes * 60 + seconds
 
     def clean_internal_id(self):
         value = self.cleaned_data.get("internal_id")
@@ -270,6 +386,26 @@ class SongForm(forms.ModelForm):
             if qs.exists():
                 raise forms.ValidationError("ID already in use.")
         return value
+
+
+class SongLyricsForm(forms.ModelForm):
+    class Meta:
+        model = Song
+        fields = ["lyrics", "languagecode", "poet"]
+        widgets = {
+            "lyrics": forms.Textarea(attrs={'rows': 20}),
+            "poet": forms.HiddenInput(),
+        }
+        labels = {
+            "languagecode": "Language",
+        }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['poet'].queryset = Person.objects.for_user_with_skill(
+                user=user, skill_id=SONG_PERSON_FIELD_SKILLS['poet']
+            )
 
 
 class ProjectForm(forms.ModelForm):
@@ -285,8 +421,8 @@ class ProjectForm(forms.ModelForm):
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
             'details': forms.Textarea(attrs={'rows': 6}),
-            'start_date': forms.DateInput(attrs={'type': 'date'}),
-            'end_date': forms.DateInput(attrs={'type': 'date'}),
+            'start_date': HtmlDateInput(),
+            'end_date': HtmlDateInput(),
         }
 
     def __init__(self, *args, user=None, **kwargs):
@@ -303,11 +439,11 @@ class EventForm(forms.ModelForm):
     class Meta:
         model = Event
         fields = ['name',
+                  'event_type',
                   'location',
                   'description',
                   'started_at',
                   'ended_at',
-                  'event_type',
                   'project',
                   'producers',
                   'additional_notes',
@@ -318,50 +454,30 @@ class EventForm(forms.ModelForm):
             'additional_notes': 'Personal notes',
         }
         widgets = {
-            'started_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
-            'ended_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+            'started_at': HtmlDateTimeInput(),
+            'ended_at': HtmlDateTimeInput(),
             'location': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Venue / address'}),
             'description': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Description'}),
             'producers': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Organizers'}),
             'additional_notes': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Personal notes'}),
         }
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Order projects by start date (most recent first)
-        qs = Project.objects.all() if user is None else Project.objects.filter(user=user)
-        self.fields['project'].queryset = qs.order_by('-start_date').distinct()
+        self.fields['project'].queryset = Project.objects.filter(user=user).order_by('-start_date')
 
         # Pre-select "rehearsal" event type and remove empty option
         rehearsal_event_type = EventType.objects.get(pk=EventType.REHEARSAL)
         self.fields['event_type'].initial = rehearsal_event_type
         self.fields['event_type'].empty_label = None
 
-        # Name is optional — auto-generated from event type + date if left blank (see clean())
+        # Name is optional - events can exist as just a date and type
         self.fields['name'].required = False
-        self.fields['name'].widget.attrs['placeholder'] = 'Auto-generated from date if left blank'
-
-    def clean(self):
-        cleaned_data = super().clean()
-        if not cleaned_data.get('name'):
-            event_type = cleaned_data.get('event_type')
-            started_at = cleaned_data.get('started_at') or timezone.now()
-            type_name = event_type.name if event_type else 'Event'
-            cleaned_data['name'] = f"{type_name} - {started_at.strftime('%d %b %Y')}"
-        return cleaned_data
+        self.fields['name'].widget.attrs['placeholder'] = 'Optional'
 
 
-class SongChoiceField(forms.ModelChoiceField):
-    def __init__(self, *args, already_added_ids=None, **kwargs):
-        self.already_added_ids = already_added_ids or set()
-        super().__init__(*args, **kwargs)
-
-    def label_from_instance(self, obj):
-        label = str(obj)
-        if obj.pk in self.already_added_ids:
-            return f"* {label}"
-        return label
 
 
 class AddSongToEventForm(forms.Form):
@@ -376,12 +492,12 @@ class AddSongToEventForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.song_search_truncated = False
         if org_user and event is not None:
-            already_added_ids = set(event.eventsong_set.values_list('song_id', flat=True))
-            exclude_pks = already_added_ids | set(exclude_ids or [])
-            qs = Song.objects.filter(user=org_user).exclude(id__in=exclude_pks).annotate(
-                resource_count=Count('song_resource', distinct=True)
-            ).order_by('title')
             if search_q:
+                already_added_ids = set(event.eventsong_set.values_list('song_id', flat=True))
+                exclude_pks = already_added_ids | set(exclude_ids or [])
+                qs = Song.objects.filter(user=org_user).exclude(id__in=exclude_pks).annotate(
+                    resource_count=Count('song_resource', distinct=True)
+                ).order_by('title')
                 if search_q.isdigit():
                     qs = qs.filter(internal_id=int(search_q))
                 else:
@@ -390,105 +506,72 @@ class AddSongToEventForm(forms.Form):
                         Q(composer__last_name__icontains=search_q) |
                         Q(keywords__icontains=search_q)
                     ).distinct()
-            if limit_results:
-                total_matches = qs.count()
-                limited_ids = list(qs.values_list('pk', flat=True)[:25])
-                qs = qs.filter(pk__in=limited_ids)
-                self.song_search_truncated = total_matches > 25
+                if limit_results:
+                    total_matches = qs.count()
+                    limited_ids = list(qs.values_list('pk', flat=True)[:25])
+                    qs = qs.filter(pk__in=limited_ids)
+                    self.song_search_truncated = total_matches > 25
+            else:
+                qs = Song.objects.none()
             self.fields['song'].queryset = qs
 
 
-class EventChoiceField(forms.ModelChoiceField):
-    def __init__(self, *args, already_added_ids=None, other_project_ids=None, **kwargs):
-        self.already_added_ids = already_added_ids or set()
-        self.other_project_ids = other_project_ids or {}
-        super().__init__(*args, **kwargs)
-
-    def label_from_instance(self, obj):
-        # Format: "Event Name (2024-12-25 19:00 - 21:00)"
-        if obj.started_at:
-            time_str = obj.started_at.strftime('%Y-%m-%d %H:%M')
-            if obj.ended_at:
-                time_str += f" - {obj.ended_at.strftime('%H:%M')}"
-        else:
-            time_str = "No date"
-        label = f"{obj.name} ({time_str})"
-        if obj.pk in self.already_added_ids:
-            return f"* {label}"
-        if obj.pk in self.other_project_ids:
-            other_project = self.other_project_ids[obj.pk]
-            return f"⚠ {label} (in: {other_project})"
-        return label
-
-
 class AddEventToProjectForm(forms.Form):
-    def __init__(self, *args, org_user=None, project=None, search_q='', **kwargs):
+    """Admin-only form powering the Events subpage's live search (see project_events_edit.html).
+
+    Adds/removes are staged client-side and committed in one batched POST
+    (ProjectEventsEditView.post), so `exclude_ids` lets the search hide events
+    already staged-but-not-yet-saved, not just ones already committed to the project.
+    """
+    def __init__(self, *args, org_user=None, project=None, search_q='', exclude_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if org_user and project is not None:
-            already_added_ids = set(project.events.values_list('id', flat=True))
-            qs = Event.objects.filter(user=org_user).order_by('-started_at')
-            if search_q:
-                qs = qs.filter(name__icontains=search_q)
-
-            # Build a mapping of events in other projects
-            other_project_ids = {}
-            for event in qs.exclude(project__isnull=True):
-                other_project_ids[event.pk] = event.project.title
-
-            self.fields['event'] = EventChoiceField(
-                queryset=qs,
-                already_added_ids=already_added_ids,
-                other_project_ids=other_project_ids,
-                widget=forms.Select(attrs={'size': '8'}),
-                empty_label=None,
-                label='Event',
-            )
+        self.other_project_ids = {}
+        self.search_results = []
+        if org_user and project is not None and search_q:
+            eligible = Event.objects.filter(user=org_user).exclude(
+                project=project
+            ).exclude(pk__in=exclude_ids or []).select_related('project').order_by('-started_at')
+            self.search_results = list(search_events(eligible, search_q))
+            for event in self.search_results:
+                if event.project_id:
+                    self.other_project_ids[event.pk] = event.project.title
 
 
 class AddSongToProjectForm(forms.Form):
-    def __init__(self, *args, org_user=None, project=None, search_q='', **kwargs):
+    """Admin-only form powering the Songs subpage's live search (see project_songs_edit.html).
+
+    See AddEventToProjectForm's docstring for why `exclude_ids` exists.
+    """
+    def __init__(self, *args, org_user=None, project=None, search_q='', exclude_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if org_user and project is not None:
-            already_added_ids = set(project.songs.values_list('id', flat=True))
-            qs = Song.objects.filter(user=org_user).order_by('title')
-            if search_q:
-                if search_q.isdigit():
-                    qs = qs.filter(internal_id=int(search_q))
-                else:
-                    qs = qs.filter(
-                        Q(title__icontains=search_q) |
-                        Q(composer__last_name__icontains=search_q) |
-                        Q(keywords__icontains=search_q)
-                    ).distinct()
-            self.fields['song'] = SongChoiceField(
-                queryset=qs,
-                already_added_ids=already_added_ids,
-                widget=forms.Select(attrs={'size': '8'}),
-                empty_label=None,
-                label='Song',
-            )
+        self.search_results = []
+        if org_user and project is not None and search_q:
+            eligible = Song.objects.filter(user=org_user).exclude(
+                projects=project
+            ).exclude(pk__in=exclude_ids or []).order_by('title')
+            if search_q.isdigit():
+                self.search_results = list(eligible.filter(internal_id=int(search_q)))
+            else:
+                self.search_results = list(eligible.filter(
+                    Q(title__icontains=search_q) |
+                    Q(composer__last_name__icontains=search_q) |
+                    Q(keywords__icontains=search_q)
+                ).distinct())
 
 
 class AddGuestToProjectForm(forms.Form):
-    def __init__(self, *args, org_user=None, project=None, search_q='', **kwargs):
+    """Admin-only form powering the Participants subpage's live search (see project_participants_edit.html).
+
+    See AddEventToProjectForm's docstring for why `exclude_ids` exists.
+    """
+    def __init__(self, *args, org_user=None, project=None, search_q='', exclude_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if org_user and project is not None:
-            already_added_ids = set(project.guests.values_list('id', flat=True))
-            qs = Person.objects.filter(
-                membership_period__user=org_user,
-            ).distinct()
-            if search_q:
-                qs = qs.filter(
-                    Q(first_name__icontains=search_q) |
-                    Q(last_name__icontains=search_q)
-                ).distinct()
-            qs = qs.order_by('last_name', 'first_name')
-            self.fields['guest'] = forms.ModelChoiceField(
-                queryset=qs,
-                widget=forms.Select(attrs={'size': '8'}),
-                empty_label=None,
-                label='Guest',
-            )
+        self.search_results = []
+        if org_user and project is not None and search_q:
+            eligible = Person.objects.filter(membership_period__user=org_user).exclude(
+                projects=project
+            ).exclude(pk__in=exclude_ids or []).distinct().order_by('last_name', 'first_name')
+            self.search_results = list(eligible.matching_name(search_q))
 
 
 class AddAttendanceForm(forms.Form):
@@ -509,34 +592,33 @@ class AddAttendanceForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.person_search_truncated = False
         if org_user and event:
-            from django.db.models import Exists, OuterRef, ExpressionWrapper, BooleanField
-            from .models import Singer, Instrumentalist
-            already_attending = event.attendance_set.values_list('person_id', flat=True)
-            exclude_pks = set(already_attending) | set(exclude_ids or [])
-            qs = Person.objects.filter(
-                membership_period__user=org_user,
-            ).exclude(
-                id__in=exclude_pks
-            ).distinct()
             if search_q:
-                qs = qs.filter(
-                    Q(first_name__icontains=search_q) |
-                    Q(last_name__icontains=search_q) |
+                from django.db.models import Exists, OuterRef, ExpressionWrapper, BooleanField
+                from .models import Singer, Instrumentalist
+                already_attending = event.attendance_set.values_list('person_id', flat=True)
+                exclude_pks = set(already_attending) | set(exclude_ids or [])
+                qs = Person.objects.filter(
+                    membership_period__user=org_user,
+                ).exclude(
+                    id__in=exclude_pks
+                ).filter(
+                    Q(pk__in=Person.objects.matching_name(search_q)) |
                     Q(singer__voice__name__icontains=search_q) |
                     Q(instrumentalist__instrument__name__icontains=search_q)
-                ).distinct()
-            qs = qs.annotate(
-                is_performer=ExpressionWrapper(
-                    Exists(Singer.objects.filter(person=OuterRef('pk'))) |
-                    Exists(Instrumentalist.objects.filter(person=OuterRef('pk'))),
-                    output_field=BooleanField()
-                )
-            ).order_by('-is_performer', 'last_name', 'first_name')
-            if limit_results:
-                total_matches = qs.count()
-                limited_ids = list(qs.values_list('pk', flat=True)[:25])
-                qs = qs.filter(pk__in=limited_ids)
-                self.person_search_truncated = total_matches > 25
+                ).distinct().annotate(
+                    is_performer=ExpressionWrapper(
+                        Exists(Singer.objects.filter(person=OuterRef('pk'))) |
+                        Exists(Instrumentalist.objects.filter(person=OuterRef('pk'))),
+                        output_field=BooleanField()
+                    )
+                ).order_by('-is_performer', 'last_name', 'first_name')
+                if limit_results:
+                    total_matches = qs.count()
+                    limited_ids = list(qs.values_list('pk', flat=True)[:25])
+                    qs = qs.filter(pk__in=limited_ids)
+                    self.person_search_truncated = total_matches > 25
+            else:
+                qs = Person.objects.none()
             self.fields['person'].queryset = qs
 
 
@@ -565,7 +647,10 @@ class LyricsTranslationForm(forms.ModelForm):
     class Meta:
         model = LyricsTranslation
         fields = ['languagecode', 'translation', 'translator']
-        widgets = {'translation': forms.Textarea(attrs={'rows': 5})}
+        widgets = {
+            'translation': forms.Textarea(attrs={'rows': 12}),
+            'translator': forms.HiddenInput(),
+        }
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -594,7 +679,7 @@ LyricsTranslationFormSet = inlineformset_factory(
     LyricsTranslation,
     form=LyricsTranslationForm,
     formset=BaseLyricsTranslationFormSet,
-    extra=1,
+    extra=0,
     can_delete=True,
 )
 
@@ -656,32 +741,11 @@ def make_resource_form(resource_model):
     return ResourceForm
 
 
-SongResourceForm = make_resource_form(SongResource)
 PersonResourceForm = make_resource_form(PersonResource)
-EventResourceForm = make_resource_form(EventResource)
 EventSongResourceForm = make_resource_form(EventSongResource)
 
-SongResourceFormSet = inlineformset_factory(
-    Song, SongResource, form=SongResourceForm,
-    formset=BaseResourceFormSet, extra=1, can_delete=True,
-)
-PersonResourceFormSet = inlineformset_factory(
-    Person, PersonResource, form=PersonResourceForm,
-    formset=BaseResourceFormSet, extra=1, can_delete=True,
-)
-EventResourceFormSet = inlineformset_factory(
-    Event, EventResource, form=EventResourceForm,
-    formset=BaseResourceFormSet, extra=1, can_delete=True,
-)
 EventSongResourceFormSet = inlineformset_factory(
     EventSong, EventSongResource, form=EventSongResourceForm,
-    formset=BaseResourceFormSet, extra=1, can_delete=True,
-)
-
-ProjectResourceForm = make_resource_form(ProjectResource)
-
-ProjectResourceFormSet = inlineformset_factory(
-    Project, ProjectResource, form=ProjectResourceForm,
     formset=BaseResourceFormSet, extra=1, can_delete=True,
 )
 
@@ -691,8 +755,8 @@ class MembershipPeriodForm(forms.ModelForm):
         model = MembershipPeriod
         fields = ['role', 'started_at', 'ended_at']
         widgets = {
-            'started_at': forms.DateInput(attrs={'type': 'date'}),
-            'ended_at': forms.DateInput(attrs={'type': 'date'}),
+            'started_at': HtmlDateInput(),
+            'ended_at': HtmlDateInput(),
         }
 
     def __init__(self, *args, user=None, person=None, **kwargs):
@@ -752,7 +816,7 @@ class BaseMembershipPeriodFormSet(BaseInlineFormSet):
 MembershipPeriodFormSet = inlineformset_factory(
     Person, MembershipPeriod, fk_name='person',
     form=MembershipPeriodForm, formset=BaseMembershipPeriodFormSet,
-    extra=1, can_delete=True,
+    extra=0, can_delete=True,  # new periods are added on demand (JS clones empty_form)
 )
 
 
@@ -782,15 +846,15 @@ class PollPersonForm(forms.ModelForm):
             'poll': forms.HiddenInput(),
         }
 
-    def __init__(self, *args, org_user=None, poll=None, search_q=None, **kwargs):
+    def __init__(self, *args, org_user=None, poll=None, search_q=None, exclude_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
         if org_user and poll:
             already_added = poll.poll_persons.values_list('person_id', flat=True)
-            qs = Person.objects.in_org_user(org_user).exclude(pk__in=already_added)
+            exclude_pks = set(already_added) | set(exclude_ids or [])
+            qs = Person.objects.in_org_user(org_user).exclude(pk__in=exclude_pks)
             if search_q:
                 qs = qs.filter(
-                    Q(first_name__icontains=search_q) |
-                    Q(last_name__icontains=search_q) |
+                    Q(pk__in=Person.objects.matching_name(search_q)) |
                     Q(roles__title__icontains=search_q) |
                     Q(skills__title__icontains=search_q) |
                     Q(singer__voice__name__icontains=search_q) |
@@ -818,8 +882,8 @@ class PollEventForm(forms.ModelForm):
         ]
         widgets = {
             'poll': forms.HiddenInput(),
-            'started_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
-            'ended_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+            'started_at': HtmlDateTimeInput(),
+            'ended_at': HtmlDateTimeInput(),
             'location': forms.Textarea(attrs={'rows': 2}),
             'details': forms.Textarea(attrs={'rows': 2}),
         }
@@ -839,20 +903,6 @@ class PollAttendanceForm(forms.ModelForm):
         }
 
 
-class PollBulkImportForm(forms.Form):
-    role_criteria = forms.ChoiceField(required=False, label='Role')
-    skill_criteria = forms.ChoiceField(required=False, label='Skill')
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['role_criteria'].choices = [('all', 'All roles')] + list(
-            Role.objects.values_list('title', 'title')
-        )
-        self.fields['skill_criteria'].choices = [('all', 'All skills')] + list(
-            Skill.objects.values_list('title', 'title')
-        )
-
-
 class InvitationForm(forms.ModelForm):
     recipient_username = forms.CharField(
         max_length=250,
@@ -863,7 +913,7 @@ class InvitationForm(forms.ModelForm):
         model = Invitation
         fields = ['existing_person', 'copy_details', 'expires_at']
         widgets = {
-            "expires_at": forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+            "expires_at": HtmlDateTimeInput(),
         }
 
     def __init__(self, *args, customuser, **kwargs):

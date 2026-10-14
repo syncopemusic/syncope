@@ -1,0 +1,137 @@
+{% extends "syncope/base.html" %}
+{% load static %}
+{% block title %}{{ song.title }} - Syncope{% endblock %}
+{% block content %}
+
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="Title">{{ song.title }}</span>
+            <small><span title="Page"> | Lyrics</span></small>
+        </span>
+    </h1>
+    <a href="{% url 'syncope:song_meta_edit' url_username song.pk %}" class="btn btn-secondary">Edit</a>
+</div>
+
+<form method="post" id="song-lyrics-form">
+    {% csrf_token %}
+
+    <div class="lyrics-columns">
+        <div>
+            <h3>Lyrics</h3>
+            {% include "syncope/_person_picker.html" with field=form.poet field_name="poet" label="Poet" current=song.poet new_person_url_name="syncope:org_member_new_poet" %}
+            <div class="form-group">
+                <label for="{{ form.languagecode.id_for_label }}">Language</label>
+                {{ form.languagecode }}
+                {{ form.languagecode.errors }}
+            </div>
+            <div class="form-group">
+                <label for="{{ form.lyrics.id_for_label }}">Lyrics</label>
+                {{ form.lyrics }}
+                {{ form.lyrics.errors }}
+            </div>
+        </div>
+
+        <div>
+            <div class="section-header">
+                <h3>Translations</h3>
+                {% if can_manage %}<button type="button" id="add-translation-btn" class="btn btn-primary">+ Add</button>{% endif %}
+            </div>
+            {{ translation_formset.management_form }}
+            <div id="translations-list">
+                {% for t_form in translation_formset %}
+                    {% include "syncope/_translation_card.html" %}
+                {% endfor %}
+            </div>
+            <template id="empty-translation-form">
+                {% with t_form=translation_formset.empty_form %}
+                    {% include "syncope/_translation_card.html" %}
+                {% endwith %}
+            </template>
+        </div>
+    </div>
+</form>
+
+{% url 'syncope:song_detail' url_username song.pk as return_target %}
+{% include "syncope/_save_bar.html" with form_id="song-lyrics-form" url=return_target %}
+
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>
+    const form = document.getElementById('song-lyrics-form');
+    const translationsList = document.getElementById('translations-list');
+    const fieldTracker = trackFormFieldChanges(form);
+
+    const saveBarCtl = initSaveBar({
+        formId: 'song-lyrics-form',
+        countUnsavedChanges: () => fieldTracker.count() + translationsList.querySelectorAll('.translation-panel.staged-add, .translation-panel.pending-remove').length,
+        onDiscard: () => {
+            translationsList.querySelectorAll('.translation-panel.staged-add').forEach(el => el.remove());
+            translationsList.querySelectorAll('.translation-panel.pending-remove').forEach(el => {
+                el.classList.remove('pending-remove');
+                const btn = el.querySelector('.translation-remove');
+                if (btn) btn.disabled = false;
+            });
+            form.reset();
+            fieldTracker.reset();
+        },
+    });
+
+    form.addEventListener('input', () => saveBarCtl.sync());
+    form.addEventListener('change', () => saveBarCtl.sync());
+    saveBarCtl.sync();
+
+    document.querySelectorAll('.person-picker').forEach(wirePersonPicker);
+
+    function updateTranslationSummary(panel) {
+        const summarySpan = panel.querySelector('.translation-summary-text');
+        const langSelect = panel.querySelector('select[name$="-languagecode"]');
+        const translatorInput = panel.querySelector('.person-picker-input');
+        const langText = langSelect && langSelect.value ? langSelect.options[langSelect.selectedIndex].text.trim() : '';
+        const translatorText = translatorInput ? translatorInput.value.trim() : '';
+        const parts = [langText, translatorText].filter(Boolean);
+        summarySpan.textContent = parts.length ? parts.join(' - ') : 'New translation';
+    }
+
+    translationsList.querySelectorAll('.translation-panel').forEach(updateTranslationSummary);
+
+    function syncTranslationSummary(e) {
+        const panel = e.target.closest('.translation-panel');
+        if (panel) updateTranslationSummary(panel);
+    }
+
+    translationsList.addEventListener('change', syncTranslationSummary);
+    translationsList.addEventListener('input', syncTranslationSummary);
+
+    document.getElementById('add-translation-btn')?.addEventListener('click', function() {
+        const totalFormsInput = document.getElementById('id_translations-TOTAL_FORMS');
+        const index = parseInt(totalFormsInput.value, 10);
+        const html = document.getElementById('empty-translation-form').innerHTML.replace(/__prefix__/g, index);
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = html;
+        const panel = wrapper.firstElementChild;
+        panel.classList.add('staged-add');
+        panel.open = true;
+        translationsList.appendChild(panel);
+        totalFormsInput.value = index + 1;
+        wirePersonPicker(panel.querySelector('.person-picker'));
+        updateTranslationSummary(panel);
+        saveBarCtl.sync();
+    });
+
+    translationsList.addEventListener('click', function(e) {
+        const removeBtn = e.target.closest('.translation-remove');
+        if (!removeBtn) return;
+        const panel = removeBtn.closest('.translation-panel');
+        if (panel.classList.contains('staged-add')) {
+            panel.remove();
+        } else {
+            panel.classList.add('pending-remove');
+            panel.querySelector('[name$="-DELETE"]').checked = true;
+            removeBtn.disabled = true;
+        }
+        saveBarCtl.sync();
+    });
+</script>
+
+{% endblock %}
