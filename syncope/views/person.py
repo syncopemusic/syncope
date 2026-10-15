@@ -594,7 +594,7 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
     def get_form_kwargs(self):
         """Pass preset to the form."""
         kwargs = super().get_form_kwargs()
-        kwargs['preset'] = self.kwargs.get('preset')
+        kwargs['preset'] = self.kwargs.get('preset', 'member')  # plain /new/ defaults to Member
         return kwargs
 
     def get_form(self, form_class=None):
