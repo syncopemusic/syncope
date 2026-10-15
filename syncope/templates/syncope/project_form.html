@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 
 {% block title %}New Project - Syncope{% endblock %}
 
@@ -12,7 +13,7 @@
     </h1>
 </div>
 <p><small>You can add other details after initial save.</small></p>
-<form method="post">
+<form method="post" id="project-form">
     {% csrf_token %}
     <input type="hidden" name="draft_key" value="{{ draft_key }}">
 
@@ -25,13 +26,12 @@
     {% include "syncope/_field.html" with field=form.start_date %}
 
     {% include "syncope/_field.html" with field=form.end_date %}
-
-    <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Create</button>
-    </div>
 </form>
 
 {% url 'syncope:project_list' url_username as return_target %}
-{% include "syncope/_save_bar.html" with url=return_target %}
+{% include "syncope/_save_bar.html" with form_id="project-form" url=return_target %}
+
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>initNewFormSaveBar('project-form');</script>
 
 {% endblock %}

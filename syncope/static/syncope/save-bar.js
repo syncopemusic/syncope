@@ -129,3 +129,38 @@ function initSaveBar({ formId, saveBarId = 'save-bar', countUnsavedChanges, befo
 
     return { sync };
 }
+
+// initSaveBar plus the wiring every plain form page needs: re-sync on any field input.
+function initFormSaveBar(formId, saveBarOptions) {
+    const form = document.getElementById(formId);
+    const ctl = initSaveBar({ formId, ...saveBarOptions(form) });
+    form.addEventListener('input', ctl.sync);
+    form.addEventListener('change', ctl.sync);
+    ctl.sync();
+    return ctl;
+}
+
+// Save bar for a "new" page: a draft-restored form is pre-filled at render, so count filled
+// fields rather than diff a snapshot. Dropdowns/checkboxes carry defaults and are not counted.
+// selector: narrow it when a field is pre-filled with a default (e.g. an expiry date).
+function initNewFormSaveBar(formId, selector = 'input[type=text],input[type=number],input[type=date],input[type=datetime-local],textarea') {
+    return initFormSaveBar(formId, form => {
+        const fields = () => Array.from(form.querySelectorAll(selector));
+        return {
+            countUnsavedChanges: () => fields().filter(el => el.value).length,
+            onDiscard: () => fields().forEach(el => { el.value = ''; }),
+        };
+    });
+}
+
+// Save bar for an edit page whose state is "any field differs from what was rendered".
+// forceDirty: a draft round trip pre-fills fields at render time, so the snapshot isn't a baseline.
+function initEditFormSaveBar(formId, { forceDirty = false } = {}) {
+    return initFormSaveBar(formId, form => {
+        const tracker = trackFormFieldChanges(form);
+        return {
+            countUnsavedChanges: () => forceDirty ? 1 : tracker.count(),
+            onDiscard: () => { form.reset(); tracker.reset(); },
+        };
+    });
+}

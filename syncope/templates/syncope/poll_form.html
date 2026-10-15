@@ -31,12 +31,6 @@
         <label for="{{ form.import_active_members.id_for_label }}">{{ form.import_active_members.label }}</label>
     </div>
     {% endif %}
-
-    {% if not form.instance.pk %}
-    <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Create</button>
-    </div>
-    {% endif %}
 </form>
 
 {% if form.instance.pk %}
@@ -44,27 +38,7 @@
 {% else %}
 {% url 'syncope:poll_list' url_username as return_target %}
 {% endif %}
-{% if form.instance.pk %}
 {% include "syncope/_save_bar.html" with form_id="poll-form" url=return_target %}
 <script src="{% static 'syncope/save-bar.js' %}"></script>
-<script>
-    const form = document.getElementById('poll-form');
-    const fieldTracker = trackFormFieldChanges(form);
-
-    const saveBarCtl = initSaveBar({
-        formId: 'poll-form',
-        countUnsavedChanges: fieldTracker.count,
-        onDiscard: () => {
-            form.reset();
-            fieldTracker.reset();
-        },
-    });
-
-    form.addEventListener('input', () => saveBarCtl.sync());
-    form.addEventListener('change', () => saveBarCtl.sync());
-    saveBarCtl.sync();
-</script>
-{% else %}
-{% include "syncope/_save_bar.html" with url=return_target %}
-{% endif %}
+<script>{% if form.instance.pk %}initEditFormSaveBar{% else %}initNewFormSaveBar{% endif %}('poll-form');</script>
 {% endblock %}

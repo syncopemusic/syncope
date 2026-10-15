@@ -54,25 +54,7 @@
 <script src="{% static 'syncope/search-box.js' %}"></script>
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script>
-    const form = document.getElementById('song-meta-form');
-    const fieldTracker = trackFormFieldChanges(form);
-    // Returning from a "+ New X" draft round trip pre-fills fields at render time, so the
-    // DOM-at-load snapshot isn't a reliable "nothing changed" baseline there: force dirty.
-    // A plain new song starts clean and becomes dirty when a field changes.
-    const forceDirty = {% if request.GET.draft_key %}true{% else %}false{% endif %};
-
-    const saveBarCtl = initSaveBar({
-        formId: 'song-meta-form',
-        countUnsavedChanges: () => forceDirty ? 1 : fieldTracker.count(),
-        onDiscard: () => {
-            form.reset();
-            fieldTracker.reset();
-        },
-    });
-
-    form.addEventListener('input', () => saveBarCtl.sync());
-    form.addEventListener('change', () => saveBarCtl.sync());
-    saveBarCtl.sync();
+    initEditFormSaveBar('song-meta-form', { forceDirty: {% if request.GET.draft_key %}true{% else %}false{% endif %} });
 
     document.querySelectorAll('.person-picker').forEach(wirePersonPicker);
 </script>

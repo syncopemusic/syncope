@@ -49,20 +49,6 @@
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script>
-    const form = document.getElementById('person-form');
-    const fieldTracker = trackFormFieldChanges(form);
-
-    const saveBarCtl = initSaveBar({
-        formId: 'person-form',
-        countUnsavedChanges: fieldTracker.count,
-        onDiscard: () => {
-            form.reset();
-            fieldTracker.reset();
-        },
-    });
-
-    saveBarCtl.sync();
-    form.addEventListener('input', () => saveBarCtl.sync());
-    form.addEventListener('change', () => saveBarCtl.sync());
+    initEditFormSaveBar('person-form');
 </script>
 {% endblock %}

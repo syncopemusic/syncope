@@ -33,21 +33,7 @@
 {% include "syncope/_save_bar.html" with form_id="org-form" url=return_target %}
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script>
-    const form = document.getElementById('org-form');
-    const fieldTracker = trackFormFieldChanges(form);
-
-    const saveBarCtl = initSaveBar({
-        formId: 'org-form',
-        countUnsavedChanges: fieldTracker.count,
-        onDiscard: () => {
-            form.reset();
-            fieldTracker.reset();
-        },
-    });
-
-    form.addEventListener('input', () => saveBarCtl.sync());
-    form.addEventListener('change', () => saveBarCtl.sync());
-    saveBarCtl.sync();
+    initEditFormSaveBar('org-form');
 </script>
 {% endif %}
 
