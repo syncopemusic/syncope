@@ -46,6 +46,7 @@
             <tr>
                 <th></th>
                 <th class="col-main">Song</th>
+                <th class="col-num">Dur</th>
                 <th title="Encore">&#8635;</th>
             </tr>
         </thead>
@@ -61,7 +62,6 @@
                         {% endif %}
                         <a href="{% url 'syncope:song_detail' url_username eventsong.song.pk %}?from_event={{ event.pk }}&origin={{ origin_key }}">{{ eventsong.song.title }}</a>
                     </span>
-                    {% if eventsong.song.duration %}<small class="song-meta">{{ eventsong.song.duration_display }}</small>{% endif %}
                     </div>
                     <div class="song-subline">
                         <span{% if eventsong.song.composer %} title="{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} {{ eventsong.song.composer.birth_date|date:'Y' }}-{{ eventsong.song.composer.death_date|date:'Y' }}"{% endif %}>
@@ -74,10 +74,12 @@
                         {% endif %}
                     </div>
                 </td>
+                <td class="col-num"><span title="{{ eventsong.song.duration_title }}">{{ eventsong.song.duration_display|default:"-" }}</span></td>
                 <td>{% if eventsong.encore %}&#10003;{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>
+        {% include "syncope/_song_total_row.html" with songs=eventsongs tail=1 %}
     </table>
     </div>
 {% endif %}

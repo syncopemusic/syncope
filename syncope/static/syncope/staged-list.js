@@ -5,6 +5,25 @@
 // Hooks (pages that need more): buildRow(btn, info) -> cells html, extraCount() -> number, afterChange(count), onDiscardExtra().
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
+// Duration helpers for song tables: rows carry data-duration (seconds, '' if unknown); the tfoot cell #duration-total shows the sum.
+function formatDuration(sec, long = false) {
+    if (!sec) return '';
+    const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = String(sec % 60).padStart(2, '0'), mm = String(m).padStart(2, '0');
+    if (long) return h ? `${h}h${mm}min${s}s` : `${m}min${s}s`;
+    return h ? `${h}:${mm}:${s}` : `${m}:${s}`;
+}
+function durationCell(btn) {
+    return `<td class="col-num">${formatDuration(Number(btn.dataset.duration)) || '-'}</td>`;
+}
+function updateDurationTotal(tbody) {
+    const secs = Array.from(tbody.querySelectorAll('tr[data-duration]:not(.pending-remove)'), r => Number(r.dataset.duration));
+    const sum = secs.reduce((a, b) => a + b, 0), partial = !secs.every(Boolean);
+    const total = document.getElementById('duration-total'), cell = total.parentElement;
+    total.textContent = formatDuration(sum) || '-';
+    cell.title = formatDuration(sum, true) + (partial ? '\nNot all songs have a duration' : '');
+    cell.querySelector('sup').hidden = !partial;
+}
+
 function initStagedList({ formId, tbodyId, rootId = tbodyId, addField, prefix, searchUrl, queryParam = 'q', excludeKey = 'id', numClass = 'col-num',
                           rowClass = '', buildRow, extraCount = () => 0, afterChange, onDiscardExtra }) {
     const tbody = document.getElementById(tbodyId), root = document.getElementById(rootId), emptyRow = tbody.querySelector('.empty-row');
@@ -55,6 +74,7 @@ function initStagedList({ formId, tbodyId, rootId = tbodyId, addField, prefix, s
         const tr = tbody.insertRow();
         tr.className = `${rowClass} staged-add`.trim();
         tr.dataset[excludeKey] = btn.dataset.id;
+        if ('duration' in btn.dataset) tr.dataset.duration = btn.dataset.duration;
         tr.innerHTML = buildRow(btn, info);
         row.remove();
         bar.sync();

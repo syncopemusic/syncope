@@ -1058,7 +1058,7 @@
     }
 
     /* Uppercase caption style shared by section labels, table headers and filter labels. */
-    :where(.section-label, .table thead th, .table tbody th.sticky-col, .filter-label, .filter-sub summary) {
+    :where(.section-label, .table thead th, .table tfoot th, .table tbody th.sticky-col, .filter-label, .filter-sub summary) {
         text-transform: uppercase;
         letter-spacing: var(--tracking-caps);
     }
@@ -1092,12 +1092,23 @@
             inset-block-start: 0;
             /* One above .sticky-col so scrolled rows never paint over the header. */
             z-index: calc(var(--z-sticky) + 1);
+        }
+
+        & thead th,
+        & tfoot th {
             padding: var(--space-2);
             background-color: var(--color-ink);
             color: var(--color-text-on-accent);
             font-size: var(--font-size-2xs);
             font-weight: 500;
             text-align: start;
+        }
+
+        /* Total duration reads like the row durations above it, so the digits line up. */
+        & tfoot th.total-time {
+            font: inherit;
+            text-transform: none;
+            letter-spacing: normal;
         }
 
         & tbody td,
@@ -1249,6 +1260,8 @@
         padding: var(--space-2) 0;
     }
     .search-result-info { flex: 1; min-width: 0; }
+    /* Duration beside the info: same size as the table cells (.table sets --font-size-sm). */
+    .search-result-row > span { font-size: var(--font-size-sm); white-space: nowrap; }
 
     .search-spinner {
         position: absolute;

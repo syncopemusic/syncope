@@ -439,6 +439,17 @@ class PersonResource(models.Model):
 
 
 
+def format_duration(seconds, long=False):
+    """m:ss, or h:mm:ss from an hour up; long=True gives the tooltip form (3min20s, 1h05min00s). Empty for none/0."""
+    if not seconds:
+        return ""
+    h, rem = divmod(seconds, 3600)
+    m, s = divmod(rem, 60)
+    if long:
+        return f"{h}h{m:02}min{s:02}s" if h else f"{m}min{s:02}s"
+    return f"{h}:{m:02}:{s:02}" if h else f"{m}:{s:02}"
+
+
 class Song(models.Model):
     title = models.CharField(max_length=250)
     number_of_pages = models.PositiveIntegerField(blank=True, null=True)
@@ -511,19 +522,11 @@ class Song(models.Model):
 
     @property
     def duration_display(self):
-        if not self.duration:
-            return ""
-        h, rem = divmod(self.duration, 3600)
-        m, s = divmod(rem, 60)
-        return f"{h}:{m:02}:{s:02}" if h else f"{m}:{s:02}"
+        return format_duration(self.duration)
 
     @property
     def duration_title(self):
-        if not self.duration:
-            return ""
-        h, rem = divmod(self.duration, 3600)
-        m, s = divmod(rem, 60)
-        return f"{h}h{m:02}min{s:02}s" if h else f"{m:02}min{s:02}s"
+        return format_duration(self.duration, long=True)
 
     def __str__(self):
         composer_name = self.composer.last_name if self.composer else '-'

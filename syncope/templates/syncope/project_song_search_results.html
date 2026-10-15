@@ -4,9 +4,9 @@
         <div id="song-result-list">
             {% for song in add_song_form.search_results %}
                 <div class="search-result-row">
-                    <button type="button" class="btn btn-secondary" data-id="{{ song.pk }}">+</button>
+                    <button type="button" class="btn btn-secondary" data-id="{{ song.pk }}" data-duration="{{ song.duration|default:'' }}">+</button>
                     <div class="search-result-info">
-                        <div class="song-subline"><span class="song-title">{{ song.title }}</span>{% if song.duration %}<small class="song-meta">{{ song.duration_display }}</small>{% endif %}</div>
+                        <div class="song-subline"><span class="song-title">{{ song.title }}</span></div>
                         <div class="song-subline">
                             <span>
                                 {% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}
@@ -16,6 +16,7 @@
                             {% if song.internal_id %}<small class="song-meta">#{{ song.internal_id }}</small>{% endif %}
                         </div>
                     </div>
+                    {% if song.duration %}<span title="{{ song.duration_title }}">{{ song.duration_display }}</span>{% endif %}
                 </div>
             {% endfor %}
         </div>

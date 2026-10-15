@@ -1,6 +1,8 @@
 from django import template
 from django.utils.html import format_html
 
+from ..models import format_duration
+
 register = template.Library()
 
 
@@ -16,3 +18,13 @@ def filter_panel(context, content, form_id):
         '</summary><form method="get" class="filter-form" id="{}"><input type="hidden" name="f" value="1">{}</form></details>',
         f'({total})' if total else '', form_id, content,
     )
+
+
+@register.simple_tag
+def song_total(songs):
+    """Summed duration of Songs or EventSongs; partial when any song has no duration. title is the tooltip text."""
+    durations = [getattr(s, 'song', s).duration for s in songs]
+    total = sum(d for d in durations if d)
+    partial = not all(durations)
+    title = format_duration(total, long=True) + ('\nNot all songs have a duration' if partial else '')
+    return {'display': format_duration(total), 'partial': partial, 'title': title}

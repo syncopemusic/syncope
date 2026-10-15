@@ -23,6 +23,7 @@
                     <tr>
                         <th class="col-lead"></th>
                         <th class="col-main">Song</th>
+                        <th class="col-num">Dur</th>
                         <th class="song-resources" title="Resources">&#128206;</th>
                         {% if is_admin %}<th class="song-actions"></th>{% endif %}
                     </tr>
@@ -32,6 +33,7 @@
                         {% include "syncope/_song_row.html" %}
                     {% endfor %}
                 </tbody>
+                {% include "syncope/_song_total_row.html" with songs=eventsongs tail=is_admin|yesno:"2,1" %}
             </table>
         </div>
     </form>
@@ -83,10 +85,12 @@
         buildRow: (btn, info) => `
             <td class="col-lead"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span><span class="song-index"></span></td>
             <td class="col-main">${info}</td>
+            ${durationCell(btn)}
             <td class="song-resources" title="Event resources for song">${escapeHtml(btn.dataset.resources || '0')}</td>
             <td class="song-actions"><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>`,
         extraCount: () => (keptIds().some((pk, i) => pk !== expectedOrder()[i]) ? 1 : 0),
         afterChange: () => {
+            updateDurationTotal(songsTbody);
             document.getElementById('songs-table-container').hidden = !songsTbody.querySelector('tr:not(.empty-row)');
             songRows().forEach((row, i) => { row.querySelector('.song-index').textContent = i + 1; });
             document.getElementById('song-order-input').value = songRows()

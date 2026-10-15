@@ -21,15 +21,16 @@
             <tr>
                 <th class="song-index"></th>
                 <th class="col-main">Song</th>
+                <th class="col-num">Dur</th>
                 <th class="col-action"></th>
             </tr>
         </thead>
         <tbody id="songs-tbody">
             {% for song in songs %}
-            <tr data-id="{{ song.pk }}">
+            <tr data-id="{{ song.pk }}" data-duration="{{ song.duration|default:'' }}">
                 <td class="song-index">{{ forloop.counter }}</td>
                 <td class="col-main">
-                    <div class="song-subline"><span class="song-title">{{ song.title }}</span>{% if song.duration %}<small class="song-meta">{{ song.duration_display }}</small>{% endif %}</div>
+                    <div class="song-subline"><span class="song-title">{{ song.title }}</span></div>
                     <div class="song-subline">
                         <span{% if song.composer %} title="{{ song.composer.first_name }} {{ song.composer.last_name }} {{ song.composer.birth_date|date:'Y' }}-{{ song.composer.death_date|date:'Y' }}"{% endif %}>
                             {% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}
@@ -39,12 +40,14 @@
                         {% if song.internal_id %}<small class="song-meta">#{{ song.internal_id }}</small>{% endif %}
                     </div>
                 </td>
+                <td class="col-num"><span title="{{ song.duration_title }}">{{ song.duration_display|default:"-" }}</span></td>
                 <td class="col-action">
                     <button type="button" class="btn btn-danger btn-remove" title="Remove from project">&times;</button>
                 </td>
             </tr>
             {% endfor %}
         </tbody>
+        {% include "syncope/_song_total_row.html" with songs=songs tail=1 %}
     </table>
     </div>
 </form>
@@ -78,6 +81,11 @@
         addField: 'add_song',
         prefix: 'song',
         numClass: 'song-index',
+        buildRow: (btn, info) => `<td class="song-index"></td>
+            <td class="col-main">${info}<input type="hidden" name="add_song" value="${btn.dataset.id}"></td>
+            ${durationCell(btn)}
+            <td class="col-action"><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>`,
+        afterChange: () => updateDurationTotal(document.getElementById('songs-tbody')),
         searchUrl: "{% url 'syncope:project_songs_search' url_username project.pk %}",
     });
 </script>
