@@ -60,21 +60,29 @@ class CustomUserCreationForm(UserCreationForm):
             raise forms.ValidationError("User already exists.")
         if username and username.lower() in RESERVED_USERNAMES:
             raise forms.ValidationError("This username is reserved.")
+        if username and "@" in username:
+            raise forms.ValidationError("Username can't contain @.")  # keeps username and email logins unambiguous
         return username
 
 
 class LoginForm(AuthenticationForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["username"].label = "Username or email address:"
+
     def clean(self):
-        username = self.cleaned_data.get("username")
+        identifier = self.cleaned_data.get("username")
         password = self.cleaned_data.get("password")
-        if username and password:
-            User = get_user_model()
-            user = User._default_manager.filter(**{User.USERNAME_FIELD: username}).first()
+        if identifier and password:
+            user = get_user_model()._default_manager.filter(
+                Q(username=identifier) | Q(email__iexact=identifier)
+            ).first()
             if user is None:
-                self.add_error("username", "Invalid username.")
+                self.add_error("username", "Invalid username or email.")
             elif not user.check_password(password):
                 self.add_error("password", PASSWORD_INCORRECT)
             else:
+                self.cleaned_data["username"] = user.username  # authenticate() expects USERNAME_FIELD
                 return super().clean()  # authenticates, handles inactive users
         return self.cleaned_data
 
@@ -119,6 +127,8 @@ class UsernameChangeForm(forms.ModelForm):
         username = self.cleaned_data["username"]
         if username.lower() in RESERVED_USERNAMES:
             raise forms.ValidationError("This username is reserved.")
+        if "@" in username:
+            raise forms.ValidationError("Username can't contain @.")
         return username
 
 
