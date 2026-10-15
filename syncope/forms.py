@@ -43,6 +43,8 @@ class CustomUserCreationForm(UserCreationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["username"].widget.attrs.pop("autofocus", None)  # Django focuses username by default
+        self.fields["email"].widget.attrs["autofocus"] = True
         self.fields["password2"].label = "Confirm password"
         self.fields["password2"].help_text = ""
 
