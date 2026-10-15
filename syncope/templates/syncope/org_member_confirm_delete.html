@@ -1,18 +1,18 @@
 {% extends "syncope/base.html" %}
 
-{% block title %}{{ person.first_name }} {{ person.last_name }} - Syncope{% endblock %}
+{% block title %}{{ person }} - Syncope{% endblock %}
 
 {% block content %}
 <div class="section-header">
     <h1 class="event-title">
         <span class="event-title-text">
-            <span title="Name">{{ person.first_name }} {{ person.last_name }}</span>
+            <span title="Name">{{ person }}</span>
             <small><span title="Action"> | Delete</span></small>
         </span>
     </h1>
 </div>
 
-<p>Are you sure you want to delete <strong>{{ person.first_name }} {{ person.last_name }}</strong>?</p>
+<p>Are you sure you want to delete <strong>{{ person }}</strong>?</p>
 
 {% if is_admin %}
 <form method="post">

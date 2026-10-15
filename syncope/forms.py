@@ -219,7 +219,7 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
     VALID_PRESETS = {'composer', 'poet', 'translator', 'arranger', 'member'}
     # Person
     first_name = forms.CharField(max_length=100)
-    last_name = forms.CharField(max_length=100)
+    last_name = forms.CharField(max_length=100, required=False)
     email = forms.EmailField(required=False)
     phone = forms.CharField(max_length=23, required=False)
     address = forms.CharField(required=False, widget=forms.Textarea)
@@ -516,6 +516,7 @@ class AddSongToEventForm(forms.Form):
                     qs = qs.filter(
                         Q(title__icontains=search_q) |
                         Q(composer__last_name__icontains=search_q) |
+                        Q(composer__first_name__icontains=search_q) |
                         Q(keywords__icontains=search_q)
                     ).distinct()
                 if limit_results:
@@ -567,6 +568,7 @@ class AddSongToProjectForm(forms.Form):
                 self.search_results = list(eligible.filter(
                     Q(title__icontains=search_q) |
                     Q(composer__last_name__icontains=search_q) |
+                    Q(composer__first_name__icontains=search_q) |
                     Q(keywords__icontains=search_q)
                 ).distinct())
 

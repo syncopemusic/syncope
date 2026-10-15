@@ -7,7 +7,7 @@
     <h1 class="event-title">
         <span class="event-title-text">
             {% if person.first_name or person.last_name %}
-            <span title="Name">{{ person.first_name }} {{ person.last_name }}</span>
+            <span title="Name">{{ person }}</span>
             {% else %}
             <span title="Username">{{ user.username }}</span>
             {% endif %}

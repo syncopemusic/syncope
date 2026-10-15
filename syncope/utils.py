@@ -337,7 +337,7 @@ ALLOWED_PERSON_KEYS = [
     ACTIVITY_KEY,
 ]
 
-REQUIRED_PERSON_KEYS = {FIRST_NAME_KEY, LAST_NAME_KEY}
+REQUIRED_PERSON_KEYS = {FIRST_NAME_KEY}
 
 OPTIONAL_PERSON_KEYS = {
     EMAIL_KEY, ADDRESS_KEY, BIRTH_DATE_KEY, BIRTH_APPROX_KEY,
@@ -446,8 +446,8 @@ def import_persons(org_user, person_mode, request, file_path, delimiter=";"):
                 activity_ranges = parse_activity(row.get(ACTIVITY_KEY) or '') if ACTIVITY_KEY in present_optional else []
                 has_active = bool(activity_ranges and any(p['end'] is None for p in activity_ranges))
 
-                if not first_name or not last_name:
-                    raise ValueError(f"first_name and last_name are required (got: '{first_name}', '{last_name}')")
+                if not first_name:
+                    raise ValueError("first_name is required")
 
                 existing = Person.objects.filter(
                     memberships__user=org_user,
@@ -913,7 +913,7 @@ def import_attendance(org_user, request, file_path, delimiter=";"):
 
                     if not person:
                         error_details.append(
-                            f"Row {reader.line_num}: Person '{first_name} {last_name}' not found in organization"
+                            f"Row {reader.line_num}: Person '{(first_name + ' ' + last_name).strip()}' not found in organization"
                         )
                         skipped_count += 1
                         continue

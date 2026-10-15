@@ -289,7 +289,7 @@ class Person(models.Model):
     The CustomUser-Person has owner, the Org-Membership-Persons are many and fk to owner's Person.
     """
     first_name = models.CharField("name", max_length=100)
-    last_name = models.CharField("surname", max_length=100)
+    last_name = models.CharField("surname", max_length=100, blank=True)
     email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True, null=True)
     phone =  models.CharField(max_length=23, blank=True, null=True)
@@ -348,7 +348,7 @@ class Person(models.Model):
         return self.owner_id is None and self.user_id is None
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+        return f"{self.first_name} {self.last_name}".strip()
 
 
 class Membership(models.Model):
@@ -529,7 +529,7 @@ class Song(models.Model):
         return format_duration(self.duration, long=True)
 
     def __str__(self):
-        composer_name = self.composer.last_name if self.composer else '-'
+        composer_name = (self.composer.last_name or self.composer.first_name) if self.composer else '-'
         return f"{self.title} - {composer_name}"
 
 

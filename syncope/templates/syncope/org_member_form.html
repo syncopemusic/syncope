@@ -1,20 +1,20 @@
 {% extends "syncope/base.html" %}
 {% load static dt_tags %}
-{% block title %}{% if form.instance.pk %}{{ form.instance.first_name }} {{ form.instance.last_name }} - Syncope{% else %}New Person {{ form.instance.first_name }} {{ form.instance.last_name }} {% endif %}{% endblock %}
+{% block title %}{% if form.instance.pk %}{{ form.instance }} - Syncope{% else %}New Person {{ form.instance }} {% endif %}{% endblock %}
 
 {% block content %}
 {% if form.instance.pk %}
 <div class="section-header section-header-edit">
     <h1 class="event-title">
         <span class="event-title-text">
-            <span title="Name">{{ form.instance.first_name }} {{ form.instance.last_name }}</span>
+            <span title="Name">{{ form.instance }}</span>
             <small><span title="Action"> | Edit</span></small>
         </span>
     </h1>
     {% if is_admin %}<a href="{% url 'syncope:org_member_delete' url_username form.instance.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger btn-delete">Delete Member</a>{% endif %}
 </div>
 {% else %}
-<h1>New Person {{ form.instance.first_name }} {{ form.instance.last_name }} </h1>
+<h1>New Person {{ form.instance }} </h1>
 {% endif %}
 
 <form method="post" id="org-member-form">

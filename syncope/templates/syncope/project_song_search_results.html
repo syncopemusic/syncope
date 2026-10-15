@@ -9,8 +9,8 @@
                         <div class="song-subline"><span class="song-title">{{ song.title }}</span></div>
                         <div class="song-subline">
                             <span>
-                                {% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}
-                                {% elif song.arranger %}{{ song.arranger.first_name }} {{ song.arranger.last_name }}
+                                {% if song.composer %}{{ song.composer }}
+                                {% elif song.arranger %}{{ song.arranger }}
                                 {% else %}<small>No composer</small>{% endif %}
                             </span>
                             {% if song.internal_id %}<small class="song-meta">#{{ song.internal_id }}</small>{% endif %}

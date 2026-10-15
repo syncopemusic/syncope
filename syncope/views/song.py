@@ -33,8 +33,11 @@ def _build_song_queryset(qs, q):
             qs = qs.filter(
                 Q(title__icontains=q) |
                 Q(composer__last_name__icontains=q) |
+                Q(composer__first_name__icontains=q) |
                 Q(poet__last_name__icontains=q) |
+                Q(poet__first_name__icontains=q) |
                 Q(arranger__last_name__icontains=q) |
+                Q(arranger__first_name__icontains=q) |
                 Q(origin__icontains=q) |
                 Q(keywords__icontains=q) |
                 Q(languagecode__language_code__icontains=q)
@@ -87,7 +90,7 @@ def _apply_song_filters(qs, filters):
 
 def _song_people_options(owner_user, role):
     people = Person.objects.filter(**{f'{role}_songs__user': owner_user}).distinct().order_by('last_name', 'first_name')
-    return [(p.pk, f'{p.last_name} {p.first_name}') for p in people]
+    return [(p.pk, f'{p.last_name} {p.first_name}'.strip()) for p in people]
 
 
 def _apply_song_sort(qs, request):

@@ -29,7 +29,7 @@
             {% for person in participants %}
             <tr data-id="{{ person.pk }}">
                 <td class="col-num">{{ forloop.counter }}</td>
-                <td class="col-main song-title">{{ person.first_name }} {{ person.last_name }}</td>
+                <td class="col-main song-title">{{ person }}</td>
                 <td>{% if person.is_guest %}<small>Guest</small>{% endif %}</td>
                 <td class="col-action">
                     {% if person.is_guest %}<button type="button" class="btn btn-danger btn-remove" title="Remove from project">&times;</button>{% endif %}

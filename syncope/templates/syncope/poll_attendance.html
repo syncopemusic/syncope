@@ -6,7 +6,7 @@
 {% block content %}
 
 <div class="section-header">
-    <h1 class="event-title"><span class="event-title-text"> {% if viewing_as %}<span title="Poll">{{ poll.title }}</span> <small><span title="Person"> | {{ viewing_as.person.first_name }} {{ viewing_as.person.last_name }}</span></small>{% else %}<span title="Poll">{{ poll.title }} - Attendance</span>{% endif %}</span>
+    <h1 class="event-title"><span class="event-title-text"> {% if viewing_as %}<span title="Poll">{{ poll.title }}</span> <small><span title="Person"> | {{ viewing_as.person }}</span></small>{% else %}<span title="Poll">{{ poll.title }} - Attendance</span>{% endif %}</span>
         {% if viewing_as %}
         <span class="share-controls">
             <button id="share-btn" class="btn btn-link" title="Copy link">

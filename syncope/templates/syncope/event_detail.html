@@ -64,9 +64,9 @@
                     </span>
                     </div>
                     <div class="song-subline">
-                        <span{% if eventsong.song.composer %} title="{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} {{ eventsong.song.composer.birth_date|date:'Y' }}-{{ eventsong.song.composer.death_date|date:'Y' }}"{% endif %}>
-                            {% if eventsong.song.composer %}{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }}
-                            {% elif eventsong.song.arranger %}{{ eventsong.song.arranger.first_name }} {{ eventsong.song.arranger.last_name }}
+                        <span{% if eventsong.song.composer %} title="{{ eventsong.song.composer }} {{ eventsong.song.composer.birth_date|date:'Y' }}-{{ eventsong.song.composer.death_date|date:'Y' }}"{% endif %}>
+                            {% if eventsong.song.composer %}{{ eventsong.song.composer }}
+                            {% elif eventsong.song.arranger %}{{ eventsong.song.arranger }}
                             {% else %}<small>No composer</small>{% endif %}
                         </span>
                         {% if eventsong.song.internal_id %}

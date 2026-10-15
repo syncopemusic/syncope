@@ -52,7 +52,7 @@
     {% for person in participants %}
     <tr>
         <td class="col-num">{{ forloop.counter }}</td>
-        <td class="col-main"><a href="{% url 'syncope:org_member_detail' url_username person.pk %}?origin=project-{{ project.pk }}">{{ person.first_name }} {{ person.last_name }}</a></td>
+        <td class="col-main"><a href="{% url 'syncope:org_member_detail' url_username person.pk %}?origin=project-{{ project.pk }}">{{ person }}</a></td>
         <td>{% if person.is_guest %}<small>Guest</small>{% endif %}</td>
     </tr>
     {% endfor %}
@@ -86,9 +86,9 @@
                 <a href="{% url 'syncope:song_detail' url_username song.pk %}?origin=project-{{ project.pk }}">{{ song.title }}</a>
             </span></div>
             <div class="song-subline">
-                <span{% if song.composer %} title="{{ song.composer.first_name }} {{ song.composer.last_name }} {{ song.composer.birth_date|date:'Y' }}-{{ song.composer.death_date|date:'Y' }}"{% endif %}>
-                    {% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}
-                    {% elif song.arranger %}{{ song.arranger.first_name }} {{ song.arranger.last_name }}
+                <span{% if song.composer %} title="{{ song.composer }} {{ song.composer.birth_date|date:'Y' }}-{{ song.composer.death_date|date:'Y' }}"{% endif %}>
+                    {% if song.composer %}{{ song.composer }}
+                    {% elif song.arranger %}{{ song.arranger }}
                     {% else %}<small>No composer</small>{% endif %}
                 </span>
                 {% if song.internal_id %}<small class="song-meta">#{{ song.internal_id }}</small>{% endif %}
