@@ -21,20 +21,17 @@
 <form method="post" id="org-form">
   {% csrf_token %}
   {{ form.as_p }}
-  {% if not object %}
-  <div class="form-actions">
-    <button type="submit" class="btn btn-primary">Create</button>
-  </div>
-  {% endif %}
 </form>
 
 {% if object %}
 {% url 'syncope:org_dashboard' object.user.username as return_target %}
+{% else %}
+{% url 'syncope:home' as return_target %}
+{% endif %}
 {% include "syncope/_save_bar.html" with form_id="org-form" url=return_target %}
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script>
-    initEditFormSaveBar('org-form');
+    {% if object %}initEditFormSaveBar('org-form');{% else %}initNewFormSaveBar('org-form');{% endif %}
 </script>
-{% endif %}
 
 {% endblock %}

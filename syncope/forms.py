@@ -45,7 +45,7 @@ class CustomUserCreationForm(UserCreationForm):
         super().__init__(*args, **kwargs)
         self.fields["username"].widget.attrs.pop("autofocus", None)  # Django focuses username by default
         self.fields["email"].widget.attrs["autofocus"] = True
-        self.fields["password2"].label = "Confirm password"
+        self.fields["password2"].label = "Confirm Password"
         self.fields["password2"].help_text = ""
 
     def clean_email(self):
@@ -68,7 +68,7 @@ class CustomUserCreationForm(UserCreationForm):
 class LoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["username"].label = "Username or email address:"
+        self.fields["username"].label = "Username or Email Address"
 
     def clean(self):
         identifier = self.cleaned_data.get("username")
@@ -96,8 +96,9 @@ class AccountPasswordChangeForm(PasswordChangeForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["old_password"].label = "Current password"
-        self.fields["new_password2"].label = "Confirm new password"
+        self.fields["old_password"].label = "Current Password"
+        self.fields["new_password1"].label = "New Password"
+        self.fields["new_password2"].label = "Confirm New Password"
 
 
 class CustomUserChangeForm(UserChangeForm):
@@ -116,7 +117,7 @@ class UsernameChangeForm(forms.ModelForm):
     class Meta:
         model = CustomUser
         fields = ["username"]
-        labels = {"username": "New username"}
+        labels = {"username": "New Username"}
         widgets = {"username": forms.TextInput(attrs={"autocomplete": "off"})}
 
     def __init__(self, *args, **kwargs):
@@ -165,6 +166,12 @@ class PersonForm(forms.ModelForm):
             "death_date",
             "death_approximate",
         ]
+        labels = {
+            "birth_date": "Date of Birth",
+            "birth_approximate": "Date of Birth Approximation",
+            "death_date": "Date of Death",
+            "death_approximate": "Date of Death Approximation",
+        }
         widgets = {
             "birth_date": HtmlDateInput(),
             "death_date": HtmlDateInput(),
@@ -218,22 +225,24 @@ class ApproximationChoiceField(forms.ModelChoiceField):
 class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
     VALID_PRESETS = {'composer', 'poet', 'translator', 'arranger', 'member'}
     # Person
-    first_name = forms.CharField(max_length=100)
-    last_name = forms.CharField(max_length=100, required=False)
+    first_name = forms.CharField(label="First Name", max_length=100)
+    last_name = forms.CharField(label="Last Name", max_length=100, required=False)
     email = forms.EmailField(required=False)
     phone = forms.CharField(max_length=23, required=False)
     address = forms.CharField(required=False, widget=forms.Textarea)
     # Date fields
     birth_date = forms.DateField(
         required=False,
+        label="Date of Birth",
         widget=HtmlDateInput()
     )
-    birth_approximate = ApproximationChoiceField(label="Birth date approximation")
+    birth_approximate = ApproximationChoiceField(label="Date of Birth Approximation")
     death_date = forms.DateField(
         required=False,
+        label="Date of Death",
         widget=HtmlDateInput()
     )
-    death_approximate = ApproximationChoiceField(label="Death date approximation")
+    death_approximate = ApproximationChoiceField(label="Date of Death Approximation")
     # Role checkboxes
     roles = forms.ModelMultipleChoiceField(
         queryset=Role.objects.all(),
@@ -252,7 +261,6 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
         required=False,
         widget=forms.SelectMultiple(attrs={
             'size': '6',  # Shows 6 options at once
-            # 'class': 'form-select'  # Optional: for styling
         }),
         label='Voice Types'
     )
@@ -262,7 +270,6 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
         required=False,
         widget=forms.SelectMultiple(attrs={
             'size': '6',  # Shows 6 options at once
-            # 'class': 'form-select'  # Optional: for styling
         }),
         label='Instrument Types'
     )
@@ -360,6 +367,14 @@ class SongMetaForm(forms.ModelForm):
             "additional_notes",
             "keywords",
         ]
+        labels = {
+            "internal_id": "ID",
+            "number_of_pages": "Number of Pages",
+            "number_of_copies": "Number of Copies",
+            "year": "Year of Creation",
+            "number_of_voices": "Number of Parts",
+            "additional_notes": "Additional Notes",
+        }
         widgets = {
             "composer": forms.HiddenInput(),
             "arranger": forms.HiddenInput(),
@@ -430,6 +445,10 @@ class ProjectForm(forms.ModelForm):
             'start_date',
             'end_date',
         ]
+        labels = {
+            'start_date': 'Start',
+            'end_date': 'End',
+        }
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
             'details': forms.Textarea(attrs={'rows': 6}),
@@ -445,6 +464,7 @@ class SkillForm(forms.ModelForm):
     class Meta:
         model = Skill
         fields = ["title", "additional_notes"]
+        labels = {"title": "Name", "additional_notes": "Additional Notes"}
 
 
 class EventForm(forms.ModelForm):
@@ -463,7 +483,9 @@ class EventForm(forms.ModelForm):
                   ]
         labels = {
             'producers': 'Organizers',
-            'additional_notes': 'Personal notes',
+            'additional_notes': 'Personal Notes',
+            'event_type': 'Type',
+            'num_visitors': 'Number of Visitors',
         }
         widgets = {
             'started_at': HtmlDateTimeInput(),
@@ -661,6 +683,7 @@ class LyricsTranslationForm(forms.ModelForm):
     class Meta:
         model = LyricsTranslation
         fields = ['languagecode', 'translation', 'translator']
+        labels = {'languagecode': 'Language'}
         widgets = {
             'translation': forms.Textarea(attrs={'rows': 12}),
             'translator': forms.HiddenInput(),
@@ -768,6 +791,7 @@ class MembershipPeriodForm(forms.ModelForm):
     class Meta:
         model = MembershipPeriod
         fields = ['role', 'started_at', 'ended_at']
+        labels = {'started_at': 'Start', 'ended_at': 'End'}
         widgets = {
             'started_at': HtmlDateInput(),
             'ended_at': HtmlDateInput(),
@@ -838,7 +862,7 @@ class PollCreateForm(forms.ModelForm):
     import_active_members = forms.BooleanField(
         required=False,
         initial=True,
-        label='Import active members'
+        label='Import Active Members'
     )
 
     class Meta:
@@ -882,6 +906,7 @@ class PollEventForm(forms.ModelForm):
         queryset=EventType.objects.all(),
         empty_label=None,
         initial=EventType.REHEARSAL,
+        label='Type',
     )
 
     class Meta:
@@ -894,6 +919,7 @@ class PollEventForm(forms.ModelForm):
             'location',
             'details'
         ]
+        labels = {'started_at': 'Start', 'ended_at': 'End'}
         widgets = {
             'poll': forms.HiddenInput(),
             'started_at': HtmlDateTimeInput(),
@@ -926,6 +952,7 @@ class InvitationForm(forms.ModelForm):
     class Meta:
         model = Invitation
         fields = ['existing_person', 'copy_details', 'expires_at']
+        labels = {'expires_at': 'Expires At'}
         widgets = {
             "expires_at": HtmlDateTimeInput(),
         }
@@ -935,13 +962,13 @@ class InvitationForm(forms.ModelForm):
         self.fields['expires_at'].initial = timezone.now() + datetime.timedelta(days=7)
         is_org = Organization.objects.filter(user=customuser).exists()
         if is_org:
-            self.fields['recipient_username'].label = "Username to invite"
+            self.fields['recipient_username'].label = "Username to Invite"
             self.fields['existing_person'].queryset = Person.objects.unlinked_in_org(customuser)
-            self.fields['existing_person'].label = "Link to existing member record (optional)"
+            self.fields['existing_person'].label = "Link to Existing Member Record (Optional)"
             self.fields['existing_person'].empty_label = "-- Create new person on accept --"
             del self.fields['copy_details']
         else:
-            self.fields['recipient_username'].label = "Organization username to request"
+            self.fields['recipient_username'].label = "Organization Username to Request"
             self.fields['existing_person'].queryset = Person.objects.none()
             self.fields['existing_person'].widget = forms.HiddenInput()
             self.fields['existing_person'].required = False
@@ -959,7 +986,7 @@ class InvitationAcceptForm(forms.Form):
     existing_person = forms.ModelChoiceField(
         queryset=Person.objects.none(),
         required=False,
-        label="Link to existing member record (optional)",
+        label="Link to Existing Member Record (Optional)",
     )
 
     def __init__(self, *args, organization_user, **kwargs):

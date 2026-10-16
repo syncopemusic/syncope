@@ -61,7 +61,6 @@
     <p class="link-row">
         <button type="button" id="song-search-clear" class="btn btn-secondary">Clear</button>
         <span id="song-search-count" class="result-count"></span>
-        <a href="{% url 'syncope:song_new' url_username %}?auto_add_project={{ project.pk }}&next={% url 'syncope:project_songs_edit' url_username project.pk %}" class="btn btn-primary" title="Create new song">+ Add</a>
     </p>
     <div id="song-search-results">
         {% include "syncope/project_song_search_results.html" %}

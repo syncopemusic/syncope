@@ -288,15 +288,15 @@ class Person(models.Model):
     One Person is under CustomUser, different Persons are owned by organizations.
     The CustomUser-Person has owner, the Org-Membership-Persons are many and fk to owner's Person.
     """
-    first_name = models.CharField("name", max_length=100)
-    last_name = models.CharField("surname", max_length=100, blank=True)
+    first_name = models.CharField("First Name", max_length=100)
+    last_name = models.CharField("Last Name", max_length=100, blank=True)
     email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True, null=True)
     phone =  models.CharField(max_length=23, blank=True, null=True)
-    birth_date = models.DateField("birthday", blank=True, null=True)
+    birth_date = models.DateField("Birthday", blank=True, null=True)
     birth_approximate = models.ForeignKey(ApproximateDate, on_delete=models.CASCADE, blank=True, null=True,
                                           related_name="birth_approximate")
-    death_date = models.DateField("deathday", blank=True, null=True)
+    death_date = models.DateField("Deathday", blank=True, null=True)
     death_approximate = models.ForeignKey(ApproximateDate, on_delete=models.CASCADE, blank=True, null=True,
                                           related_name="death_approximate")
 
@@ -592,10 +592,10 @@ class Event(models.Model):
         related_name="events"
     )
     internal_id = models.PositiveIntegerField("ID", blank=True, null=True)
-    name = models.CharField("name of the event", max_length=250, blank=True)
+    name = models.CharField("Name", max_length=250, blank=True)
     location = models.TextField(blank=True, null=True)
-    started_at = models.DateTimeField("start date hour", blank=True, null=True)
-    ended_at = models.DateTimeField("end date hour", blank=True, null=True)
+    started_at = models.DateTimeField("Start")
+    ended_at = models.DateTimeField("End", blank=True, null=True)
     event_type = models.ForeignKey(EventType, on_delete=models.CASCADE)
     num_visitors = models.PositiveIntegerField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)

@@ -15,7 +15,7 @@
 
 <form method="post" id="events-form">
     {% csrf_token %}
-    <div class="table-container">
+    <div class="table-container" id="events-table-container"{% if not events %} hidden{% endif %}>
     <table class="table">
         <thead>
             <tr>
@@ -41,7 +41,6 @@
                 </td>
             </tr>
             {% endfor %}
-            <tr class="empty-row"><td colspan="3">No events yet.</td></tr>
         </tbody>
     </table>
     </div>
@@ -56,7 +55,6 @@
     <p class="link-row">
         <button type="button" id="event-search-clear" class="btn btn-secondary">Clear</button>
         <span id="event-search-count" class="result-count"></span>
-        <a href="{% url 'syncope:event_new' url_username %}?project={{ project.pk }}&next={% url 'syncope:project_events_edit' url_username project.pk %}" class="btn btn-primary" title="Create new event">+ Add</a>
     </p>
     <div id="event-search-results">
         {% include "syncope/project_event_search_results.html" %}
@@ -74,6 +72,7 @@
         formId: 'events-form',
         tbodyId: 'events-tbody',
         addField: 'add_event',
+        afterChange: () => { document.getElementById('events-table-container').hidden = !document.getElementById('events-tbody').rows.length; },
         prefix: 'event',
         searchUrl: "{% url 'syncope:project_events_search' url_username project.pk %}",
     });
