@@ -9,7 +9,6 @@
                             data-title="{{ song.title }}"
                             data-composer="{% if song.composer %}{{ song.composer }}{% endif %}"
                             data-arranger="{% if song.arranger %}{{ song.arranger }}{% endif %}"
-                            data-resources="{{ song.resource_count }}"
                             data-duration="{{ song.duration|default:'' }}"
                             data-internal-id="{{ song.internal_id|default:'' }}">+</button>
                     <div class="search-result-info">
@@ -23,7 +22,6 @@
                             {% if song.internal_id %}<small class="song-meta">#{{ song.internal_id }}</small>{% endif %}
                         </div>
                     </div>
-                    {% if song.duration %}<span title="{{ song.duration_title }}">{{ song.duration_display }}</span>{% endif %}
                 </div>
             {% endfor %}
         </div>

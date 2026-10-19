@@ -534,14 +534,17 @@ class Song(models.Model):
 
 
 class Quote(models.Model):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="quotes"
+    )
     word = models.CharField(max_length=100)
     bar_number = models.CharField(max_length=20, blank=True, null=True)
-    song = models.ForeignKey(Song, on_delete=models.CASCADE, related_name='quotes')
+    song = models.ForeignKey(Song, on_delete=models.CASCADE, related_name='quotes', blank=True, null=True)
     date = models.DateField(blank=True, null=True)
-    person = models.ForeignKey(Person, on_delete=models.SET_NULL, related_name='quotes', blank=True, null=True)
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name='quotes', blank=True, null=True)
 
-    class Meta:
-        ordering = ['word']
 
     def __str__(self):
         if self.bar_number:

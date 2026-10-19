@@ -14,7 +14,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from syncope.models import Song, EventType, CustomUser, Person, LanguageCode, LyricsTranslation
 from syncope.models import Event, EventSong, EventSongResource, Project
 from syncope.forms import SongMetaForm, SongLyricsForm, SONG_PERSON_FIELD_SKILLS, SONG_PERSON_FIELD_META
-from syncope.forms import QuoteFormSet, LyricsTranslationFormSet
+from syncope.forms import LyricsTranslationFormSet
 from syncope.mixins import ListFilterMixin, SongOwnerMixin
 from syncope.views.drafts import DraftMixin, clear_draft
 from syncope.permissions import AccessControl
@@ -205,6 +205,7 @@ class SongDetailView(SongOwnerMixin, DetailView):
         context['song_resources'] = resource_icon_list(
             song.song_resource.select_related('resource').order_by('order')
         )
+        context['quotes'] = song.quotes.select_related('person')
         context['related_song_resources'] = song_related_resource_rows(song)
         context['resource_count'] = len(context['song_resources']) + len(context['related_song_resources'])
 
@@ -365,8 +366,7 @@ def song_person_search(request, username, field):
     """AJAX single-person search for the Meta/Quotes subpages' person pickers.
 
     Composer/arranger/poet/translator are scoped to a skill; the Quotes "person"
-    field isn't skill-specific, so it searches every org person instead - the
-    same scope QuoteForm already uses for its dropdown.
+    field isn't skill-specific, so it searches every org person instead.
     """
     owner_user = get_object_or_404(CustomUser, username=username)
     q = request.GET.get('q', '')
@@ -436,62 +436,6 @@ class SongDeleteView(SongOwnerMixin, DeleteView):
         context['cancel_url'] = cancel_url
         return context
 
-
-
-@method_decorator(login_required, name='dispatch')
-class SongQuoteView(SongOwnerMixin, View):
-    """Manage quotes for a specific song. Supports ?next= redirect after save."""
-    template_name = 'syncope/song_quotes.html'
-    permission_check_method = AccessControl.can_manage_song
-
-    def _get_song(self, pk):
-        song = get_object_or_404(Song, pk=pk, user=self.owner_user)
-        if not AccessControl.can_manage_song(self.request.user, song):
-            from django.core.exceptions import PermissionDenied
-            raise PermissionDenied
-        return song
-
-    def _next_url(self, request, username, pk):
-        next_url = request.GET.get('next') or request.POST.get('next', '')
-        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
-            return next_url
-        return request.get_full_path()  # stay on the edit page
-
-    def get(self, request, username, pk):
-        song = self._get_song(pk)
-        formset = QuoteFormSet(instance=song, prefix='quotes', user=song.user)
-        return render(request, self.template_name, {
-            'song': song,
-            'formset': formset,
-            'url_username': username,
-            'next': request.GET.get('next', ''),
-            'can_manage': True,
-        })
-
-    def post(self, request, username, pk):
-        song = self._get_song(pk)
-        if request.POST.get('action') == 'add_kw_row':
-            post_data = request.POST.copy()
-            total = int(post_data.get('quotes-TOTAL_FORMS', 0))
-            post_data['quotes-TOTAL_FORMS'] = total + 1
-            formset = QuoteFormSet(post_data, instance=song, prefix='quotes', user=song.user)
-            return render(request, self.template_name, {
-                'song': song,
-                'formset': formset,
-                'url_username': username,
-                'next': request.POST.get('next', ''),
-            })
-        formset = QuoteFormSet(request.POST, instance=song, prefix='quotes', user=song.user)
-        if formset.is_valid():
-            formset.save()
-            messages.success(request, "Quotes updated successfully!")
-            return redirect(self._next_url(request, username, pk))
-        return render(request, self.template_name, {
-            'song': song,
-            'formset': formset,
-            'url_username': username,
-            'next': request.POST.get('next', ''),
-        })
 
 
 @method_decorator(login_required, name='dispatch')

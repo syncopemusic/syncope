@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static %}
+{% load static icon_tags %}
 {% block title %}{{ project.title }} - Syncope{% endblock %}
 
 {% block content %}
@@ -21,7 +21,7 @@
             <tr>
                 <th class="song-index"></th>
                 <th class="col-main">Song</th>
-                <th class="col-num">Dur</th>
+                <th class="col-num" title="Duration">{% icon "stopwatch" %}</th>
                 <th class="col-action"></th>
             </tr>
         </thead>

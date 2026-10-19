@@ -528,6 +528,8 @@ class OrgMemberDetailView(DetailView):
             person.person_resource.select_related('resource').order_by('order')
         )
 
+        context['quotes'] = person.quotes.select_related('song')
+
         # Songs by role; composer/arranger are shown in each row's subline
         for key, songs in {
             "composed_songs": person.composed_songs.all(),

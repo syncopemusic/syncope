@@ -174,6 +174,7 @@ PAGES = {
     "org_member_edit": ("members", "sub", "Edit"),
     "org_member_delete": ("members", "sub", "Delete"),
     "person_resources_edit": ("members", "sub", "Resources"),
+    "person_quotes": ("members", "sub", "Quotes"),
 }
 for _key in _MEMBER_SECTIONS:
     _singular = _key[:-1]

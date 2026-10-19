@@ -1,11 +1,11 @@
-<h3>{{ heading }} ({{ songs|length }})</h3>
+{% load icon_tags %}<h3>{{ heading }} ({{ songs|length }})</h3>
 <div class="table-container">
 <table class="table">
   <thead>
   <tr>
     <th class="col-num"></th>
     <th class="col-main">Song</th>
-    <th class="col-num">Dur</th>
+    <th class="col-num" title="Duration">{% icon "stopwatch" %}</th>
   </tr>
   </thead>
   <tbody>

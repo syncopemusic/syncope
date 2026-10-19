@@ -1106,9 +1106,22 @@
 
         /* Total duration reads like the row durations above it, so the digits line up. */
         & tfoot th.total-time {
-            font: inherit;
+            font-weight: 400;
             text-transform: none;
             letter-spacing: normal;
+        }
+
+        /* The cell keeps the header's font (so the row is exactly as tall); children are bigger but add no height. */
+        & tfoot th.total-time > * {
+            line-height: 0;
+        }
+
+        & tfoot th.total-time > span {
+            font-size: var(--font-size-sm);
+        }
+
+        & tfoot th.total-time > sup {
+            font-size: var(--font-size-2xs);
         }
 
         & tbody td,
@@ -1337,7 +1350,7 @@
     .song-meta { white-space: nowrap; color: var(--color-text-muted); }
 
     /* Edit-page table: narrow fixed columns; the extra class beats .table's cell padding. */
-    .songs-table .song-resources { text-align: center; width: 1.4rem; padding-inline: 0; }
+    .songs-table .song-encore { text-align: center; width: 1.4rem; padding-inline: 0; }
     .songs-table .song-actions { text-align: center; width: 2.2rem; padding-inline-start: 0; }
 
     @media (max-width: 768px) {

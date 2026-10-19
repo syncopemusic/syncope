@@ -11,8 +11,8 @@
             {% if eventsong.song.internal_id %}<small class="song-meta">#{{ eventsong.song.internal_id }}</small>{% endif %}
         </div>
     </td>
+    <td class="song-encore"><input type="checkbox" class="encore-check" title="Encore"{% if eventsong.encore %} checked{% endif %}{% if not is_admin %} disabled{% endif %}></td>
     <td class="col-num"><span title="{{ eventsong.song.duration_title }}">{{ eventsong.song.duration_display|default:"-" }}</span></td>
-    <td class="song-resources" title="Event resources for song">{{ eventsong.resources_count }}</td>
     {% if is_admin %}
     <td class="song-actions">
         <button type="button" class="btn btn-danger btn-remove" title="Remove from event">&times;</button>

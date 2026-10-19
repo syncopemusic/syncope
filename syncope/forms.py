@@ -3,7 +3,7 @@ import datetime
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, UserCreationForm, UserChangeForm
 from django.utils import timezone
-from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project, Poll, PollPerson, PollEvent, \
+from .models import CustomUser, Organization, Person, Song, Skill, Role, Project, Poll, PollPerson, PollEvent, \
     PollAttendance, Invitation
 from .models import Event, EventSong, AttendanceType,  Voice, Instrument, EventType, EventSongResource
 from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, PersonResource, \
@@ -301,29 +301,6 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
 
 
 
-class QuoteForm(forms.ModelForm):
-    class Meta:
-        model = Quote
-        fields = ['word', 'bar_number', 'date', 'person']
-        labels = {
-            'word': 'Quote',
-            'bar_number': 'Bar Number',
-            'date': 'Date',
-            'person': 'Person',
-        }
-        widgets = {
-            'word': forms.TextInput(attrs={'placeholder': 'Quote text'}),
-            'bar_number': forms.TextInput(attrs={'placeholder': '43'}),
-            'date': HtmlDateInput(),
-            'person': forms.HiddenInput(),
-        }
-
-    def __init__(self, *args, user=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        if user:
-            self.fields['person'].queryset = Person.objects.in_org_user(user)
-
-
 # Skill each person-picker field on SongMetaForm draws its candidates from; also used
 # by song_person_search to scope the AJAX search per field.
 SONG_PERSON_FIELD_SKILLS = {
@@ -522,16 +499,12 @@ class AddSongToEventForm(forms.Form):
         label='Song',
     )
 
-    def __init__(self, *args, org_user=None, event=None, search_q='', limit_results=True, exclude_ids=None, **kwargs):
+    def __init__(self, *args, org_user=None, event=None, search_q='', limit_results=True, **kwargs):
         super().__init__(*args, **kwargs)
         self.song_search_truncated = False
         if org_user and event is not None:
             if search_q:
-                already_added_ids = set(event.eventsong_set.values_list('song_id', flat=True))
-                exclude_pks = already_added_ids | set(exclude_ids or [])
-                qs = Song.objects.filter(user=org_user).exclude(id__in=exclude_pks).annotate(
-                    resource_count=Count('song_resource', distinct=True)
-                ).order_by('title')
+                qs = Song.objects.filter(user=org_user).order_by('title')
                 if search_q.isdigit():
                     qs = qs.filter(internal_id=int(search_q))
                 else:
@@ -656,27 +629,6 @@ class AddAttendanceForm(forms.Form):
             else:
                 qs = Person.objects.none()
             self.fields['person'].queryset = qs
-
-
-class BaseQuoteFormSet(BaseInlineFormSet):
-    def __init__(self, *args, user=None, **kwargs):
-        self.user = user
-        super().__init__(*args, **kwargs)
-
-    def get_form_kwargs(self, index):
-        kwargs = super().get_form_kwargs(index)
-        kwargs['user'] = self.user
-        return kwargs
-
-
-QuoteFormSet = inlineformset_factory(
-    Song,
-    Quote,
-    form=QuoteForm,
-    formset=BaseQuoteFormSet,
-    extra=1,
-    can_delete=True,
-)
 
 
 class LyricsTranslationForm(forms.ModelForm):

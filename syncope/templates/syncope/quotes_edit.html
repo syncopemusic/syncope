@@ -1,0 +1,84 @@
+{% extends "syncope/base.html" %}
+{% load static %}
+{% block title %}{% firstof owner.title owner %} - Syncope{% endblock %}
+{% block content %}
+
+<div class="section-header">
+    <h1 class="event-title">
+        <span class="event-title-text">
+            <span title="{% if kind == 'song' %}Title{% else %}Name{% endif %}">{% firstof owner.title owner %}</span>
+            <small><span title="Page"> | Quotes</span></small>
+        </span>
+    </h1>
+</div>
+
+<form method="post" id="quotes-form">
+    {% csrf_token %}
+
+    {% include "syncope/_quotes_table.html" with rows=quotes editable=True table_id="quotes" %}
+
+    <div id="add-quote" class="narrow">
+        <h3>Add Quote</h3>
+        <div class="form-group">
+            <label for="new-quote-word">Quote</label>
+            <input type="text" id="new-quote-word" maxlength="100">
+        </div>
+        <div class="form-group">
+            <label for="new-quote-bar-number">Bar Number</label>
+            <input type="text" id="new-quote-bar-number" maxlength="20">
+        </div>
+        <div class="form-group">
+            <label for="new-quote-date">Date</label>
+            <input type="date" id="new-quote-date">
+        </div>
+        {% if kind == 'song' %}
+        {% include "syncope/_person_picker.html" with field_name="person" label="Person" current=None %}
+        {% endif %}
+        <p><button type="button" id="add-quote-btn" class="btn btn-primary">+ Add</button></p>
+    </div>
+</form>
+
+{% include "syncope/_save_bar.html" with form_id="quotes-form" url=owner_detail_url %}
+
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script src="{% static 'syncope/search-box.js' %}"></script>
+<script src="{% static 'syncope/staged-list.js' %}"></script>
+<script>
+    const rowsBody = document.getElementById('quotes-rows');
+    const saveBarCtl = initStagedList({formId: 'quotes-form', tbodyId: 'quotes-rows', rootId: 'quotes'});
+
+    const wordInput = document.getElementById('new-quote-word');
+    const barInput = document.getElementById('new-quote-bar-number');
+    const dateInput = document.getElementById('new-quote-date');
+    const picker = document.querySelector('.person-picker');
+    if (picker) wirePersonPicker(picker);
+    const personField = picker?.querySelector('input[type=hidden]');
+    const personInput = picker?.querySelector('.person-picker-input');
+
+    document.getElementById('add-quote-btn').addEventListener('click', function() {
+        const word = wordInput.value.trim();
+        if (!word) {
+            wordInput.setCustomValidity('Enter the quote text');
+            wordInput.reportValidity();
+            wordInput.setCustomValidity('');
+            return;
+        }
+        const bar = barInput.value.trim(), date = dateInput.value;
+        const tr = document.createElement('tr');
+        tr.className = 'staged-add';
+        tr.innerHTML = `
+            <td class="col-num"></td>
+            <td class="col-main">${escapeHtml(word)}<input type="hidden" name="new_word" value="${escapeHtml(word)}"></td>
+            <td>${escapeHtml(bar) || '-'}<input type="hidden" name="new_bar_number" value="${escapeHtml(bar)}"></td>
+            <td>${escapeHtml(date) || '-'}<input type="hidden" name="new_date" value="${escapeHtml(date)}"></td>
+            <td class="col-main">${personField ? escapeHtml(personInput.value.trim()) || '-' : '-'}<input type="hidden" name="new_person" value="${personField ? personField.value : ''}"></td>
+            <td class="col-action"><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>
+        `;
+        rowsBody.appendChild(tr);
+        wordInput.value = barInput.value = dateInput.value = '';
+        if (personField) personField.value = personInput.value = '';
+        saveBarCtl.sync();
+    });
+</script>
+
+{% endblock %}
