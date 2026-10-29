@@ -27,7 +27,7 @@
 
     {% if eventsongs %}
     <div class="form-group">
-        <label for="id_encore_song">Encore song</label>
+        <label for="id_encore_song">Encore Song</label>
         <select name="encore_song" id="id_encore_song">
             <option value="">-</option>
             {% for eventsong in eventsongs %}
@@ -44,20 +44,6 @@
 
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 <script>
-    const form = document.getElementById('event-meta-form');
-    const fieldTracker = trackFormFieldChanges(form);
-
-    const saveBarCtl = initSaveBar({
-        formId: 'event-meta-form',
-        countUnsavedChanges: fieldTracker.count,
-        onDiscard: () => {
-            form.reset();
-            fieldTracker.reset();
-        },
-    });
-
-    form.addEventListener('input', () => saveBarCtl.sync());
-    form.addEventListener('change', () => saveBarCtl.sync());
-    saveBarCtl.sync();
+    initEditFormSaveBar('event-meta-form');
 </script>
 {% endblock %}

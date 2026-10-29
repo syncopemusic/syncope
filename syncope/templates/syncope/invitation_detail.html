@@ -14,7 +14,7 @@
     {% endif %}
     <tr><th>Status</th><td>{{ invitation.status }}</td></tr>
     {% if invitation.existing_person %}
-        <tr><th>Linked member record</th><td>{{ invitation.existing_person.first_name }} {{ invitation.existing_person.last_name }}</td></tr>
+        <tr><th>Linked member record</th><td>{{ invitation.existing_person }}</td></tr>
     {% endif %}
     {% if is_request %}
         <tr><th>Requester opted to copy profile details</th><td>{{ invitation.copy_details|yesno:"Yes,No" }}</td></tr>

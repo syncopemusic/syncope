@@ -1,4 +1,4 @@
-<p class="result-count">{{ songs|length }} result{{ songs|length|pluralize }}</p>
+{% load icon_tags %}<p class="result-count">{{ songs|length }} result{{ songs|length|pluralize }}</p>
 {% if songs %}
 <div class="table-container">
 <table class="table">
@@ -39,9 +39,9 @@
                     PERF {% if current_sort == 'perf' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
-            <th>
+            <th class="col-num" title="Duration">
                 <a href="?q={{ q }}&sort=duration{% if current_sort == 'duration' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
-                    DUR {% if current_sort == 'duration' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+                    {% icon "stopwatch" %} {% if current_sort == 'duration' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
         </tr>
@@ -67,7 +67,7 @@
             </td>
             <td>{{ song.number_of_copies|default:"-" }}</td>
             <td><span title="Number of concerts / number of performances">{% if song.concert_count or song.performance_count %}{{ song.concert_count }}/{{ song.performance_count }}{% else %}-{% endif %}</span></td>
-            <td><span title="{{ song.duration_title }}">{{ song.duration_display|default:"-" }}</span></td>
+            <td class="col-num"><span title="{{ song.duration_title }}">{{ song.duration_display|default:"-" }}</span></td>
         </tr>
     {% endfor %}
     </tbody>

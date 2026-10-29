@@ -153,21 +153,7 @@ $(function () {
 <script src="{% static 'syncope/save-bar.js' %}"></script>
 {% if editing %}
 <script>
-    const form = document.getElementById('poll-event-form');
-    const fieldTracker = trackFormFieldChanges(form);
-
-    const saveBarCtl = initSaveBar({
-        formId: 'poll-event-form',
-        countUnsavedChanges: fieldTracker.count,
-        onDiscard: () => {
-            form.reset();
-            fieldTracker.reset();
-        },
-    });
-
-    form.addEventListener('input', () => saveBarCtl.sync());
-    form.addEventListener('change', () => saveBarCtl.sync());
-    saveBarCtl.sync();
+    initEditFormSaveBar('poll-event-form');
 </script>
 {% else %}
 <script>

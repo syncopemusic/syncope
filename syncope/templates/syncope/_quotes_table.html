@@ -1,0 +1,34 @@
+{# rows=quotes; kind='song' -> Person column, kind='person' -> Song column; editable=True adds remove buttons (quotes_edit.html). #}
+{% with table_id=table_id|default:"quote-table" %}
+{% if rows or editable %}
+<div class="table-container table-narrow">
+<table class="table" id="{{ table_id }}">
+    <thead>
+        <tr>
+            <th class="col-num"></th>
+            <th class="col-main">Quote</th>
+            <th>Bar Number</th>
+            <th>Date</th>
+            <th class="col-main">{% if kind == 'song' %}Person{% else %}Song{% endif %}</th>
+            {% if editable %}<th class="col-action"></th>{% endif %}
+        </tr>
+    </thead>
+    <tbody id="{{ table_id }}-rows">
+        {% for quote in rows %}
+        <tr data-id="{{ quote.pk }}">
+            <td class="col-num">{{ forloop.counter }}</td>
+            <td class="col-main">{{ quote.word }}</td>
+            <td>{{ quote.bar_number|default:"-" }}</td>
+            <td>{{ quote.date|default:"-" }}</td>
+            <td class="col-main">
+                {% if kind == 'song' %}{% include "syncope/person_link.html" with person=quote.person %}
+                {% elif quote.song %}<a href="{% url 'syncope:song_detail' url_username quote.song.pk %}">{{ quote.song.title }}</a>{% else %}-{% endif %}
+            </td>
+            {% if editable %}<td class="col-action"><button type="button" class="btn btn-danger btn-remove" title="Remove">&times;</button></td>{% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+{% endwith %}

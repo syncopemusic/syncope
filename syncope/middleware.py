@@ -65,7 +65,7 @@ class ProfileCompletionMiddleware:
                 person = Person.objects.filter(
                     user=request.user, owner=None
                 ).first()
-                if person and (not person.first_name or not person.last_name):
+                if person and (not person.first_name):
                     messages.info(
                         request,
                         "Please complete your profile."
