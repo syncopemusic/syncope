@@ -135,10 +135,15 @@ class Resource(models.Model):
         on_delete=models.CASCADE,
         related_name="resources"
     )
-    url = models.URLField("url", unique=True)
+    url = models.URLField("url")
     description = models.TextField("description", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["owner", "url"], name="unique_url_per_owner"),
+        ]
 
     def __str__(self):
         return self.description

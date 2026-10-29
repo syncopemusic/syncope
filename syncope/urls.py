@@ -9,8 +9,10 @@ from .views.event import event_songs_search, event_song_resources_save
 from .views.event import event_attendance_search
 from .views.home import HomeView, SkillListAndCreateView
 from .views.importing import ImportHubView, ImportDashboardView, CombineProjectsView
-from .views.export_import import ExportView
-from .views.organization import OrganizationCreateView, OrganizationDashboard, OrganizationUpdateView, OrganizationDeleteView
+from .views.organization import (
+    ExportView, OrgBackupView, OrganizationCreateView, OrganizationDashboard, OrganizationUpdateView,
+    OrganizationDeleteView,
+)
 from .views.person import PersonUpdateView, profile_account, ProfileDetailView, OrgMemberAddView, OrgMemberEditView, PersonListView, OrgMemberDetailView, OrgMemberDeleteView, org_member_unlink, person_list_search
 from .views.invitation import InvitationListView, InvitationListSearchView, InvitationCreateView, InvitationUpdateView
 from .views.organization import OrganizationCreateView, OrganizationDashboard
@@ -49,6 +51,7 @@ urlpatterns = [
 
     path("", RedirectView.as_view(pattern_name='syncope:home', permanent=False)),
     path("organization/new/", OrganizationCreateView.as_view(), name="org_new"),
+    path("organization/import/", OrgBackupView.as_view(), name="org_backup"),
 
     path("<str:username>/dashboard/", OrganizationDashboard.as_view(), name="org_dashboard"),
     path("<str:username>/edit/", OrganizationUpdateView.as_view(), name="org_edit"),
