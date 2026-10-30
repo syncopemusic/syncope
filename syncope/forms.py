@@ -222,7 +222,7 @@ class OrganizationForm(forms.ModelForm):
 
 
 class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
-    VALID_PRESETS = {'composer', 'poet', 'translator', 'arranger', 'member'}
+    VALID_PRESETS = {'composer', 'lyricist', 'translator', 'arranger', 'member'}
     # Person
     first_name = forms.CharField(label="First Name", max_length=100)
     last_name = forms.CharField(label="Last Name", max_length=100, required=False)
@@ -283,9 +283,9 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
             self.initial['roles'] = [Role.EXTERNAL]
             self.initial["skills"] = [Skill.COMPOSER]
 
-        elif preset == 'poet':
+        elif preset == 'lyricist':
             self.initial['roles'] = [Role.EXTERNAL]
-            self.initial["skills"] = [Skill.POET]
+            self.initial["skills"] = [Skill.LYRICIST]
 
         elif preset == 'translator':
             self.initial['roles'] = [Role.EXTERNAL]
@@ -305,7 +305,7 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
 SONG_PERSON_FIELD_SKILLS = {
     'composer': Skill.COMPOSER,
     'arranger': Skill.ARRANGER,
-    'poet': Skill.POET,
+    'lyricist': Skill.LYRICIST,
     'translator': Skill.TRANSLATOR,
 }
 
@@ -315,7 +315,7 @@ SONG_PERSON_FIELD_SKILLS = {
 SONG_PERSON_FIELD_META = {
     'composer': ('Composer', 'syncope:org_member_new_composer'),
     'arranger': ('Arranger', 'syncope:org_member_new_arranger'),
-    'poet': ('Poet', 'syncope:org_member_new_poet'),
+    'lyricist': ('Lyricist', 'syncope:org_member_new_lyricist'),
     'translator': ('Translator', 'syncope:org_member_new_translator'),
     'person': ('Person', 'syncope:org_member_new'),
 }
@@ -331,7 +331,7 @@ class SongMetaForm(forms.ModelForm):
             "title",
             "composer",
             "arranger",
-            "poet",
+            "lyricist",
             "translator",
             "duration",
             "number_of_pages",
@@ -354,7 +354,7 @@ class SongMetaForm(forms.ModelForm):
         widgets = {
             "composer": forms.HiddenInput(),
             "arranger": forms.HiddenInput(),
-            "poet": forms.HiddenInput(),
+            "lyricist": forms.HiddenInput(),
             "translator": forms.HiddenInput(),
         }
 
@@ -394,10 +394,10 @@ class SongMetaForm(forms.ModelForm):
 class SongLyricsForm(forms.ModelForm):
     class Meta:
         model = Song
-        fields = ["lyrics", "languagecode", "poet"]
+        fields = ["lyrics", "languagecode", "lyricist"]
         widgets = {
             "lyrics": forms.Textarea(attrs={'rows': 20}),
-            "poet": forms.HiddenInput(),
+            "lyricist": forms.HiddenInput(),
         }
         labels = {
             "languagecode": "Language",
@@ -406,8 +406,8 @@ class SongLyricsForm(forms.ModelForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         if user:
-            self.fields['poet'].queryset = Person.objects.for_user_with_skill(
-                user=user, skill_id=SONG_PERSON_FIELD_SKILLS['poet']
+            self.fields['lyricist'].queryset = Person.objects.for_user_with_skill(
+                user=user, skill_id=SONG_PERSON_FIELD_SKILLS['lyricist']
             )
 
 

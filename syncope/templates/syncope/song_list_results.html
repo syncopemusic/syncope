@@ -20,8 +20,8 @@
                 </a>
             </th>
             <th class="col-main">
-                <a href="?q={{ q }}&sort=poet{% if current_sort == 'poet' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
-                    Poet {% if current_sort == 'poet' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+                <a href="?q={{ q }}&sort=lyricist{% if current_sort == 'lyricist' and not reverse %}&reverse=true{% endif %}" class="sortable-header">
+                    Lyricist {% if current_sort == 'lyricist' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
                 </a>
             </th>
             <th>
@@ -60,7 +60,7 @@
                 {% include "syncope/person_link.html" with person=song.composer %}
             </td>
             <td class="col-main">
-                {% include "syncope/person_link.html" with person=song.poet %}
+                {% include "syncope/person_link.html" with person=song.lyricist %}
             </td>
             <td>
                 {% include "syncope/person_link.html" with person=song.arranger %}

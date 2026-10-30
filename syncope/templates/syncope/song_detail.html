@@ -30,9 +30,9 @@
         <a href="{%  url 'syncope:org_member_detail' url_username song.arranger.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}{% endif %}{% if request.GET.origin %}&origin={{ request.GET.origin }}{% endif %}">{{ song.arranger }}</a>
     </td></tr>
     {% endif %}
-    {% if song.poet %}
-    <tr><th>Poet</th><td>
-        <a href="{%  url 'syncope:org_member_detail' url_username song.poet.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}{% endif %}{% if request.GET.origin %}&origin={{ request.GET.origin }}{% endif %}">{{ song.poet }}</a>
+    {% if song.lyricist %}
+    <tr><th>Lyricist</th><td>
+        <a href="{%  url 'syncope:org_member_detail' url_username song.lyricist.pk %}?from_song={{ song.pk }}{% if request.GET.from_event %}&from_event={{ request.GET.from_event }}{% endif %}{% if request.GET.origin %}&origin={{ request.GET.origin }}{% endif %}">{{ song.lyricist }}</a>
     </td></tr>
     {% endif %}
     {% if song.translator %}

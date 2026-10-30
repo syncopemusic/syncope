@@ -3,7 +3,7 @@
   {"title": "Composer", "additional_notes": "creates musical compositions", "created_at": "2026-02-16T11:39:31.869Z"}
   },
   {"model": "syncope.skill", "pk": 2, "fields":
-  {"title": "Poet", "additional_notes": "writes lyrics and poetry", "created_at": "2026-02-16T11:39:58.706Z"}
+  {"title": "Lyricist", "additional_notes": "writes lyrics", "created_at": "2026-02-16T11:39:58.706Z"}
   },
   {"model": "syncope.skill", "pk": 3, "fields":
   {"title": "Arranger", "additional_notes": "arranges musical pieces", "created_at": "2026-02-16T11:40:19.865Z"}

@@ -77,7 +77,7 @@ def event_breadcrumbs(request, username, event, current_label=None):
 def event_song_breadcrumbs(request, username, event, song, current_label=None):
     """Attendance/Events > event name > song title > [current label].
 
-    Used when something below a song (e.g. its composer/poet/etc.) was reached
+    Used when something below a song (e.g. its composer/lyricist/etc.) was reached
     via a song that was itself reached via an event.
     """
     roots, origin_key = origin_root_crumbs(request, username)
@@ -101,7 +101,7 @@ def event_song_breadcrumbs(request, username, event, song, current_label=None):
 
 _MEMBER_SECTIONS = {
     "composers": ("Composers", "org_composers_list", "org_composer_detail"),
-    "poets": ("Poets", "org_poets_list", "org_poet_detail"),
+    "lyricists": ("Lyricists", "org_lyricists_list", "org_lyricist_detail"),
     "arrangers": ("Arrangers", "org_arrangers_list", "org_arranger_detail"),
     "translators": ("Translators", "org_translators_list", "org_translator_detail"),
 }
