@@ -1,0 +1,95 @@
+{% extends 'syncope/base.html' %}
+
+{% block title %}Organization from a backup file - Syncope{% endblock %}
+
+{% block content %}
+<h1>Organization from a backup file</h1>
+
+{% if not reviewing %}
+<p class="text-muted">Upload a file made with Export. It is compared with this server before anything is created.</p>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="file">Backup file:</label>
+        <input type="file" id="file" name="file" accept=".json,application/json" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Compare &rarr;</button>
+</form>
+{% else %}
+<form method="post">
+    {% csrf_token %}
+
+    {% if errors %}
+    <div class="alert alert-error">
+        <strong>The import stopped and nothing was created.</strong>
+        <ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    {% if no_differences %}
+    <p>No differences between the file and this server.</p>
+    {% endif %}
+    <p class="text-muted">Backup made {{ file_exported_at|default:"at an unknown time" }}, models version {{ file_version|default:"unknown" }}; this server writes {{ version }}.</p>
+    <p class="text-muted">Compared with this server: the field definitions of every model, and the fixed values ({{ compared|join:", " }}).</p>
+
+    {% if dropped %}
+    <h2>Not on this server</h2>
+    <p class="text-muted">These parts of the file are ignored: {{ dropped|join:", " }}.</p>
+    {% endif %}
+
+    {% if schema_diff %}
+    <h2>Fields</h2>
+    {% for model, d in schema_diff.items %}
+    <h3>{{ model }}</h3>
+    <table class="table">
+        {% for field, guess in d.gone.items %}
+        <tr>
+            <td>{{ field }}</td>
+            <td>{% if guess %}was renamed?{% else %}was removed{% endif %}</td>
+            <td>
+                <select name="field__{{ model }}__{{ field }}">
+                    <option value="">Ignore it</option>
+                    {% for new in d.new %}
+                    <option value="{{ new }}" {% if new == guess %}selected{% endif %}>Now called {{ new }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+        </tr>
+        {% endfor %}
+        {% for field, change in d.fk_changed.items %}
+        <tr><td>{{ field }}</td><td colspan="2">now points to {{ change.1|default:"nothing" }} (was {{ change.0|default:"nothing" }})</td></tr>
+        {% endfor %}
+    </table>
+    {% if d.new %}<p class="text-muted">New here, filled with defaults: {{ d.new|join:", " }}.</p>{% endif %}
+    {% endfor %}
+    {% endif %}
+
+    {% if fixture_diff %}
+    <h2>Fixed values that changed</h2>
+    <p class="text-muted">Pick what each of these means on this server.</p>
+    {% for model, d in fixture_diff.items %}
+    <h3>{{ model }}</h3>
+    <table class="table">
+        {% for row in d.rows %}
+        <tr>
+            <td>{{ row.label }}<br><small class="text-muted">used by {{ row.refs }}</small></td>
+            <td>
+                <select name="fixture__{{ model }}__{{ row.id }}" {% if not row.none_ok %}required{% endif %}>
+                    {% if row.none_ok %}<option value="">None (those links are left empty)</option>
+                    {% else %}<option value="" disabled {% if not row.guess %}selected{% endif %}>Choose one</option>{% endif %}
+                    {% for option in d.options %}
+                    <option value="{{ option.id }}" {% if option.id == row.guess %}selected{% endif %}>{{ option.label }}{% if option.id == row.guess %} (looks like it){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endfor %}
+    {% endif %}
+
+    <button type="submit" class="btn btn-primary">Create organization &rarr;</button>
+    <a href="{% url 'syncope:org_backup' %}" class="btn btn-secondary">Start over</a>
+</form>
+{% endif %}
+{% endblock %}

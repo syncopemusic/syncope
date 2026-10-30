@@ -133,8 +133,21 @@ class UsernameChangeForm(forms.ModelForm):
         return username
 
 
+class ApproximationChoiceField(forms.ModelChoiceField):
+    """Exact date (row 0) is the first and default choice; rows 1 and 2 get readable labels."""
+    LABELS = {"0": "Exact date", "1": "Month/day approx", "2": "Year approx"}
+
+    def __init__(self, **kwargs):
+        super().__init__(queryset=ApproximateDate.objects.order_by("pk"), empty_label=None, **kwargs)
+
+    def label_from_instance(self, obj):
+        return self.LABELS.get(obj.approximation, obj.approximation)
+
+
 class PersonForm(forms.ModelForm):
     email = forms.EmailField(required=True)
+    birth_approximate = ApproximationChoiceField(label="Date of Birth Approximation")
+    death_approximate = ApproximationChoiceField(label="Date of Death Approximation")
     skills = forms.ModelMultipleChoiceField(
         queryset=Skill.objects.exclude(id__in=[Skill.SINGER, Skill.INSTRUMENTALIST]),
         required=False,
@@ -168,9 +181,7 @@ class PersonForm(forms.ModelForm):
         ]
         labels = {
             "birth_date": "Date of Birth",
-            "birth_approximate": "Date of Birth Approximation",
             "death_date": "Date of Death",
-            "death_approximate": "Date of Death Approximation",
         }
         widgets = {
             "birth_date": HtmlDateInput(),
@@ -208,18 +219,6 @@ class OrganizationForm(forms.ModelForm):
         if email and CustomUser.objects.filter(email=email).exists():
             raise forms.ValidationError("An account with this email already exists.")
         return email
-
-
-class ApproximationChoiceField(forms.ModelChoiceField):
-    """Exact date is the empty choice (None); rows 1 and 2 get readable labels."""
-    LABELS = {"1": "Month/day approx", "2": "Year approx"}
-
-    def __init__(self, **kwargs):
-        super().__init__(queryset=ApproximateDate.objects.exclude(approximation="0"),
-                         required=False, empty_label="Exact date", **kwargs)
-
-    def label_from_instance(self, obj):
-        return self.LABELS.get(obj.approximation, obj.approximation)
 
 
 class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
@@ -717,9 +716,9 @@ def make_resource_form(resource_model):
             url = self.cleaned_data.get('url')
             description = self.cleaned_data.get('description')
             if url:
-                resource, created = Resource.objects.get_or_create(
+                resource, created = self.user.resources.get_or_create(
                     url=url,
-                    defaults={'owner': self.user, 'description': description}
+                    defaults={'description': description}
                 )
                 if not created:
                     resource.description = description

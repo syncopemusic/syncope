@@ -12,7 +12,7 @@ from django.views.generic import View
 from syncope.breadcrumbs import event_breadcrumbs, with_origin, DEFAULT_EVENT_ORIGIN
 from syncope.models import (
     CustomUser, Role, Song, Event, Project, Person,
-    SongResource, EventResource, ProjectResource, PersonResource, EventSongResource, Resource,
+    SongResource, EventResource, ProjectResource, PersonResource, EventSongResource,
 )
 from syncope.permissions import AccessControl
 from syncope.utils import resource_icon_list
@@ -205,8 +205,8 @@ class ResourcesEditView(View):
                 url = url.strip()
                 if not url:
                     continue
-                resource, created = Resource.objects.get_or_create(
-                    url=url, defaults={'owner': self.owner_user, 'description': description}
+                resource, created = self.owner_user.resources.get_or_create(
+                    url=url, defaults={'description': description}
                 )
                 if not created and description:
                     resource.description = description
