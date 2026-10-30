@@ -210,7 +210,7 @@ class Organization(models.Model):
 
 
 class PersonQuerySet(models.QuerySet):
-    """Intent for this queryset was to get filtering of composers and poets."""
+    """Intent for this queryset was to get filtering of composers and lyricists."""
     def with_skill(self, skill_id):
         """Filter persons who have a specific skill"""
         return self.filter(person_skill__skill_id=skill_id).distinct()
@@ -267,10 +267,10 @@ class PersonQuerySet(models.QuerySet):
 class Skill(models.Model):
     """
     Title of the skill that each member has.
-    Example: conductor, singer, musician, composer, poet, translator...
+    Example: conductor, singer, musician, composer, lyricist, translator...
     """
     COMPOSER = 1
-    POET = 2
+    LYRICIST = 2
     ARRANGER = 3
     SINGER = 4
     INSTRUMENTALIST = 5
@@ -476,11 +476,11 @@ class Song(models.Model):
         null=True,
         blank=True
     )
-    poet = models.ForeignKey(
+    lyricist = models.ForeignKey(
         Person,
         on_delete=models.SET_NULL,
         related_name="written_songs",
-        limit_choices_to={'person_skill__skill_id': Skill.POET},
+        limit_choices_to={'person_skill__skill_id': Skill.LYRICIST},
         null=True,
         blank=True
     )

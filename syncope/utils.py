@@ -150,8 +150,8 @@ INTERNAL_ID_KEY = "internal_id"
 TITLE_KEY = "title"
 COMPOSER_LAST_NAME_KEY = "composer_last_name"
 COMPOSER_FIRST_NAME_KEY = "composer_first_name"
-POET_LAST_NAME_KEY = "poet_last_name"
-POET_FIRST_NAME_KEY = "poet_first_name"
+LYRICIST_LAST_NAME_KEY = "lyricist_last_name"
+LYRICIST_FIRST_NAME_KEY = "lyricist_first_name"
 TRANSLATOR_LAST_NAME_KEY = "translator_last_name"
 TRANSLATOR_FIRST_NAME_KEY = "translator_first_name"
 ARRANGER_LAST_NAME_KEY = "arranger_last_name"
@@ -171,8 +171,8 @@ ALLOWED_SONG_KEYS = [
     TITLE_KEY,
     COMPOSER_LAST_NAME_KEY,
     COMPOSER_FIRST_NAME_KEY,
-    POET_LAST_NAME_KEY,
-    POET_FIRST_NAME_KEY,
+    LYRICIST_LAST_NAME_KEY,
+    LYRICIST_FIRST_NAME_KEY,
     TRANSLATOR_LAST_NAME_KEY,
     TRANSLATOR_FIRST_NAME_KEY,
     ARRANGER_LAST_NAME_KEY,
@@ -242,8 +242,8 @@ def import_songs(org_user, request, file_path, delimiter=";"):
             title_value = (row.get(TITLE_KEY) or '').strip()
             composer_last_name = (row.get(COMPOSER_LAST_NAME_KEY) or '').strip()
             composer_first_name = (row.get(COMPOSER_FIRST_NAME_KEY) or '').strip()
-            poet_last_name = (row.get(POET_LAST_NAME_KEY) or '').strip()
-            poet_first_name = (row.get(POET_FIRST_NAME_KEY) or '').strip()
+            lyricist_last_name = (row.get(LYRICIST_LAST_NAME_KEY) or '').strip()
+            lyricist_first_name = (row.get(LYRICIST_FIRST_NAME_KEY) or '').strip()
             translator_last_name = (row.get(TRANSLATOR_LAST_NAME_KEY) or '').strip()
             translator_first_name = (row.get(TRANSLATOR_FIRST_NAME_KEY) or '').strip()
             arranger_last_name = (row.get(ARRANGER_LAST_NAME_KEY) or '').strip()
@@ -263,8 +263,8 @@ def import_songs(org_user, request, file_path, delimiter=";"):
                 composer = _get_or_create_person_with_skill(
                     org_user, composer_last_name, composer_first_name, Skill.COMPOSER, today
                 )
-                poet = _get_or_create_person_with_skill(
-                    org_user, poet_last_name, poet_first_name, Skill.POET, today
+                lyricist = _get_or_create_person_with_skill(
+                    org_user, lyricist_last_name, lyricist_first_name, Skill.LYRICIST, today
                 )
                 translator = _get_or_create_person_with_skill(
                     org_user, translator_last_name, translator_first_name, Skill.TRANSLATOR, today
@@ -282,7 +282,7 @@ def import_songs(org_user, request, file_path, delimiter=";"):
                     internal_id=internal_id_value or None,  # Explicitly set None if empty
                     title=title_value,
                     composer=composer,
-                    poet=poet,
+                    lyricist=lyricist,
                     translator=translator,
                     arranger=arranger,
                     number_of_pages=number_of_pages_value or None,

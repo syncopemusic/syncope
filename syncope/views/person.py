@@ -33,7 +33,7 @@ from django.utils.safestring import mark_safe
 
 SKILL_MAP = {
     'composers': Skill.COMPOSER,
-    'poets': Skill.POET,
+    'lyricists': Skill.LYRICIST,
     'arrangers': Skill.ARRANGER,
     'translators': Skill.TRANSLATOR,
 }
@@ -43,14 +43,14 @@ LIST_INFO = {
     'active': ('Members', 'syncope:org_member_new_member', 'member'),
     'all': ('All Persons', None, None),
     'composers': ('Composers', 'syncope:org_member_new_composer', 'composer'),
-    'poets': ('Poets', 'syncope:org_member_new_poet', 'poet'),
+    'lyricists': ('Lyricists', 'syncope:org_member_new_lyricist', 'lyricist'),
     'arrangers': ('Arrangers', 'syncope:org_member_new_arranger', 'arranger'),
     'translators': ('Translators', 'syncope:org_member_new_translator', 'translator'),
 }
 
 CONTEXT_TYPE_LIST_MAP = {
     'composers': 'org_composers_list',
-    'poets': 'org_poets_list',
+    'lyricists': 'org_lyricists_list',
     'arrangers': 'org_arrangers_list',
     'translators': 'org_translators_list',
 }
@@ -62,28 +62,28 @@ def _default_list_name(request, username):
 
 PRESET_LIST_MAP = {
     'composer': 'org_composers_list',
-    'poet': 'org_poets_list',
+    'lyricist': 'org_lyricists_list',
     'arranger': 'org_arrangers_list',
     'translator': 'org_translators_list',
 }
 
 _DETAIL_URL_NAMES = {
     'composers': 'syncope:org_composer_detail',
-    'poets': 'syncope:org_poet_detail',
+    'lyricists': 'syncope:org_lyricist_detail',
     'arrangers': 'syncope:org_arranger_detail',
     'translators': 'syncope:org_translator_detail',
 }
 
 _EDIT_URL_NAMES = {
     'composers': 'syncope:org_composer_edit',
-    'poets': 'syncope:org_poet_edit',
+    'lyricists': 'syncope:org_lyricist_edit',
     'arrangers': 'syncope:org_arranger_edit',
     'translators': 'syncope:org_translator_edit',
 }
 
 _DELETE_URL_NAMES = {
     'composers': 'syncope:org_composer_delete',
-    'poets': 'syncope:org_poet_delete',
+    'lyricists': 'syncope:org_lyricist_delete',
     'arrangers': 'syncope:org_arranger_delete',
     'translators': 'syncope:org_translator_delete',
 }
@@ -137,7 +137,7 @@ def _apply_person_sort(queryset, request):
 
 
 def _apply_person_list_type_filter(queryset, list_type):
-    """Narrow a skill list (composers/poets/...) to that skill; 'active' and 'all' need no branch."""
+    """Narrow a skill list (composers/lyricists/...) to that skill; 'active' and 'all' need no branch."""
     if list_type in SKILL_MAP:
         queryset = queryset.filter(person__skills__id=SKILL_MAP[list_type]).distinct()
     return queryset
@@ -326,7 +326,7 @@ class PersonUpdateView(DraftMixin, UpdateView):
 
 @method_decorator(login_required, name='dispatch')
 class PersonListView(ListView):
-    """Shows members or persons with song skills (composers/poets/arrangers/translators)."""
+    """Shows members or persons with song skills (composers/lyricists/arrangers/translators)."""
     template_name = "syncope/person_list.html"
     context_object_name = "persons"
     organization = None
@@ -665,7 +665,7 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
                 if project:
                     project.guests.add(person)
             preset = self.kwargs.get('preset')
-            if preset in ('composer', 'poet', 'arranger', 'translator'):
+            if preset in ('composer', 'lyricist', 'arranger', 'translator'):
                 safe_next = add_query_param(safe_next, {f'select_{preset}': person.pk})
             draft_key = self.request.POST.get('draft_key') or self.request.GET.get('draft_key')
             if draft_key:
@@ -696,7 +696,7 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
                 owner=None  # Ownership not claimed yet
             )
         else:
-            #  Adding to personal account (like adding a family member, poet, composer, etc.)
+            #  Adding to personal account (like adding a family member, lyricist, composer, etc.)
             # These are personal records that belong to the user but "user" is only for login
             person = Person.objects.create(
                 first_name=form.cleaned_data["first_name"],
