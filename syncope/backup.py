@@ -5,12 +5,13 @@ from operator import and_, or_
 
 from django.apps import apps
 from django.db.models import ForeignKey, Q
+from django.utils import timezone
 
 from syncope.models import CustomUser
 
 APP_LABEL = "syncope"
 SKIP = {"Invitation", "Share", "ShareVisit"}
-VERSION = 6
+VERSION = "2026-10-30"  # date the models last changed: set it to today whenever a model or field changes
 SECTIONS = ("schema", "fixtures", "data")
 FIXTURE_IGNORED = {"id", "created_at", "updated_at", "additional_notes"}  # not part of what a fixture row means
 
@@ -125,12 +126,12 @@ def export_org(org_user):
                 fks = [f for f in _follow(m) if f.related_model in pks]
                 if fks:
                     inside = [Q(**{f"{f.attname}__in": pks[f.related_model]}) for f in fks]
-                    empty = [Q(**{f"{f.attname}__isnull": True}) for f in fks]
-                    q = reduce(or_, inside) & reduce(and_, (i | e for i, e in zip(inside, empty)))
+                    q = reduce(or_, inside) & reduce(and_, (i | Q(**{f"{f.attname}__isnull": True}) for i, f in zip(inside, fks)))
                     pks[m] |= set(m.objects.filter(q).values_list("pk", flat=True))
 
     return {
         "version": VERSION,
+        "exported_at": timezone.now().isoformat(timespec="seconds"),
         "schema": export_schema(),
         "fixtures": export_fixtures(),
         "data": {m.__name__: _rows(m.objects.filter(pk__in=pks[m])) for m in data},
@@ -141,7 +142,7 @@ def allowlist(payload):
     """The file is untrusted: keep only models this server exports itself. Returns the cleaned payload and the dropped names."""
     known = export_schema()
     dropped = sorted({name for key in SECTIONS for name in payload[key]} - known.keys())
-    return {"version": payload.get("version")} | {key: {n: v for n, v in payload[key].items() if n in known}
+    return {"version": payload.get("version"), "exported_at": payload.get("exported_at")} | {key: {n: v for n, v in payload[key].items() if n in known}
                                                   for key in SECTIONS}, dropped
 
 

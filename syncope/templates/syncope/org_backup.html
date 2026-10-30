@@ -29,7 +29,7 @@
     {% if no_differences %}
     <p>No differences between the file and this server.</p>
     {% endif %}
-    <p class="text-muted">Backup made with version {{ file_version|default:"unknown" }}, this server writes version {{ version }}.</p>
+    <p class="text-muted">Backup made {{ file_exported_at|default:"at an unknown time" }}, models version {{ file_version|default:"unknown" }}; this server writes {{ version }}.</p>
     <p class="text-muted">Compared with this server: the field definitions of every model, and the fixed values ({{ compared|join:", " }}).</p>
 
     {% if dropped %}

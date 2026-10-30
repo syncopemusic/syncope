@@ -838,7 +838,7 @@ class ExportSchemaTests(TestCase):
         person = Person.objects.create(first_name="Mia", last_name="Member", birth_approximate_id=0)
         Membership.objects.create(user=org_user, person=person)
         out = export_org(org_user)
-        self.assertEqual(list(out), ["version", "schema", "fixtures", "data"])
+        self.assertEqual(list(out), ["version", "exported_at", "schema", "fixtures", "data"])
         self.assertIn("ApproximateDate", out["fixtures"])
         self.assertNotIn("CustomUser", out["schema"])
         self.assertEqual(out["schema"]["Person"]["fks"]["birth_approximate_id"], "ApproximateDate")

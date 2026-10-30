@@ -305,6 +305,7 @@ class OrgBackupView(View):
             "dropped": dropped,
             "compared": sorted(fixtures),
             "file_version": payload.get("version"),
+            "file_exported_at": payload.get("exported_at"),
             "version": VERSION,
             "no_differences": not (schema or dropped or fixture_diff),
         })
@@ -351,8 +352,7 @@ class OrgBackupView(View):
         saved = request.session.get(self.SESSION_KEY)
         if not saved or not os.path.exists(saved["path"]):
             return self.reject(request, "Upload the backup file again.")
-        with open(saved["path"], encoding="utf-8") as f:
-            payload = json.load(f)
+        payload = json.loads(Path(saved["path"]).read_text(encoding="utf-8"))
         dropped = saved["dropped"]
         who = f"user={request.user} file={saved.get('name')}"
         try:
@@ -411,8 +411,6 @@ class OrgBackupView(View):
                     raise BackupError("Organization", "This org already exists.") from e
                 for name in order:
                     model = apps.get_model(APP_LABEL, name)
-                    file_fks = payload["schema"][name]["fks"]
-                    renamed = renames.get(name, {})
                     # Person.user is a login link, not ownership
                     owner = {} if model is Person else {f.attname: org_user.pk for f in user_fks(model)}
                     stamps = [a for a, f in cols[name].items() if getattr(f, "auto_now", False) or getattr(f, "auto_now_add", False)]
@@ -423,14 +421,14 @@ class OrgBackupView(View):
                         kwargs = dict(owner)
                         try:
                             for key, value in src.items():
-                                attname = renamed.get(key, key)
+                                attname = renames.get(name, {}).get(key, key)
                                 field = cols[name].get(attname)
                                 if field is None or attname == "id":  # removed here, or ignored by the user
                                     continue
                                 if not isinstance(field, ForeignKey) or value is None:
                                     kwargs[attname] = field.to_python(value)
                                     continue
-                                kwargs[attname] = resolve(ids, file_fks.get(key), field, value)
+                                kwargs[attname] = resolve(ids, payload["schema"][name]["fks"].get(key), field, value)
                                 if kwargs[attname] is None:
                                     if not field.null:
                                         raise BackupError(where, f"no {field.related_model.__name__} here for {attname} {value}",
@@ -497,7 +495,7 @@ class ExportView(View):
         return render(request, self.template_name, {"org_user": self.org_user, "url_username": username})
 
     def post(self, request, username):
-        body = json.dumps(export_org(self.org_user), cls=DjangoJSONEncoder, ensure_ascii=False, indent=2)
-        response = HttpResponse(body, content_type="application/json; charset=utf-8")
-        response["Content-Disposition"] = f'attachment; filename="syncope-{username}-{timezone.localdate():%Y-%m-%d}.json"'
-        return response
+        return HttpResponse(
+            json.dumps(export_org(self.org_user), cls=DjangoJSONEncoder, ensure_ascii=False, indent=2),
+            content_type="application/json; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="syncope-{username}-{timezone.localdate():%Y-%m-%d}.json"'})
