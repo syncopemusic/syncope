@@ -37,12 +37,11 @@
 <div>
     <h3>Make your own organization</h3>
     <a href="{% url 'syncope:org_new' %}" class="btn btn-primary">+ New</a>
-    <a href="{% url 'syncope:org_backup' %}" class="btn btn-secondary">From a backup file</a>
 </div>
 
 <h2>Personal</h2>
+<div class="card-grid card-links">
 <div class="card-grid">
-    <div class="card">
         <h3>Invitations</h3>
         <a href="{% url 'syncope:invitation_list' user.username %}" class="btn btn-secondary">View invitations{% if pending_invitations %} <span class="badge nav-badge">{{ pending_invitations }}</span>{% endif %}</a>
     </div>

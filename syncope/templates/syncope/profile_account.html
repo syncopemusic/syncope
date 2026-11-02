@@ -10,14 +10,14 @@
     </h1>
 </div>
 
-<h3>Change Password</h3>
+<h2>Change Password</h2>
 <form method="post" id="password-form">
     {% csrf_token %}
     <input type="hidden" name="action" value="password">
     {{ password_form.as_p }}
 </form>
 
-<h3>Change Username</h3>
+<h2>Change Username</h2>
 <table class="table-detail">
   <tr><th>Current Username</th><td>{{ user.username }}</td></tr>
 </table>

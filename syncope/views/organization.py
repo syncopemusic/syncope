@@ -103,9 +103,9 @@ class OrganizationDashboard(TemplateView):
         return context
 
 
-def create_org_account(name, email):
-    """Login account of a new organization. Call inside a transaction."""
-    org_user = CustomUser.objects.create(username=slugify(name), email=email)
+def create_org_account(slug, email):
+    """Login account of a new organization, `slug` is its URL name. Call inside a transaction."""
+    org_user = CustomUser.objects.create(username=slug, email=email)
     org_user.set_unusable_password()
     org_user.save()
     return org_user
@@ -172,7 +172,7 @@ class OrganizationCreateView(DraftMixin, CreateView):
     def form_valid(self, form):
         with transaction.atomic():
             organization = form.save(commit=False)
-            organization.user = create_org_account(organization.name, organization.email)
+            organization.user = create_org_account(form.cleaned_data["slug"], organization.email)
             organization.save()
             make_org_admin(organization.user, Person.objects.filter(user=self.request.user).first())
 
@@ -186,11 +186,20 @@ class OrganizationUpdateView(DraftMixin, OrgAdminMixin, UpdateView):
     template_name = "syncope/org_form.html"
 
     def get_success_url(self):
-        return self.request.get_full_path()  # stay on the edit page
+        # stay on the edit page; the slug may just have changed, so build the URL again
+        url = reverse("syncope:org_edit", kwargs={"username": self.object.user.username})
+        query = self.request.META.get("QUERY_STRING")
+        return f"{url}?{query}" if query else url
 
     def form_valid(self, form):
+        with transaction.atomic():  # the login account follows the organization's email and slug
+            user = form.instance.user
+            user.email = form.cleaned_data["email"]
+            user.username = form.cleaned_data["slug"]
+            user.save(update_fields=["email", "username"])
+            response = super().form_valid(form)
         messages.success(self.request, "Organization updated successfully!")
-        return super().form_valid(form)
+        return response
 
 
 @method_decorator(login_required, name='dispatch')
@@ -415,7 +424,7 @@ class OrgBackupView(View):
                     owner = {} if model is Person else {f.attname: org_user.pk for f in user_fks(model)}
                     stamps = [a for a, f in cols[name].items() if getattr(f, "auto_now", False) or getattr(f, "auto_now_add", False)]
                     made = []
-                    ids[name] = {}
+                    ids.setdefault(name, {})
                     for position, src in enumerate(data[name], 1):
                         where = f"{name} row {position} (id {src['id']})"
                         kwargs = dict(owner)
@@ -448,11 +457,11 @@ class OrgBackupView(View):
                             made.append(obj)
                     if made:  # bulk_update does not run pre_save, so auto_now(_add) leaves them alone
                         model.objects.bulk_update(made, stamps, batch_size=500)
-                # the imported person with the importer's email is their admin person, else a fresh one
-                email = (the_admin.email or "").lower()
-                match = next((ids["Person"][str(r["id"])] for r in data.get("Person", [])
-                              if email and (r.get("email") or "").lower() == email), None)
-                make_org_admin(org_user, the_admin, Person.objects.get(pk=match) if match else None)
+            # the imported person with the importer's email is their admin person, else a fresh one
+            email = (the_admin.email or "").lower()
+            match = next((ids["Person"][str(r["id"])] for r in data.get("Person", [])
+                            if email and (r.get("email") or "").lower() == email), None)
+            make_org_admin(org_user, the_admin, Person.objects.get(pk=match) if match else None)
         except BackupError as e:
             logger.warning("org backup import failed, nothing created (%s): %s", who, e)
             return self.review(request, payload, dropped, [e.message])

@@ -994,6 +994,18 @@
         --card-min: 260px;
     }
 
+    /* Dashboard link cards: button pinned to the bottom, so buttons line up across a row. */
+    .card-links > .card {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .card-links > .card > .btn,
+    .card-links > .card > form {
+        margin-block-start: auto;
+    }
+
     .card-title {
         margin: 0 0 var(--space-2);
         font-size: var(--font-size-md);
