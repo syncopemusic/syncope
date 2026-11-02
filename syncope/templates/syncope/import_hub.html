@@ -77,5 +77,14 @@
             </button>
         </form>
     </div>
+
+    <!-- Whole backup file -->
+    <div class="card">
+        <h3>Import from a Backup File</h3>
+        <p class="text-muted">Upload a JSON file made with Export. It is compared with this server before anything is imported. Organization admins only.</p>
+        <a href="{% url 'syncope:org_import_backup' username=url_username %}" class="btn btn-primary">
+            Upload
+        </a>
+    </div>
 </div>
 {% endblock %}

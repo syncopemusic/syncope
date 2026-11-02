@@ -101,11 +101,8 @@ def export_fixtures():
     return {m.__name__: _rows(m.objects.all()) for m in _models()[0]}
 
 
-def export_org(org_user):
-    """
-    Everything under org_user, read from the models so new fields and models need no change here.
-    One flat list per model, FKs as source ids; the importer remaps them.
-    """
+def org_pks(org_user):
+    """{model: pks} of everything under org_user: what it owns, its parents and its children."""
     data = _models()[1]
 
     pks = {m: set() for m in data}
@@ -128,7 +125,16 @@ def export_org(org_user):
                     inside = [Q(**{f"{f.attname}__in": pks[f.related_model]}) for f in fks]
                     q = reduce(or_, inside) & reduce(and_, (i | Q(**{f"{f.attname}__isnull": True}) for i, f in zip(inside, fks)))
                     pks[m] |= set(m.objects.filter(q).values_list("pk", flat=True))
+    return pks
 
+
+def export_org(org_user):
+    """
+    Everything under org_user, read from the models so new fields and models need no change here.
+    One flat list per model, FKs as source ids; the importer remaps them.
+    """
+    pks = org_pks(org_user)
+    data = _models()[1]
     return {
         "version": VERSION,
         "exported_at": timezone.now().isoformat(timespec="seconds"),

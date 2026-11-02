@@ -905,28 +905,61 @@ class OrgBackupDiffTests(SimpleTestCase):
 
 
 class OrgBackupViewTests(TestCase):
+    """Backup file into an existing org (made first, with its admin person)."""
+
     fixtures = ["syncope/fixture_role.json", "syncope/fixture_approximatedate.json"]
 
     def setUp(self):
-        me = CustomUser.objects.create_user(username="me", email="me@example.com", password="pw12345")
-        Person.objects.create(first_name="Me", user=me)
-        self.client.login(username="me", password="pw12345")
-        org_user = CustomUser.objects.create_user(username="org", email="org@example.com", password="pw12345")
+        # the source org the backup is made from
+        src = CustomUser.objects.create_user(username="src", email="src@example.com", password="pw12345")
         person = Person.objects.create(first_name="Mia", last_name="Member")
-        Membership.objects.create(user=org_user, person=person)
+        Membership.objects.create(user=src, person=person)
         PersonRole.objects.create(person=person, role_id=Role.ADMIN)  # a fixed value the file's rows use
-        Organization.objects.create(name="Org", email="org@example.com", user=org_user)
-        self.backup = export_org(org_user)
-        self.backup["data"]["Organization"][0].update(name="Copy", email="copy@example.com")  # not on this server yet
+        Organization.objects.create(name="Src", email="src@example.com", user=src)
+        self.backup = export_org(src)
+        # the target org, made the normal way
+        self.me = CustomUser.objects.create_user(username="me", email="me@example.com", password="pw12345")
+        Person.objects.create(first_name="Me", email="me@example.com", user=self.me)
+        self.client.login(username="me", password="pw12345")
+        self.client.post(reverse("syncope:org_new"), {"name": "Target", "email": "target@example.com", "slug": ""})
+        self.org_user = CustomUser.objects.get(username="target")
+        self.url = reverse("syncope:org_import_backup", kwargs={"username": "target"})
 
     def upload(self, payload):
         file = SimpleUploadedFile("backup.json", json.dumps(payload, default=str).encode())
-        return self.client.post(reverse("syncope:org_backup"), {"file": file})
+        return self.client.post(self.url, {"file": file})
+
+    def confirm(self):
+        self.upload(self.backup)
+        return self.client.post(self.url, {}, follow=True)
+
+    def members(self):
+        return Person.objects.filter(memberships__user=self.org_user)
 
     def test_same_server_has_no_differences(self):
         self.assertContains(self.upload(self.backup), "No differences")
 
-    def test_changed_file_shows_diff_and_confirm_uses_the_map(self):
+    def test_non_admin_is_forbidden(self):
+        CustomUser.objects.create_user(username="x", email="x@example.com", password="pw12345")
+        self.client.login(username="x", password="pw12345")
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+
+    def test_review_shows_stats_and_first_rows_of_every_model(self):
+        response = self.upload(self.backup)
+        self.assertContains(response, "File size")
+        self.assertEqual({s["model"] for s in response.context["stats"]} - {"Person"}, set(self.backup["data"]) - {"Person", "Organization"})
+        person = next(s for s in response.context["stats"] if s["model"] == "Person")
+        self.assertEqual((person["file"], person["now"]), (1, 1))  # the file's Mia, the org's admin person
+        models = {s["model"] for s in response.context["samples"]}
+        self.assertTrue({"Person", "Role"} <= models)
+
+    def test_samples_are_capped(self):
+        self.backup["data"]["Person"] += [dict(self.backup["data"]["Person"][0], id=100 + i, first_name="x" * 200) for i in range(10)]
+        sample = next(s for s in self.upload(self.backup).context["samples"] if s["model"] == "Person")
+        self.assertEqual(len(sample["rows"]), 3)
+        self.assertTrue(all(len(c) <= 83 for row in sample["rows"] for c in row))
+
+    def test_changed_file_shows_diff(self):
         self.backup["schema"]["Person"]["fields"][self.backup["schema"]["Person"]["fields"].index("phone")] = "mobile"
         for row in self.backup["data"]["Person"]:
             row["mobile"] = row.pop("phone")
@@ -935,56 +968,28 @@ class OrgBackupViewTests(TestCase):
         self.assertContains(response, "field__Person__mobile")
         self.assertContains(response, "fixture__Role__1")
 
-    def test_org_exists(self):
-        self.backup["data"]["Organization"][0].update(name="Org", email="org@example.com")
-        response = self.client.post(reverse("syncope:org_backup"), {"file": SimpleUploadedFile(
-            "b.json", json.dumps(self.backup, default=str).encode())}, follow=True)
-        self.assertContains(response, "This org already exists.")
+    def test_import_adds_to_the_existing_org_and_leaves_its_identity(self):
+        response = self.confirm()
+        self.assertContains(response, "Imported the backup")
+        self.assertTrue(self.members().filter(first_name="Mia").exists())
+        self.assertTrue(self.members().filter(first_name="Me").exists())  # the admin person is still there
+        org = Organization.objects.get(user=self.org_user)
+        self.assertEqual((org.name, org.email), ("Target", "target@example.com"))
+        self.assertEqual(Organization.objects.count(), 2)  # none made by the import
 
-    def test_confirm_creates_org_with_data_and_admin(self):
-        self.upload(self.backup)
-        response = self.client.post(reverse("syncope:org_backup"), {}, follow=True)
-        self.assertContains(response, "You are its admin")
-        new = CustomUser.objects.get(username="copy")
-        self.assertTrue(Organization.objects.filter(user=new, name="Copy").exists())
-        self.assertTrue(Person.objects.filter(first_name="Mia", memberships__user=new).exists())
-        self.assertIn(Role.ADMIN, AccessControl.org_role_ids(CustomUser.objects.get(username="me"), "copy"))
-
-    def confirm(self):
-        self.upload(self.backup)
-        return self.client.post(reverse("syncope:org_backup"), {}, follow=True)
-
-    def test_admin_person_is_matched_by_email(self):
-        me = Person.objects.get(first_name="Me")
-        me.email = "me@example.com"
-        me.save()
-        self.backup["data"]["Person"][0]["email"] = "ME@example.com"
+    def test_admin_person_is_matched_by_email_not_duplicated(self):
+        self.backup["data"]["Person"][0].update(first_name="Me", email="ME@example.com")
         self.confirm()
-        mia = Person.objects.get(first_name="Mia", memberships__user__username="copy")
-        self.assertEqual(mia.owner, me)
-        self.assertTrue(PersonRole.objects.filter(person=mia, role_id=Role.ADMIN).exists())
-        self.assertTrue(MembershipPeriod.objects.filter(person=mia, role_id=Role.ADMIN, ended_at=None).exists())
-        self.assertFalse(Person.objects.filter(owner=me, memberships__user__username="copy").exclude(pk=mia.pk).exists())
-
-    def test_unmatched_admin_gets_a_fresh_person(self):
-        self.confirm()
-        me = Person.objects.get(first_name="Me", owner=None)
-        self.assertTrue(Person.objects.filter(owner=me, memberships__user__username="copy").exists())
-
-    def test_empty_org_slug_is_rejected(self):
-        self.backup["data"]["Organization"][0]["name"] = "!!!"
-        response = self.client.post(reverse("syncope:org_backup"), {"file": SimpleUploadedFile(
-            "b.json", json.dumps(self.backup, default=str).encode())}, follow=True)
-        self.assertContains(response, "letters or digits")
+        self.assertEqual(self.members().filter(first_name="Me").count(), 1)
+        self.assertEqual(Membership.objects.filter(user=self.org_user).count(), 1)
+        self.assertEqual(PersonRole.objects.filter(person__memberships__user=self.org_user, role_id=Role.ADMIN).count(), 1)
 
     def test_original_timestamps_survive_the_import(self):
         stamp = datetime(2020, 1, 2, 3, 4, 5, tzinfo=timezone.UTC)
-        for model in ("Person", "Organization"):
-            self.backup["data"][model][0].update(created_at="2020-01-02T03:04:05Z", updated_at="2020-01-02T03:04:05Z")
+        self.backup["data"]["Person"][0].update(created_at="2020-01-02T03:04:05Z", updated_at="2020-01-02T03:04:05Z")
         self.confirm()
-        mia = Person.objects.get(first_name="Mia", memberships__user__username="copy")
+        mia = self.members().get(first_name="Mia")
         self.assertEqual((mia.created_at, mia.updated_at), (stamp, stamp))
-        self.assertEqual(Organization.objects.get(name="Copy").created_at, stamp)
         mia.save()
         self.assertGreater(Person.objects.get(pk=mia.pk).updated_at, stamp)
 
@@ -993,7 +998,7 @@ class OrgBackupViewTests(TestCase):
         self.backup["data"]["Person"][0]["birth_approximate_id"] = self.backup["fixtures"]["ApproximateDate"][1]["id"]
         response = self.confirm()
         self.assertContains(response, "Person.birth_approximate_id (1)")
-        self.assertIsNone(Person.objects.get(first_name="Mia", memberships__user__username="copy").birth_approximate_id)
+        self.assertIsNone(self.members().get(first_name="Mia").birth_approximate_id)
 
     def test_required_fixture_has_no_none_choice(self):
         self.backup["fixtures"]["Role"][0]["title"] = "Boss"
@@ -1021,42 +1026,46 @@ class OrgBackupViewTests(TestCase):
         self.assertContains(response, "Person row 1")
         self.assertContains(response, "Mia")  # the row hint is for the user ...
         self.assertNotIn("Mia", "".join(logs.output))  # ... not for the server log
-        self.assertFalse(CustomUser.objects.filter(username="copy").exists())
+        self.assertFalse(self.members().filter(first_name="Mia").exists())
 
     def test_unmatched_required_links_are_all_listed_before_writing(self):
         person = Person.objects.get(first_name="Mia")
         PersonRole.objects.create(person=person, role_id=Role.MEMBER)
-        self.backup = export_org(CustomUser.objects.get(username="org"))
-        self.backup["data"]["Organization"][0].update(name="Copy", email="copy@example.com")
+        self.backup = export_org(CustomUser.objects.get(username="src"))
         for row in self.backup["fixtures"]["Role"][:2]:
             row["title"] = "Gone " + row["title"]
         with self.assertLogs("syncope", level="WARNING"):
             response = self.confirm()
         self.assertContains(response, "PersonRole.role_id: 2 rows point at Role")
-        self.assertFalse(CustomUser.objects.filter(username="copy").exists())
+        self.assertFalse(self.members().filter(first_name="Mia").exists())
 
     def test_unexpected_error_is_logged_and_nothing_is_created(self):
-        with mock.patch("syncope.views.organization.make_org_admin", side_effect=RuntimeError("boom")):
+        with mock.patch("syncope.views.organization.Counter.__getitem__", side_effect=RuntimeError("boom")):
             with self.assertLogs("syncope", level="ERROR"):
                 response = self.confirm()
         self.assertContains(response, "Unexpected error")
-        self.assertFalse(CustomUser.objects.filter(username="copy").exists())
+        self.assertFalse(self.members().filter(first_name="Mia").exists())
 
     def test_success_reports_what_was_created(self):
         with self.assertLogs("syncope", level="INFO") as logs:
             response = self.confirm()
-        self.assertContains(response, "Created organization")
+        self.assertContains(response, "Imported the backup")
         self.assertContains(response, "Person")
         self.assertIn("org backup imported", "".join(logs.output))
 
+    def test_upload_for_another_org_is_not_reused(self):
+        self.upload(self.backup)
+        self.client.post(reverse("syncope:org_new"), {"name": "Other", "email": "o@example.com", "slug": ""})
+        response = self.client.post(reverse("syncope:org_import_backup", kwargs={"username": "other"}), {}, follow=True)
+        self.assertContains(response, "Upload the backup file again.")
+
     def test_malformed_rows_are_located(self):
         self.backup["data"]["Person"][0] = "nope"
-        response = self.client.post(reverse("syncope:org_backup"), {"file": SimpleUploadedFile(
-            "b.json", json.dumps(self.backup, default=str).encode())}, follow=True)
+        response = self.client.post(self.url, {"file": SimpleUploadedFile("b.json", json.dumps(self.backup, default=str).encode())}, follow=True)
         self.assertContains(response, "data.Person[0] is not a row with an id")
 
     def test_not_a_backup(self):
-        response = self.client.post(reverse("syncope:org_backup"), {"file": SimpleUploadedFile("x.json", b"[1]")}, follow=True)
+        response = self.client.post(self.url, {"file": SimpleUploadedFile("x.json", b"[1]")}, follow=True)
         self.assertContains(response, "not a Syncope backup")
 
 

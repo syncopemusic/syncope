@@ -1,19 +1,19 @@
 {% extends 'syncope/base.html' %}
 
-{% block title %}Organization from a backup file - Syncope{% endblock %}
+{% block title %}Import from a backup file - Syncope{% endblock %}
 
 {% block content %}
-<h1>Organization from a backup file</h1>
+<h1>Import from a backup file</h1>
 
 {% if not reviewing %}
-<p class="text-muted">Upload a file made with Export. It is compared with this server before anything is created.</p>
+<p class="text-muted">Upload a file made with Export. It is compared with this server before anything is imported. Its rows are added to this organization; the organization's own name, email and slug are not changed.</p>
 <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <div class="form-group">
         <label for="file">Backup file:</label>
         <input type="file" id="file" name="file" accept=".json,application/json" required>
     </div>
-    <button type="submit" class="btn btn-primary">Compare &rarr;</button>
+    <button type="submit" class="btn btn-primary">Compare</button>
 </form>
 {% else %}
 <form method="post">
@@ -29,8 +29,17 @@
     {% if no_differences %}
     <p>No differences between the file and this server.</p>
     {% endif %}
+    <p class="text-muted">File size {{ file_size|filesizeformat }}.</p>
     <p class="text-muted">Backup made {{ file_exported_at|default:"at an unknown time" }}, models version {{ file_version|default:"unknown" }}; this server writes {{ version }}.</p>
     <p class="text-muted">Compared with this server: the field definitions of every model, and the fixed values ({{ compared|join:", " }}).</p>
+
+    <h2>In the file</h2>
+    <table class="table">
+        <tr><th>Model</th><th>Rows in file</th><th>Rows in this organization now</th></tr>
+        {% for s in stats %}
+        <tr><td>{{ s.model }}</td><td>{{ s.file }}</td><td>{{ s.now }}</td></tr>
+        {% endfor %}
+    </table>
 
     {% if dropped %}
     <h2>Not on this server</h2>
@@ -88,8 +97,24 @@
     {% endfor %}
     {% endif %}
 
-    <button type="submit" class="btn btn-primary">Create organization &rarr;</button>
-    <a href="{% url 'syncope:org_backup' %}" class="btn btn-secondary">Start over</a>
+    <h2>First rows</h2>
+    <p class="text-muted">The first rows of every model in the file, long values cut short.</p>
+    {% for sample in samples %}
+    <details>
+        <summary>{{ sample.model }}</summary>
+        <div style="overflow-x: auto;">
+        <table class="table">
+            <tr>{% for f in sample.fields %}<th>{{ f }}</th>{% endfor %}</tr>
+            {% for row in sample.rows %}
+            <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+            {% endfor %}
+        </table>
+        </div>
+    </details>
+    {% endfor %}
+
+    <button type="submit" class="btn btn-primary">Import</button>
+    <a href="{% url 'syncope:org_import_backup' url_username %}" class="btn btn-secondary">Start over</a>
 </form>
 {% endif %}
 {% endblock %}

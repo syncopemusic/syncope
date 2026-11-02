@@ -15,11 +15,10 @@ from django.db.models import Q
 from datetime import datetime
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, UpdateView, View
-from django.utils.text import slugify
 import datetime
 from django.views.generic import TemplateView
 from django.apps import apps
-from django.db import DatabaseError, IntegrityError, transaction
+from django.db import DatabaseError, transaction
 from django.db.models import ForeignKey
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -111,20 +110,16 @@ def create_org_account(slug, email):
     return org_user
 
 
-def make_org_admin(org_user, the_admin, person=None):
-    """
-    the_admin becomes ADMIN of the org, as a copy of their profile, or as `person` (already in the org, from a backup).
-    Call inside a transaction.
-    """
-    if person is None:
-        transfer_fields = [
-            "first_name", "last_name", "email", "address", "phone",
-            "birth_date", "birth_approximate", "death_date", "death_approximate",
-        ]
-        person = Person.objects.create(
-            owner=the_admin,
-            **{field: getattr(the_admin, field) for field in transfer_fields}
-        )
+def make_org_admin(org_user, the_admin):
+    """the_admin becomes ADMIN of the org, as a copy of their profile. Call inside a transaction."""
+    transfer_fields = [
+        "first_name", "last_name", "email", "address", "phone",
+        "birth_date", "birth_approximate", "death_date", "death_approximate",
+    ]
+    person = Person.objects.create(
+        owner=the_admin,
+        **{field: getattr(the_admin, field) for field in transfer_fields}
+    )
 
         # copy skills, voices, instruments
         skill_ids = PersonSkill.objects.filter(person=the_admin).values_list("skill_id", flat=True)
