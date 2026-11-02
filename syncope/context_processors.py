@@ -77,7 +77,7 @@ def user_person(request):
             user=membership.user,
         ).exclude(person_id__in=ever_had_role).exclude(
             person__skills__id__in=[
-                Skill.COMPOSER, Skill.POET, Skill.ARRANGER, Skill.TRANSLATOR,
+                Skill.COMPOSER, Skill.LYRICIST, Skill.ARRANGER, Skill.TRANSLATOR,
             ]
         ).exists()
 

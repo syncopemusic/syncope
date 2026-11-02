@@ -34,8 +34,8 @@ def _build_song_queryset(qs, q):
                 Q(title__icontains=q) |
                 Q(composer__last_name__icontains=q) |
                 Q(composer__first_name__icontains=q) |
-                Q(poet__last_name__icontains=q) |
-                Q(poet__first_name__icontains=q) |
+                Q(lyricist__last_name__icontains=q) |
+                Q(lyricist__first_name__icontains=q) |
                 Q(arranger__last_name__icontains=q) |
                 Q(arranger__first_name__icontains=q) |
                 Q(origin__icontains=q) |
@@ -70,7 +70,7 @@ def _annotate_song_queryset(qs, owner_user):
 
 
 SONG_FILTER_SPEC = {
-    'start': 'date', 'end': 'date', 'language': 'codes', 'composer': 'multi', 'poet': 'multi', 'arranger': 'multi',
+    'start': 'date', 'end': 'date', 'language': 'codes', 'composer': 'multi', 'lyricist': 'multi', 'arranger': 'multi',
 }
 
 
@@ -82,7 +82,7 @@ def _apply_song_filters(qs, filters):
         codes = filters['language']
         qs = qs.filter(Q(languagecode__in=codes) | Q(pk__in=LyricsTranslation.objects.filter(
             languagecode__in=codes).values('song_id')))
-    for role in ('composer', 'poet', 'arranger'):
+    for role in ('composer', 'lyricist', 'arranger'):
         if role in filters:
             qs = qs.filter(**{f'{role}_id__in': filters[role]})
     return qs
@@ -102,7 +102,7 @@ def _apply_song_sort(qs, request):
         'id': 'internal_id',
         'title': 'title',
         'composer': 'composer__last_name',
-        'poet': 'poet__last_name',
+        'lyricist': 'lyricist__last_name',
         'arranger': 'arranger__last_name',
         'duration': 'duration',
         'copies': 'number_of_copies',
@@ -131,7 +131,7 @@ class SongListView(ListFilterMixin, SongOwnerMixin, ListView):
         qs = _build_song_queryset(qs, self.request.GET.get('q', ''))
         qs = _apply_song_filters(_annotate_song_queryset(qs, self.owner_user), self.get_filters())
         qs = _apply_song_sort(qs, self.request)
-        return qs.select_related('composer', 'poet', 'arranger').prefetch_related('song_resource__resource')
+        return qs.select_related('composer', 'lyricist', 'arranger').prefetch_related('song_resource__resource')
 
     def filter_options(self):
         codes = LanguageCode.objects.filter(
@@ -140,7 +140,7 @@ class SongListView(ListFilterMixin, SongOwnerMixin, ListView):
         return {
             'filter_languages': codes,
             'filter_composers': _song_people_options(self.owner_user, 'composed'),
-            'filter_poets': _song_people_options(self.owner_user, 'written'),
+            'filter_lyricists': _song_people_options(self.owner_user, 'written'),
             'filter_arrangers': _song_people_options(self.owner_user, 'arranged'),
         }
 
@@ -244,7 +244,7 @@ class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Creat
     form_class = SongMetaForm
     template_name = "syncope/song_meta_edit.html"
     permission_check_method = AccessControl.can_manage_song
-    person_preset_fields = ['composer', 'arranger', 'poet', 'translator']
+    person_preset_fields = ['composer', 'arranger', 'lyricist', 'translator']
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -307,11 +307,11 @@ class SongCreateView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Creat
 
 @method_decorator(login_required, name='dispatch')
 class SongMetaEditView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, UpdateView):
-    """Details subpage: identifying fields, composer/arranger/poet/translator pickers, and Delete."""
+    """Details subpage: identifying fields, composer/arranger/lyricist/translator pickers, and Delete."""
     form_class = SongMetaForm
     template_name = "syncope/song_meta_edit.html"
     permission_check_method = AccessControl.can_manage_song
-    person_preset_fields = ['composer', 'arranger', 'poet', 'translator']
+    person_preset_fields = ['composer', 'arranger', 'lyricist', 'translator']
 
     def get_queryset(self):
         return Song.objects.filter(user=self.owner_user)
@@ -365,7 +365,7 @@ class SongMetaEditView(DraftMixin, SongOwnerMixin, SelectPersonInitialMixin, Upd
 def song_person_search(request, username, field):
     """AJAX single-person search for the Meta/Quotes subpages' person pickers.
 
-    Composer/arranger/poet/translator are scoped to a skill; the Quotes "person"
+    Composer/arranger/lyricist/translator are scoped to a skill; the Quotes "person"
     field isn't skill-specific, so it searches every org person instead.
     """
     owner_user = get_object_or_404(CustomUser, username=username)

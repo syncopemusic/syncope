@@ -19,7 +19,7 @@
     <div class="lyrics-columns">
         <div>
             <h3>Lyrics</h3>
-            {% include "syncope/_person_picker.html" with field=form.poet field_name="poet" label="Poet" current=song.poet new_person_url_name="syncope:org_member_new_poet" %}
+            {% include "syncope/_person_picker.html" with field=form.lyricist field_name="lyricist" label="Lyricist" current=song.lyricist new_person_url_name="syncope:org_member_new_lyricist" %}
             <div class="form-group">
                 <label for="{{ form.languagecode.id_for_label }}">Language</label>
                 {{ form.languagecode }}

@@ -60,13 +60,13 @@ One can have more than one role at the same time, but only once per organization
 
 ### Managing songs
 
-Step one is make your composer and poet persons into your organization.
-Next you add a song and you have to assign it to the composer and poet persons.
+Step one is make your composer and lyricist persons into your organization.
+Next you add a song and you have to assign it to the composer and lyricist persons.
 
 - Lyrics are optional, translations as well, each text can be assigned own language code.
 - ID of the song is inputted manually, for when your archive is non-sequential.
 - There is an alphabetical searchable drop-down menu for previously created
-  composers and poets; these are limited to within organization.
+  composers and lyricists; these are limited to within organization.
 
 
 ### Managing events and projects

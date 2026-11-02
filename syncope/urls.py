@@ -96,11 +96,11 @@ urlpatterns = [
     path("<str:username>/composers/<int:pk>/edit/", OrgMemberEditView.as_view(), {'context_type': 'composers'}, name="org_composer_edit"),
     path("<str:username>/composers/<int:pk>/delete/", OrgMemberDeleteView.as_view(), {'context_type': 'composers'}, name="org_composer_delete"),
 
-    path("<str:username>/poets/", PersonListView.as_view(), {"list_type": "poets"}, name="org_poets_list"),
-    path("<str:username>/poets/new/", OrgMemberAddView.as_view(), {'preset': 'poet'}, name="org_member_new_poet"),
-    path("<str:username>/poets/<int:pk>/", OrgMemberDetailView.as_view(), {'context_type': 'poets'}, name="org_poet_detail"),
-    path("<str:username>/poets/<int:pk>/edit/", OrgMemberEditView.as_view(), {'context_type': 'poets'}, name="org_poet_edit"),
-    path("<str:username>/poets/<int:pk>/delete/", OrgMemberDeleteView.as_view(), {'context_type': 'poets'}, name="org_poet_delete"),
+    path("<str:username>/lyricists/", PersonListView.as_view(), {"list_type": "lyricists"}, name="org_lyricists_list"),
+    path("<str:username>/lyricists/new/", OrgMemberAddView.as_view(), {'preset': 'lyricist'}, name="org_member_new_lyricist"),
+    path("<str:username>/lyricists/<int:pk>/", OrgMemberDetailView.as_view(), {'context_type': 'lyricists'}, name="org_lyricist_detail"),
+    path("<str:username>/lyricists/<int:pk>/edit/", OrgMemberEditView.as_view(), {'context_type': 'lyricists'}, name="org_lyricist_edit"),
+    path("<str:username>/lyricists/<int:pk>/delete/", OrgMemberDeleteView.as_view(), {'context_type': 'lyricists'}, name="org_lyricist_delete"),
 
     path("<str:username>/arrangers/", PersonListView.as_view(), {"list_type": "arrangers"}, name="org_arrangers_list"),
     path("<str:username>/arrangers/new/", OrgMemberAddView.as_view(), {'preset': 'arranger'}, name="org_member_new_arranger"),
