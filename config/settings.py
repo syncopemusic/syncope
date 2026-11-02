@@ -108,3 +108,12 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# the app's own messages (backup import) go to the console, i.e. `docker logs` for the deployer
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"plain": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
+    "loggers": {"syncope": {"handlers": ["console"], "level": "INFO", "propagate": False}},
+}

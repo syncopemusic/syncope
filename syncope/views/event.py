@@ -17,7 +17,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.http import url_has_allowed_host_and_scheme
 from syncope.models import CustomUser, Person, Role, Song
-from syncope.models import Event, EventSong, Attendance, AttendanceType, EventSongResource, Resource
+from syncope.models import Event, EventSong, Attendance, AttendanceType, EventSongResource
 from syncope.models import EventType, Project
 from syncope.mixins import ListFilterMixin
 from syncope.forms import EventForm, AddAttendanceForm
@@ -64,9 +64,9 @@ def _save_resource_formset(existing_manager, resource_model, owner_kwargs, resou
     for idx, f in enumerate(valid_forms):
         url = f.cleaned_data['url']
         description = f.cleaned_data.get('description', '')
-        resource, created = Resource.objects.get_or_create(
+        resource, created = owner_user.resources.get_or_create(
             url=url,
-            defaults={'owner': owner_user, 'description': description}
+            defaults={'description': description}
         )
         if not created:
             resource.description = description

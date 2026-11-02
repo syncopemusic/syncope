@@ -75,6 +75,8 @@
         <a href="{% url 'syncope:org_edit' url_username %}" class="btn btn-secondary">Edit organization</a>
         <p>Import data from external sources.</p>
         <a href="{% url 'syncope:import_hub' url_username %}" class="btn btn-secondary">Import data</a>
+        <p>Download all organization data.</p>
+        <a href="{% url 'syncope:export' url_username %}" class="btn btn-secondary">Export data</a>
     </div>
 </div>
 {% endif %}
