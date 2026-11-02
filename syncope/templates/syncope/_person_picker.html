@@ -1,6 +1,6 @@
 <div class="form-group person-picker" data-field="{{ field_name }}" data-search-url="{% url 'syncope:song_person_search' url_username field_name %}" data-next="{{ request.get_full_path }}">
     <label>{{ label }}</label>
-    {{ field }}
+    {% if field %}{{ field }}{% else %}<input type="hidden">{% endif %}
     <div class="link-row">
         <p class="search-field search-field-wide">
             <input type="text" class="person-picker-input" value="{{ current|default:'' }}" placeholder="Search {{ label }}" autocomplete="off">

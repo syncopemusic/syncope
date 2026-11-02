@@ -1,0 +1,10 @@
+{% load filter_tags %}{% song_total songs as total %}
+<tfoot{% if not total.display %} hidden{% endif %}>
+    <tr>
+        <th></th>
+        <th class="col-num">Total</th>
+        {% if lead %}<th colspan="{{ lead }}"></th>{% endif %}
+        <th class="col-num total-time" title="{{ total.title }}"><sup{% if not total.partial %} hidden{% endif %}>*</sup><span id="duration-total">{{ total.display|default:"-" }}</span></th>
+        {% if tail %}<th colspan="{{ tail }}"></th>{% endif %}
+    </tr>
+</tfoot>

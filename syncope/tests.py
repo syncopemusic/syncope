@@ -8,7 +8,7 @@ from django.utils import timezone
 from syncope.models import (
     Attendance, AttendanceType, CustomUser, Event, EventResource, EventSong, EventSongResource, EventType,
     Invitation, InvitationStatus, InvitationType, LyricsTranslation, Membership, MembershipPeriod, Organization,
-    Person, PersonRole, PersonSkill, Poll, PollPerson, Project, Resource, Role, Singer, Skill, Song, Voice,
+    Person, PersonRole, PersonSkill, Poll, PollPerson, Project, Quote, Resource, Role, Singer, Skill, Song, Voice,
 )
 from syncope.forms import SongMetaForm
 from syncope.utils import filter_period, parse_date_query, parse_filters
@@ -75,7 +75,7 @@ class ProjectStagedEditTests(TestCase):
 
     def test_add_and_remove_event(self):
         event_type = EventType.objects.create(name="Rehearsal")
-        event = Event.objects.create(user=self.org_user, name="Test Event", event_type=event_type)
+        event = Event.objects.create(user=self.org_user, name="Test Event", event_type=event_type, started_at=timezone.now())
         url = reverse("syncope:project_events_edit", kwargs={"username": "org", "pk": self.project.pk})
 
         self.client.post(url, {"add_event": [str(event.pk)]})
@@ -90,7 +90,7 @@ class ProjectStagedEditTests(TestCase):
         song = Song.objects.create(user=self.org_user, title="Test Song")
         other = Song.objects.create(user=self.org_user, title="Other Song")
         event_type = EventType.objects.create(name="Rehearsal")
-        event = Event.objects.create(user=self.org_user, name="Test Event", event_type=event_type)
+        event = Event.objects.create(user=self.org_user, name="Test Event", event_type=event_type, started_at=timezone.now())
         EventSong.objects.create(event=event, song=other, order=1)
         kwargs = {"username": "org", "pk": song.pk}
         url = reverse("syncope:song_events_edit", kwargs=kwargs)
@@ -251,7 +251,7 @@ class ResourcesEditViewTests(TestCase):
 
     def test_add_resource_scoped_to_an_event_creates_event_song_resource(self):
         event_type = EventType.objects.create(name="Rehearsal")
-        event = Event.objects.create(user=self.org_user, name="Test Event", event_type=event_type)
+        event = Event.objects.create(user=self.org_user, name="Test Event", event_type=event_type, started_at=timezone.now())
         event_song = EventSong.objects.create(event=event, song=self.song, order=1)
 
         self.client.login(username="org", password="pw12345")
@@ -307,7 +307,7 @@ class ResourcesEditOtherKindsRenderTests(TestCase):
         Organization.objects.create(user=self.org_user, name="Org", email="org@example.com")  # only orgs show member events
         Person.objects.create(user=self.org_user, email=self.org_user.email, first_name="Org", last_name="Owner")
         self.project = Project.objects.create(user=self.org_user, title="Test Project")
-        self.event = Event.objects.create(user=self.org_user, name="Test Event", event_type_id=EventType.REHEARSAL)
+        self.event = Event.objects.create(user=self.org_user, name="Test Event", event_type_id=EventType.REHEARSAL, started_at=timezone.now())
         self.person = Person.objects.create(first_name="Mia", last_name="Member")
         Membership.objects.create(user=self.org_user, person=self.person)
         self.client.login(username="org", password="pw12345")
@@ -326,7 +326,7 @@ class ResourcesEditOtherKindsRenderTests(TestCase):
     def test_member_events_list_only_present(self):
         # the member page preselects performance/concert/recording
         Event.objects.filter(pk=self.event.pk).update(event_type_id=EventType.PERFORMANCE)
-        other = Event.objects.create(user=self.org_user, name="Missed Event", event_type_id=EventType.PERFORMANCE)
+        other = Event.objects.create(user=self.org_user, name="Missed Event", event_type_id=EventType.PERFORMANCE, started_at=timezone.now())
         Attendance.objects.create(event=self.event, person=self.person, attendance_type_id=AttendanceType.PRESENT)
         Attendance.objects.create(event=other, person=self.person, attendance_type_id=AttendanceType.ILLNESS)
         kwargs = {"username": "org", "pk": self.person.pk}
@@ -760,3 +760,53 @@ class SongDurationTests(SimpleTestCase):
         self.assertEqual(Song(duration=3723).duration_display, "1:02:03")
         self.assertEqual(Song(duration=225).duration_display, "3:45")
         self.assertEqual(Song().duration_display, "")
+
+
+class QuotesEditViewTests(TestCase):
+    """One view/template covers Song and Person quotes (same shape as ResourcesEditView)."""
+
+    fixtures = ["syncope/fixture_role.json"]
+
+    def setUp(self):
+        self.org_user = CustomUser.objects.create_user(username="org", email="org@example.com", password="pw12345")
+        Person.objects.create(user=self.org_user, email=self.org_user.email, first_name="Org", last_name="Owner")
+        self.outsider = CustomUser.objects.create_user(username="outsider", email="o@example.com", password="pw12345")
+        self.song = Song.objects.create(user=self.org_user, title="Test Song")
+        self.person = Person.objects.create(first_name="Woody", last_name="Composer")
+        Membership.objects.create(user=self.org_user, person=self.person)
+        self.song_url = reverse("syncope:song_quotes", kwargs={"username": "org", "pk": self.song.pk})
+        self.person_url = reverse("syncope:person_quotes", kwargs={"username": "org", "pk": self.person.pk})
+
+    def test_outsider_forbidden(self):
+        self.client.login(username="outsider", password="pw12345")
+        self.assertEqual(self.client.post(self.song_url, {"new_word": ["x"]}).status_code, 403)
+
+    def test_song_quote_gets_owner_song_and_person(self):
+        self.client.login(username="org", password="pw12345")
+        self.client.post(self.song_url, {
+            "new_word": ["Alleluia"], "new_bar_number": ["43"], "new_date": ["2026-01-02"], "new_person": [str(self.person.pk)],
+        })
+        quote = Quote.objects.get()
+        self.assertEqual((quote.owner, quote.song, quote.person), (self.org_user, self.song, self.person))
+        self.assertEqual((quote.bar_number, str(quote.date)), ("43", "2026-01-02"))
+        self.assertContains(self.client.get(reverse("syncope:song_detail", kwargs={"username": "org", "pk": self.song.pk})), "Alleluia")
+
+    def test_person_quote_gets_owner_and_person(self):
+        self.client.login(username="org", password="pw12345")
+        self.client.post(self.person_url, {"new_word": ["Amen"], "new_bar_number": [""], "new_date": [""], "new_person": [""]})
+        quote = Quote.objects.get()
+        self.assertEqual((quote.owner, quote.person, quote.song), (self.org_user, self.person, None))
+        detail = reverse("syncope:org_member_detail", kwargs={"username": "org", "pk": self.person.pk})
+        self.assertContains(self.client.get(detail), "Amen")
+
+    def test_song_quote_ignores_person_outside_org(self):
+        stranger = Person.objects.create(first_name="No", last_name="Member")
+        self.client.login(username="org", password="pw12345")
+        self.client.post(self.song_url, {"new_word": ["Hi"], "new_person": [str(stranger.pk)]})
+        self.assertIsNone(Quote.objects.get().person)
+
+    def test_remove(self):
+        quote = Quote.objects.create(owner=self.org_user, song=self.song, word="Bye")
+        self.client.login(username="org", password="pw12345")
+        self.client.post(self.song_url, {f"remove_{quote.pk}": "1"})
+        self.assertFalse(Quote.objects.exists())

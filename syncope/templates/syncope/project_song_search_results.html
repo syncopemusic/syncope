@@ -4,13 +4,13 @@
         <div id="song-result-list">
             {% for song in add_song_form.search_results %}
                 <div class="search-result-row">
-                    <button type="button" class="btn btn-secondary" data-id="{{ song.pk }}">+</button>
+                    <button type="button" class="btn btn-secondary" data-id="{{ song.pk }}" data-duration="{{ song.duration|default:'' }}">+</button>
                     <div class="search-result-info">
-                        <div class="song-subline"><span class="song-title">{{ song.title }}</span>{% if song.duration %}<small class="song-meta">{{ song.duration_display }}</small>{% endif %}</div>
+                        <div class="song-subline"><span class="song-title">{{ song.title }}</span></div>
                         <div class="song-subline">
                             <span>
-                                {% if song.composer %}{{ song.composer.first_name }} {{ song.composer.last_name }}
-                                {% elif song.arranger %}{{ song.arranger.first_name }} {{ song.arranger.last_name }}
+                                {% if song.composer %}{{ song.composer }}
+                                {% elif song.arranger %}{{ song.arranger }}
                                 {% else %}<small>No composer</small>{% endif %}
                             </span>
                             {% if song.internal_id %}<small class="song-meta">#{{ song.internal_id }}</small>{% endif %}
@@ -20,4 +20,7 @@
             {% endfor %}
         </div>
     {% endif %}
+    <div class="search-result-row">
+        <a href="{% url 'syncope:song_new' url_username %}?auto_add_project={{ project.pk }}&next={% url 'syncope:project_songs_edit' url_username project.pk %}" class="btn btn-primary" title="Create new song">+ New song</a>
+    </div>
 {% endif %}

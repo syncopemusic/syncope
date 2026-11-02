@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 {% block title %}Invitations - Syncope{% endblock %}
 
 {% block content %}
@@ -26,8 +27,11 @@
     {% csrf_token %}
     <input type="hidden" name="draft_key" value="{{ draft_key }}">
     {{ form.as_p }}
-    <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Send</button>
-    </div>
 </form>
+
+{% url 'syncope:invitation_list' url_username as return_target %}
+{% include "syncope/_save_bar.html" with form_id="invitation-form" url=return_target %}
+
+<script src="{% static 'syncope/save-bar.js' %}"></script>
+<script>initNewFormSaveBar('invitation-form', 'input[type=text]');</script>
 {% endblock %}

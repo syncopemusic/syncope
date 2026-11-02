@@ -1,5 +1,5 @@
 {% extends "syncope/base.html" %}
-{% load static dt_tags %}
+{% load static dt_tags icon_tags %}
 {% block title %}{{ event.name|default:event.event_type }} - Syncope{% endblock %}
 
 {% block content %}
@@ -23,7 +23,8 @@
                     <tr>
                         <th class="col-lead"></th>
                         <th class="col-main">Song</th>
-                        <th class="song-resources" title="Resources">&#128206;</th>
+                        <th class="song-encore" title="Encore">&#8635;</th>
+                        <th class="col-num" title="Duration">{% icon "stopwatch" %}</th>
                         {% if is_admin %}<th class="song-actions"></th>{% endif %}
                     </tr>
                 </thead>
@@ -32,6 +33,7 @@
                         {% include "syncope/_song_row.html" %}
                     {% endfor %}
                 </tbody>
+                {% include "syncope/_song_total_row.html" with songs=eventsongs lead=1 tail=is_admin|yesno:"1,0" %}
             </table>
         </div>
     </form>
@@ -46,7 +48,6 @@
         <p class="link-row">
             <button type="button" id="song-search-clear" class="btn btn-secondary">Clear</button>
             <span id="song-search-count" class="result-count"></span>
-            <button type="submit" form="songs-form" name="action" value="new_song" class="btn btn-primary" title="Save current changes and create a new song">+ Add</button>
         </p>
         <div id="song-search-results">
             {% include "syncope/song_search_results.html" %}
@@ -83,20 +84,29 @@
         buildRow: (btn, info) => `
             <td class="col-lead"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span><span class="song-index"></span></td>
             <td class="col-main">${info}</td>
-            <td class="song-resources" title="Event resources for song">${escapeHtml(btn.dataset.resources || '0')}</td>
+            <td class="song-encore"><input type="checkbox" class="encore-check" title="Encore"></td>
+            ${durationCell(btn)}
             <td class="song-actions"><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>`,
-        extraCount: () => (keptIds().some((pk, i) => pk !== expectedOrder()[i]) ? 1 : 0),
+        keepResults: true,
+        extraCount: () => (keptIds().some((pk, i) => pk !== expectedOrder()[i]) ? 1 : 0)
+            + (Array.from(songsTbody.querySelectorAll('tr:not(.staged-add) .encore-check')).some(c => c.checked !== c.defaultChecked) ? 1 : 0),
         afterChange: () => {
+            updateDurationTotal(songsTbody);
             document.getElementById('songs-table-container').hidden = !songsTbody.querySelector('tr:not(.empty-row)');
             songRows().forEach((row, i) => { row.querySelector('.song-index').textContent = i + 1; });
             document.getElementById('song-order-input').value = songRows()
                 .filter(r => !r.classList.contains('pending-remove'))
-                .map(r => r.classList.contains('staged-add') ? `new-${r.dataset.songId}` : `es-${r.dataset.id}`).join(',');
+                .map(r => (r.classList.contains('staged-add') ? `new-${r.dataset.songId}` : `es-${r.dataset.id}`)
+                    + (r.querySelector('.encore-check').checked ? '*' : '')).join(',');
             const expected = expectedOrder();
             keptIds().forEach((pk, i) => songsTbody.querySelector(`tr[data-id="${pk}"]`).classList.toggle('row-moved', pk !== expected[i]));
         },
-        onDiscardExtra: () => originalOrder.forEach(pk => songsTbody.appendChild(songsTbody.querySelector(`tr[data-id="${pk}"]`))),
+        onDiscardExtra: () => {
+            originalOrder.forEach(pk => songsTbody.appendChild(songsTbody.querySelector(`tr[data-id="${pk}"]`)));
+            songsTbody.querySelectorAll('.encore-check').forEach(c => { c.checked = c.defaultChecked; });
+        },
     });
+    songsTbody.addEventListener('change', e => { if (e.target.matches('.encore-check')) stagedList.sync(); });
     initDragReorder(songsTbody, { rowSelector: 'tr.song-row', onDrop: stagedList.sync });
 </script>
 {% endblock %}

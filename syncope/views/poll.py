@@ -472,9 +472,9 @@ class PollEventAttendanceView(View):
                 )
         if changed_count:
             label = 'field' if changed_count == 1 else 'fields'
-            messages.success(request, f'Updated {changed_count} {label} for {poll_person.person.first_name} {poll_person.person.last_name}')
+            messages.success(request, f'Updated {changed_count} {label} for {poll_person.person}')
         else:
-            messages.success(request, f'Saved successfully (no changes) for {poll_person.person.first_name} {poll_person.person.last_name}')
+            messages.success(request, f'Saved successfully (no changes) for {poll_person.person}')
         return redirect('syncope:poll_attendance', username=username, pk=pk)
 
 

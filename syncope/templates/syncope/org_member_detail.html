@@ -61,6 +61,14 @@
 {% endif %}
 {% endif %}
 
+{% if quotes or is_admin %}
+<div class="section-header">
+    <h3>Quotes ({{ quotes|length }})</h3>
+    {% if is_admin and not profile %}<a href="{% url 'syncope:person_quotes' url_username person.pk %}" class="btn btn-secondary">Edit</a>{% endif %}
+</div>
+{% include "syncope/_quotes_table.html" with rows=quotes kind="person" %}
+{% endif %}
+
 <!-- Songs by role -->
 {% if composed_songs %}{% include "syncope/_member_songs_table.html" with heading="Composed Songs" songs=composed_songs %}{% endif %}
 {% if written_songs %}{% include "syncope/_member_songs_table.html" with heading="Written Songs" songs=written_songs %}{% endif %}

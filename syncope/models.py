@@ -288,15 +288,15 @@ class Person(models.Model):
     One Person is under CustomUser, different Persons are owned by organizations.
     The CustomUser-Person has owner, the Org-Membership-Persons are many and fk to owner's Person.
     """
-    first_name = models.CharField("name", max_length=100)
-    last_name = models.CharField("surname", max_length=100)
+    first_name = models.CharField("First Name", max_length=100)
+    last_name = models.CharField("Last Name", max_length=100, blank=True)
     email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True, null=True)
     phone =  models.CharField(max_length=23, blank=True, null=True)
-    birth_date = models.DateField("birthday", blank=True, null=True)
+    birth_date = models.DateField("Birthday", blank=True, null=True)
     birth_approximate = models.ForeignKey(ApproximateDate, on_delete=models.CASCADE, blank=True, null=True,
                                           related_name="birth_approximate")
-    death_date = models.DateField("deathday", blank=True, null=True)
+    death_date = models.DateField("Deathday", blank=True, null=True)
     death_approximate = models.ForeignKey(ApproximateDate, on_delete=models.CASCADE, blank=True, null=True,
                                           related_name="death_approximate")
 
@@ -348,7 +348,7 @@ class Person(models.Model):
         return self.owner_id is None and self.user_id is None
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+        return f"{self.first_name} {self.last_name}".strip()
 
 
 class Membership(models.Model):
@@ -439,6 +439,17 @@ class PersonResource(models.Model):
 
 
 
+def format_duration(seconds, long=False):
+    """m:ss, or h:mm:ss from an hour up; long=True gives the tooltip form (3min20s, 1h05min00s). Empty for none/0."""
+    if not seconds:
+        return ""
+    h, rem = divmod(seconds, 3600)
+    m, s = divmod(rem, 60)
+    if long:
+        return f"{h}h{m:02}min{s:02}s" if h else f"{m}min{s:02}s"
+    return f"{h}:{m:02}:{s:02}" if h else f"{m}:{s:02}"
+
+
 class Song(models.Model):
     title = models.CharField(max_length=250)
     number_of_pages = models.PositiveIntegerField(blank=True, null=True)
@@ -511,34 +522,29 @@ class Song(models.Model):
 
     @property
     def duration_display(self):
-        if not self.duration:
-            return ""
-        h, rem = divmod(self.duration, 3600)
-        m, s = divmod(rem, 60)
-        return f"{h}:{m:02}:{s:02}" if h else f"{m}:{s:02}"
+        return format_duration(self.duration)
 
     @property
     def duration_title(self):
-        if not self.duration:
-            return ""
-        h, rem = divmod(self.duration, 3600)
-        m, s = divmod(rem, 60)
-        return f"{h}h{m:02}min{s:02}s" if h else f"{m:02}min{s:02}s"
+        return format_duration(self.duration, long=True)
 
     def __str__(self):
-        composer_name = self.composer.last_name if self.composer else '-'
+        composer_name = (self.composer.last_name or self.composer.first_name) if self.composer else '-'
         return f"{self.title} - {composer_name}"
 
 
 class Quote(models.Model):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="quotes"
+    )
     word = models.CharField(max_length=100)
     bar_number = models.CharField(max_length=20, blank=True, null=True)
-    song = models.ForeignKey(Song, on_delete=models.CASCADE, related_name='quotes')
+    song = models.ForeignKey(Song, on_delete=models.CASCADE, related_name='quotes', blank=True, null=True)
     date = models.DateField(blank=True, null=True)
-    person = models.ForeignKey(Person, on_delete=models.SET_NULL, related_name='quotes', blank=True, null=True)
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name='quotes', blank=True, null=True)
 
-    class Meta:
-        ordering = ['word']
 
     def __str__(self):
         if self.bar_number:
@@ -589,10 +595,10 @@ class Event(models.Model):
         related_name="events"
     )
     internal_id = models.PositiveIntegerField("ID", blank=True, null=True)
-    name = models.CharField("name of the event", max_length=250, blank=True)
+    name = models.CharField("Name", max_length=250, blank=True)
     location = models.TextField(blank=True, null=True)
-    started_at = models.DateTimeField("start date hour", blank=True, null=True)
-    ended_at = models.DateTimeField("end date hour", blank=True, null=True)
+    started_at = models.DateTimeField("Start")
+    ended_at = models.DateTimeField("End", blank=True, null=True)
     event_type = models.ForeignKey(EventType, on_delete=models.CASCADE)
     num_visitors = models.PositiveIntegerField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)

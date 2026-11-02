@@ -1,6 +1,6 @@
 <tr data-id="{{ attendance.pk }}" data-person-id="{{ attendance.person_id }}">
     <td class="col-num">{{ forloop.counter }}</td>
-    <td class="col-main song-title">{{ attendance.person.first_name }} {{ attendance.person.last_name }}</td>
+    <td class="col-main song-title">{{ attendance.person }}</td>
     <td>
         <span class="btn attendance-chip"
               data-attendance-id="{{ attendance.pk }}"

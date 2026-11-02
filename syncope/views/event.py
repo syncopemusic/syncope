@@ -152,14 +152,6 @@ class EventCreateView(DraftMixin, CreateView):
         kwargs['user'] = self.customuser or self.request.user
         return kwargs
 
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        # Name and most other fields are optional (see EventForm); a start date is the one
-        # thing we actually need up front to auto-generate a name and seed attendance.
-        form.fields['started_at'].required = True
-        form.fields['started_at'].label = 'Start date hour *'
-        return form
-
     def get_initial(self):
         initial = super().get_initial()
         project_pk = self.request.GET.get('project')
@@ -385,14 +377,10 @@ class EventSongsEditView(View):
     def _get_context(self):
         event = self.event
         eventsongs = list(
-            event.eventsong_set.select_related('song', 'song__composer', 'song__arranger').order_by('order').annotate(
-                song_resource_count=Count('song__song_resource', distinct=True),
-                es_resource_count=Count('event_song_resource', distinct=True),
-            )
+            event.eventsong_set.select_related('song', 'song__composer', 'song__arranger').order_by('order')
         )
         for idx, es in enumerate(eventsongs):
             es.index = idx + 1
-            es.resources_count = es.song_resource_count + es.es_resource_count
         search_q = self.request.GET.get('song_q', '')
         breadcrumbs, origin_key = event_breadcrumbs(
             self.request, self.kwargs.get('username'), event, current_label='Songs'
@@ -440,28 +428,29 @@ class EventSongsEditView(View):
             if surviving:
                 EventSong.objects.bulk_update(surviving, ['order'])
 
-            new_song_pks = {t[len('new-'):] for t in order_tokens if t.startswith('new-')}
+            new_song_pks = {t[len('new-'):].rstrip('*') for t in order_tokens if t.startswith('new-')}
             valid_song_ids = set(
                 Song.objects.filter(pk__in=new_song_pks, user=self.customuser).values_list('pk', flat=True)
             ) if new_song_pks else set()
 
             final_order = 0
-            seen_new_songs = set()
             for token in order_tokens:
+                encore = token.endswith('*')  # a trailing * marks the row as an encore song
+                token = token.rstrip('*')
                 if token.startswith('es-'):
                     es = surviving_by_pk.get(token[len('es-'):])
                     if es is None:
                         continue
                     final_order += 1
                     es.order = final_order
-                    es.save(update_fields=['order'])
+                    es.encore = encore
+                    es.save(update_fields=['order', 'encore'])
                 elif token.startswith('new-'):
                     song_pk = token[len('new-'):]
-                    if not song_pk.isdigit() or int(song_pk) not in valid_song_ids or song_pk in seen_new_songs:
+                    if not song_pk.isdigit() or int(song_pk) not in valid_song_ids:
                         continue
-                    seen_new_songs.add(song_pk)
                     final_order += 1
-                    EventSong.objects.create(event=event, song_id=song_pk, order=final_order)
+                    EventSong.objects.create(event=event, song_id=song_pk, order=final_order, encore=encore)
 
             # A surviving row the client didn't mention in song_order (shouldn't normally happen) keeps a spot at the end.
             for es in surviving:
@@ -493,11 +482,7 @@ class EventSongsEditView(View):
 def event_songs_search(request, org_user, event):
     """AJAX song search for the Songs subpage's add-song picker."""
     song_search_q = request.GET.get('song_q', '')
-    exclude_raw = request.GET.get('exclude', '')
-    exclude_ids = [int(x) for x in exclude_raw.split(',') if x.strip().isdigit()]
-    add_song_form = AddSongToEventForm(
-        org_user=org_user, event=event, search_q=song_search_q, exclude_ids=exclude_ids
-    )
+    add_song_form = AddSongToEventForm(org_user=org_user, event=event, search_q=song_search_q)
     return render(request, 'syncope/song_search_results.html', {
         'add_song_form': add_song_form,
         'song_search_q': song_search_q,

@@ -82,7 +82,7 @@
                 <td class="col-num">{{ row.index }}</td>
                 <td class="sticky-col col-main"
                     title="{% for singer in row.person.person.singer_set.all %}{{ singer.voice.name }}{% if not forloop.last %}, {% endif %}{% endfor %} {% for instrumentalist in row.person.person.instrumentalist_set.all %}{{ instrumentalist.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
-                    {{ row.person.person.first_name }} {{ row.person.person.last_name }}
+                    {{ row.person.person }}
                 </td>
                 <td>
                     <a href="{{ person_attendance_url }}" target="_blank" class="btn btn-secondary" title="Edit your poll results">Edit</a>

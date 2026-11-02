@@ -73,7 +73,7 @@
                     </li>
                 </ul>
                 <div class="sidebar-footer">
-                    <form method="post" action="{% url 'logout' %}" data-confirm="You want to log out?">
+                    <form method="post" action="{% url 'syncope:logout' %}" data-confirm="You want to log out?">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-secondary btn-block">Log out</button>
                     </form>

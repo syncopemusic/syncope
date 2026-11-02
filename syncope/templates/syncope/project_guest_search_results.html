@@ -5,7 +5,7 @@
             {% for guest in add_guest_form.search_results %}
                 <div class="search-result-row">
                     <button type="button" class="btn btn-secondary" data-id="{{ guest.pk }}">+</button>
-                    <span class="result-label">{{ guest.first_name }} {{ guest.last_name }}</span>
+                    <span class="result-label">{{ guest }}</span>
                 </div>
             {% endfor %}
         </div>

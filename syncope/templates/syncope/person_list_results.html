@@ -37,7 +37,7 @@
             <td class="col-num">{{ forloop.counter }}</td>
             <td class="sticky-col col-main">
                 <a href="{% url person_detail_url_name url_username person.person.id %}">
-                {{ person.person.first_name }} {{ person.person.last_name }}
+                {{ person.person }}
                 </a>
             </td>
             <td class="col-main">{{ person.person.email }}</td>

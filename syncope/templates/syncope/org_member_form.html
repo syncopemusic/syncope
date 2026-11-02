@@ -1,20 +1,20 @@
 {% extends "syncope/base.html" %}
 {% load static dt_tags %}
-{% block title %}{% if form.instance.pk %}{{ form.instance.first_name }} {{ form.instance.last_name }} - Syncope{% else %}New Person {{ form.instance.first_name }} {{ form.instance.last_name }} {% endif %}{% endblock %}
+{% block title %}{% if form.instance.pk %}{{ form.instance }} - Syncope{% else %}New Person {{ form.instance }} {% endif %}{% endblock %}
 
 {% block content %}
 {% if form.instance.pk %}
 <div class="section-header section-header-edit">
     <h1 class="event-title">
         <span class="event-title-text">
-            <span title="Name">{{ form.instance.first_name }} {{ form.instance.last_name }}</span>
+            <span title="Name">{{ form.instance }}</span>
             <small><span title="Action"> | Edit</span></small>
         </span>
     </h1>
     {% if is_admin %}<a href="{% url 'syncope:org_member_delete' url_username form.instance.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger btn-delete">Delete Member</a>{% endif %}
 </div>
 {% else %}
-<h1>New Person {{ form.instance.first_name }} {{ form.instance.last_name }} </h1>
+<h1>New Person {{ form.instance }} </h1>
 {% endif %}
 
 <form method="post" id="org-member-form">
@@ -69,7 +69,7 @@
     <div class="table-container">
     <table class="table">
         <thead>
-            <tr><th>Role</th><th>From</th><th>To</th><th class="col-action"></th></tr>
+            <tr><th>Role</th><th>Start</th><th>End</th><th class="col-action"></th></tr>
         </thead>
         <tbody id="periods-tbody">
             {% for p_form in period_formset %}
@@ -107,11 +107,11 @@
             </select>
         </div>
         <div class="form-group">
-            <label for="new-period-from">From</label>
+            <label for="new-period-from">Start</label>
             <input type="date" id="new-period-from">
         </div>
         <div class="form-group">
-            <label for="new-period-to">To</label>
+            <label for="new-period-to">End</label>
             <input type="date" id="new-period-to">
             <small class="form-help">Leave blank if still active</small>
         </div>
@@ -140,13 +140,19 @@
     const periodsTbody = document.getElementById('periods-tbody');
     const escapeHtml = s => Object.assign(document.createElement('div'), { textContent: s }).innerHTML;
 
+    const isNew = {% if form.instance.pk %}false{% else %}true{% endif %};
+    // New page: a draft-restored form is pre-filled at render, so count filled fields rather than diff a snapshot.
+    const textFields = () => Array.from(form.querySelectorAll('input[type=text],input[type=email],input[type=tel],input[type=date],textarea'));
+    const stagedAdds = () => periodsTbody ? periodsTbody.querySelectorAll('tr.staged-add').length : 0;
+
     const saveBarCtl = initSaveBar({
         formId: 'org-member-form',
-        countUnsavedChanges: () => fieldTracker.count() + periodsTbody.querySelectorAll('tr.staged-add').length,
+        countUnsavedChanges: () => (isNew ? textFields().filter(el => el.value).length : fieldTracker.count()) + stagedAdds(),
         onDiscard: () => {
             form.reset();
-            periodsTbody.querySelectorAll('tr.staged-add').forEach(row => row.remove());
-            periodsTbody.querySelectorAll('tr.pending-remove').forEach(row => setRemoved(row, false));
+            if (isNew) textFields().forEach(el => { el.value = ''; });
+            periodsTbody?.querySelectorAll('tr.staged-add').forEach(row => row.remove());
+            periodsTbody?.querySelectorAll('tr.pending-remove').forEach(row => setRemoved(row, false));
             fieldTracker.reset();
         },
     });
@@ -162,51 +168,53 @@
         box.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    periodsTbody.addEventListener('click', e => {
-        const btn = e.target.closest('.btn-remove');
-        if (!btn) return;
-        const row = btn.closest('tr');
-        if (row.classList.contains('staged-add')) {
-            row.remove();
+    if (periodsTbody) {
+        periodsTbody.addEventListener('click', e => {
+            const btn = e.target.closest('.btn-remove');
+            if (!btn) return;
+            const row = btn.closest('tr');
+            if (row.classList.contains('staged-add')) {
+                row.remove();
+                saveBarCtl.sync();
+            } else {
+                setRemoved(row, !row.classList.contains('pending-remove'));
+            }
+        });
+
+        const roleSelect = document.getElementById('new-period-role');
+        const fromInput = document.getElementById('new-period-from');
+        const toInput = document.getElementById('new-period-to');
+        [fromInput, toInput].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); }));
+
+        const showDate = v => new Date(v + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+        document.getElementById('add-period-btn').addEventListener('click', () => {
+            if (!roleSelect.value || !fromInput.value) {
+                alert('Role and start date are required.');
+                return;
+            }
+            if (toInput.value && toInput.value < fromInput.value) {
+                alert('End date must be after start date.');
+                return;
+            }
+            const total = document.getElementById('id_periods-TOTAL_FORMS');
+            const i = parseInt(total.value, 10);
+            const tr = document.createElement('tr');
+            tr.className = 'staged-add';
+            tr.innerHTML = `
+                <td>${escapeHtml(roleSelect.selectedOptions[0].textContent)}
+                    <input type="hidden" name="periods-${i}-role" value="${escapeHtml(roleSelect.value)}">
+                    <input type="hidden" name="periods-${i}-started_at" value="${escapeHtml(fromInput.value)}">
+                    <input type="hidden" name="periods-${i}-ended_at" value="${escapeHtml(toInput.value)}"></td>
+                <td>${showDate(fromInput.value)}</td>
+                <td>${toInput.value ? showDate(toInput.value) : 'Active'}</td>
+                <td class="col-action"><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>`;
+            periodsTbody.appendChild(tr);
+            total.value = i + 1;
+            roleSelect.value = fromInput.value = toInput.value = '';
             saveBarCtl.sync();
-        } else {
-            setRemoved(row, !row.classList.contains('pending-remove'));
-        }
-    });
-
-    const roleSelect = document.getElementById('new-period-role');
-    const fromInput = document.getElementById('new-period-from');
-    const toInput = document.getElementById('new-period-to');
-    [fromInput, toInput].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); }));
-
-    const showDate = v => new Date(v + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-
-    document.getElementById('add-period-btn').addEventListener('click', () => {
-        if (!roleSelect.value || !fromInput.value) {
-            alert('Role and start date are required.');
-            return;
-        }
-        if (toInput.value && toInput.value < fromInput.value) {
-            alert('End date must be after start date.');
-            return;
-        }
-        const total = document.getElementById('id_periods-TOTAL_FORMS');
-        const i = parseInt(total.value, 10);
-        const tr = document.createElement('tr');
-        tr.className = 'staged-add';
-        tr.innerHTML = `
-            <td>${escapeHtml(roleSelect.selectedOptions[0].textContent)}
-                <input type="hidden" name="periods-${i}-role" value="${escapeHtml(roleSelect.value)}">
-                <input type="hidden" name="periods-${i}-started_at" value="${escapeHtml(fromInput.value)}">
-                <input type="hidden" name="periods-${i}-ended_at" value="${escapeHtml(toInput.value)}"></td>
-            <td>${showDate(fromInput.value)}</td>
-            <td>${toInput.value ? showDate(toInput.value) : 'Active'}</td>
-            <td class="col-action"><button type="button" class="btn btn-danger btn-remove" title="Remove staged addition">&times;</button></td>`;
-        periodsTbody.appendChild(tr);
-        total.value = i + 1;
-        roleSelect.value = fromInput.value = toInput.value = '';
-        saveBarCtl.sync();
-    });
+        });
+    }
 
     form.addEventListener('input', () => saveBarCtl.sync());
     form.addEventListener('change', () => saveBarCtl.sync());

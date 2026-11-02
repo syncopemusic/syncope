@@ -15,7 +15,7 @@
 
 <form method="post" id="participants-form">
     {% csrf_token %}
-    <div class="table-container">
+    <div class="table-container" id="participants-table-container"{% if not participants %} hidden{% endif %}>
     <table class="table">
         <thead>
             <tr>
@@ -29,14 +29,13 @@
             {% for person in participants %}
             <tr data-id="{{ person.pk }}">
                 <td class="col-num">{{ forloop.counter }}</td>
-                <td class="col-main song-title">{{ person.first_name }} {{ person.last_name }}</td>
+                <td class="col-main song-title">{{ person }}</td>
                 <td>{% if person.is_guest %}<small>Guest</small>{% endif %}</td>
                 <td class="col-action">
                     {% if person.is_guest %}<button type="button" class="btn btn-danger btn-remove" title="Remove from project">&times;</button>{% endif %}
                 </td>
             </tr>
             {% endfor %}
-            <tr class="empty-row"><td colspan="4">No participants yet.</td></tr>
         </tbody>
     </table>
     </div>
@@ -70,6 +69,7 @@
         formId: 'participants-form',
         tbodyId: 'participants-tbody',
         addField: 'add_guest',
+        afterChange: () => { document.getElementById('participants-table-container').hidden = !document.getElementById('participants-tbody').rows.length; },
         prefix: 'guest',
         searchUrl: "{% url 'syncope:project_guests_search' url_username project.pk %}",
         buildRow: (btn, info) => `<td class="col-num"></td>

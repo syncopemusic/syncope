@@ -528,6 +528,8 @@ class OrgMemberDetailView(DetailView):
             person.person_resource.select_related('resource').order_by('order')
         )
 
+        context['quotes'] = person.quotes.select_related('song')
+
         # Songs by role; composer/arranger are shown in each row's subline
         for key, songs in {
             "composed_songs": person.composed_songs.all(),
@@ -594,7 +596,7 @@ class OrgMemberAddView(DraftMixin, FormView):  # OrgMemberMixin,
     def get_form_kwargs(self):
         """Pass preset to the form."""
         kwargs = super().get_form_kwargs()
-        kwargs['preset'] = self.kwargs.get('preset')
+        kwargs['preset'] = self.kwargs.get('preset', 'member')  # plain /new/ defaults to Member
         return kwargs
 
     def get_form(self, form_class=None):

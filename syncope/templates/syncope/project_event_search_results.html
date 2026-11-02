@@ -18,4 +18,7 @@
             {% endfor %}
         </div>
     {% endif %}
+    <div class="search-result-row">
+        <a href="{% url 'syncope:event_new' url_username %}?project={{ project.pk }}&next={% url 'syncope:project_events_edit' url_username project.pk %}" class="btn btn-primary" title="Create new event">+ New event</a>
+    </div>
 {% endif %}

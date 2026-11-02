@@ -7,7 +7,7 @@
     <h1 class="event-title">
         <span class="event-title-text">
             {% if person.first_name or person.last_name %}
-            <span title="Name">{{ person.first_name }} {{ person.last_name }}</span>
+            <span title="Name">{{ person }}</span>
             {% else %}
             <span title="Username">{{ user.username }}</span>
             {% endif %}
@@ -20,7 +20,7 @@
     {% endif %}
 </div>
 
-<h3>Organizations</h3>
+<h2>Organizations</h2>
 <div class="card-grid">
     {% for membership in org_memberships %}
         {% with org=membership.user.organizations.first %}
@@ -33,13 +33,13 @@
         {% endif %}
         {% endwith %}
     {% endfor %}
-    <div class="card">
-        <h3>Make your own organization</h3>
-        <a href="{% url 'syncope:org_new' %}" class="btn btn-primary">+ Create</a>
-    </div>
+</div>
+<div>
+    <h3>Make your own organization</h3>
+    <a href="{% url 'syncope:org_new' %}" class="btn btn-primary">+ New</a>
 </div>
 
-<h3>Personal</h3>
+<h2>Personal</h2>
 <div class="card-grid">
     <div class="card">
         <h3>Invitations</h3>
