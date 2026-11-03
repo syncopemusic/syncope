@@ -22,6 +22,8 @@ from django.db import DatabaseError, transaction
 from django.db.models import ForeignKey
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
+from django.utils.functional import cached_property
+from django.utils.text import Truncator
 from syncope.models import (
     MembershipPeriod, PersonRole, EventSongResource, ProjectResource, ShareVisit,
     PersonSkill, Singer, Instrumentalist, PersonResource,
@@ -30,7 +32,7 @@ from syncope.models import (
 from syncope.forms import OrganizationForm
 from syncope.backup import (
     APP_LABEL, SECTIONS, VERSION, BackupError, allowlist, check_shape, diff_fixtures, diff_schema, export_fields,
-    export_fixtures, export_org, export_schema, fixture_keys, fixture_label, fixture_usage, resolve, row_label, user_fks,
+    export_fixtures, export_org, export_schema, org_pks, fixture_keys, fixture_label, fixture_usage, resolve, row_label, user_fks,
 )
 from syncope.permissions import AccessControl
 from syncope.views.drafts import DraftMixin
@@ -121,30 +123,27 @@ def make_org_admin(org_user, the_admin):
         **{field: getattr(the_admin, field) for field in transfer_fields}
     )
 
-        # copy skills, voices, instruments
-        skill_ids = PersonSkill.objects.filter(person=the_admin).values_list("skill_id", flat=True)
-        voice_ids = Singer.objects.filter(person=the_admin).values_list("voice_id", flat=True)
-        instrument_ids = Instrumentalist.objects.filter(person=the_admin).values_list("instrument_id", flat=True)
+    # copy skills, voices, instruments
+    skill_ids = PersonSkill.objects.filter(person=the_admin).values_list("skill_id", flat=True)
+    voice_ids = Singer.objects.filter(person=the_admin).values_list("voice_id", flat=True)
+    instrument_ids = Instrumentalist.objects.filter(person=the_admin).values_list("instrument_id", flat=True)
 
-        PersonSkill.objects.bulk_create([
-            PersonSkill(person=person, skill_id=sid) for sid in skill_ids
-        ], ignore_conflicts=True)
-        Singer.objects.bulk_create([
-            Singer(person=person, voice_id=vid) for vid in voice_ids
-        ], ignore_conflicts=True)
-        Instrumentalist.objects.bulk_create([
-            Instrumentalist(person=person, instrument_id=iid) for iid in instrument_ids
-        ], ignore_conflicts=True)
+    PersonSkill.objects.bulk_create([
+        PersonSkill(person=person, skill_id=sid) for sid in skill_ids
+    ], ignore_conflicts=True)
+    Singer.objects.bulk_create([
+        Singer(person=person, voice_id=vid) for vid in voice_ids
+    ], ignore_conflicts=True)
+    Instrumentalist.objects.bulk_create([
+        Instrumentalist(person=person, instrument_id=iid) for iid in instrument_ids
+    ], ignore_conflicts=True)
 
-        # copy person resources (portfolio)
-        human_resources = PersonResource.objects.filter(person=the_admin).values_list('resource_id', 'order')
-        PersonResource.objects.bulk_create([
-            PersonResource(person=person, resource_id=resource_id, order=order)
-            for resource_id, order in human_resources
-        ], ignore_conflicts=True)
-    else:
-        person.owner = the_admin
-        person.save(update_fields=["owner"])
+    # copy person resources (portfolio)
+    human_resources = PersonResource.objects.filter(person=the_admin).values_list('resource_id', 'order')
+    PersonResource.objects.bulk_create([
+        PersonResource(person=person, resource_id=resource_id, order=order)
+        for resource_id, order in human_resources
+    ], ignore_conflicts=True)
 
     Membership.objects.get_or_create(user=org_user, person=person)
     PersonRole.objects.get_or_create(person=person, role_id=Role.ADMIN)
@@ -261,13 +260,20 @@ class OrganizationDeleteView(OrgAdminMixin, DeleteView):
 
 
 @method_decorator(login_required, name="dispatch")
-class OrgBackupView(View):
-    """New org from a backup file: upload, review what differs from this server, connect it, confirm."""
+class OrgBackupView(OrgAdminMixin, View):
+    """Backup file into an existing org: upload, review what differs from this server, confirm. ADMIN only."""
     template_name = "syncope/org_backup.html"
     SESSION_KEY = "org_backup"
+    SAMPLE_ROWS = 3
+    SAMPLE_CHARS = 80
+    ADMIN_LINKS = ("Membership", "PersonRole", "MembershipPeriod")  # the admin person already has these
 
-    def get(self, request):
-        return render(request, self.template_name)
+    @cached_property
+    def org_user(self):
+        return self.get_object().user
+
+    def get(self, request, username):
+        return render(request, self.template_name, {"url_username": username})
 
     def forget(self, request):
         saved = request.session.pop(self.SESSION_KEY, None)
@@ -277,12 +283,26 @@ class OrgBackupView(View):
     def reject(self, request, message):
         logger.warning("org backup rejected (user=%s): %s", request.user, message)
         messages.error(request, message)
-        return redirect("syncope:org_backup")
+        return redirect("syncope:org_import_backup", username=self.org_user.username)
 
     def diffs(self, payload):
         """What differs between the file and this server: (fixtures, schema)."""
         return (diff_fixtures(payload["fixtures"], export_fixtures(), fixture_keys()),
                 diff_schema(payload["schema"], export_schema()))
+
+    def stats(self, payload):
+        """What is in the file: rows per model, file against what the org holds now."""
+        now = {m.__name__: len(pks) for m, pks in org_pks(self.org_user).items()}
+        return [{"model": model, "file": len(rows), "now": now.get(model, 0)}
+                for model, rows in payload["data"].items() if model != "Organization"]
+
+    def samples(self, payload):
+        """The first rows of every model in the file, cut short, so the page stays small whatever the file size."""
+        def cell(value):
+            return "" if value is None else Truncator(str(value)).chars(self.SAMPLE_CHARS)
+        return [{"model": model, "fields": list(rows[0]),
+                 "rows": [[cell(v) for v in row.values()] for row in rows[:self.SAMPLE_ROWS]]}
+                for section in ("fixtures", "data") for model, rows in payload[section].items() if rows]
 
     def review(self, request, payload, dropped, errors=()):
         """The review page: how the file differs from this server, and the errors of a failed import if any."""
@@ -303,6 +323,10 @@ class OrgBackupView(View):
                                        "options": [{"id": r["id"], "label": fixture_label(r)} for r in d["options"]]}
         return render(request, self.template_name, {
             "reviewing": True,
+            "url_username": self.org_user.username,
+            "file_size": os.path.getsize(request.session[self.SESSION_KEY]["path"]),
+            "stats": self.stats(payload),
+            "samples": self.samples(payload),
             "errors": errors,
             "schema_diff": schema,
             "fixture_diff": fixture_diff,
@@ -314,7 +338,7 @@ class OrgBackupView(View):
             "no_differences": not (schema or dropped or fixture_diff),
         })
 
-    def post(self, request):
+    def post(self, request, username):
         if "file" in request.FILES:  # step 1: upload and review
             upload = request.FILES["file"]
             try:
@@ -330,13 +354,6 @@ class OrgBackupView(View):
             problems = check_shape(payload)
             if problems:
                 return self.reject(request, "The backup is malformed: " + "; ".join(problems) + ".")
-            org = payload["data"]["Organization"][0]
-            # the org's email and slugged name become its login account, both are unique
-            username = slugify(org["name"])
-            if not username:
-                return self.reject(request, "The organization needs a name with letters or digits.")
-            if CustomUser.objects.filter(Q(email=org["email"]) | Q(username=username)).exists():
-                return self.reject(request, "This org already exists.")
             try:
                 payload, dropped = allowlist(payload)
                 self.forget(request)
@@ -346,23 +363,25 @@ class OrgBackupView(View):
                 with tempfile.NamedTemporaryFile("w", delete=False, prefix="syncope-backup-", suffix=".json",
                                                  encoding="utf-8") as tmp:
                     json.dump(payload, tmp)
-                request.session[self.SESSION_KEY] = {"path": tmp.name, "dropped": dropped, "name": upload.name}
+                request.session[self.SESSION_KEY] = {"path": tmp.name, "dropped": dropped, "name": upload.name,
+                                                     "org": username}
                 return self.review(request, payload, dropped)
             except Exception:
                 logger.exception("org backup upload crashed (user=%s file=%s)", request.user, upload.name)
                 return self.reject(request, "Unexpected error while reading the backup, details are in the server log.")
 
-        # step 2: the user's choices, then create the org
+        # step 2: the user's choices, then import
         saved = request.session.get(self.SESSION_KEY)
-        if not saved or not os.path.exists(saved["path"]):
+        if not saved or saved.get("org") != username or not os.path.exists(saved["path"]):
             return self.reject(request, "Upload the backup file again.")
-        payload = json.loads(Path(saved["path"]).read_text(encoding="utf-8"))
+        with open(saved["path"], encoding="utf-8") as f:  # not read_text: that holds the whole file twice
+            payload = json.load(f)
         dropped = saved["dropped"]
         who = f"user={request.user} file={saved.get('name')}"
         try:
             the_admin = AccessControl.get_auth_person(request.user)
         except Person.DoesNotExist:
-            return self.review(request, payload, dropped, ["You have no personal profile yet, so there is no admin person to create."])
+            return self.review(request, payload, dropped, ["You have no personal profile yet."])
         fixtures, schema = self.diffs(payload)
         # the posted choices are checked against what this server offers, never trusted as they are
         renames = {}  # {model: {source field: field here}}
@@ -379,6 +398,7 @@ class OrgBackupView(View):
                 str(row["id"]): options.get(request.POST.get(f"fixture__{model}__{row['id']}", ""))
                 for row in d["unmapped"]}
         data = payload["data"]
+        data.pop("Organization", None)  # the org exists: its name, email and slug stay as they are
         known = export_schema()
         cols = {name: {f.attname: f for f in export_fields(apps.get_model(APP_LABEL, name))} for name in data}
         problems = []
@@ -405,14 +425,17 @@ class OrgBackupView(View):
         if problems:
             logger.warning("org backup not importable (%s): %s", who, "; ".join(problems))
             return self.review(request, payload, dropped, problems)
-        row = data["Organization"][0]
+        org_user = self.org_user
         created, lost = Counter(), Counter()  # rows made per model; links with no match, left empty
+        # the file's person with the importer's email is the org's admin person: reused, not created again
+        admin = Person.objects.filter(owner=the_admin, memberships__user=org_user).first()
+        email = (the_admin.email or "").lower()
+        admin_src = next((str(r["id"]) for r in data.get("Person", [])
+                          if admin and email and (r.get("email") or "").lower() == email), None)
+        if admin_src:
+            ids["Person"] = {admin_src: admin.pk}
         try:
             with transaction.atomic():  # all or nothing
-                try:
-                    org_user = create_org_account(row["name"], row["email"])  # the Organization row itself comes from the loop
-                except IntegrityError as e:  # created by someone else since the upload
-                    raise BackupError("Organization", "This org already exists.") from e
                 for name in order:
                     model = apps.get_model(APP_LABEL, name)
                     # Person.user is a login link, not ownership
@@ -422,6 +445,9 @@ class OrgBackupView(View):
                     ids.setdefault(name, {})
                     for position, src in enumerate(data[name], 1):
                         where = f"{name} row {position} (id {src['id']})"
+                        if str(src["id"]) in ids[name] or (
+                                name in self.ADMIN_LINKS and admin_src and str(src.get("person_id")) == admin_src):
+                            continue  # the admin person and what it already has
                         kwargs = dict(owner)
                         try:
                             for key, value in src.items():
@@ -452,11 +478,6 @@ class OrgBackupView(View):
                             made.append(obj)
                     if made:  # bulk_update does not run pre_save, so auto_now(_add) leaves them alone
                         model.objects.bulk_update(made, stamps, batch_size=500)
-            # the imported person with the importer's email is their admin person, else a fresh one
-            email = (the_admin.email or "").lower()
-            match = next((ids["Person"][str(r["id"])] for r in data.get("Person", [])
-                            if email and (r.get("email") or "").lower() == email), None)
-            make_org_admin(org_user, the_admin, Person.objects.get(pk=match) if match else None)
         except BackupError as e:
             logger.warning("org backup import failed, nothing created (%s): %s", who, e)
             return self.review(request, payload, dropped, [e.message])
@@ -465,10 +486,8 @@ class OrgBackupView(View):
             return self.review(request, payload, dropped, ["Unexpected error, details are in the server log."])
         self.forget(request)
         counts = ", ".join(f"{n} {m}" for m, n in sorted(created.items()))
-        messages.success(request, f"Created organization '{row['name']}' from the backup: {counts} ({sum(created.values())} rows). "
-                                  + ("You are its admin, linked to the imported person with your email." if match
-                                     else "You are its admin, with a new person created for you."))
-        logger.info("org backup imported (%s org=%s): %s", who, row["name"], counts)
+        messages.success(request, f"Imported the backup into '{org_user.username}': {counts} ({sum(created.values())} rows).")
+        logger.info("org backup imported (%s org=%s): %s", who, org_user.username, counts)
         warnings = []
         if lost:
             warnings.append("Links with no match on this server were left empty: "
@@ -481,7 +500,7 @@ class OrgBackupView(View):
         for text in warnings:
             logger.warning("org backup import (%s): %s", who, text)
             messages.warning(request, text)
-        return redirect("syncope:home")
+        return redirect("syncope:org_dashboard", username=org_user.username)
 
 
 class ExportView(View):
