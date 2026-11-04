@@ -1058,3 +1058,37 @@ class OrgBackupViewTests(TestCase):
     def test_not_a_backup(self):
         response = self.client.post(reverse("syncope:org_backup"), {"file": SimpleUploadedFile("x.json", b"[1]")}, follow=True)
         self.assertContains(response, "not a Syncope backup")
+
+
+class OrganizationFormTests(TestCase):
+    """One form for create and edit: current values are prefilled, the login account follows email and slug."""
+
+    fixtures = ["syncope/fixture_role.json"]
+
+    def setUp(self):
+        self.me = CustomUser.objects.create_user(username="me", email="me@example.com", password="pw12345")
+        Person.objects.create(user=self.me, email=self.me.email, first_name="Me")
+        self.client.login(username="me", password="pw12345")
+        self.client.post(reverse("syncope:org_new"), {"name": "My Choir", "email": "choir@example.com", "slug": "", "address": "Main St"})
+        self.org = Organization.objects.get(name="My Choir")
+        self.url = reverse("syncope:org_edit", kwargs={"username": "my-choir"})
+
+    def test_edit_prefills_current_values(self):
+        form = self.client.get(self.url).context["form"]
+        self.assertEqual([form[k].value() for k in ("name", "slug", "email", "address")],
+                         ["My Choir", "my-choir", "choir@example.com", "Main St"])
+
+    def test_blank_name_is_an_error_not_keep(self):
+        response = self.client.post(self.url, {"name": "", "slug": "my-choir", "email": "choir@example.com", "address": ""})
+        self.assertIn("name", response.context["form"].errors)
+
+    def test_slug_and_email_change_reach_the_login_account(self):
+        self.client.post(self.url, {"name": "My Choir", "slug": "new-slug", "email": "new@example.com", "address": ""})
+        self.org.refresh_from_db()
+        self.assertEqual((self.org.user.username, self.org.user.email, self.org.address), ("new-slug", "new@example.com", ""))
+
+    def test_rejected_edit_does_not_replace_the_current_values_next_visit(self):
+        CustomUser.objects.create_user(username="taken", email="t@example.com", password="pw12345")
+        bad = self.client.post(self.url, {"name": "My Choir", "slug": "taken", "email": "choir@example.com", "address": ""})
+        self.assertIn("slug", bad.context["form"].errors)
+        self.assertEqual(self.client.get(self.url).context["form"]["slug"].value(), "my-choir")

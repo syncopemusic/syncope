@@ -994,6 +994,18 @@
         --card-min: 260px;
     }
 
+    /* Dashboard link cards: button pinned to the bottom, so buttons line up across a row. */
+    .card-links > .card {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .card-links > .card > .btn,
+    .card-links > .card > form {
+        margin-block-start: auto;
+    }
+
     .card-title {
         margin: 0 0 var(--space-2);
         font-size: var(--font-size-md);
@@ -1674,10 +1686,11 @@
     }
 
     /* h3 sub-sections get space above, tight below; the page h1 stays flush. */
-    .section-header:has(h3) {
+    .section-header:has(h2, h3) {
         margin-block-start: var(--space-4);
     }
 
+    .section-header h2,
     .section-header h3,
     .section-header h1 {
         margin: 0;

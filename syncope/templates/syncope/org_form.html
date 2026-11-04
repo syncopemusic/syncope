@@ -20,7 +20,7 @@
 {% endif %}
 <form method="post" id="org-form">
   {% csrf_token %}
-  {{ form.as_p }}
+  {% include "syncope/_form_fields.html" %}
 </form>
 
 {% if object %}
@@ -30,6 +30,21 @@
 {% endif %}
 {% include "syncope/_save_bar.html" with form_id="org-form" url=return_target %}
 <script src="{% static 'syncope/save-bar.js' %}"></script>
+{% if not object %}
+<script>
+    // Show the slug while typing the name, until the user edits the slug themselves. Mirrors Django's slugify.
+    (function () {
+        const name = document.getElementById('id_name'), slug = document.getElementById('id_slug');
+        let touched = false;
+        slug.addEventListener('input', () => { touched = true; });
+        name.addEventListener('input', () => {
+            if (touched) return;
+            slug.value = name.value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+                .replace(/[^\w\s-]/g, '').trim().replace(/[-\s]+/g, '-');
+        });
+    })();
+</script>
+{% endif %}
 <script>
     {% if object %}initEditFormSaveBar('org-form');{% else %}initNewFormSaveBar('org-form');{% endif %}
 </script>

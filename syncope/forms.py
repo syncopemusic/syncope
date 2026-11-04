@@ -3,6 +3,7 @@ import datetime
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, UserCreationForm, UserChangeForm
 from django.utils import timezone
+from django.utils.text import slugify
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Project, Poll, PollPerson, PollEvent, \
     PollAttendance, Invitation
 from .models import Event, EventSong, AttendanceType,  Voice, Instrument, EventType, EventSongResource
@@ -205,7 +206,12 @@ class PersonForm(forms.ModelForm):
             self.fields["email"].initial = user.email
 
 class OrganizationForm(forms.ModelForm):
+    """Create and edit: name, email and username (the org's slug, defaults to the name) with the current values prefilled."""
+    field_order = ["name", "slug", "email", "address"]
     email = forms.EmailField(required=True)
+    slug = forms.CharField(
+        required=False, max_length=250, label="Username",
+    )
 
     class Meta:
         model = Organization
@@ -214,11 +220,26 @@ class OrganizationForm(forms.ModelForm):
             "address": forms.Textarea(attrs={"rows": 4}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            self.initial["slug"] = self.instance.user.username
+
     def clean_email(self):
-        email = self.cleaned_data.get("email")
-        if email and CustomUser.objects.filter(email=email).exists():
+        email = self.cleaned_data["email"]
+        if CustomUser.objects.filter(email__iexact=email).exclude(pk=self.instance.user_id).exists():
             raise forms.ValidationError("An account with this email already exists.")
         return email
+
+    def clean_slug(self):
+        slug = self.cleaned_data["slug"].strip() or slugify(self.cleaned_data.get("name", ""))
+        if not slug or slugify(slug) != slug:
+            raise forms.ValidationError("Use only letters, digits, - and _ .")
+        if slug in RESERVED_USERNAMES:
+            raise forms.ValidationError("This username is reserved.")
+        if CustomUser.objects.filter(username__iexact=slug).exclude(pk=self.instance.user_id).exists():
+            raise forms.ValidationError("This username is already taken.")
+        return slug
 
 
 class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
