@@ -206,13 +206,11 @@ class PersonForm(forms.ModelForm):
             self.fields["email"].initial = user.email
 
 class OrganizationForm(forms.ModelForm):
-    """Create: name, email and url-username (the org's slug name) are all required, url-nickname defaults to the name.
-    Edit: every field starts blank next to its current value, blank keeps it."""
+    """Create and edit: name, email and username (the org's slug, defaults to the name) with the current values prefilled."""
     field_order = ["name", "slug", "email", "address"]
     email = forms.EmailField(required=True)
     slug = forms.CharField(
         required=False, max_length=250, label="Username",
-        help_text="The organization's web address: letters, digits, - and _."
     )
 
     class Meta:
@@ -224,48 +222,23 @@ class OrganizationForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.editing = self.instance.pk is not None
-        if self.editing:
-            current = {"name": self.instance.name, "slug": self.instance.user.username,
-                       "email": self.instance.email, "address": self.instance.address or ""}
-            self.sections = []  # (bound field, its current value), for the edit page
-            for key, value in current.items():
-                field = self.fields[key]
-                field.required = False
-                field.widget.attrs["autocomplete"] = "off"  # these start blank on purpose, no browser autofill
-                field.label = f"New {key.title()}"
-                if key != "slug":
-                    field.help_text = ""
-                self.initial[key] = ""
-                self.sections.append((self[key], value))
-            self.fields["slug"].help_text = "Changing it changes every link to this organization."
-
-    def clean_name(self):
-        return self.cleaned_data["name"] or self.instance.name
-
-    def clean_address(self):
-        address = self.cleaned_data["address"]
-        return address if address or not self.editing else self.instance.address
+        if self.instance.pk:
+            self.initial["slug"] = self.instance.user.username
 
     def clean_email(self):
         email = self.cleaned_data["email"]
-        if not email:
-            return self.instance.email
         if CustomUser.objects.filter(email__iexact=email).exclude(pk=self.instance.user_id).exists():
             raise forms.ValidationError("An account with this email already exists.")
         return email
 
     def clean_slug(self):
-        slug = self.cleaned_data["slug"].strip()
-        if self.editing and not slug:
-            return self.instance.user.username
-        slug = slug or slugify(self.cleaned_data.get("name", ""))
+        slug = self.cleaned_data["slug"].strip() or slugify(self.cleaned_data.get("name", ""))
         if not slug or slugify(slug) != slug:
-            raise forms.ValidationError("Use only letters, digits, - and _ (and at least one letter or digit).")
+            raise forms.ValidationError("Use only letters, digits, - and _ .")
         if slug in RESERVED_USERNAMES:
-            raise forms.ValidationError("This slug is reserved.")
+            raise forms.ValidationError("This username is reserved.")
         if CustomUser.objects.filter(username__iexact=slug).exclude(pk=self.instance.user_id).exists():
-            raise forms.ValidationError("This slug is already taken.")
+            raise forms.ValidationError("This username is already taken.")
         return slug
 
 

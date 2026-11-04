@@ -20,20 +20,7 @@
 {% endif %}
 <form method="post" id="org-form">
   {% csrf_token %}
-  {% if object %}
-  {% for field, current in form.sections %}
-  <table class="table-detail">
-    <tr><th>Current {{ field.name|title }}</th><td>{{ current|linebreaksbr }}</td></tr>
-  </table>
-  {{ field.errors }}
-  <p>
-    {{ field.label_tag }} {{ field }}
-    {% if field.help_text %}<span class="helptext" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</span>{% endif %}
-  </p>
-  {% endfor %}
-  {% else %}
-  {{ form.as_p }}
-  {% endif %}
+  {% include "syncope/_form_fields.html" %}
 </form>
 
 {% if object %}
@@ -43,6 +30,7 @@
 {% endif %}
 {% include "syncope/_save_bar.html" with form_id="org-form" url=return_target %}
 <script src="{% static 'syncope/save-bar.js' %}"></script>
+{% if not object %}
 <script>
     // Show the slug while typing the name, until the user edits the slug themselves. Mirrors Django's slugify.
     (function () {
@@ -56,6 +44,7 @@
         });
     })();
 </script>
+{% endif %}
 <script>
     {% if object %}initEditFormSaveBar('org-form');{% else %}initNewFormSaveBar('org-form');{% endif %}
 </script>

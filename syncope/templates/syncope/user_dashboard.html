@@ -20,7 +20,10 @@
     {% endif %}
 </div>
 
-<h2>Organizations</h2>
+<div class="section-header">
+    <h2>Organizations</h2>
+    <a href="{% url 'syncope:org_new' %}" class="btn btn-primary">+ Add</a>
+</div>
 <div class="card-grid">
     {% for membership in org_memberships %}
         {% with org=membership.user.organizations.first %}
@@ -34,14 +37,10 @@
         {% endwith %}
     {% endfor %}
 </div>
-<div>
-    <h3>Make your own organization</h3>
-    <a href="{% url 'syncope:org_new' %}" class="btn btn-primary">+ New</a>
-</div>
 
 <h2>Personal</h2>
 <div class="card-grid card-links">
-<div class="card-grid">
+    <div class="card">
         <h3>Invitations</h3>
         <a href="{% url 'syncope:invitation_list' user.username %}" class="btn btn-secondary">View invitations{% if pending_invitations %} <span class="badge nav-badge">{{ pending_invitations }}</span>{% endif %}</a>
     </div>

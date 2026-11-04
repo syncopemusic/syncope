@@ -180,7 +180,7 @@ class OrganizationCreateView(DraftMixin, CreateView):
 
 
 @method_decorator(login_required, name='dispatch')
-class OrganizationUpdateView(DraftMixin, OrgAdminMixin, UpdateView):
+class OrganizationUpdateView(OrgAdminMixin, UpdateView):  # no drafts: a rejected value must not replace the current one
     model = Organization
     form_class = OrganizationForm
     template_name = "syncope/org_form.html"
