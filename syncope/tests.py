@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import DatabaseError
 from django.http import QueryDict
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
@@ -1018,14 +1019,86 @@ class OrgBackupViewTests(TestCase):
             new.unlink(missing_ok=True)
             old.unlink(missing_ok=True)
 
-    def test_row_failure_names_the_row_and_creates_nothing(self):
+    def test_invalid_value_is_listed_before_writing(self):
         self.backup["data"]["Person"][0]["birth_date"] = "not-a-date"
         with self.assertLogs("syncope", level="WARNING") as logs:
             response = self.confirm()
         self.assertContains(response, "nothing was created")
-        self.assertContains(response, "Person row 1")
+        self.assertContains(response, "fix__Person__birth_date__not-a-date")
         self.assertContains(response, "Mia")  # the row hint is for the user ...
         self.assertNotIn("Mia", "".join(logs.output))  # ... not for the server log
+        self.assertFalse(self.members().filter(first_name="Mia").exists())
+
+    def test_group_fix_applies_to_every_row_and_row_fix_wins(self):
+        self.backup["data"]["Person"] += [dict(self.backup["data"]["Person"][0], id=100 + i, first_name=f"P{i}") for i in range(2)]
+        for row in self.backup["data"]["Person"]:
+            row["birth_date"] = "not-a-date"
+        self.upload(self.backup)
+        bad = self.client.post(self.url, {"fix__Person__birth_date__not-a-date": "2000-01-02", "row__Person__101__birth_date": "nope"})
+        self.assertContains(bad, "row__Person__101__birth_date")  # still listed, the fixes so far are kept
+        self.assertFalse(self.members().filter(first_name="Mia").exists())
+        response = self.client.post(self.url, {"row__Person__101__birth_date": "1999-03-04"}, follow=True)
+        self.assertContains(response, "Imported the backup")
+        self.assertEqual(self.members().get(first_name="Mia").birth_date.isoformat(), "2000-01-02")
+        self.assertEqual(Person.objects.get(first_name="P1").birth_date.isoformat(), "1999-03-04")  # not a member, no membership row
+        self.assertEqual(Person.objects.get(first_name="P0").birth_date.isoformat(), "2000-01-02")
+
+    def test_rows_that_already_exist_are_kept_not_a_database_error(self):
+        skill = Skill.objects.create(title="Singing")
+        other = Skill.objects.create(title="Piano")
+        src = CustomUser.objects.get(username="src")
+        mia = Person.objects.get(first_name="Mia")
+        for s in (skill, other):
+            PersonSkill.objects.create(person=mia, skill=s)
+        self.backup = export_org(src)
+        self.backup["data"]["Person"][0].update(first_name="Me", email="me@example.com")  # becomes the admin person here
+        admin = self.members().get(first_name="Me")
+        PersonSkill.objects.create(person=admin, skill=skill)
+        review = self.confirm()
+        self.assertContains(review, "Already on this server")  # asks first, nothing written yet
+        self.assertEqual(PersonSkill.objects.filter(person=admin).count(), 1)
+        response = self.client.post(self.url, {"existing_seen": "1"}, follow=True)  # keep is the preselected answer
+        self.assertContains(response, "Imported the backup")
+        self.assertContains(response, "PersonSkill (1)")  # Singing was already there
+        self.assertEqual(sorted(PersonSkill.objects.filter(person=admin).values_list("skill__title", flat=True)), ["Piano", "Singing"])
+
+    def clash_setup(self):
+        """The admin person here already has Singing; the file's matching person has Singing and Piano."""
+        skills = [Skill.objects.create(title=t) for t in ("Singing", "Piano")]
+        for s in skills:
+            PersonSkill.objects.create(person=Person.objects.get(first_name="Mia"), skill=s)
+        self.backup = export_org(CustomUser.objects.get(username="src"))
+        self.backup["data"]["Person"][0].update(first_name="Me", email="me@example.com")
+        admin = self.members().get(first_name="Me")
+        PersonSkill.objects.create(person=admin, skill=skills[0])
+        self.upload(self.backup)
+        return admin
+
+    def test_group_skip_leaves_the_file_row_out(self):
+        admin = self.clash_setup()
+        self.client.post(self.url, {"existing_seen": "1", "action__PersonSkill": "skip"}, follow=True)
+        self.assertEqual(list(PersonSkill.objects.filter(person=admin).values_list("skill__title", flat=True)), ["Singing", "Piano"])
+
+    def test_row_choice_beats_the_group_choice(self):
+        admin = self.clash_setup()
+        row = next(r["id"] for r in self.backup["data"]["PersonSkill"]
+                   if Skill.objects.get(pk=r["skill_id"]).title == "Singing")
+        response = self.client.post(self.url, {"existing_seen": "1", "action__PersonSkill": "skip",
+                                               f"rowaction__PersonSkill__{row}": "keep"}, follow=True)
+        self.assertContains(response, "PersonSkill (1)")  # only the kept one is reported
+
+    def test_unknown_choice_means_keep(self):
+        admin = self.clash_setup()
+        response = self.client.post(self.url, {"existing_seen": "1", "action__PersonSkill": "delete-everything"}, follow=True)
+        self.assertContains(response, "Imported the backup")
+        self.assertEqual(PersonSkill.objects.filter(person=admin, skill__title="Singing").count(), 1)
+
+    def test_database_failure_names_the_row_and_creates_nothing(self):
+        with mock.patch("syncope.views.organization.OrgBackupView.clashes", return_value=[]), \
+                mock.patch("syncope.models.Person.save", side_effect=DatabaseError("db says no")):
+            with self.assertLogs("syncope", level="WARNING"):
+                response = self.confirm()
+        self.assertContains(response, "Person row 1")
         self.assertFalse(self.members().filter(first_name="Mia").exists())
 
     def test_unmatched_required_links_are_all_listed_before_writing(self):

@@ -6,6 +6,16 @@
 <h1>Import from a backup file</h1>
 
 {% if not reviewing %}
+{% if result %}
+<h2>Import result</h2>
+<table class="table">
+    <tr><th>Model</th><th>Imported</th><th>Already here, kept</th><th>Rows in this organization now</th></tr>
+    {% for r in result %}
+    <tr><td>{{ r.model }}</td><td>{{ r.imported }}</td><td>{{ r.kept }}</td><td>{{ r.now }}</td></tr>
+    {% endfor %}
+</table>
+<h2>Import another file</h2>
+{% endif %}
 <p class="text-muted">Upload a file made with Export. It is compared with this server before anything is imported. Its rows are added to this organization; the organization's own name, email and slug are not changed.</p>
 <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
@@ -24,6 +34,34 @@
         <strong>The import stopped and nothing was created.</strong>
         <ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
     </div>
+    {% endif %}
+
+    {% if clashes %}
+    <div class="alert alert-error">
+        <strong>Some values are not valid on this server and nothing was created.</strong>
+        Fix them below and press Import again.
+    </div>
+    <h2>Values to fix</h2>
+    <p class="text-muted">One new value fixes every row with the same value. Open a line to fix single rows instead.</p>
+    <table class="table">
+        <tr><th>Field</th><th>Value in file</th><th>Problem</th><th>Rows</th><th>New value for all of them</th></tr>
+        {% for c in clashes %}
+        <tr>
+            <td>{{ c.model }}.{{ c.field }}</td><td>{{ c.value }}</td><td>{{ c.message }}</td><td>{{ c.rows|length }}</td>
+            <td>{% if c.fixable %}<input type="text" name="fix__{{ c.model }}__{{ c.field }}__{{ c.value }}">{% endif %}</td>
+        </tr>
+        {% if c.fixable %}
+        <tr><td colspan="5">
+            <details>
+                <summary>Fix single rows</summary>
+                {% for id, label in c.rows %}
+                <div>{{ label|default:id }} <input type="text" name="row__{{ c.model }}__{{ id }}__{{ c.field }}"></div>
+                {% endfor %}
+            </details>
+        </td></tr>
+        {% endif %}
+        {% endfor %}
+    </table>
     {% endif %}
 
     {% if no_differences %}
@@ -94,6 +132,31 @@
         </tr>
         {% endfor %}
     </table>
+    {% endfor %}
+    {% endif %}
+
+    {% if existing %}
+    <input type="hidden" name="existing_seen" value="1">
+    <h2>Already on this server</h2>
+    <p class="text-muted">These rows of the file are already here. <strong>Keep existing</strong> leaves this server's row as it is and adds no second one; whatever in the file points at it links to this server's row. <strong>Skip</strong> ignores the file's row, and things pointing at it lose that link.</p>
+    {% for e in existing %}
+    <h3>{{ e.model }} ({{ e.rows|length }})</h3>
+    <select name="action__{{ e.model }}">
+        <option value="keep" selected>Keep existing</option>
+        <option value="skip">Skip</option>
+    </select>
+    <details>
+        <summary>Choose per row</summary>
+        {% for id, label in e.rows %}
+        <div>{{ label|default:id }}
+            <select name="rowaction__{{ e.model }}__{{ id }}">
+                <option value="">Same as above</option>
+                <option value="keep">Keep existing</option>
+                <option value="skip">Skip</option>
+            </select>
+        </div>
+        {% endfor %}
+    </details>
     {% endfor %}
     {% endif %}
 

@@ -19,7 +19,7 @@ import datetime
 from django.views.generic import TemplateView
 from django.apps import apps
 from django.db import DatabaseError, transaction
-from django.db.models import ForeignKey
+from django.db.models import ForeignKey, UniqueConstraint
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.utils.functional import cached_property
@@ -273,7 +273,8 @@ class OrgBackupView(OrgAdminMixin, View):
         return self.get_object().user
 
     def get(self, request, username):
-        return render(request, self.template_name, {"url_username": username})
+        return render(request, self.template_name, {"url_username": username,
+                                                    "result": request.session.pop("org_backup_result", None)})
 
     def forget(self, request):
         saved = request.session.pop(self.SESSION_KEY, None)
@@ -304,7 +305,31 @@ class OrgBackupView(OrgAdminMixin, View):
                  "rows": [[cell(v) for v in row.values()] for row in rows[:self.SAMPLE_ROWS]]}
                 for section in ("fixtures", "data") for model, rows in payload[section].items() if rows]
 
-    def review(self, request, payload, dropped, errors=()):
+    def owner(self, model):
+        """Ownership FKs of a new row. Person.user is a login link, not ownership."""
+        return {} if model is Person else {f.attname: self.org_user.pk for f in user_fks(model)}
+
+    def clashes(self, name, rows, cols, renames, skip):
+        """Rows of one model that fail its validation, grouped by field and bad value (FKs wait for their new ids)."""
+        model = apps.get_model(APP_LABEL, name)
+        back = {new: old for old, new in renames.items()}
+        plain = {a for a, f in cols.items() if not isinstance(f, ForeignKey) and not f.primary_key}
+        groups = {}
+        for src in rows:
+            if skip(name, src):
+                continue
+            kwargs = {a: v for k, v in src.items() if (a := renames.get(k, k)) in plain}
+            exclude = [f.name for a, f in cols.items() if a not in kwargs]  # FKs and fields the file lacks
+            try:  # ponytail: a few queries per row (owner FK, unique checks), batch if big files get slow
+                model(**self.owner(model), **kwargs).full_clean(exclude=exclude)
+            except ValidationError as e:
+                for field, messages in e.message_dict.items():
+                    key = back.get(field, field)
+                    group = groups.setdefault((name, key, str(src.get(key))), {"message": messages[0], "rows": []})
+                    group["rows"].append((src["id"], row_label(src)))
+        return [{"model": n, "field": k, "value": v, "fixable": k != "__all__", **g} for (n, k, v), g in groups.items()]
+
+    def review(self, request, payload, dropped, errors=(), clashes=(), existing=()):
         """The review page: how the file differs from this server, and the errors of a failed import if any."""
         fixtures, schema = self.diffs(payload)
         usage = fixture_usage(payload["data"], fixtures, payload["schema"], export_schema())
@@ -328,6 +353,8 @@ class OrgBackupView(OrgAdminMixin, View):
             "stats": self.stats(payload),
             "samples": self.samples(payload),
             "errors": errors,
+            "clashes": clashes,
+            "existing": existing,
             "schema_diff": schema,
             "fixture_diff": fixture_diff,
             "dropped": dropped,
@@ -434,20 +461,74 @@ class OrgBackupView(OrgAdminMixin, View):
                           if admin and email and (r.get("email") or "").lower() == email), None)
         if admin_src:
             ids["Person"] = {admin_src: admin.pk}
+
+        kept, left = Counter(), set()  # file rows kept as they are here; file rows the user left out
+
+        def skip(name, src):  # the admin person and what it already has
+            return str(src["id"]) in ids.get(name, {}) or (name, str(src["id"])) in left or (
+                name in self.ADMIN_LINKS and admin_src and str(src.get("person_id")) == admin_src)
+
+        def existing(name, src):
+            """pk of a row here holding the same unique values as this file row, or None. Parents must be mapped already."""
+            model = apps.get_model(APP_LABEL, name)
+            owner, back = self.owner(model), {new: old for old, new in renames.get(name, {}).items()}
+            sets = [c.fields for c in model._meta.constraints if isinstance(c, UniqueConstraint) and not c.condition]
+            sets += list(model._meta.unique_together) + [(f.name,) for f in model._meta.concrete_fields if f.unique and not f.primary_key]
+            for names in sets:
+                look = {}
+                for f in map(model._meta.get_field, names):
+                    value = src.get(back.get(f.attname, f.attname))
+                    try:
+                        if f.attname in owner:
+                            look[f.attname] = owner[f.attname]
+                        elif value is not None and f.attname in cols[name]:
+                            look[f.attname] = (resolve(ids, payload["schema"][name]["fks"].get(back.get(f.attname, f.attname)), f, value)
+                                               if isinstance(f, ForeignKey) else f.to_python(value))
+                    except ValidationError:
+                        pass  # the value is reported by the validation below
+                if len(look) == len(names) and None not in look.values():  # a NULL never clashes
+                    return model.objects.filter(**look).values_list("pk", flat=True).first()
+
+        # the user's fixes: "fix__model__field__value" for every row with that value, "row__model__id__field" for one row
+        fixes = {tuple(k.split("__", 3)): v for k, v in request.POST.items() if k.startswith(("fix__", "row__")) and v}
+        if fixes:
+            for name, rows in data.items():
+                for src in rows:
+                    for key in src:
+                        src[key] = fixes.get(("row", name, str(src["id"]), key), fixes.get(("fix", name, key, str(src[key])), src[key]))
+        if fixes:
+            with open(saved["path"], "w", encoding="utf-8") as f:  # keeps the fixes made so far
+                json.dump(payload, f)
+        invalid = [c for name in order for c in self.clashes(name, data[name], cols[name], renames.get(name, {}), skip)]
+        if invalid:
+            logger.warning("org backup has invalid values, nothing created (%s): %d groups", who, len(invalid))
+            return self.review(request, payload, dropped, clashes=invalid)
+        # file rows that already exist here, per model; ponytail: only parents known now (fixed values, admin person) are matched
+        found = {name: [(src, pk) for src in data[name] if not skip(name, src) and (pk := existing(name, src))] for name in order}
+        found = {name: rows for name, rows in found.items() if rows}
+        if found and not request.POST.get("existing_seen"):
+            return self.review(request, payload, dropped, existing=[
+                {"model": name, "rows": [(src["id"], row_label(src)) for src, _ in rows]} for name, rows in found.items()])
+        for name, rows in found.items():  # keep: this server's row stands in for the file's; skip: the file's row is left out
+            for src, pk in rows:
+                choice = request.POST.get(f"rowaction__{name}__{src['id']}") or request.POST.get(f"action__{name}")
+                if choice == "skip":
+                    left.add((name, str(src["id"])))
+                else:
+                    ids.setdefault(name, {})[str(src["id"])] = pk
+                    kept[name] += 1
         try:
             with transaction.atomic():  # all or nothing
                 for name in order:
                     model = apps.get_model(APP_LABEL, name)
-                    # Person.user is a login link, not ownership
-                    owner = {} if model is Person else {f.attname: org_user.pk for f in user_fks(model)}
+                    owner = self.owner(model)
                     stamps = [a for a, f in cols[name].items() if getattr(f, "auto_now", False) or getattr(f, "auto_now_add", False)]
                     made = []
                     ids.setdefault(name, {})
                     for position, src in enumerate(data[name], 1):
                         where = f"{name} row {position} (id {src['id']})"
-                        if str(src["id"]) in ids[name] or (
-                                name in self.ADMIN_LINKS and admin_src and str(src.get("person_id")) == admin_src):
-                            continue  # the admin person and what it already has
+                        if skip(name, src):
+                            continue
                         kwargs = dict(owner)
                         try:
                             for key, value in src.items():
@@ -486,9 +567,14 @@ class OrgBackupView(OrgAdminMixin, View):
             return self.review(request, payload, dropped, ["Unexpected error, details are in the server log."])
         self.forget(request)
         counts = ", ".join(f"{n} {m}" for m, n in sorted(created.items()))
-        messages.success(request, f"Imported the backup into '{org_user.username}': {counts} ({sum(created.values())} rows).")
+        now = {m.__name__: len(pks) for m, pks in org_pks(org_user).items()}  # what the org holds after the import
+        request.session["org_backup_result"] = [
+            {"model": m, "imported": created[m], "kept": kept[m], "now": now.get(m, 0)} for m in sorted(created.keys() | kept.keys())]
+        messages.success(request, f"Imported the backup into '{org_user.username}': {sum(created.values())} rows.")
         logger.info("org backup imported (%s org=%s): %s", who, org_user.username, counts)
         warnings = []
+        if kept:
+            warnings.append("Already on this server, kept as they were: " + ", ".join(f"{m} ({n})" for m, n in sorted(kept.items())) + ".")
         if lost:
             warnings.append("Links with no match on this server were left empty: "
                             + ", ".join(f"{f} ({n})" for f, n in sorted(lost.items())) + ".")
@@ -500,7 +586,7 @@ class OrgBackupView(OrgAdminMixin, View):
         for text in warnings:
             logger.warning("org backup import (%s): %s", who, text)
             messages.warning(request, text)
-        return redirect("syncope:org_dashboard", username=org_user.username)
+        return redirect("syncope:org_import_backup", username=org_user.username)
 
 
 class ExportView(View):
